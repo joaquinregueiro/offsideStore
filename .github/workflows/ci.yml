@@ -17,6 +17,9 @@ defaults:
     working-directory: offsideApp
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Verificacion estatica + tests sin IO. No necesita servicios.
+  # ---------------------------------------------------------------------------
   verify:
     name: Verificar
     runs-on: ubuntu-latest
@@ -52,3 +55,94 @@ jobs:
           # de entorno (@offside/config) exige que las variables existan.
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
           REDIS_URL: redis://localhost:6379
+
+  # ---------------------------------------------------------------------------
+  # Integridad del modelo de datos y tests contra PostgreSQL real.
+  #
+  # Este job existe porque la invariante ERD = Drizzle = Migration = PostgreSQL
+  # (CLAUDE.md §6) no la garantiza ningun analisis estatico: solo la verifican
+  # las migraciones aplicadas y los tests de integracion. Corriendolos unicamente
+  # en local, la red de seguridad depende de que alguien se acuerde.
+  # ---------------------------------------------------------------------------
+  integration:
+    name: Modelo de datos e integracion
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: offside
+          POSTGRES_PASSWORD: offside
+          POSTGRES_DB: offside_test
+          # Misma colacion determinista que docker-compose.yml, para que el
+          # ordenamiento no dependa del locale del runner.
+          POSTGRES_INITDB_ARGS: '--locale=C --encoding=UTF8'
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U offside -d offside_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://offside:offside@localhost:5432/offside_test
+      REDIS_URL: redis://localhost:6379
+      APP_ENV: test
+      APP_URL: http://localhost:3000
+      # Solo para los tests: el pepper de sesiones se exige en el borde del
+      # modulo auth. No es un secreto real y no protege nada en CI.
+      AUTH_SESSION_SECRET: ci-solo-para-tests-no-es-un-secreto-real
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: offsideApp/.nvmrc
+          cache: npm
+          cache-dependency-path: offsideApp/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Valida el journal y la consistencia de las migraciones entre si
+      # (colisiones de nombre, orden, hashes).
+      - name: Consistencia de migraciones
+        run: npm run db:check --workspace @offside/database
+
+      # Aplica el schema a una base vacia. Verifica de paso que la migracion
+      # 0000 cree las extensiones (citext, unaccent, pg_trgm) ANTES de las
+      # tablas que las usan: si no, falla aca y no en produccion (ERD §1.b).
+      - name: Aplicar migraciones
+        run: npm run db:migrate
+
+      # Drift: si el schema de Drizzle y las migraciones no coinciden,
+      # `generate` produce un archivo nuevo. Que aparezca significa que alguien
+      # toco el schema sin generar la migracion — el estado exacto que rompe la
+      # invariante del ERD. Falla con el diff a la vista.
+      - name: Drift entre schema y migraciones
+        run: |
+          npm run db:generate < /dev/null
+          if [ -n "$(git status --porcelain packages/database/migrations)" ]; then
+            echo "::error::El schema de Drizzle no coincide con las migraciones."
+            echo "Genera la migracion con 'npm run db:generate' y commiteala."
+            git status --porcelain packages/database/migrations
+            git --no-pager diff -- packages/database/migrations
+            exit 1
+          fi
+          echo "Sin drift: el schema coincide con las migraciones aplicadas."
+
+      - name: Tests de integracion
+        run: npm run test -- --project=integration
