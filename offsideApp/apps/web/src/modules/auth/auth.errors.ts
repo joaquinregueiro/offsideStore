@@ -16,17 +16,21 @@ export type AuthErrorCode =
   | 'FORBIDDEN'
   | 'SELLER_PROFILE_ALREADY_EXISTS'
   | 'TERMS_NOT_ACCEPTED'
+  | 'RATE_LIMITED'
   // --- sellers: identidad fiscal ---
   | 'VALIDATION_FAILED'
   | 'FISCAL_SOURCE_UNAVAILABLE';
 
 export class AuthError extends Error {
   readonly code: AuthErrorCode;
+  /** Solo en RATE_LIMITED: alimenta el header `Retry-After`. */
+  readonly retryAfterSeconds?: number;
 
-  constructor(code: AuthErrorCode, message: string) {
+  constructor(code: AuthErrorCode, message: string, retryAfterSeconds?: number) {
     super(message);
     this.name = 'AuthError';
     this.code = code;
+    if (retryAfterSeconds !== undefined) this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -66,3 +70,16 @@ export const sellerProfileAlreadyExists = (): AuthError =>
 
 export const termsNotAccepted = (): AuthError =>
   new AuthError('TERMS_NOT_ACCEPTED', 'Tenes que aceptar los terminos y la politica de privacidad');
+
+/**
+ * Demasiados intentos (`security-observability-analytics.md` §1).
+ *
+ * ⚠️ Mensaje generico por el mismo motivo que `invalidCredentials`: no dice si
+ * el bloqueo es por IP o por cuenta, ni si la cuenta existe.
+ */
+export const rateLimited = (retryAfterSeconds: number): AuthError =>
+  new AuthError(
+    'RATE_LIMITED',
+    'Demasiados intentos. Espera unos minutos antes de volver a intentar',
+    retryAfterSeconds,
+  );

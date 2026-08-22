@@ -73,6 +73,20 @@ export const envSchema = z.object({
   AUTH_PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).default(12),
   AUTH_EMAIL_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(24),
   AUTH_PASSWORD_RESET_TTL_HOURS: z.coerce.number().int().positive().default(1),
+
+  /**
+   * Rate limiting de los endpoints de auth no autenticados.
+   *
+   * Mismo criterio que los parametros de arriba: el MECANISMO es un control de
+   * seguridad (`security-observability-analytics.md` §1 lo exige), el VALOR es
+   * operable. Los valores por defecto son provisorios y estan 🟡 pendientes de
+   * confirmacion del owner (`configuration-registry.md` §3).
+   */
+  AUTH_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+  /** Intentos por IP y ventana, sobre CUALQUIER endpoint de auth. */
+  AUTH_RATE_LIMIT_MAX_PER_IP: z.coerce.number().int().positive().default(20),
+  /** Intentos FALLIDOS por cuenta y ventana. Ver `lib/rate-limit.ts`. */
+  AUTH_RATE_LIMIT_MAX_PER_ACCOUNT: z.coerce.number().int().positive().default(5),
 });
 
 export type Env = z.infer<typeof envSchema>;

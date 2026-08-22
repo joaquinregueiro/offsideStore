@@ -3,8 +3,15 @@ import type { NextResponse } from 'next/server';
 
 import { requireUser } from '@/lib/auth-guard';
 import { handleError, ok, readJson } from '@/lib/http';
+import {
+  checkAccountLimit,
+  consumeIpLimit,
+  registerFailedAttempt,
+  type RateLimitScope,
+} from '@/lib/rate-limit';
 import { clearSessionCookie, readSessionToken, setSessionCookie } from '@/lib/session-cookie';
 
+import * as errors from '../auth.errors';
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -19,6 +26,17 @@ import * as authService from '../services/auth.service';
  * resultado a HTTP. NO tiene reglas de negocio.
  */
 
+/**
+ * Consume el limite por IP y corta si se supero.
+ *
+ * Va ANTES de parsear el body y de tocar la base: el sentido de un rate limit
+ * es no gastar recursos en el intento numero mil.
+ */
+async function enforceIpLimit(request: Request, scope: RateLimitScope): Promise<void> {
+  const decision = await consumeIpLimit(request, scope);
+  if (!decision.allowed) throw errors.rateLimited(decision.retryAfterSeconds);
+}
+
 /** Fuera de desarrollo nunca se devuelve un token por la API. */
 function exposeTokenInDev(token: string): { devToken?: string } {
   return getEnv().APP_ENV === 'development' ? { devToken: token } : {};
@@ -26,6 +44,7 @@ function exposeTokenInDev(token: string): { devToken?: string } {
 
 export async function register(request: Request): Promise<NextResponse> {
   try {
+    await enforceIpLimit(request, 'register');
     const input = registerSchema.parse(await readJson(request));
     const result = await authService.register(input);
 
@@ -43,13 +62,29 @@ export async function register(request: Request): Promise<NextResponse> {
 
 export async function login(request: Request): Promise<NextResponse> {
   try {
+    await enforceIpLimit(request, 'login');
     const input = loginSchema.parse(await readJson(request));
 
-    const result = await authService.login(input, {
-      userAgent: request.headers.get('user-agent') ?? undefined,
-      // `x-forwarded-for` puede traer una cadena de proxies; el primero es el cliente.
-      ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim(),
-    });
+    // Limite por cuenta: lectura pura, no consume cupo. Frena la fuerza bruta
+    // distribuida, donde cada IP prueba pocas veces contra la misma cuenta.
+    const account = await checkAccountLimit(input.email);
+    if (!account.allowed) throw errors.rateLimited(account.retryAfterSeconds);
+
+    let result;
+    try {
+      result = await authService.login(input, {
+        userAgent: request.headers.get('user-agent') ?? undefined,
+        // `x-forwarded-for` puede traer una cadena de proxies; el primero es el cliente.
+        ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim(),
+      });
+    } catch (error) {
+      // Solo los FALLOS consumen el cupo de la cuenta: un login exitoso no debe
+      // acercar al usuario legitimo a su propio bloqueo.
+      if (error instanceof errors.AuthError && error.code === 'INVALID_CREDENTIALS') {
+        await registerFailedAttempt(input.email);
+      }
+      throw error;
+    }
 
     const response = ok({ user: result.user });
     setSessionCookie(response, result.sessionToken, result.expiresAt);
@@ -101,6 +136,7 @@ export async function verifyEmail(request: Request): Promise<NextResponse> {
  */
 export async function forgotPassword(request: Request): Promise<NextResponse> {
   try {
+    await enforceIpLimit(request, 'password-forgot');
     const { email } = forgotPasswordSchema.parse(await readJson(request));
     const token = await authService.requestPasswordReset(email);
 
@@ -115,6 +151,7 @@ export async function forgotPassword(request: Request): Promise<NextResponse> {
 
 export async function resetPassword(request: Request): Promise<NextResponse> {
   try {
+    await enforceIpLimit(request, 'password-reset');
     const { token, password } = resetPasswordSchema.parse(await readJson(request));
     await authService.resetPassword(token, password);
 

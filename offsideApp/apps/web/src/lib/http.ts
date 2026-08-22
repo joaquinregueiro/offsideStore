@@ -22,6 +22,8 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   FORBIDDEN: 403,
   SELLER_PROFILE_ALREADY_EXISTS: 409,
   TERMS_NOT_ACCEPTED: 422,
+  /** Demasiados intentos: el cliente puede reintentar mas tarde. */
+  RATE_LIMITED: 429,
   /** Identificador fiscal sintacticamente invalido. */
   VALIDATION_FAILED: 422,
   /** No hay integracion con la fuente fiscal: no es culpa del cliente. */
@@ -32,8 +34,13 @@ export function ok<T>(data: T, status = 200): NextResponse {
   return NextResponse.json(data, { status });
 }
 
-export function fail(code: string, message: string, status: number): NextResponse {
-  return NextResponse.json({ error: { code, message } }, { status });
+export function fail(
+  code: string,
+  message: string,
+  status: number,
+  headers?: Record<string, string>,
+): NextResponse {
+  return NextResponse.json({ error: { code, message } }, { status, ...(headers && { headers }) });
 }
 
 /** Errores de validacion de Zod: 422 con el detalle por campo. */
@@ -63,7 +70,14 @@ export function handleError(error: unknown): NextResponse {
   if (error instanceof ZodError) return validationFailed(error);
 
   if (error instanceof AuthError) {
-    return fail(error.code, error.message, STATUS_BY_CODE[error.code]);
+    // `Retry-After` es lo que convierte un 429 en algo accionable: sin el, el
+    // cliente solo puede adivinar cuando reintentar.
+    const headers =
+      error.retryAfterSeconds === undefined
+        ? undefined
+        : { 'Retry-After': String(error.retryAfterSeconds) };
+
+    return fail(error.code, error.message, STATUS_BY_CODE[error.code], headers);
   }
 
   console.error('[api] error no controlado:', error);

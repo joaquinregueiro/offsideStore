@@ -47,12 +47,19 @@ jobs:
 
       - name: Tests unitarios
         run: npm run test -- --project=unit
+        env:
+          # Los tests unitarios no hacen IO, pero algunos schemas y servicios
+          # leen parametros del entorno al construirse y @offside/config valida
+          # el objeto COMPLETO. En CI no hay `.env`, asi que las variables
+          # obligatorias se inyectan aca. Los valores son ficticios: nada se
+          # conecta a ellos.
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          REDIS_URL: redis://localhost:6379
+          AUTH_SESSION_SECRET: ci-solo-para-tests-no-es-un-secreto-real
 
       - name: Build
         run: npm run build
         env:
-          # Valores ficticios: el build no se conecta a nada, pero la validacion
-          # de entorno (@offside/config) exige que las variables existan.
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
           REDIS_URL: redis://localhost:6379
 
