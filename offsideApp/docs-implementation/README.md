@@ -25,10 +25,18 @@ migrations están aplicadas y PostgreSQL real fue validado contra el ERD
 (ver [post-migration-validation.md](post-migration-validation.md)).
 
 **Implementado:** autenticación (registro, verificación de email, login, logout,
-sesión, recuperación de contraseña), perfil de vendedor e **identidad fiscal**
-(CUIT/CUIL/CDI con validación sintáctica e historial).
+sesión, recuperación de contraseña, **rate limiting**), perfil de vendedor e
+**identidad fiscal** (CUIT/CUIL/CDI con validación sintáctica e historial).
+
+**105 tests** (57 unitarios + 48 de integración contra PostgreSQL real). CI corre
+ambos, aplica las migraciones sobre una base vacía y verifica que el schema de
+Drizzle no se haya separado de las migraciones.
 
 Explícitamente **no** implementado: validación fiscal real contra ARCA,
 aprobación del vendedor, Mercado Pago, Payments, comisiones, percepciones,
-listings, carrito, órdenes, Correo Argentino, refunds, disputas, reviews,
-reputación, admin, y **frontend** (sigue siendo un placeholder).
+Config Store operativo, catálogo, listings, búsqueda, carrito, órdenes, Correo
+Argentino, refunds, disputas, reviews, reputación, admin, **envío de emails** y
+**frontend** (sigue siendo un placeholder).
+
+⚠️ Sin módulo de notificaciones, el token de verificación se genera pero **no se
+envía**: fuera de desarrollo nadie puede completar el alta (BR-001).

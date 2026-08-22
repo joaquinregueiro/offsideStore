@@ -17,9 +17,10 @@ Offside Store/                       raíz del repositorio git
     │   └── web/                     Next.js 16 — storefront + seller + admin + api
     │       └── src/
     │           ├── app/             rutas (App Router)
-    │           │   └── api/health/  health check de infraestructura
-    │           ├── lib/             utilidades de la app
+    │           │   └── api/         health, auth, sellers
+    │           ├── lib/             guard de auth, cookies, HTTP, rate limiting
     │           └── modules/         módulos de dominio (ver modules/README.md)
+    │               ├── auth/  users/  sellers/
     │               └── _template/   plantilla con el layering obligatorio
     ├── packages/
     │   ├── config/                  validación tipada del entorno (Zod)
@@ -41,19 +42,23 @@ intermedio en cada cambio.
 
 ## Correspondencia con la documentación
 
-| Documentado                                                  | Implementado                                          |
-| ------------------------------------------------------------ | ----------------------------------------------------- |
-| Monorepo Turborepo con `apps/` y `packages/` (tech-stack §2) | ✅ npm workspaces + Turborepo                         |
-| `packages/database`, `config`, `types`, `utils`              | ✅ los cuatro                                         |
-| Monolito modular                                             | ✅ `apps/web/src/modules/`                            |
-| Route Handler → Controller → Service → Repository            | ✅ convención + plantilla; sin módulos reales todavía |
-| Integraciones aisladas en `infrastructure/` por módulo       | ✅ carpeta en la plantilla; sin adaptadores todavía   |
-| PostgreSQL + Drizzle, sólo migraciones                       | ✅ Drizzle Kit configurado; **schema vacío**          |
-| Redis + BullMQ                                               | ✅ conexión, registro de colas y de workers           |
-| Docker para dev                                              | ✅ Postgres 17 + Redis 8                              |
-| Búsqueda en PostgreSQL full-text                             | ⏸ no aplica todavía (depende del schema)              |
-| Auth propia + OAuth                                          | ⏸ no implementado                                     |
-| Mercado Pago / Correo Argentino                              | ⏸ no implementado                                     |
+| Documentado                                                  | Implementado                                                   |
+| ------------------------------------------------------------ | -------------------------------------------------------------- |
+| Monorepo Turborepo con `apps/` y `packages/` (tech-stack §2) | ✅ npm workspaces + Turborepo                                  |
+| `packages/database`, `config`, `types`, `utils`              | ✅ los cuatro                                                  |
+| Monolito modular                                             | ✅ `apps/web/src/modules/`                                     |
+| Route Handler → Controller → Service → Repository            | ✅ ejercitado de verdad por `auth` y `sellers`                 |
+| Integraciones aisladas en `infrastructure/` por módulo       | ✅ `sellers/infrastructure/fiscal-source` (port + adapter)     |
+| PostgreSQL + Drizzle, sólo migraciones                       | ✅ ERD v1.2 completo: 51 tablas, 37 enums, 2 migraciones       |
+| Redis + BullMQ                                               | ✅ conexión y registro; Redis además sostiene el rate limiting |
+| Docker para dev                                              | ✅ Postgres 17 + Redis 8                                       |
+| Auth propia                                                  | ✅ sesión opaca en base, argon2id, rate limiting               |
+| OAuth externos (Google, etc.)                                | ⏸ no implementado                                              |
+| Búsqueda en PostgreSQL full-text                             | ⏸ tablas e índices migrados; sin código de búsqueda            |
+| Config Store operativo (`app_settings`, `seller_tiers`)      | ⏸ tablas migradas pero **vacías y sin código que las lea**     |
+| Jobs de negocio en BullMQ                                    | ⏸ infraestructura lista, ningún job todavía                    |
+| Mercado Pago / Correo Argentino                              | ⏸ no implementado                                              |
+| Frontend                                                     | ⏸ placeholder                                                  |
 
 ## Decisiones de diseño de la foundation
 
@@ -90,16 +95,36 @@ requiere `maxRetriesPerRequest: null`.
 consuma eventos externos debe ser idempotente por su cuenta, porque los webhooks
 llegan duplicados y desordenados.
 
-### El schema de Drizzle está vacío a propósito
+### El schema se verifica contra PostgreSQL real, no sólo con tipos
 
-`packages/database/src/schema/index.ts` no exporta ninguna tabla. El ERD v1.0
-está cerrado y es la fuente de verdad, pero traducirlo a Drizzle es una fase
-posterior que todavía no fue autorizada. El archivo documenta el mapeo previsto
-módulo por módulo y las convenciones obligatorias.
+La invariante `ERD = Drizzle = Migration = PostgreSQL` no la garantiza ningún
+análisis estático: `tsc` no sabe nada de un `ON DELETE CASCADE` ni de un índice
+único parcial. Por eso CI levanta PostgreSQL, aplica las migraciones **sobre una
+base vacía** —lo que verifica de paso que las extensiones se creen antes que las
+tablas que las usan (ERD §1.b)— y corre los tests de integración.
 
-## Qué falta para empezar a implementar negocio
+CI incluye además un **drift check**: si alguien toca el schema de Drizzle sin
+generar la migración, `drizzle-kit generate` produce un archivo nuevo y el
+workflow falla mostrando el diff. Ése es exactamente el estado que rompe la
+invariante.
 
-1. Traducir el ERD v1.0 a schema de Drizzle y generar la primera migración.
-2. Definir el módulo de auth (primer módulo real que ejercita el layering).
-3. Resolver las decisiones 🟡 que bloquean cada módulo — ver
-   `docs/04-technical/open-decisions-impact.md`.
+### El rate limiting vive en `lib/`, no en un módulo
+
+`lib/rate-limit.ts` es infraestructura de la app, no dominio: no representa
+ninguna regla de negocio del marketplace y lo va a usar cualquier endpoint
+expuesto, no sólo `auth`. Los umbrales son configuración de seguridad por
+entorno y siguen pendientes de confirmación del owner.
+
+## Qué falta para seguir
+
+1. **Investigar Mercado Pago contra sandbox** (retención de fondos, refunds sin
+   saldo, semántica del split, webhooks). Es 🔵 y su resultado **puede cambiar el
+   ERD**: conviene saberlo antes de construir `orders` y `payments`.
+2. **Config Store operativo**: seed de `app_settings` + lectura tipada + el
+   patrón de snapshot económico (DEC-030/038). Lo necesita toda operación con
+   dinero, así que se construye una vez y antes de la primera orden.
+3. **Catálogo, listings y búsqueda** — el diferencial del producto; está
+   desbloqueado por DEC-041 y DEC-042.
+4. **Aprobación de vendedor**, en cuanto TS-001 esté definida.
+5. **Módulo de notificaciones**: hoy los tokens de verificación se generan pero
+   no se envían, con lo cual fuera de desarrollo nadie puede completar el alta.

@@ -3,7 +3,8 @@
 > Reglas de trabajo para Claude Code dentro de este repositorio.
 > Ámbito: **todo el desarrollo de Offside Store**.
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
-> Estado: sin código todavía (pre-Fase 3). Última actualización: 2026-08-20.
+> Estado: ERD migrado + auth y sellers implementados (ver §19).
+> Última actualización: 2026-08-22.
 
 ---
 
@@ -513,20 +514,42 @@ trabajar en el repositorio equivocado.
 
 ---
 
-## 19. Estado de la implementación (2026-08-20)
+## 19. Estado de la implementación (2026-08-22)
 
-**Foundation técnica construida, sin commitear.** No hay funcionalidades de
-negocio, ni schema de Drizzle, ni migrations.
+**Foundation + modelo de datos + primeros módulos de negocio. Todo commiteado.**
+
+> Esta sección venía desactualizada: afirmaba "schema de Drizzle vacío" y "sin
+> funcionalidades de negocio" cuando el ERD ya estaba migrado y auth funcionaba.
+> Es exactamente el fallo que previene §13. **Actualizar esta sección es parte de
+> terminar un módulo, no una tarea aparte.**
 
 Qué existe en `offsideApp/`:
 
 | | |
 |---|---|
-| `apps/web` | Next.js 16 + React 19. Home placeholder y `/api/health` |
+| `apps/web` | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 11 rutas de API |
 | `packages/config` | validación de entorno con Zod. **No es el Config Store de negocio** (§12) |
-| `packages/database` | Drizzle + Drizzle Kit + cliente Postgres. **Schema vacío a propósito** |
-| `packages/jobs` | Redis, registro de colas y workers de BullMQ. Sin jobs de negocio |
+| `packages/database` | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 2 migraciones aplicadas** |
+| `packages/jobs` | Redis, registro de colas y workers de BullMQ. **Sin jobs de negocio todavía** |
 | `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio |
+
+Módulos de dominio implementados (`apps/web/src/modules/`):
+
+| Módulo | Alcance |
+|--------|---------|
+| `auth` | registro, verificación de email, login, logout, sesión, reset de password, rate limiting |
+| `users` | historial de hechos (`user_history_events`, DEC-036) |
+| `sellers` | alta de perfil (nace en `pending`) e identidad fiscal CUIT/CUIL/CDI con historial |
+
+**De las 51 tablas migradas se usan 7.** El resto está creada y vacía.
+
+**NO implementado:** Mercado Pago, payments, comisiones, Config Store operativo,
+listings, catálogo, búsqueda, carrito, órdenes, envíos, refunds, disputas,
+reviews, reputación, aprobación de vendedor, admin, envío de emails y frontend.
+
+Tests: **105** (57 unitarios + 48 de integración contra PostgreSQL real).
+CI corre ambos, aplica las migraciones sobre una base vacía y verifica que no
+haya drift entre el schema de Drizzle y las migraciones.
 
 Comandos (desde `offsideApp/`): `npm run dev`, `build`, `verify`
 (format + lint + typecheck + test), `test`, `docker:up`, `db:generate`,
@@ -541,9 +564,30 @@ Todo está justificado en
 `offsideApp/docs-implementation/adr/ADR-001-tooling-de-la-foundation.md`, que
 sigue **pendiente de confirmación** del owner.
 
-### Antes de implementar el schema de Drizzle
+Los parámetros operables de auth (`AUTH_SESSION_TTL_HOURS`,
+`AUTH_PASSWORD_MIN_LENGTH`, `AUTH_EMAIL_TOKEN_TTL_HOURS`,
+`AUTH_PASSWORD_RESET_TTL_HOURS` y los tres `AUTH_RATE_LIMIT_*`) son
+**parámetros de seguridad**, no reglas de negocio del marketplace: viven en
+entorno y **también siguen pendientes de confirmación**. La comisión, las
+ventanas de pago/cancelación/refund y los límites del marketplace NO están ahí:
+pertenecen al Config Store (§12) y siguen 🟡.
 
-⚠️ Hay una contradicción documental sin resolver: `configuration-registry.md`
-§12–13 dice que el ERD **no** incluye tablas de configuración y que el modelo
-está 🔴 por diseñar, pero el ERD v1.0 cerrado ya incluye `app_settings` y
-`seller_tiers`. Resolver antes de traducir esa parte del ERD (§4).
+### Decisiones bloqueantes conocidas
+
+Lo que hoy frena el avance, en orden de impacto:
+
+1. **TS-001 — "qué significa identidad verificada"** 🟡. Sin esto no se puede
+   aprobar a ningún vendedor, y `seller_profiles.status` se queda en `pending`
+   para siempre. Bloquea toda la cadena de venta.
+2. **B1 — liberación/retención de fondos en MP Split** 🔵. Es la única
+   mitigación conocida de RISK-F1, el riesgo central del negocio. **Requiere
+   investigación contra la API real; no se asume.**
+3. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()` autoriza
+   sólo por rol. Bloquea la aprobación de `catalog_change_requests` (OQ-F2).
+4. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
+   lanzamiento comercial**. El módulo fiscal está limitado a identificación.
+
+> La contradicción que esta sección señalaba entre `configuration-registry.md`
+> §12–13 y el ERD quedó **resuelta**: el registro fue alineado con DEC-039 y el
+> Config Store está modelado como `app_settings` + `seller_tiers`. Ambas tablas
+> están migradas pero **vacías y sin código que las lea**.

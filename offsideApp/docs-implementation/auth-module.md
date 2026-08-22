@@ -165,11 +165,20 @@ definir**. Implementarlo sería inventar la regla.
 permisos granulares**: DEC-023 los deja 🟡. Cada endpoint administrativo declara
 qué roles acepta.
 
-### 5. Sin rate limiting
+### 5. Rate limiting — ✅ RESUELTO (2026-08-22)
 
-`security-observability-analytics.md` §1 lo pide, pero sus valores están 🟡
-(`configuration-registry.md` §3). No se implementó para no inventar umbrales.
-**Es un riesgo real en login y en `password/forgot`** (fuerza bruta).
+Era una limitación abierta. Se implementó en `lib/rate-limit.ts` separando el
+**mecanismo** (control de seguridad, se implementa) del **umbral** (decisión de
+negocio, sigue 🟡 y vive en entorno como los demás parámetros de auth).
+
+Ventana fija en Redis, con dos dimensiones **asimétricas a propósito**: el
+límite por IP se consume en cada intento; el de cuenta **sólo ante un fallo**,
+porque consumirlo siempre permitiría dejar afuera a un usuario legítimo
+mandando intentos con su email. Falla abierto si Redis no responde —fallar
+cerrado dejaría a todos sin poder entrar— y el email se guarda como HMAC, no en
+claro. Responde 429 con `Retry-After`.
+
+Se aplica también a `register` y `password/reset`: misma clase de endpoint.
 
 ### 6. BR-004 no implementado
 
@@ -179,7 +188,7 @@ email.
 
 ## Tests
 
-**65 en total: 31 unitarios + 34 de integración.**
+**105 en total: 57 unitarios + 48 de integración.**
 
 Unitarios (sin base): hashing argon2id, salt distinta por llamada, rechazo de
 hash corrupto sin lanzar, y todos los schemas de validación.
