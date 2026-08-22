@@ -2,7 +2,7 @@
 
 > Reglas de trabajo para Claude Code dentro de este repositorio.
 > Ámbito: **todo el desarrollo de Offside Store**.
-> Raíz del repo: `Documentos/Offside Store/`.
+> Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
 > Estado: sin código todavía (pre-Fase 3). Última actualización: 2026-08-20.
 
 ---
@@ -32,13 +32,16 @@ documentada: habilita a **informar el problema y pedir decisión**.
 
 ## 1. Estructura real del proyecto
 
-Estructura verificada el 2026-08-20, **después de consolidar el repositorio en la
-raíz** (ver §18). Manda esta estructura, no la conceptual descrita informalmente:
+Estructura verificada el 2026-08-20, **después de mover el monorepo a
+`offsideApp/`** (ver §18). Manda esta estructura, no la conceptual descrita
+informalmente:
 
 ```
-Documentos/Offside Store/      ← **RAÍZ DEL REPOSITORIO GIT** — aquí trabajo
-├── .git/                      ← remote: github.com/joaquinregueiro/offsideApp.git
+C:\Users\tango\Documents\Proyects\Offside Store\   ← **RAÍZ DEL REPO GIT**
+├── .git/                      ← remote: github.com/joaquinregueiro/offsideStore.git
 ├── .gitattributes
+├── .gitignore                 ← reglas del repo (los artefactos, en offsideApp/)
+├── .github/workflows/ci.yml   ← CI: GitHub sólo lee workflows desde la raíz
 ├── CLAUDE.md                  ← este archivo
 ├── docs/                      ← FUENTE DE VERDAD  (conceptualmente "Documentation/")
 │   ├── README.md              ← índice y orden de lectura
@@ -57,15 +60,25 @@ Documentos/Offside Store/      ← **RAÍZ DEL REPOSITORIO GIT** — aquí traba
 │                                configuration-registry,
 │                                security-observability-analytics
 ├── design/                    ← sistema visual (conceptualmente "Design/")
-│   ├── assets/ (icons/, logos/, offside-logo.png, offside-wordmark.png)
+│   ├── assets/icons/          ← icon-autenticado, -balon, -camiseta, -etiqueta,
+│   │                            -favorito, -intercambio
+│   ├── assets/logos/          ← offside-isotipo-bandera, -logo-invertido,
+│   │                            -logo-principal, -wordmark
 │   └── Offside Identidad Visual.html
-└── offsideApp/                ← ⚠️ carpeta VACÍA, residuo de la estructura vieja.
-                                 Ya no es el repo. Se elimina (ver §18).
+│
+└── offsideApp/                ← **RAÍZ DEL MONOREPO** — aquí va TODO el código
+    ├── apps/web/              ← Next.js (storefront + seller + admin + api)
+    │   └── src/{app,lib,modules}
+    ├── packages/              ← config, database, jobs, types, utils
+    ├── docs-implementation/   ← documentación del código (§13)
+    ├── docker-compose.yml     ← PostgreSQL + Redis (desarrollo local)
+    ├── package.json           ← npm workspaces + scripts
+    ├── turbo.json  tsconfig.base.json  eslint.config.mjs  vitest.config.mts
+    └── .env.example  .gitignore  .nvmrc  .prettierrc.json  .prettierignore
 ```
 
-Cuando llegue el código, la aplicación se ubica en esta misma raíz siguiendo el
-monorepo definido en `docs/04-technical/tech-stack.md` §2 (`apps/web`,
-`packages/*`, `turbo.json`) — **no** dentro de `offsideApp/`.
+**Todo el código vive en `offsideApp/`.** Los comandos de npm se ejecutan desde
+ahí, no desde la raíz. Ver `docs/04-technical/tech-stack.md` §2.
 
 Notas importantes:
 
@@ -73,10 +86,11 @@ Notas importantes:
 - `design/` **no** tiene subcarpetas `Brand/ UX/ UI/`; hoy sólo `assets/` y un HTML
   de identidad visual.
 - `DECISIONS.md` está en `docs/DECISIONS.md` (**no** en `04-technical/`).
-- Todas las rutas de este documento son **relativas a la raíz del repo**.
-- El repositorio en GitHub se llama `offsideApp` aunque la carpeta local sea
-  `Offside Store`. Es intencional; no hay que "arreglarlo".
-- La ruta contiene **espacios** y está bajo **OneDrive** (ver §18).
+- Salvo indicación contraria, las rutas de este documento son **relativas a la
+  raíz del repo**. Las de código son relativas a `offsideApp/`.
+- El repositorio en GitHub es `joaquinregueiro/offsideStore`.
+- La ruta contiene **espacios** (`...\Proyects\Offside Store`): entrecomillar
+  siempre en scripts y configuración. Ya **no** está bajo OneDrive (ver §18).
 
 ---
 
@@ -97,14 +111,14 @@ Ante cualquier conflicto, este es el orden (mayor a menor):
 
 La doc oficial no usa CLOSED/PENDING, usa **5 estados**. Mapeo obligatorio:
 
-| Marca | Significado | Cómo lo trato |
-|-------|-------------|---------------|
-| ✅ **DECIDIDO** | Decisión firme | Obligatorio. Se construye sobre ella. |
-| ⚙️ **CONFIGURABLE** | Gobernado desde Admin | El **mecanismo** es obligatorio; el **valor** NO se hardcodea (§12). |
-| 🟡 **PENDIENTE** | Falta definir (interno) | No inventar. Informar antes de implementar solución definitiva. |
-| 🔵 **REQUIERE INVESTIGACIÓN** | Depende de un tercero (MP / Correo Argentino) | No asumir comportamiento externo. Investigar o marcar pendiente. |
-| 🔴 **REQUIERE ASESORAMIENTO PROFESIONAL** | Fiscal / legal | No implementar reglas fiscales o legales por cuenta propia. |
-| 🌐 *(tag)* | Dependencia externa | No se inventan endpoints, campos ni comportamientos. |
+| Marca                                     | Significado                                   | Cómo lo trato                                                        |
+| ----------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| ✅ **DECIDIDO**                           | Decisión firme                                | Obligatorio. Se construye sobre ella.                                |
+| ⚙️ **CONFIGURABLE**                       | Gobernado desde Admin                         | El **mecanismo** es obligatorio; el **valor** NO se hardcodea (§12). |
+| 🟡 **PENDIENTE**                          | Falta definir (interno)                       | No inventar. Informar antes de implementar solución definitiva.      |
+| 🔵 **REQUIERE INVESTIGACIÓN**             | Depende de un tercero (MP / Correo Argentino) | No asumir comportamiento externo. Investigar o marcar pendiente.     |
+| 🔴 **REQUIERE ASESORAMIENTO PROFESIONAL** | Fiscal / legal                                | No implementar reglas fiscales o legales por cuenta propia.          |
+| 🌐 _(tag)_                                | Dependencia externa                           | No se inventan endpoints, campos ni comportamientos.                 |
 
 Documentos anteriores al 2026-08-19 pueden usar 🔴 con el sentido viejo de
 "DECISION REQUIRED": reinterpretar según esta tabla.
@@ -113,17 +127,23 @@ Documentos anteriores al 2026-08-19 pueden usar 🔴 con el sentido viejo de
 
 ## 3. Permisos
 
-### En la raíz del repo, **excepto** `docs/` y `design/` — permitido
+### Dentro de `offsideApp/` — permitido
 
 - crear, modificar y eliminar archivos y carpetas de código
 - instalar dependencias y configurar herramientas
 - ejecutar comandos, tests y migrations
 - crear scripts
-- crear documentación técnica del código en `docs-implementation/` (ver §13)
+- crear documentación técnica del código en `offsideApp/docs-implementation/` (ver §13)
 
-⚠️ Ahora `docs/` y `design/` viven **dentro** del repositorio. Que estén
-versionadas no las vuelve editables: siguen siendo solo lectura. La ventaja es que
-cualquier modificación accidental aparece en `git status` y puede revertirse.
+### En la raíz del repo — permitido con criterio
+
+Sólo lo que **no puede** vivir dentro de `offsideApp/`: `.github/workflows/`
+(GitHub sólo lee workflows desde la raíz), `.gitignore`, `.gitattributes` y este
+`CLAUDE.md`. Nada de código.
+
+⚠️ `docs/` y `design/` viven **dentro** del repositorio. Que estén versionadas
+no las vuelve editables: siguen siendo solo lectura. La ventaja es que cualquier
+modificación accidental aparece en `git status` y puede revertirse.
 
 ### `docs/` — SOLO LECTURA
 
@@ -163,11 +183,11 @@ terceros.
 
 ## 5. Clasificación de cambios (regla de autorización)
 
-| Tipo | Definición | ¿Puedo hacerlo? |
-|------|-----------|-----------------|
-| **MENOR** | No afecta arquitectura, modelo de datos ni reglas de negocio (formato, refactor local, typo, test) | ✅ Sí |
-| **TÉCNICO** | Afecta implementación pero no decisiones de negocio, y cae **dentro** de la arquitectura definida | ✅ Sí, informando qué se hizo |
-| **ARQUITECTÓNICO** | Afecta ERD, arquitectura, contratos de API, integraciones, máquinas de estado, reglas de negocio o seguridad estructural | ❌ NO sin autorización |
+| Tipo               | Definición                                                                                                               | ¿Puedo hacerlo?               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| **MENOR**          | No afecta arquitectura, modelo de datos ni reglas de negocio (formato, refactor local, typo, test)                       | ✅ Sí                         |
+| **TÉCNICO**        | Afecta implementación pero no decisiones de negocio, y cae **dentro** de la arquitectura definida                        | ✅ Sí, informando qué se hizo |
+| **ARQUITECTÓNICO** | Afecta ERD, arquitectura, contratos de API, integraciones, máquinas de estado, reglas de negocio o seguridad estructural | ❌ NO sin autorización        |
 
 Ejemplos de **ARQUITECTÓNICO** (siempre requieren autorización): crear o renombrar
 una tabla, agregar o quitar una columna, cambiar una relación o una FK, agregar un
@@ -228,19 +248,19 @@ Reglas:
 
 Definido en `docs/04-technical/tech-stack.md`. No sustituir ni ampliar sin autorización.
 
-| Capa | Tecnología |
-|------|-----------|
-| Frontend / Backend | **Next.js + TypeScript** (Route Handlers / Server Actions) |
-| Base de datos | **PostgreSQL** |
-| ORM | **Drizzle ORM** |
-| Cache | **Redis** |
-| Jobs / colas | **BullMQ** |
-| Archivos | **S3 compatible** |
-| Búsqueda (Fase 1) | PostgreSQL full-text (`tsvector` + `GIN`) — sin Elastic/Meili/Typesense |
-| Auth | Auth propia + OAuth externos |
-| Pagos | Mercado Pago Split 1:1 |
-| Envíos | API Correo Argentino |
-| Infra | Docker + Coolify |
+| Capa               | Tecnología                                                              |
+| ------------------ | ----------------------------------------------------------------------- |
+| Frontend / Backend | **Next.js + TypeScript** (Route Handlers / Server Actions)              |
+| Base de datos      | **PostgreSQL**                                                          |
+| ORM                | **Drizzle ORM**                                                         |
+| Cache              | **Redis**                                                               |
+| Jobs / colas       | **BullMQ**                                                              |
+| Archivos           | **S3 compatible**                                                       |
+| Búsqueda (Fase 1)  | PostgreSQL full-text (`tsvector` + `GIN`) — sin Elastic/Meili/Typesense |
+| Auth               | Auth propia + OAuth externos                                            |
+| Pagos              | Mercado Pago Split 1:1                                                  |
+| Envíos             | API Correo Argentino                                                    |
+| Infra              | Docker + Coolify                                                        |
 
 **Arquitectura: monolito modular** en monorepo (Turborepo), con capas dentro de
 cada módulo:
@@ -357,9 +377,10 @@ futura.
 
 ## 13. Documentación del código
 
-La documentación de implementación va en **`docs-implementation/`** (raíz del
-repo), nunca dentro de `docs/`, que es solo lectura. Ahí puedo crear
-documentación **exclusivamente de implementación**:
+La documentación de implementación va en **`offsideApp/docs-implementation/`**,
+nunca dentro de `docs/`, que es solo lectura. El nombre evita que se confunda con
+la fuente de verdad. Ahí puedo crear documentación **exclusivamente de
+implementación**:
 
 - arquitectura implementada
 - decisiones técnicas de implementación (ADRs de código)
@@ -379,12 +400,15 @@ Esta documentación **describe cómo está implementado el código**.
 - **No hacer commits automáticamente**, salvo pedido explícito del usuario.
 - **Nunca hacer push automáticamente**, salvo autorización explícita.
 - No eliminar ni sobrescribir trabajo que no haya creado yo.
-- La raíz del repo es `Documentos/Offside Store/`. **`docs/` y `design/` ahora
-  están versionadas junto al código** (ver §18): la fuente de verdad tiene
-  historial y trazabilidad. Siguen siendo solo lectura (§3).
-- Remote: `origin → github.com/joaquinregueiro/offsideApp.git`.
+- La raíz del repo es `C:\Users\tango\Documents\Proyects\Offside Store\`; el
+  código vive en `offsideApp/`. **`docs/` y `design/` están versionadas junto al
+  código** (ver §18): la fuente de verdad tiene historial y trazabilidad. Siguen
+  siendo solo lectura (§3).
+- Remote: `origin → github.com/joaquinregueiro/offsideStore.git`, rama `main`.
 - Nunca crear un `git init` anidado dentro del repo. Un `.git` de más ya causó
   una duplicación de repositorios (§18).
+- Hay **un solo** `.gitignore` por ámbito: el de la raíz cubre entorno y editor;
+  el de `offsideApp/` cubre dependencias y artefactos de build.
 
 ### Cambios existentes
 
@@ -450,17 +474,18 @@ cuando sea necesario.**
 
 ## 18. Notas del entorno (verificadas 2026-08-20)
 
-- Repo git: raíz `Documentos/Offside Store/`, un solo commit (`Initial commit`,
-  `15bf4ea`), remote `origin → github.com/joaquinregueiro/offsideApp.git`,
-  **sin código todavía**. `docs/`, `design/` y `CLAUDE.md` están sin commitear.
-- `docs/` y `design/` **ahora sí están dentro del repositorio**, por lo que la
-  fuente de verdad queda versionada junto al código. Esto resuelve la
-  inconsistencia con `docs/04-technical/tech-stack.md` §2, que ya asumía un
-  monorepo con `docs/` adentro.
-- El proyecto vive en **OneDrive** y la ruta contiene **espacios**
-  (`.../Documentos/Offside Store`). Al configurar herramientas y scripts:
-  entrecomillar rutas y contemplar que la sincronización de OneDrive sobre
-  `node_modules/` puede dar problemas.
+- Repo git: raíz `C:\Users\tango\Documents\Proyects\Offside Store\`, remote
+  `origin → github.com/joaquinregueiro/offsideStore.git`, rama `main`.
+- Historial: `15bf4ea Initial commit` → `926bb22 inicial`. El segundo commit
+  incorpora `docs/`, `design/` y `CLAUDE.md` (40 archivos versionados).
+- **La foundation técnica está construida y sin commitear** (ver §19): monorepo
+  en `offsideApp/`, sin funcionalidades de negocio y sin schema de Drizzle.
+- `docs/` y `design/` están **dentro del repositorio**, por lo que la fuente de
+  verdad queda versionada junto al código.
+- El proyecto **ya no está en OneDrive**: se migró a `Documents\Proyects\`, lo
+  que elimina el riesgo de que la sincronización rompa `node_modules/`.
+- La ruta **sigue conteniendo espacios** (`Proyects\Offside Store`): entrecomillar
+  rutas en scripts, configuración y comandos.
 - Plataforma: Windows. Los comandos que se documenten deben funcionar ahí.
 
 ### Consolidación del repositorio (2026-08-20)
@@ -468,13 +493,57 @@ cuando sea necesario.**
 El proyecto tenía **dos repositorios git distintos** y el contenido anidado un
 nivel de más. Se consolidó así:
 
-| Antes | Después |
-|-------|---------|
-| `Offside Store/offsideApp/.git` (commit `15bf4ea`, **con** remote de GitHub) | → movido a `Offside Store/.git` — **es el repo definitivo** |
-| `Offside Store/Offside Store/.git` (commit `ce72d08`, **sin** remote, `git init` accidental) | → apartado como respaldo fuera del repo; no se borró |
-| `Offside Store/Offside Store/{docs,design,CLAUDE.md,.gitattributes}` | → subidos a la raíz `Offside Store/` |
-| carpeta anidada `Offside Store/Offside Store/` | → eliminada (quedó vacía) |
+| Antes                                                                                        | Después                                                     |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `Offside Store/offsideApp/.git` (commit `15bf4ea`, **con** remote de GitHub)                 | → movido a `Offside Store/.git` — **es el repo definitivo** |
+| `Offside Store/Offside Store/.git` (commit `ce72d08`, **sin** remote, `git init` accidental) | → apartado como respaldo fuera del repo; no se borró        |
+| `Offside Store/Offside Store/{docs,design,CLAUDE.md,.gitattributes}`                         | → subidos a la raíz `Offside Store/`                        |
+| carpeta anidada `Offside Store/Offside Store/`                                               | → eliminada (quedó vacía)                                   |
 
-Pendiente de limpieza: la carpeta vacía `offsideApp/` en la raíz. No se eliminó
-todavía porque era el directorio de trabajo de la sesión que hizo la
-consolidación.
+### Migración fuera de OneDrive (2026-08-20)
+
+Tras consolidar, el proyecto se migró a
+`C:\Users\tango\Documents\Proyects\Offside Store` y se apuntó a un repositorio
+nuevo de GitHub (`offsideStore`, antes `offsideApp`). Verificado: `git fsck`
+sin errores, 39 archivos idénticos a la copia original, working tree limpio y
+commit `926bb22` presente en el remoto.
+
+La copia vieja de OneDrive fue **eliminada por el owner**. Ya no hay riesgo de
+trabajar en el repositorio equivocado.
+
+---
+
+## 19. Estado de la implementación (2026-08-20)
+
+**Foundation técnica construida, sin commitear.** No hay funcionalidades de
+negocio, ni schema de Drizzle, ni migrations.
+
+Qué existe en `offsideApp/`:
+
+| | |
+|---|---|
+| `apps/web` | Next.js 16 + React 19. Home placeholder y `/api/health` |
+| `packages/config` | validación de entorno con Zod. **No es el Config Store de negocio** (§12) |
+| `packages/database` | Drizzle + Drizzle Kit + cliente Postgres. **Schema vacío a propósito** |
+| `packages/jobs` | Redis, registro de colas y workers de BullMQ. Sin jobs de negocio |
+| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio |
+
+Comandos (desde `offsideApp/`): `npm run dev`, `build`, `verify`
+(format + lint + typecheck + test), `test`, `docker:up`, `db:generate`,
+`db:migrate`. Detalle en `offsideApp/docs-implementation/setup-local.md`.
+
+### Decisiones técnicas tomadas sin cobertura documental
+
+`docs/` no define gestor de paquetes, framework de tests, CI ni librería de
+validación. Se eligieron npm workspaces, Vitest, GitHub Actions y Zod, y se
+fijó TypeScript en 5.9.3 porque `typescript-eslint@8` todavía no soporta TS 7.
+Todo está justificado en
+`offsideApp/docs-implementation/adr/ADR-001-tooling-de-la-foundation.md`, que
+sigue **pendiente de confirmación** del owner.
+
+### Antes de implementar el schema de Drizzle
+
+⚠️ Hay una contradicción documental sin resolver: `configuration-registry.md`
+§12–13 dice que el ERD **no** incluye tablas de configuración y que el modelo
+está 🔴 por diseñar, pero el ERD v1.0 cerrado ya incluye `app_settings` y
+`seller_tiers`. Resolver antes de traducir esa parte del ERD (§4).

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# El workflow vive en la raiz del repo porque GitHub solo lee
+# `.github/workflows` desde ahi, pero el monorepo esta en `offsideApp/`.
+defaults:
+  run:
+    working-directory: offsideApp
+
+jobs:
+  verify:
+    name: Verificar
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: offsideApp/.nvmrc
+          cache: npm
+          cache-dependency-path: offsideApp/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Formato
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests unitarios
+        run: npm run test -- --project=unit
+
+      - name: Build
+        run: npm run build
+        env:
+          # Valores ficticios: el build no se conecta a nada, pero la validacion
+          # de entorno (@offside/config) exige que las variables existan.
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          REDIS_URL: redis://localhost:6379
