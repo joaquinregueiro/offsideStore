@@ -1,0 +1,2 @@
+# Utilidades y helpers compartidos por la app web.
+# La logica de negocio va en modules/<modulo>/services, no aca.

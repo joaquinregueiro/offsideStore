@@ -1,0 +1,55 @@
+# =============================================================================
+# Offside Store — servicios de desarrollo local
+# =============================================================================
+# Alcance: SOLO las dependencias de datos (tech-stack.md §5). La app Next.js y
+# el worker BullMQ corren en el host con `npm run dev`; se contenedorizan cuando
+# se despliegue en Coolify, no antes.
+#
+#   docker compose up -d      levantar
+#   docker compose down       detener
+#   docker compose down -v    detener y BORRAR los datos
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: offside-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: offside
+      POSTGRES_PASSWORD: offside
+      POSTGRES_DB: offside_dev
+      # Colacion determinista, independiente del locale del host.
+      POSTGRES_INITDB_ARGS: '--locale=C --encoding=UTF8'
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U offside -d offside_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:8-alpine
+    container_name: offside-redis
+    restart: unless-stopped
+    # appendonly: BullMQ pierde jobs encolados si Redis se reinicia sin persistencia.
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+    name: offside-postgres-data
+  redis-data:
+    name: offside-redis-data

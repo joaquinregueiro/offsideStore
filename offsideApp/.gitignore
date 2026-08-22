@@ -1,0 +1,27 @@
+# === Dependencias ===
+node_modules/
+
+# === Build / cache ===
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# === Entorno (NUNCA commitear secretos — CLAUDE.md §10) ===
+.env
+.env.*
+!.env.example
+
+# === Testing ===
+coverage/
+.vitest/
+
+# === Logs ===
+*.log
+npm-debug.log*
+
+# === Datos locales de Docker ===
+.docker-data/

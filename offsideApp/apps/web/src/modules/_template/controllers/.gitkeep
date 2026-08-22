@@ -1,0 +1,2 @@
+# Controllers: validan el input del borde y traducen a/desde HTTP.
+# No contienen reglas de negocio.

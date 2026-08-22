@@ -1,0 +1,45 @@
+{
+  "name": "offside-store",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Offside Store — marketplace vertical de indumentaria de futbol (monorepo)",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "npm run db:generate --workspace @offside/database",
+    "db:migrate": "npm run db:migrate --workspace @offside/database",
+    "db:studio": "npm run db:studio --workspace @offside/database",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@next/eslint-plugin-next": "^16.3.1",
+    "@types/node": "^24.13.3",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^9.39.5",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.11",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.11"
+  }
+}
