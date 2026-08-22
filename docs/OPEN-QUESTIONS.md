@@ -106,8 +106,10 @@ Categorías:
 ## F. Producto / catálogo
 
 - **OQ-F1:** Matriz fina **"categoría → atributos obligatorios"**.
-- **OQ-F2:** **Gobierno de catálogos** controlados (alta de clubes/marcas/
-  competiciones nuevas; quién aprueba).
+- **OQ-F2 — parcialmente cerrada (DEC-041, 2026-08-21):** el **mecanismo** de alta
+  de catálogos está definido (`catalog_change_requests`, ERD §8.1: propuesta →
+  revisión → aprobación/rechazo). **Sigue abierto: quién aprueba**, que depende de
+  los permisos granulares por rol de **DEC-023**.
 - **OQ-F3:** **Tabla de talles** canónica y su normalización.
 - **OQ-F4:** Definición precisa del flag **retro/vintage**.
 - **OQ-F5:** **Moneda(s)** soportada(s) (hipótesis: ARS).

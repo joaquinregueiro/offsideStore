@@ -142,8 +142,16 @@ filtros consistentes, evitar duplicados ("River" vs "River Plate"), analítica.
 
 🟡 **HIPÓTESIS:** los catálogos se semillan (seed) para el MVP con los clubes,
 selecciones y marcas más frecuentes de Argentina + principales ligas/copas
-internacionales. Alta de nuevos ítems: propuesta del vendedor → aprobación admin
-(para no ensuciar el catálogo). Mecanismo fino 🟡 a definir.
+internacionales.
+
+✅ **Alta de nuevos ítems — mecanismo DECIDIDO (DEC-041, 2026-08-21):** propuesta
+del usuario → revisión administrativa → aprobación o rechazo, mediante la tabla
+`catalog_change_requests` (ERD §8.1). La propuesta **no** modifica el catálogo:
+sólo la aprobación crea la entidad. Estados: `PENDING | APPROVED | REJECTED`.
+
+🟡 Sigue pendiente **quién aprueba**: depende de los permisos granulares por rol
+(DEC-023). La tabla no se acopla a un rol; la autorización vive en la capa de
+permisos.
 
 ### 4.4 Configuración de publicaciones vs datos de la publicación — ⚙️ (DEC-013)
 
@@ -202,10 +210,20 @@ Estrategia inicial en **PostgreSQL** (DEC-012). Debe soportar:
 ### 5.3 Implementación (referencia; detalle en architecture.md / tech-stack.md)
 
 ✅ **DECIDIDO (DEC-012):** búsqueda inicial en **PostgreSQL** (full-text `tsvector`
-+ índices + filtros). La **tolerancia a typos y sinónimos** se implementa con
-recursos de PostgreSQL (p. ej. `pg_trgm`, diccionarios/alias) — 🔵 técnica fina a
-validar. El **motor de búsqueda externo** queda **fuera del MVP** (`mvp-scope.md`);
-el modelo se mantiene preparado para migrar.
++ índices + filtros). El **motor de búsqueda externo** queda **fuera del MVP**
+(`mvp-scope.md`); el modelo se mantiene preparado para migrar.
+
+✅ **Técnica fina CERRADA (DEC-042, 2026-08-21)** — ya no es 🔵:
+
+- Configuración de text search **`spanish`**, con **`unaccent`** habilitado.
+- Tolerancia a typos con **`pg_trgm`** + índices GIN trigram sobre `title`,
+  `player_name` y `model` (ERD §9.1).
+- `listings.search_vector` lo puebla el **Service de Listings** (no una columna
+  generada ni un trigger), incorporando los `aliases` de los catálogos (PS-024).
+- Los **pesos de ranking (PS-021) permanecen ⚙️ configurables**, nunca en PL/pgSQL.
+- Reindexación por **job de BullMQ** cuando cambian datos de catálogo.
+
+Detalle en `04-technical/database-design.md` §19.2.
 
 ## 6. Casos de uso
 
@@ -243,11 +261,13 @@ BR-014; `BORRADOR` para publicaciones incompletas aún no publicadas).
 ## 10. Decisiones pendientes (DECISION REQUIRED)
 
 - 🔴 Matriz fina "categoría → atributos obligatorios".
-- 🔴 Gestión/gobierno de catálogos controlados (alta de clubes/marcas nuevos).
+- 🟡 Gobierno de catálogos controlados — **estructura cerrada por DEC-041**
+  (§4.3 y ERD §8.1); sigue pendiente **quién aprueba** (permisos de DEC-023).
 - 🔴 Tabla de talles canónica y su normalización.
 - 🔴 Definición precisa del flag retro/vintage y sus requisitos (ligado a
   DEC-010 autenticidad).
-- 🔴 Motor de búsqueda concreto (ligado a DEC-012 stack).
+- ✅ Motor de búsqueda — **cerrado**: PostgreSQL (DEC-012) y técnica fina por
+  **DEC-042** (§5.3).
 
 ## 11. Riesgos
 

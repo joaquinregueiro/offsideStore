@@ -46,17 +46,30 @@ src/
 ```
 
 ### Monorepo (Turborepo)
+
+> **Actualizado 2026-08-20 por autorización explícita del owner.** La versión
+> anterior de este diagrama ubicaba el monorepo en la raíz del repositorio, con
+> `docs/` adentro. Se movió el monorepo a `offsideApp/`, dejando `docs/` y
+> `design/` como carpetas hermanas en la raíz. **Es un cambio de ubicación en el
+> repositorio, no un cambio de arquitectura:** el monorepo, sus packages y el
+> layering por módulo siguen exactamente igual.
+
 ```
-offside-store/
-├── apps/
-│   └── web/                  # Next.js (storefront + seller + admin + api)
-├── packages/
-│   ├── database/  config/  types/  utils/
-├── docs/
-├── docker-compose.yml
-├── package.json
-└── turbo.json
+Offside Store/                # raíz del repositorio git
+├── docs/                     # fuente de verdad (solo lectura)
+├── design/                   # sistema visual (solo lectura)
+├── .github/workflows/        # CI (GitHub solo lee workflows desde la raíz)
+└── offsideApp/               # raíz del MONOREPO
+    ├── apps/
+    │   └── web/              # Next.js (storefront + seller + admin + api)
+    ├── packages/
+    │   ├── database/  config/  types/  utils/
+    ├── docs-implementation/  # documentación del código (no reemplaza a docs/)
+    ├── docker-compose.yml
+    ├── package.json
+    └── turbo.json
 ```
+
 Preparado para que luego aparezcan `apps/admin` y `apps/worker` sin reorganizar.
 
 ### Capas dentro de cada módulo (lógica FUERA de los Route Handlers)

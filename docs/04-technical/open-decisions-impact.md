@@ -187,7 +187,14 @@ tablas podría afectar**, **qué decisión necesitamos**, y **prioridad**:
 
 ## E. Configuración (transversal a DEC-013)
 
-### E1. Config Store (DEC-038) — 🔴 BLOQUEANTE (modelo de datos)
+### E1. Config Store (DEC-038) — ✅ RESUELTO por DEC-039
+
+> **Actualizado 2026-08-20.** Esta sección estaba marcada 🔴 BLOQUEANTE por el
+> modelo de datos. **DEC-039 (cierre del ERD v1.0, 2026-08-19) lo resolvió**
+> adoptando la Alternativa C. No es una decisión nueva: se alinea el texto con la
+> decisión ✅ ya tomada. Lo único que sigue abierto son los **valores** y el
+> **orden fino de precedencia** (🟦, no bloqueante para modelar).
+
 - **Concepto CERRADO (DEC-038):** existirá un **Config Store administrativo**,
   **simple y controlado** para el MVP (no un motor genérico complejo), para cambiar
   parámetros de negocio sin código (comisión default, comisión por `SELLER_TIER`,
@@ -195,11 +202,16 @@ tablas podría afectar**, **qué decisión necesitamos**, y **prioridad**:
   **Regla firme:** toda config que afecte una transacción económica se **snapshotea
   dentro de la transacción** (`commission_rate_at_transaction`, `commission_amount`,
   …); **nunca** se recalcula lo histórico (DEC-030).
-- **Qué queda 🟡:** el **modelo de datos** del store (clave-valor tipado vs tablas
-  por dominio), alcance (global / por `SELLER_TIER` / por categoría) y versionado/
-  auditoría de cambios.
-- **Tablas (potencial, NO creadas):** `app_settings`/`config_*` + auditoría.
-- **Ref:** `configuration-registry.md`, DEC-038.
+- **Modelo de datos — ✅ CERRADO (DEC-039, Alternativa C):** key-value acotado y
+  tipado (`app_settings`) para lo simple + tabla de dominio (`seller_tiers`) para
+  lo relacional/rico. Alcance resuelto por la columna `scope`
+  (global / seller_tier / category). Versionado por columna `version` + registro
+  en `audit_log`.
+- **Tablas (EN EL ERD v1.0):** `app_settings` (§17.1) y `seller_tiers` (§7.1).
+- **Qué queda 🟦:** los **valores** concretos y el **orden fino de precedencia**
+  (publicación > categoría > seller_tier > global).
+- **Ref:** `database-design.md` §17.1 y §7.1, `configuration-registry.md`,
+  DEC-038, DEC-039.
 
 ## F. Engagement (nuevas entidades)
 

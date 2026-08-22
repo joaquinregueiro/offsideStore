@@ -149,14 +149,33 @@ eliminar.
 
 ## 12. Impacto en el sistema (resumen)
 
-Todo esto requiere un **almacén de configuración** (aún no modelado) — ver
-`open-decisions-impact.md` §E1 (🔴 bloqueante para lo configurable). El ERD actual
-**no** incluye tablas de configuración; se decidirá su forma (clave-valor tipado vs
-tablas por dominio) y su **versionado/auditoría**.
+> **Actualizado 2026-08-20.** Esta sección afirmaba que el almacén de
+> configuración estaba "aún no modelado" y que "el ERD actual **no** incluye
+> tablas de configuración". Ambas afirmaciones quedaron **superadas por DEC-039**
+> (cierre del ERD v1.0, 2026-08-19), que adopta la **Alternativa C**. No es una
+> decisión nueva: se alinea el texto con la decisión ✅ ya tomada.
+
+El almacén de configuración **ya está modelado** en el ERD v1.0:
+
+- **`app_settings`** (`database-design.md` §17.1) — key-value **acotado y tipado**
+  para parámetros simples, con `scope` (global / seller_tier / category),
+  `value jsonb`, `value_type` y `version`.
+- **`seller_tiers`** (`database-design.md` §7.1) — lo relacional/rico vive en
+  tabla de dominio, no en el key-value.
+- **Versionado y auditoría:** columna `version` + registro en `audit_log`.
+
+Es decir, la pregunta "clave-valor tipado **vs** tablas por dominio" se resolvió
+como **ambas**: key-value para lo simple, tabla de dominio para lo rico.
+
+Sigue vigente la regla firme de DEC-030/DEC-038: toda configuración que afecte
+una transacción económica se **snapshotea dentro de la transacción** y **nunca**
+se recalcula lo histórico con la configuración actual.
 
 ## 13. Estado
 
 - ✅ **DEC-013:** principio de configurabilidad.
-- 🟡 **Valores por defecto** de casi todos los parámetros.
-- 🔴 **Modelo de almacenamiento** de la configuración (a diseñar antes de
-  implementar lo configurable).
+- ✅ **Modelo de almacenamiento** — cerrado por **DEC-039** (Alternativa C):
+  `app_settings` + `seller_tiers`. Ver `database-design.md` §17.1 y §7.1.
+- 🟦 **Valores por defecto** de casi todos los parámetros, y el **orden fino de
+  precedencia** (publicación > categoría > seller_tier > global). La estructura
+  ya soporta cargarlos desde Admin; los valores no se inventan desde el código.

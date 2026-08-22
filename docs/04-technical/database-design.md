@@ -15,6 +15,34 @@
 > decisiones de negocio PENDING no se inventan; los campos afectados quedan
 > marcados 🟦 y su semántica se resuelve después (§22).
 
+> ## ⚠️ ERD v1.1 — actualizado 2026-08-21 (por autorización explícita del owner)
+>
+> v1.0 quedó cerrado el 2026-08-19. Esta actualización **no cambia ninguna
+> decisión de negocio de v1.0**: cierra dos gaps detectados al traducir el ERD a
+> Drizzle. Cambios (detalle en §28):
+>
+> 1. **`catalog_change_requests`** — era la única tabla sin definición de
+>    columnas. Se define su estructura y su ciclo de vida (**DEC-041**, §8.1).
+> 2. **Búsqueda** — se cierra la técnica que estaba 🔵: `spanish` + `unaccent` +
+>    `pg_trgm`, `search_vector` generado por el Service (**DEC-042**, §19.2).
+> 3. **Enums: 33 → 35** (`catalog_request_status`, `catalog_target_type`).
+> 4. **Extensiones de PostgreSQL requeridas** — nueva §1.b.
+>
+> El resto de v1.0 permanece **sin cambios**. Tablas: siguen siendo **50**.
+
+> ## ⚠️ ERD v1.2 — actualizado 2026-08-21 (por autorización explícita del owner)
+>
+> Documenta el módulo de **identidad fiscal del vendedor**, que ya estaba
+> implementado y dejaba el ERD desincronizado. Cambios (detalle en §29):
+>
+> 1. **`seller_tax_profiles`** — nueva tabla (§7.5). Tablas: 50 → **51**.
+> 2. **Enums: 35 → 37** (`tax_id_type`, `tax_verification_status`).
+>
+> **Alcance estricto: SOLO identificación fiscal.** No se modela nada de
+> percepciones, retenciones, comisiones, snapshots fiscales de órdenes ni
+> tablas de ARCA — eso sigue 🔴 bajo DEC-011 (`legal.md` §2). El resto de v1.1
+> permanece **sin cambios**.
+
 Convención de marcas: ✅ estable · 🟦 estructura lista pero **semántica/valores
 PENDING** · 🌐 dependencia externa (MP/Correo, no inventar).
 
@@ -37,6 +65,27 @@ PENDING** · 🌐 dependencia externa (MP/Correo, no inventar).
 | **Índices** | PK + únicos explícitos; FKs indexadas; facetas de búsqueda en `listings`. |
 | **IDs externos** | Terceros (MP, Correo) como `text` en `*_external_id`/`mp_*_id`, nunca PK propia; el **estado crudo** se conserva (`mp_status`/`raw`). |
 
+## 1.b Extensiones de PostgreSQL requeridas (v1.1)
+
+El modelo depende de tres extensiones. **La primera migración debe crearlas antes
+de las tablas que las usan**; ninguna herramienta las genera automáticamente.
+
+```sql
+CREATE EXTENSION IF NOT EXISTS citext;    -- users.email (§5.1)
+CREATE EXTENSION IF NOT EXISTS unaccent;  -- búsqueda: acentos (§19.2)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;   -- búsqueda: tolerancia a typos (§19.2)
+```
+
+| Extensión | Para qué | Si falta |
+|-----------|----------|----------|
+| `citext` | `users.email` case-insensitive | falla la creación de `users` |
+| `unaccent` | normalizar acentos en la búsqueda en español | la búsqueda distingue "camiseta"/"camisetá" |
+| `pg_trgm` | índices trigram → tolerancia a errores de escritura (PS-020.b) | no se pueden crear los índices GIN trigram de §9.1 |
+
+⚠️ `CREATE EXTENSION` requiere privilegios elevados. Verificar en el entorno de
+despliegue (Coolify) que el rol de la aplicación pueda crearlas, o pedir que se
+creen previamente.
+
 ---
 
 ## 2. Módulos y mapa de tablas (v1.0)
@@ -45,7 +94,7 @@ PENDING** · 🌐 dependencia externa (MP/Correo, no inventar).
 |--------|--------|
 | **auth** | `users`, `sessions`, `oauth_accounts`, `email_verification_tokens`, `password_reset_tokens` |
 | **users** | `user_addresses`, `identity_verifications`, `user_history_events` ⭐, `user_level_history` ⭐, `user_risk_history` ⭐(ex `seller_risk_history`) |
-| **sellers** | `seller_profiles`, `seller_tiers` ⭐, `mercadopago_accounts`, `seller_reputations` (cache derivado) |
+| **sellers** | `seller_profiles`, `seller_tiers` ⭐, `mercadopago_accounts`, `seller_reputations` (cache derivado), `seller_tax_profiles` ⭐ (v1.2) |
 | **catalog** | `categories`, `clubs`, `national_teams`, `brands`, `competitions`, `countries`, `seasons`, `size_charts`, `catalog_change_requests` |
 | **listings** | `listings`, `listing_images`, `listing_price_history` |
 | **cart/favorites** | `carts`, `cart_items`, `favorites` |
@@ -100,7 +149,27 @@ risk_severity           : LOW | MEDIUM | HIGH
 risk_source             : SYSTEM | ADMIN
 notification_type       : order | payment | shipment | dispute | price_alert | system
 config_scope            : global | seller_tier | category
+catalog_request_status  : PENDING | APPROVED | REJECTED                               (DEC-041, v1.1)
+catalog_target_type     : club | national_team | brand | competition | country | season | size_chart   (DEC-041, v1.1)
+tax_id_type             : CUIT | CUIL | CDI                                           (v1.2, §7.5)
+tax_verification_status : PENDING | VERIFIED | REJECTED                               (v1.2, §7.5)
 ```
+
+> **`tax_id_type`** — no se asume que todo vendedor tenga CUIT: una persona física
+> sin actividad comercial puede tener CUIL, y CDI aplica a quien no tiene ninguno
+> de los dos. Por eso hay `tax_id_type` + `tax_id`, y **no** una columna `cuit`.
+> **`tax_verification_status`** es el resultado de la verificación contra la
+> **fuente oficial**, no de la validación sintáctica. Hoy sólo `PENDING` es
+> alcanzable: no hay integración fiscal. `VERIFIED`/`REJECTED` se declaran ahora
+> para evitar un `ALTER TYPE` posterior (§26.1).
+
+> **`catalog_request_status` NO reutiliza `moderation_status`** (DEC-041): moderar
+> una publicación y gobernar el catálogo son conceptos distintos, y `SUSPENDED` no
+> tiene sentido para una solicitud.
+> **`catalog_target_type`** contiene exactamente los **catálogos controlados** que
+> lista `product-specification.md` §4.3 (clubes, selecciones, marcas,
+> competiciones, países, temporadas, tabla de talles). **No** incluye `categories`,
+> que es un conjunto fijo respaldado por el enum `garment_category` y no se propone.
 
 > **`seller_tier` NO es enum** — es la tabla `seller_tiers` (DEC-037), para poder
 > configurar tiers sin migración. 🟦 sus valores concretos no se definen todavía.
@@ -360,16 +429,120 @@ exponer por API. 🌐 vida/rotación de tokens a verificar.
 | score | numeric(6,2) | **Derivado, no autoridad** (DEC-036); nullable/recomputable. |
 | computed_at | timestamptz | Última recomputación. |
 
+### 7.5 `seller_tax_profiles` ⭐ (v1.2) — identidad fiscal del vendedor
+
+Identificación fiscal declarada por el vendedor y, cuando exista la integración,
+el resultado de verificarla contra la fuente oficial.
+
+**Alcance: SOLO identificación.** No modela percepciones, retenciones,
+comisiones ni comprobantes: eso sigue 🔴 bajo DEC-011 (`legal.md` §2).
+
+| Columna | Tipo | Null | Default | Notas |
+|---------|------|------|---------|-------|
+| id | uuid | no | gen_random_uuid() | PK |
+| seller_id | uuid | no | — | FK→seller_profiles (RESTRICT). |
+| tax_id_type | tax_id_type | no | — | CUIT / CUIL / CDI. Lo **declarado**. |
+| tax_id | text | no | — | **Normalizado: sólo dígitos** (`20-12345678-6` → `20123456786`). El formateo es de la UI. |
+| verification_status | tax_verification_status | no | 'PENDING' | Resultado de la verificación contra la **fuente oficial**. |
+| source | text | sí | — | Qué fuente respondió. Null mientras no haya integración. |
+| checked_at | timestamptz | sí | — | Cuándo se consultó. Null mientras no haya integración. |
+| tax_condition | text | sí | — | Qué dijo la fuente. **`text` y NO enum**: los valores los define la fuente y todavía no se conocen. |
+| valid_from | timestamptz | no | now() | Inicio de vigencia. |
+| valid_to | timestamptz | sí | — | **Null = fila VIGENTE.** Se completa al reemplazarla. |
+| created_at | timestamptz | no | now() | |
+| updated_at | timestamptz | sí | — | |
+
+Índices: `UNIQUE(seller_id) WHERE valid_to IS NULL`, `INDEX(seller_id)`,
+`INDEX(verification_status)`, `INDEX(tax_id)`.
+
+**Historial (sin segunda tabla).** La condición fiscal de una persona cambia con
+el tiempo, así que la tabla es append-only por diseño:
+
+- puede existir **más de un registro histórico** por vendedor;
+- sólo puede existir **uno vigente**;
+- el vigente es el que tiene **`valid_to IS NULL`**;
+- los anteriores se **cierran** estableciendo `valid_to`; nada se borra ni se
+  sobrescribe.
+
+El índice único parcial es lo que garantiza la unicidad del vigente.
+
+**Separación de responsabilidades — no mezclar:**
+
+| | Qué responde |
+|---|---|
+| `tax_id_type` + `tax_id` | lo que **declaró** el vendedor |
+| `verification_status` | si la **fuente oficial** lo confirmó |
+| `tax_condition` | **qué dijo** esa fuente |
+
+Que un identificador pase la validación sintáctica (formato + dígito
+verificador) **no lo vuelve verificado**.
+
+Reglas:
+
+- Cargar identidad fiscal **NO aprueba al vendedor**: `seller_profiles.status`
+  sigue en `pending`. La aprobación es un paso aparte y depende de TS-001 (🟡).
+- ⚠️ **`tax_condition` NO deriva comisiones ni percepciones.** La identidad
+  fiscal y las reglas de comisión son conceptos desacoplados: el módulo fiscal
+  identifica al vendedor, y `payments` decidirá después qué hacer con esa
+  información. La dependencia va `payments → fiscal`, nunca al revés.
+- No se pide DNI, foto, selfie ni documentación adicional.
+
+🔵 La integración con la fuente fiscal (ARCA) **no está implementada**: servicio,
+credenciales, ambientes y cadencia de refresco quedan por investigar.
+
 ---
 
 ## 8. Módulo CATALOG
 
-Sin cambios funcionales vs v0.1. Forma común: `id, name, slug UNIQUE, aliases text[],
-is_active, timestamps`. Tablas: `categories` (`code garment_category UNIQUE`,
-`required_attributes jsonb` 🟦 OQ-F1), `clubs`, `national_teams`, `brands`,
-`competitions`, `countries` (`iso_code char(2) UNIQUE`), `seasons`
-(`label UNIQUE`), `size_charts` (🟦 OQ-F3), `catalog_change_requests` (alta
-propuesta→aprobada por admin).
+Forma común: `id, name, slug UNIQUE, aliases text[], is_active, timestamps`.
+Tablas: `categories` (`code garment_category UNIQUE`, `required_attributes jsonb`
+🟦 OQ-F1), `clubs`, `national_teams`, `brands`, `competitions`, `countries`
+(`iso_code char(2) UNIQUE`), `seasons` (`label UNIQUE`), `size_charts` (🟦 OQ-F3).
+
+`catalog_change_requests` **no** sigue la forma común: se define en §8.1.
+
+### 8.1 `catalog_change_requests` ⭐ (DEC-041, v1.1)
+
+Solicitud de **alta** de un ítem de catálogo controlado. Existe para que un
+vendedor pueda proponer un club/marca/competición que falta **sin escribir
+directamente** en las tablas de catálogo — evitando "datos sucios", que
+`product-specification.md` §11 identifica como el riesgo que **mata el
+diferencial** de la búsqueda facetada.
+
+**Regla dura: la solicitud NO modifica el catálogo.** Sólo la **aprobación** crea
+la entidad correspondiente, y el `id` creado se guarda en `created_entity_id`.
+
+| Columna | Tipo | Null | Default | Notas |
+|---------|------|------|---------|-------|
+| id | uuid | no | gen_random_uuid() | PK |
+| target_type | catalog_target_type | no | — | A qué catálogo apunta. |
+| payload | jsonb | no | — | **Snapshot inmutable** de la propuesta original, tal como se envió. No cambia aunque luego se edite la entidad creada. |
+| requested_by | uuid | no | — | FK→users. Quién propuso. |
+| status | catalog_request_status | no | 'PENDING' | PENDING → APPROVED \| REJECTED. |
+| reviewed_by | uuid | sí | — | FK→users. Null hasta que se revise. |
+| reviewed_at | timestamptz | sí | — | Null hasta que se revise. |
+| review_note | text | sí | — | Motivo de la resolución. Obligatorio al rechazar (validado en app). |
+| created_entity_id | uuid | sí | — | Entidad creada al aprobar. **Sin FK**: la tabla destino depende de `target_type` (referencia polimórfica, igual que `audit_log.entity_id`). |
+| created_at | timestamptz | no | now() | |
+| updated_at | timestamptz | sí | — | |
+
+Índices: `INDEX(status)`, `INDEX(requested_by)`, `INDEX(target_type)`.
+
+Reglas:
+
+- **Autorización:** quién puede crear solicitudes y quién puede aprobarlas se
+  resuelve en la **capa de permisos** (roles de DEC-023), **no** en el modelo de
+  datos. Por eso `requested_by` apunta a `users` y no a `seller_profiles`: la
+  tabla no se acopla al rol.
+- Toda resolución (aprobación o rechazo) → `audit_log` (AR-001).
+- `payload` es `jsonb` porque la forma varía según `target_type`: un club no
+  tiene los mismos campos que una temporada.
+- No se hard-deletea: es un registro de decisiones.
+
+🟦 Fuera del MVP (no modelados): detección de duplicados (`duplicate_of_id`),
+evidencia adjunta, SLA de revisión, y propuestas de **edición**/**fusión** de
+ítems existentes — hoy el alcance es **sólo alta** (`product-specification.md`
+§4.3).
 
 ---
 
@@ -424,6 +597,10 @@ Fase 2 §6); `moderation_status` es **independiente** de `status`.
 `INDEX(season_id)`, `INDEX(price_amount)`, `INDEX(condition)`, `INDEX(authenticity)`,
 `INDEX(is_retro)`, `GIN(search_vector)`, `GIN(extra_attributes)`; compuestos
 `(status, category_id, club_id)`, `(status, price_amount)`.
+**Trigram (v1.1, DEC-042):** `GIN(title gin_trgm_ops)`,
+`GIN(player_name gin_trgm_ops)`, `GIN(model gin_trgm_ops)` — habilitan la
+tolerancia a errores de escritura (PS-020.b). Se eligen los campos **cortos y de
+alta señal**; `description` queda **excluida** a propósito por costo de índice.
 CHECK: `stock >= 0`, `price_amount > 0`.
 Reglas: comprable sólo si `status='active'` **y** `moderation_status='APPROVED'` **y**
 `stock ≥ 1`. Cambios de `price_amount`/`authenticity`/`condition` →
@@ -741,11 +918,46 @@ before jsonb, after jsonb, metadata jsonb, created_at`.
 `INDEX(created_at)`. No update/delete. Obligatorio en dinero, sanciones, disputas,
 credenciales MP, cambios de nivel/riesgo/tier y **config**.
 
-### 19.2 Búsqueda (PostgreSQL)
-`listings.search_vector` (`GIN`) desde title/description/player_name/model + aliases
-de catálogos; facetas por columnas indexadas; sinónimos por `aliases[]`; tolerancia
-a typos con `pg_trgm` (🔵 técnica a validar). Modelo preparado para migrar a motor
-externo (post-MVP).
+### 19.2 Búsqueda (PostgreSQL) — ✅ técnica cerrada (DEC-042, v1.1)
+
+`listings.search_vector` (`GIN`) desde title/description/player_name/model +
+aliases de catálogos; facetas por columnas indexadas; sinónimos por `aliases[]`.
+Modelo preparado para migrar a motor externo (post-MVP).
+
+Lo que estaba 🔵 ("técnica a validar") queda **decidido**:
+
+| Punto | Decisión |
+|-------|----------|
+| Configuración de text search | **`spanish`** |
+| Acentos | **`unaccent` habilitado** |
+| Tolerancia a typos | **`pg_trgm` habilitado** + índices GIN trigram (§9.1) |
+| Quién puebla `search_vector` | **el Service de Listings**, desde la aplicación |
+| Pesos de ranking | **configurables** (⚙️ `app_settings`, PS-021). **Nunca** hardcodeados en triggers PL/pgSQL |
+| Alias de catálogo desactualizados | **job de BullMQ** que reindexa los listings afectados |
+
+**Por qué NO columna generada:** una `GENERATED` sólo puede leer columnas **de su
+propia fila**, y el vector debe incorporar los `aliases` de las tablas de catálogo
+(PS-024). Una columna generada no puede hacerlo. *(Nota técnica:
+`to_tsvector(regconfig, text)` sí es `IMMUTABLE`, así que la limitación es el
+acceso cross-table, no la volatilidad.)*
+
+**Por qué NO trigger:** podría hacer el JOIN, pero metería los **pesos del
+ranking** —que PS-021 define como ⚙️ configurables— dentro de PL/pgSQL, donde no
+se testean ni se editan desde Admin. Contradice el layering de `tech-stack.md` §2.
+
+**Contrato del Service de Listings:**
+
+1. Compone `search_vector` con `setweight`, incorporando los campos de §9.1 y los
+   `aliases` de las entidades de catálogo relacionadas.
+2. Lo escribe en **todo** camino que cree o modifique un listing (punto único de
+   escritura).
+3. Cuando cambian `aliases` u otros datos relevantes de un catálogo, encola un job
+   de **reindexación** de los listings afectados.
+
+🟦 Pendiente menor: si la búsqueda por nombre de catálogo con typo (ej. "rvier"
+→ club "River Plate") no alcanza con el trigram de `listings.title`, habrá que
+agregar índices trigram sobre los `name` de las tablas de catálogo. Se evalúa al
+implementar búsqueda; no se agregan preventivamente.
 
 ---
 
@@ -850,27 +1062,29 @@ muchos hechos); `users.risk_level` = **estado actual**. Ninguna tabla se elimina
 
 ---
 
-## 24. Lista de tablas (50) y de enums (33)
+## 24. Lista de tablas (51 en v1.2) y de enums (37 en v1.2)
 
 **Tablas:** users, sessions, oauth_accounts, email_verification_tokens,
 password_reset_tokens, user_addresses, identity_verifications, user_history_events,
 user_level_history, user_risk_history, seller_tiers, seller_profiles,
-mercadopago_accounts, seller_reputations, categories, clubs, national_teams, brands,
+mercadopago_accounts, seller_reputations, seller_tax_profiles, categories, clubs, national_teams, brands,
 competitions, countries, seasons, size_charts, catalog_change_requests, listings,
 listing_images, listing_price_history, carts, cart_items, favorites, orders,
 order_items, order_status_history, payments, payment_splits, payment_webhook_events,
 refunds, chargebacks, seller_liabilities, reconciliation_records, shipments,
 shipment_tracking_events, disputes, dispute_evidences, dispute_actions, reviews,
 risk_events, sanctions, app_settings, notifications, audit_log.
-*(50 entidades incluyendo las nuevas; "40" del banner original queda superado.)*
+*(51 con seller_tax_profiles de v1.2; 50 en v1.1; "40" del banner original queda superado.)*
 
-**Enums (33):** user_status, user_level, risk_level, admin_role, identity_status,
+**Enums (35 en v1.1 — los 33 de v1.0 + `catalog_request_status` y
+`catalog_target_type`, DEC-041):** user_status, user_level, risk_level, admin_role, identity_status,
 seller_status, mp_connection_status, listing_status, moderation_status,
 garment_category, kit_type, sleeve, version_type, item_condition, authenticity,
 order_status, payment_status, refund_type, refund_status, seller_liability_status,
 shipment_status, dispute_reason, dispute_status, dispute_resolution, sanction_type,
 actor_type, evidence_uploader, history_event_type, **risk_type**, **risk_severity**,
-**risk_source**, notification_type, config_scope.
+**risk_source**, notification_type, config_scope, **catalog_request_status**,
+**catalog_target_type**, **tax_id_type**, **tax_verification_status**.
 
 ---
 
@@ -925,5 +1139,68 @@ actor_type, evidence_uploader, history_event_type, **risk_type**, **risk_severit
 1. Seed simple de `app_settings` (comisión default, ventanas) y de `seller_tiers`
    cuando DEC-037 defina valores.
 2. Definir fórmulas nivel/riesgo/reputación desde `user_history_events`.
-3. Traducir a **Drizzle schema** + primera migración (fase posterior).
+3. Traducir a **Drizzle schema** ✅ (hecho) + **primera migración** (siguiente paso).
 4. Semillar catálogos + ~100 camisetas de prueba.
+
+---
+
+## 28. Cambios de v1.0 → v1.1 (2026-08-21)
+
+Actualización autorizada explícitamente por el owner para cerrar dos gaps
+detectados al traducir el ERD a Drizzle. **Ninguna decisión de negocio de v1.0
+cambió.**
+
+| # | Sección | Cambio |
+|---|---------|--------|
+| 1 | §1.b **(nueva)** | Extensiones requeridas: `citext`, `unaccent`, `pg_trgm`, con el orden de creación en la primera migración. |
+| 2 | §3 | +2 enums: `catalog_request_status` y `catalog_target_type` (**DEC-041**). Total 33 → **35**. |
+| 3 | §8 / §8.1 **(nueva)** | `catalog_change_requests` pasa de una línea de descripción a **tabla definida** (columnas, índices, ciclo de vida, reglas). Era la única tabla del ERD sin columnas. |
+| 4 | §9.1 | +3 índices GIN trigram en `listings` (`title`, `player_name`, `model`) para PS-020.b. |
+| 5 | §19.2 | La técnica de búsqueda pasa de 🔵 a ✅: `spanish` + `unaccent` + `pg_trgm`; `search_vector` poblado por el **Service**; reindexación por **BullMQ**; pesos ⚙️ configurables (**DEC-042**). |
+| 6 | §24 | Conteo de enums actualizado. |
+
+**Sin cambios:** las 50 tablas, todos los enums de v1.0, las convenciones (§1),
+los snapshots económicos, los ciclos de vida separados, y las decisiones
+DEC-027…DEC-040.
+
+### Qué NO cerró esta actualización
+
+- **OQ-F2 sigue parcialmente abierta.** Se definió la **estructura** del gobierno
+  de catálogos, pero **quién aprueba** queda delegado a la capa de permisos, que
+  depende de los permisos granulares 🟡 de **DEC-023**.
+- Los 🟦 de §22 siguen igual.
+
+---
+
+## 29. Cambios de v1.1 → v1.2 (2026-08-21)
+
+Actualización autorizada por el owner para **volver a sincronizar el ERD con la
+implementación**: el módulo de identidad fiscal del vendedor ya estaba
+construido y el ERD no lo reflejaba, rompiendo la invariante
+`ERD = Drizzle = Migration = PostgreSQL`.
+
+**No introduce ninguna decisión de negocio nueva.** Documenta lo que ya existe.
+
+| # | Sección | Cambio |
+|---|---------|--------|
+| 1 | §2 | `seller_tax_profiles` se suma al módulo **sellers**. Tablas: 50 → **51**. |
+| 2 | §3 | +2 enums: `tax_id_type` y `tax_verification_status`. Total 35 → **37**. |
+| 3 | §7.5 **(nueva)** | Definición completa de `seller_tax_profiles`: columnas, índices, historial por vigencia y separación de responsabilidades. |
+| 4 | §24 | Conteos y listas actualizados. |
+
+**Sin cambios:** las 50 tablas de v1.1, todos sus enums, las convenciones (§1),
+las extensiones (§1.b), los snapshots económicos y las decisiones
+DEC-027…DEC-042.
+
+### Qué NO entra en v1.2
+
+Sigue **sin modelar**, bajo DEC-011 🔴 (`legal.md` §2):
+
+- percepciones y retenciones;
+- snapshot fiscal en `orders`;
+- tablas de comprobantes o de ARCA;
+- reglas de comisión derivadas de la condición fiscal;
+- historial de constancias.
+
+`seller_tiers` permanece **sin uso** en el MVP y `seller_profiles.seller_tier_id`
+sigue en `NULL`: DEC-037 no tiene valores definidos.

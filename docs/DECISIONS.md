@@ -63,9 +63,11 @@ pendiente) y `RISKS.md`.
 | DEC-035 | `IN_PROCESS` en Payment + mapeo estado MP↔Offside (I-3) | ✅ |
 | DEC-036 | Historial es la fuente de verdad de confianza; score sólo derivado (I-4) | ✅ |
 | DEC-037 | `SELLER_TIER` separado de USER LEVEL (I-5) | ✅ estructura / 🟡 valores |
-| DEC-038 | Configuration Store administrativo (simple) + snapshot económico | ✅ concepto / 🟡 modelo |
+| DEC-038 | Configuration Store administrativo (simple) + snapshot económico | ✅ concepto / ✅ modelo (DEC-039) / 🟦 valores |
 | DEC-039 | ERD v1.0 cerrado + 6 decisiones de modelado (Fase 2) | ✅ |
 | DEC-040 | Riesgo: hechos (`user_history_events`) vs señales (`risk_events`) | ✅ |
+| DEC-041 | Estructura de `catalog_change_requests` (gobierno de catálogos) | ✅ estructura / 🟡 permisos (DEC-023) |
+| DEC-042 | Técnica de búsqueda: `spanish` + `unaccent` + `pg_trgm`; `search_vector` desde el Service | ✅ |
 
 ## 2. Detalle de cada decisión
 
@@ -359,7 +361,7 @@ inicial **simple y configurable**; **no** se asumen valores definitivos de
 SELLER_TIER (🟡). Reemplaza el naming de DEC-015. Ref: `seller-system.md`,
 `payments-and-commissions.md`, `configuration-registry.md`.
 
-### DEC-038 — Configuration Store administrativo — ✅ concepto / 🟡 modelo
+### DEC-038 — Configuration Store administrativo — ✅ concepto / ✅ modelo (DEC-039) / 🟦 valores
 Existirá un **sistema de configuración administrativa** que permita modificar
 parámetros de negocio **sin cambiar código** (ej.: comisión default, comisión por
 `SELLER_TIER`, ventana de cancelación, ventana de refund, máximo de imágenes,
@@ -368,8 +370,16 @@ excesivamente complejo: para el MVP es **simple y controlado** (DEC-032). **Toda
 configuración que afecte una transacción económica se conserva como snapshot dentro
 de la transacción** (p. ej. `commission_rate_at_transaction`, `commission_amount`);
 **nunca** se recalculan operaciones históricas con la configuración actual (refuerza
-DEC-030). El **modelo de datos** del store queda 🟡 (a diseñar; no se toca el ERD
-ahora). Ref: `configuration-registry.md`, `open-decisions-impact.md` (E1).
+DEC-030).
+
+> **Actualizado 2026-08-20.** El texto original cerraba con "el **modelo de datos**
+> del store queda 🟡 (a diseñar; no se toca el ERD ahora)". Eso fue **superado por
+> DEC-039** (§2.d), que adopta la **Alternativa C** y cierra el ERD v1.0 con
+> `app_settings` (§17.1) + `seller_tiers` (§7.1). Sólo siguen 🟦 los **valores**
+> concretos y el **orden fino de precedencia**. No es una decisión nueva.
+
+Ref: `database-design.md` §17.1 y §7.1, `configuration-registry.md`,
+`open-decisions-impact.md` (E1), DEC-039.
 
 ## 2.d Cierre del ERD (Fase 2, 2026-08-19)
 
@@ -413,6 +423,53 @@ cambiar la lógica de riesgo **no** modifica el historial (los hechos persisten)
 **no** se implementa un Risk Engine complejo todavía. El Risk Engine completo y sus
 umbrales quedan 🟦 PENDING (DEC-020/021). Aplicado al ERD v1.0 (§6.3/§16.1). Ref:
 `database-design.md`, `trust-and-safety.md`, `open-decisions-impact.md`.
+
+## 2.e Cierre de gaps pre-migración (2026-08-21, ERD v1.1)
+
+### DEC-041 — Estructura de `catalog_change_requests` — ✅ estructura / 🟡 permisos
+`catalog_change_requests` era la **única tabla del ERD v1.0 sin definición de
+columnas**: sólo estaba descrita como "alta propuesta→aprobada por admin". Se
+define su estructura (ERD §8.1):
+
+- **Enum propio `catalog_request_status`:** `PENDING | APPROVED | REJECTED`.
+  **No** se reutiliza `moderation_status`: moderar una publicación y gobernar el
+  catálogo son conceptos distintos, y `SUSPENDED` no aplica a una solicitud.
+- **Enum propio `catalog_target_type`:** `club | national_team | brand |
+  competition | country | season | size_chart` — exactamente los catálogos
+  controlados que lista `product-specification.md` §4.3. **No** incluye
+  `categories` (conjunto fijo vía `garment_category`).
+- **`requested_by` → `users`**, no a `seller_profiles`: la tabla **no se acopla
+  al rol**. Quién puede crear y quién puede aprobar se resuelve en la **capa de
+  permisos** (roles de DEC-023), no en el modelo de datos. **No se inventaron
+  permisos nuevos.**
+- `payload jsonb` conserva la propuesta original como **snapshot inmutable**;
+  `reviewed_by`/`reviewed_at`/`review_note` conservan la resolución;
+  `created_entity_id` guarda la entidad creada al aprobar (referencia
+  polimórfica, sin FK).
+- **Regla dura:** la solicitud **no** modifica el catálogo; sólo la aprobación
+  crea la entidad.
+
+Sigue 🟡: **quién aprueba**, que depende de los permisos granulares de DEC-023.
+Cierra parcialmente **OQ-F2**. Ref: `database-design.md` §8.1,
+`product-specification.md` §4.3.
+
+### DEC-042 — Técnica de búsqueda full-text — ✅
+Cierra lo que `product-specification.md` §5.3 dejaba 🔵 ("técnica fina a validar"):
+
+- Configuración de text search: **`spanish`**; **`unaccent`** habilitado.
+- **`pg_trgm`** habilitado + índices GIN trigram en `listings.title`,
+  `player_name` y `model` (ERD §9.1) para la tolerancia a typos de **PS-020.b**.
+- `listings.search_vector` se mantiene y lo **puebla el Service de Listings**,
+  **no** una columna generada ni un trigger. Motivo: una columna generada no
+  puede leer los `aliases` de las tablas de catálogo (PS-024), y un trigger
+  metería los pesos del ranking —⚙️ configurables por **PS-021**— dentro de
+  PL/pgSQL.
+- Cuando cambian aliases/datos relevantes de catálogo, se encola un **job de
+  BullMQ** que reindexa los listings afectados.
+- Los **pesos de ranking permanecen configurables** desde la aplicación
+  (`app_settings`), nunca hardcodeados.
+
+Ref: `database-design.md` §19.2, `product-specification.md` §5.
 
 ## 3. Cómo evoluciona este archivo
 
