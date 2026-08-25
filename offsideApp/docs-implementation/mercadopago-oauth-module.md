@@ -204,12 +204,82 @@ intercambio fallido sin persistir nada, los casos **B, C y D** de la spec §9,
 credenciales de MP justamente para que quitar la inyección lo haga fallar en vez
 de salir a la red.
 
+## Puesta en marcha contra Mercado Pago real
+
+Verificado end-to-end el **2026-08-25** contra un VPS con Coolify y una cuenta
+de prueba de vendedor. La conexión quedó `connected`, con `expiresAt` a 180 días
+y `canSell: true`.
+
+Lo que sigue es lo que **costó vueltas y no estaba documentado en ningún lado**.
+
+### En el panel de Mercado Pago
+
+| Requisito                                                                 | Por qué                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La aplicación debe crearse con el modelo **Marketplace / Split de pagos** | Una app de "Checkout Pro" a secas no puede pedir autorización a terceros: OAuth no se habilita                                                                                                                                         |
+| **Activar las credenciales de producción**                                | Mientras no se activen, MP rechaza el flujo con _"La aplicación no está preparada para conectarse"_. Además, el **Client Secret sólo aparece ahí**: la pantalla de credenciales de prueba muestra únicamente Public Key y Access Token |
+| Registrar la **Redirect URI** exacta                                      | `https://<dominio>/api/sellers/mercadopago/callback`                                                                                                                                                                                   |
+| Habilitar **PKCE**                                                        | No alcanza con que Offside envíe los parámetros                                                                                                                                                                                        |
+
+⚠️ **`client_id` es el "N.º de la aplicación", NO el "User ID".** MP muestra los
+dos números juntos y se confunden con facilidad. El User ID es la cuenta dueña de
+la aplicación; ponerlo como `client_id` hace que MP rechace la autorización.
+
+⚠️ El `client_id` y el `client_secret` **son los mismos para prueba y para
+producción**: identifican a la aplicación, no al ambiente. Lo que define si una
+operación es de prueba es **con qué cuenta autoriza el vendedor**.
+
+### En el entorno
+
+| Variable                   | Detalle que rompe si se ignora                                                                                                                                                                                                    |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MERCADOPAGO_REDIRECT_URI` | Debe coincidir **carácter por carácter** con la registrada, y apuntar a la ruta que existe: `/api/sellers/mercadopago/callback`                                                                                                   |
+| `TOKEN_ENCRYPTION_KEY`     | **base64 de 32 bytes** (`openssl rand -base64 32`, 44 caracteres terminados en `=`). Una clave hex de 64 caracteres decodifica a 48 bytes y el cifrado falla **recién en el callback**, porque es el primer momento en que se usa |
+| `APP_URL`                  | Es la base del redirect final al frontend. Si queda en `localhost`, el flujo funciona pero el navegador termina en una URL inexistente y no se ve el resultado                                                                    |
+
+### El callback exige sesión activa en el MISMO navegador
+
+El `state` se valida contra el usuario logueado (spec §4 paso 18). Si se autoriza
+en una ventana donde no hay sesión de Offside —por ejemplo, una de incógnito
+abierta sólo para Mercado Pago—, el callback devuelve
+`?status=error&reason=invalid_state` aunque todo lo demás esté bien.
+
+La cookie es `SameSite=lax`, que **sí** viaja en el redirect de vuelta desde
+Mercado Pago: el problema no es la cookie, es que no exista.
+
+⚠️ Hoy **no hay pantalla de login**, así que para probar hay que crear la sesión
+a mano desde la consola del navegador:
+
+```js
+await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ email: '...', password: '...' }),
+}).then((r) => r.json());
+```
+
+### Cómo se diagnostica un fallo
+
+`audit_log` distingue los dos mundos, y esa distinción se agregó justamente
+porque en la primera prueba real no existía:
+
+| `metadata`                                                                    | Significa                                                                            |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `{"reason":"exchange_failed","failure":"exchange_rejected","httpStatus":400}` | Mercado Pago rechazó — típicamente `client_secret` que no corresponde al `client_id` |
+| `{"reason":"exchange_failed","errorName":"Error"}`                            | Reventó código propio; el mensaje textual va al log del servidor                     |
+| `{"reason":"state_invalid"}`                                                  | `state` vencido, reusado, o **sin sesión en el navegador**                           |
+
 ## Lo que falta antes de usar esto de verdad
 
-1. **Registrar la aplicación en Mercado Pago y habilitar PKCE en su panel.**
-   Acción operativa del owner. Sin PKCE habilitado, el flujo falla.
-2. **Cerrar TS-001**, o el gate `approved` deja el flujo inalcanzable.
-3. **Validar en sandbox** los 🔵 de la spec §20: si `user_id` viene en el flujo
-   `authorization_code`, códigos de error exactos, scopes adicionales.
-4. **Refresh de tokens** (spec §10 y §18) y **webhook `mp-connect`** (§11).
-   Sin refresh, una conexión muere a los 180 días.
+1. ~~Registrar la aplicación en Mercado Pago~~ ✅ hecho y verificado (ver
+   arriba).
+2. ~~Validar si `user_id` viene en el flujo `authorization_code`~~ ✅ **sí
+   viene**; el fallback previsto en MP-OAUTH-007 no hizo falta.
+3. **Cerrar TS-001**, o el gate `approved` deja el flujo inalcanzable para
+   cualquier vendedor real. Hoy se aprueba escribiendo en la base.
+4. **Refresh de tokens** (spec §10 y §18): sin él, una conexión muere a los 180
+   días. La primera conexión real vence el **2027-02-21**.
+5. **Webhook `mp-connect`** (§11): sin él, Offside no se entera si el vendedor
+   revoca la autorización desde Mercado Pago.
+6. Siguen 🔵: códigos de error exactos del intercambio y del refresh, scopes
+   adicionales, y si el `refresh_token` anterior se invalida al rotar.

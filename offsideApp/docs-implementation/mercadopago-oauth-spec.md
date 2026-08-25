@@ -700,8 +700,11 @@ antes de que la conexión muera. **No implementar todavía.**
 - **Códigos de error exactos** del intercambio, del refresh y ante autorización
   revocada.
 - **Scopes adicionales** más allá de `offline_access`.
-- **Si `user_id` viene en la respuesta del flujo authorization_code** (está
-  documentado para refresh).
+- ~~**Si `user_id` viene en la respuesta del flujo authorization_code**~~
+  ✅ **CERRADO el 2026-08-25 contra Mercado Pago real: SÍ viene.** La primera
+  conexión devolvió `user_id` en el intercambio y quedó persistido como
+  `mp_user_id`. El fallback a "un endpoint autenticado de MP" que preveía
+  MP-OAUTH-007 **no hace falta** y no se implementó.
 - Si existe algún **endpoint de revocación** invocable por la aplicación.
 - Estructura exacta del payload del webhook `mp-connect`.
 
@@ -709,7 +712,10 @@ antes de que la conexión muera. **No implementar todavía.**
 
 - **Qué significa `seller_status = 'limited'`** y si puede vender.
 - **KYC 6**: si se comunica antes de intentar conectar, y cómo.
-- **Registro real de la aplicación en Mercado Pago** y habilitación de PKCE en
+- ~~**Registro real de la aplicación en Mercado Pago**~~ ✅ hecho el
+  2026-08-25; los requisitos concretos quedaron en
+  [mercadopago-oauth-module.md](mercadopago-oauth-module.md) §Puesta en marcha.
+- **Habilitación de PKCE** en
   su panel (acción operativa del owner).
 
 > Ninguno de estos pendientes se resuelve inventando un valor. Los 🔵 se cierran

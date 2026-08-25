@@ -89,6 +89,30 @@ del disco, pero **en la imagen no hay `.env`** y las variables se perdían.
 Declararlas también hace que la caché de Turbo se invalide correctamente cuando
 cambian.
 
+## Aprendido en el primer despliegue real (2026-08-25)
+
+- **`APP_ENV=development` en un deploy publico es un agujero de seguridad.**
+  Gobierna cuatro cosas: los endpoints de auth devuelven los tokens en la
+  respuesta HTTP —incluido el de reset de password—, la cookie de sesion pierde
+  el flag `Secure`, Drizzle loguea todas las consultas con sus parametros, y el
+  pool de conexiones baja a 5. Coolify avisa del valor con un mensaje pensado
+  para Laravel, facil de ignorar.
+- **`APP_URL` tiene que ser el dominio publico.** Es la base del redirect de
+  vuelta al frontend; si queda en `localhost`, el flujo de Mercado Pago funciona
+  pero el navegador termina en una URL inexistente.
+- **`TOKEN_ENCRYPTION_KEY` en hexadecimal no sirve.** Debe ser base64 de 32
+  bytes. Una clave hex de 64 caracteres decodifica a 48 y falla, pero **no al
+  arrancar**: falla en la primera operacion que cifra, que es el callback de
+  Mercado Pago.
+- **Los recursos de base no se crean solos ni se conectan solos.** Hay que crear
+  PostgreSQL y Redis, copiar la URL **interna** de cada uno y pegarla en las
+  variables de la aplicacion. Con `localhost` no funciona: dentro del contenedor
+  es el contenedor mismo.
+- **Cuidado con los placeholders de Coolify.** Los campos de "Custom Docker
+  options", "Pre/Post deployment" y "Port mappings" muestran ejemplos —incluido
+  `--cap-add SYS_ADMIN` y comandos de Laravel— que si quedan guardados rompen el
+  deploy o abren un riesgo serio.
+
 ## Verificado
 
 La imagen se construyó y se corrió contra el PostgreSQL y el Redis locales:
