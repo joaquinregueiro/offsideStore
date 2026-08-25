@@ -233,9 +233,24 @@ export async function completeConnection(
             failure: error.failure,
             ...(error.httpStatus === undefined ? {} : { httpStatus: error.httpStatus }),
           }
-        : {};
+        : // No es un error de Mercado Pago: reviento algo nuestro dentro del
+          // intercambio (tipicamente la clave de cifrado). Se guarda el NOMBRE
+          // de la clase para poder distinguirlo sin adivinar.
+          { errorName: error instanceof Error ? error.name : typeof error };
 
     await auditFailure(user, 'exchange_failed', detail);
+
+    // ⚠️ Se loguea nombre y mensaje, NUNCA el stack ni el payload: todos los
+    // errores que pueden llegar aca los produce codigo propio y sus mensajes no
+    // contienen credenciales. Sin esto, un fallo nuestro es indistinguible de
+    // un rechazo de Mercado Pago y hay que deducirlo leyendo el codigo.
+    if (!(error instanceof MercadoPagoOAuthError)) {
+      console.error(
+        '[mercadopago] fallo no esperado al intercambiar el code:',
+        error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+      );
+    }
+
     throw errors.mercadoPagoExchangeFailed();
   }
 
