@@ -15,6 +15,13 @@
       "when": 1787356542017,
       "tag": "0001_seller_tax_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787624013069,
+      "tag": "0002_payments_mp_preference_id",
+      "breakpoints": true
     }
   ]
 }

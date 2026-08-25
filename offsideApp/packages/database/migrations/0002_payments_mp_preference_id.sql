@@ -1,0 +1,2 @@
+ALTER TABLE "payments" ADD COLUMN "mp_preference_id" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "payments_mp_preference_id_key" ON "payments" USING btree ("mp_preference_id") WHERE "payments"."mp_preference_id" IS NOT NULL;

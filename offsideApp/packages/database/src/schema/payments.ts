@@ -43,6 +43,16 @@ export const payments = pgTable(
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id, { onDelete: 'restrict' }),
+    /**
+     * ID de la PREFERENCIA de Checkout Pro.
+     *
+     * Existe ANTES que `mp_payment_id`: la preferencia se crea al iniciar el
+     * checkout y el pago recien existe cuando el comprador paga. Es el unico
+     * identificador que Offside tiene en esa ventana, y sin el no se puede
+     * reconciliar un checkout abandonado ni reintentar de forma idempotente.
+     * UNIQUE parcial (solo cuando no es null).
+     */
+    mpPreferenceId: text('mp_preference_id'),
     /** ID del pago en MP. UNIQUE parcial (solo cuando no es null). */
     mpPaymentId: text('mp_payment_id'),
     /** Estado NORMALIZADO de Offside (DEC-028/035). */
@@ -68,6 +78,9 @@ export const payments = pgTable(
   },
   (t) => [
     index('payments_order_id_idx').on(t.orderId),
+    uniqueIndex('payments_mp_preference_id_key')
+      .on(t.mpPreferenceId)
+      .where(sql`${t.mpPreferenceId} IS NOT NULL`),
     uniqueIndex('payments_mp_payment_id_key')
       .on(t.mpPaymentId)
       .where(sql`${t.mpPaymentId} IS NOT NULL`),
