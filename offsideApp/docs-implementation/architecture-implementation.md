@@ -57,7 +57,8 @@ intermedio en cada cambio.
 | Búsqueda en PostgreSQL full-text                             | ⏸ tablas e índices migrados; sin código de búsqueda            |
 | Config Store operativo (`app_settings`, `seller_tiers`)      | ⏸ tablas migradas pero **vacías y sin código que las lea**     |
 | Jobs de negocio en BullMQ                                    | ⏸ infraestructura lista, ningún job todavía                    |
-| Mercado Pago / Correo Argentino                              | ⏸ no implementado                                              |
+| Mercado Pago: OAuth + pagos (Split 1:1)                      | ✅ `sellers` + `payments`                                      |
+| Correo Argentino                                             | ⏸ no implementado                                              |
 | Frontend                                                     | ⏸ placeholder                                                  |
 
 ## Decisiones de diseño de la foundation

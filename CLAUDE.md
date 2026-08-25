@@ -3,8 +3,8 @@
 > Reglas de trabajo para Claude Code dentro de este repositorio.
 > Ámbito: **todo el desarrollo de Offside Store**.
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
-> Estado: ERD migrado + auth y sellers implementados (ver §19).
-> Última actualización: 2026-08-22.
+> Estado: ERD migrado; auth, sellers y conexión con Mercado Pago implementados (ver §19).
+> Última actualización: 2026-08-24.
 
 ---
 
@@ -514,7 +514,7 @@ trabajar en el repositorio equivocado.
 
 ---
 
-## 19. Estado de la implementación (2026-08-22)
+## 19. Estado de la implementación (2026-08-24)
 
 **Foundation + modelo de datos + primeros módulos de negocio. Todo commiteado.**
 
@@ -525,31 +525,39 @@ trabajar en el repositorio equivocado.
 
 Qué existe en `offsideApp/`:
 
-| | |
-|---|---|
-| `apps/web` | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 11 rutas de API |
-| `packages/config` | validación de entorno con Zod. **No es el Config Store de negocio** (§12) |
-| `packages/database` | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 2 migraciones aplicadas** |
-| `packages/jobs` | Redis, registro de colas y workers de BullMQ. **Sin jobs de negocio todavía** |
-| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio |
+|                                    |                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 15 rutas de API |
+| `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)      |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 2 migraciones aplicadas** |
+| `packages/jobs`                    | Redis, registro de colas y workers de BullMQ. **Sin jobs de negocio todavía**  |
+| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                        |
 
 Módulos de dominio implementados (`apps/web/src/modules/`):
 
-| Módulo | Alcance |
-|--------|---------|
-| `auth` | registro, verificación de email, login, logout, sesión, reset de password, rate limiting |
-| `users` | historial de hechos (`user_history_events`, DEC-036) |
-| `sellers` | alta de perfil (nace en `pending`) e identidad fiscal CUIT/CUIL/CDI con historial |
+| Módulo    | Alcance                                                                                                                |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `auth`    | registro, verificación de email, login, logout, sesión, reset de password, rate limiting                               |
+| `users`   | historial de hechos (`user_history_events`, DEC-036)                                                                   |
+| `sellers` | alta de perfil (nace en `pending`), identidad fiscal CUIT/CUIL/CDI con historial y **conexión OAuth con Mercado Pago** |
+| `audit`   | escritor de `audit_log` (ERD §19.1). Transversal: lo van a usar payments, disputas y admin                             |
 
-**De las 51 tablas migradas se usan 7.** El resto está creada y vacía.
+**De las 51 tablas migradas se usan 9.** El resto está creada y vacía.
 
-**NO implementado:** Mercado Pago, payments, comisiones, Config Store operativo,
-listings, catálogo, búsqueda, carrito, órdenes, envíos, refunds, disputas,
-reviews, reputación, aprobación de vendedor, admin, envío de emails y frontend.
+**Mercado Pago — sólo la CONEXIÓN.** Implementado según
+`offsideApp/docs-implementation/mercadopago-oauth-spec.md`: PKCE S256, `state`
+de un solo uso en Redis, tokens cifrados con AES-256-GCM, conflictos de cuenta,
+desvinculación y auditoría. **Sin cambios en el ERD**: `mercadopago_accounts` ya
+cubría todo. Detalle en `mercadopago-oauth-module.md`.
 
-Tests: **105** (57 unitarios + 48 de integración contra PostgreSQL real).
-CI corre ambos, aplica las migraciones sobre una base vacía y verifica que no
-haya drift entre el schema de Drizzle y las migraciones.
+**NO implementado:** refresh de tokens de MP, webhook `mp-connect`, payments,
+comisiones, Config Store operativo, listings, catálogo, búsqueda, carrito,
+órdenes, envíos, refunds, disputas, reviews, reputación, aprobación de vendedor,
+admin, envío de emails y frontend.
+
+Tests: **200** (122 unitarios + 78 de integración contra PostgreSQL y Redis
+reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
+que no haya drift entre el schema de Drizzle y las migraciones.
 
 Comandos (desde `offsideApp/`): `npm run dev`, `build`, `verify`
 (format + lint + typecheck + test), `test`, `docker:up`, `db:generate`,
@@ -563,6 +571,12 @@ fijó TypeScript en 5.9.3 porque `typescript-eslint@8` todavía no soporta TS 7.
 Todo está justificado en
 `offsideApp/docs-implementation/adr/ADR-001-tooling-de-la-foundation.md`, que
 sigue **pendiente de confirmación** del owner.
+
+Para conectar Mercado Pago hacen falta además `MERCADOPAGO_CLIENT_ID`,
+`MERCADOPAGO_CLIENT_SECRET`, `MERCADOPAGO_REDIRECT_URI` y
+`TOKEN_ENCRYPTION_KEY`, exigidas en el borde del módulo con `requireEnv()`. Las
+URLs de Mercado Pago son constantes en `infrastructure/mercadopago/`, no
+configuración: son parte del contrato del proveedor.
 
 Los parámetros operables de auth (`AUTH_SESSION_TTL_HOURS`,
 `AUTH_PASSWORD_MIN_LENGTH`, `AUTH_EMAIL_TOKEN_TTL_HOURS`,
@@ -578,7 +592,10 @@ Lo que hoy frena el avance, en orden de impacto:
 
 1. **TS-001 — "qué significa identidad verificada"** 🟡. Sin esto no se puede
    aprobar a ningún vendedor, y `seller_profiles.status` se queda en `pending`
-   para siempre. Bloquea toda la cadena de venta.
+   para siempre. Bloquea toda la cadena de venta. **Desde la conexión con
+   Mercado Pago el bloqueo es visible en el código**: `connect` exige
+   `approved`, así que hoy todo vendedor real recibe `MP_SELLER_NOT_APPROVED`.
+   El gate NO se relajó: hacerlo sería inventar la decisión que falta.
 2. **B1 — liberación/retención de fondos en MP Split** 🔵. Es la única
    mitigación conocida de RISK-F1, el riesgo central del negocio. **Requiere
    investigación contra la API real; no se asume.**

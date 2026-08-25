@@ -40,9 +40,15 @@ El Service depende de la **interfaz** (`PaymentService`, `ShippingService`),
 nunca del SDK del proveedor. Eso es lo que permite tener un proveedor _fake_
 para tests y MVP (`architecture.md` §5.2).
 
-## Módulos previstos
+## Módulos
 
-Todavía **no hay ninguno implementado**. Los previstos en `tech-stack.md` §2:
+Implementados hoy: **`auth`**, **`users`**, **`sellers`** (perfil, identidad
+fiscal y conexión con Mercado Pago), **`payments`** (Checkout Pro, webhooks,
+refunds), **`orders`**, **`listings`** (publicar y listar) y **`audit`**, que no está en la lista de
+`tech-stack.md` porque `audit_log` es transversal: lo escriben varios módulos y
+por eso no vive dentro de ninguno.
+
+Los previstos en `tech-stack.md` §2:
 
 |                                           |                                                   |
 | ----------------------------------------- | ------------------------------------------------- |
