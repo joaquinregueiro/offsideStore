@@ -41,9 +41,21 @@ export const envSchema = z.object({
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
 
-  // --- Mercado Pago (modulo payments: no implementado) ---
+  // --- Mercado Pago ---
+  // `CLIENT_ID`, `CLIENT_SECRET` y `REDIRECT_URI` los usa la conexion OAuth de
+  // vendedores (modulo `sellers`); `ACCESS_TOKEN` y `WEBHOOK_SECRET` los usara
+  // `payments`, que todavia no existe.
   MERCADOPAGO_CLIENT_ID: z.string().optional(),
   MERCADOPAGO_CLIENT_SECRET: z.string().optional(),
+  /**
+   * URI de retorno del flujo OAuth.
+   *
+   * ⚠️ SIN FALLBACK a `APP_URL`, a proposito: Mercado Pago exige coincidencia
+   * EXACTA con la URI registrada en la aplicacion. Derivarla en silencio
+   * convertiria un error de configuracion local en un rechazo remoto opaco.
+   * Se exige con `requireEnv()` al inicializar el cliente OAuth.
+   */
+  MERCADOPAGO_REDIRECT_URI: z.string().url().optional(),
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
 

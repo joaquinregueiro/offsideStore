@@ -5,6 +5,14 @@
  * estados, plazos), NO va aca. Va en el Service de su modulo.
  */
 
+export {
+  DecryptionError,
+  ENCRYPTION_KEY_BYTES,
+  decodeEncryptionKey,
+  decryptSecret,
+  encryptSecret,
+} from './crypto';
+
 /**
  * Garantiza en tiempo de compilacion que un `switch` cubre todos los casos de
  * una union. Util para los enums de estado del ERD, donde olvidar un caso es un

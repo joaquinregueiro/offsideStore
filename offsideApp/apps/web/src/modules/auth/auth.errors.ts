@@ -19,7 +19,27 @@ export type AuthErrorCode =
   | 'RATE_LIMITED'
   // --- sellers: identidad fiscal ---
   | 'VALIDATION_FAILED'
-  | 'FISCAL_SOURCE_UNAVAILABLE';
+  | 'FISCAL_SOURCE_UNAVAILABLE'
+  // --- sellers: conexion con Mercado Pago (mercadopago-oauth-spec.md §13) ---
+  | 'MP_SELLER_NOT_APPROVED'
+  | 'MP_ALREADY_CONNECTED'
+  | 'MP_NOT_CONNECTED'
+  | 'MP_INVALID_STATE'
+  | 'MP_EXCHANGE_FAILED'
+  | 'MP_ACCOUNT_CONFLICT'
+  | 'MP_CONNECTION_UNAVAILABLE'
+  // --- payments (mercadopago-payments-spec.md) ---
+  | 'ORDER_NOT_FOUND'
+  | 'ORDER_NOT_PAYABLE'
+  | 'PAYMENT_DEADLINE_EXPIRED'
+  | 'PAYMENT_NOT_FOUND'
+  | 'PAYMENT_NOT_REFUNDABLE'
+  | 'PAYMENT_PROVIDER_ERROR'
+  | 'REFUND_AMOUNT_INVALID'
+  // --- orders ---
+  | 'LISTING_NOT_AVAILABLE'
+  | 'LISTING_OUT_OF_STOCK'
+  | 'SELLER_NOT_OPERATIONAL';
 
 export class AuthError extends Error {
   readonly code: AuthErrorCode;

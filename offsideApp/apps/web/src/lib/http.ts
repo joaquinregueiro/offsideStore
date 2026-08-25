@@ -28,6 +28,37 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   VALIDATION_FAILED: 422,
   /** No hay integracion con la fuente fiscal: no es culpa del cliente. */
   FISCAL_SOURCE_UNAVAILABLE: 503,
+
+  // --- Mercado Pago (mercadopago-oauth-spec.md §13) ---
+  /** El vendedor todavia no esta aprobado: conflicto de estado, no de permisos. */
+  MP_SELLER_NOT_APPROVED: 409,
+  MP_ALREADY_CONNECTED: 409,
+  MP_NOT_CONNECTED: 409,
+  /** `state` invalido, vencido, reusado o de otra sesion. */
+  MP_INVALID_STATE: 400,
+  /** Mercado Pago rechazo el intercambio: el fallo es aguas arriba, no del cliente. */
+  MP_EXCHANGE_FAILED: 502,
+  MP_ACCOUNT_CONFLICT: 409,
+  /** No se pudo preparar la conexion (Redis no acepto el contexto). */
+  MP_CONNECTION_UNAVAILABLE: 503,
+
+  // --- Payments (mercadopago-payments-spec.md) ---
+  ORDER_NOT_FOUND: 404,
+  /** La orden existe pero su estado no admite pago. */
+  ORDER_NOT_PAYABLE: 409,
+  PAYMENT_DEADLINE_EXPIRED: 409,
+  PAYMENT_NOT_FOUND: 404,
+  PAYMENT_NOT_REFUNDABLE: 409,
+  /** Mercado Pago rechazo o no respondio: el fallo es aguas arriba. */
+  PAYMENT_PROVIDER_ERROR: 502,
+  REFUND_AMOUNT_INVALID: 422,
+
+  // --- Orders ---
+  /** La publicacion no existe o no admite compra. */
+  LISTING_NOT_AVAILABLE: 409,
+  LISTING_OUT_OF_STOCK: 409,
+  /** El vendedor no puede operar: sin aprobar o sin Mercado Pago conectado. */
+  SELLER_NOT_OPERATIONAL: 409,
 };
 
 export function ok<T>(data: T, status = 200): NextResponse {

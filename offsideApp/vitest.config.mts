@@ -1,4 +1,14 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vitest/config';
+
+/**
+ * `@/` apunta a `apps/web/src`, igual que en `tsconfig` y en Next. Sin esto,
+ * cualquier test que cargue un controller falla al resolver el import.
+ */
+const aliasWeb = {
+  '@/': `${fileURLToPath(new URL('./apps/web/src', import.meta.url))}/`,
+};
 
 /**
  * Configuracion de tests del monorepo.
@@ -16,6 +26,7 @@ export default defineConfig({
   test: {
     projects: [
       {
+        resolve: { alias: aliasWeb },
         test: {
           name: 'unit',
           environment: 'node',
@@ -24,6 +35,7 @@ export default defineConfig({
         },
       },
       {
+        resolve: { alias: aliasWeb },
         test: {
           name: 'integration',
           environment: 'node',

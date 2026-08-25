@@ -126,8 +126,26 @@ function limits(): Limits {
   };
 }
 
-/** Alcance del limite: separa los contadores por endpoint. */
-export type RateLimitScope = 'login' | 'register' | 'password-forgot' | 'password-reset';
+/**
+ * Alcance del limite: separa los contadores por endpoint.
+ *
+ * `mp-connect` y `mp-callback` son endpoints de vendedor, no de auth, pero
+ * comparten el mecanismo y los umbrales operables: iniciar una vinculacion
+ * escribe en Redis y el callback dispara una llamada a un tercero, asi que
+ * ninguno de los dos puede quedar abierto a repeticion ilimitada
+ * (mercadopago-oauth-spec.md §13).
+ */
+export type RateLimitScope =
+  | 'login'
+  | 'register'
+  | 'password-forgot'
+  | 'password-reset'
+  | 'mp-connect'
+  | 'mp-callback'
+  | 'checkout'
+  | 'refund'
+  | 'order-create'
+  | 'listing-create';
 
 /**
  * Consume una unidad del limite POR IP para este scope.
