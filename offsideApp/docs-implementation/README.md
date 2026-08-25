@@ -6,21 +6,22 @@ Documentación **del código**, no del producto.
 > es de solo lectura. Si algo de acá contradice a `docs/`, gana `docs/` y hay que
 > reportar la discrepancia (CLAUDE.md §4 y §13).
 
-| Documento                                                        | Contenido                                                         |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [setup-local.md](setup-local.md)                                 | Cómo levantar el proyecto y qué comandos existen                  |
-| [architecture-implementation.md](architecture-implementation.md) | Qué se construyó y cómo se mapea a la arquitectura documentada    |
-| [infra-validation.md](infra-validation.md)                       | Validación end-to-end de Docker, PostgreSQL y Redis               |
-| [erd-to-drizzle.md](erd-to-drizzle.md)                           | Traducción del ERD v1.0 al schema de Drizzle + auditoría          |
-| [gaps-pre-migration.md](gaps-pre-migration.md)                   | Gaps a resolver antes de la primera migration (propuesta)         |
-| [post-migration-validation.md](post-migration-validation.md)     | Validación de PostgreSQL real contra el ERD                       |
-| [auth-module.md](auth-module.md)                                 | Módulo AUTH + USERS + SELLERS                                     |
-| [seller-tax-identity.md](seller-tax-identity.md)                 | Identidad fiscal del vendedor (CUIT/CUIL/CDI)                     |
-| [mercadopago-oauth-spec.md](mercadopago-oauth-spec.md)           | **Especificación** de OAuth de Mercado Pago (contrato de diseño)  |
-| [mercadopago-oauth-module.md](mercadopago-oauth-module.md)       | Conexión con Mercado Pago, **tal como quedó implementada**        |
-| [mercadopago-payments-spec.md](mercadopago-payments-spec.md)     | **Especificación** de Payments / Split 1:1                        |
-| [mercadopago-payments-module.md](mercadopago-payments-module.md) | Checkout, webhooks y refunds, **tal como quedaron implementados** |
-| [adr/](adr/)                                                     | Decisiones técnicas de implementación                             |
+| Documento                                                        | Contenido                                                              |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [deployment-coolify.md](deployment-coolify.md)                   | Despliegue en un VPS con Coolify: Dockerfile, variables y verificacion |
+| [setup-local.md](setup-local.md)                                 | Cómo levantar el proyecto y qué comandos existen                       |
+| [architecture-implementation.md](architecture-implementation.md) | Qué se construyó y cómo se mapea a la arquitectura documentada         |
+| [infra-validation.md](infra-validation.md)                       | Validación end-to-end de Docker, PostgreSQL y Redis                    |
+| [erd-to-drizzle.md](erd-to-drizzle.md)                           | Traducción del ERD v1.0 al schema de Drizzle + auditoría               |
+| [gaps-pre-migration.md](gaps-pre-migration.md)                   | Gaps a resolver antes de la primera migration (propuesta)              |
+| [post-migration-validation.md](post-migration-validation.md)     | Validación de PostgreSQL real contra el ERD                            |
+| [auth-module.md](auth-module.md)                                 | Módulo AUTH + USERS + SELLERS                                          |
+| [seller-tax-identity.md](seller-tax-identity.md)                 | Identidad fiscal del vendedor (CUIT/CUIL/CDI)                          |
+| [mercadopago-oauth-spec.md](mercadopago-oauth-spec.md)           | **Especificación** de OAuth de Mercado Pago (contrato de diseño)       |
+| [mercadopago-oauth-module.md](mercadopago-oauth-module.md)       | Conexión con Mercado Pago, **tal como quedó implementada**             |
+| [mercadopago-payments-spec.md](mercadopago-payments-spec.md)     | **Especificación** de Payments / Split 1:1                             |
+| [mercadopago-payments-module.md](mercadopago-payments-module.md) | Checkout, webhooks y refunds, **tal como quedaron implementados**      |
+| [adr/](adr/)                                                     | Decisiones técnicas de implementación                                  |
 
 ## Estado actual
 
