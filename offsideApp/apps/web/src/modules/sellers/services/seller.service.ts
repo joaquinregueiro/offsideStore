@@ -2,6 +2,7 @@ import * as errors from '../../auth/auth.errors';
 import type { CreateSellerProfileInput } from '../../auth/auth.schemas';
 import type { PublicUser } from '../../auth/services/auth.service';
 import * as sellerRepo from '../repositories/seller.repository';
+import * as sellerErrors from '../seller.errors';
 
 /**
  * Logica de negocio de vendedores.
@@ -44,6 +45,25 @@ export function toPublicSellerProfile(row: sellerRepo.SellerProfileRow): PublicS
     approvedAt: row.approvedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+/**
+ * Resuelve el perfil de vendedor del usuario autenticado.
+ *
+ * ESTA ES LA AUTORIZACION del modulo: se busca el perfil POR `user.id`, nunca
+ * por un id que venga del request. Asi es imposible tocar el perfil de otro
+ * vendedor — no hay parametro que manipular.
+ *
+ * Vive aca, y no en cada servicio, para que la identidad fiscal y la conexion
+ * con Mercado Pago autoricen exactamente igual. Duplicarla seria arriesgarse a
+ * que una de las copias se relaje.
+ */
+export async function requireOwnSellerProfile(
+  user: PublicUser,
+): Promise<sellerRepo.SellerProfileRow> {
+  const profile = await sellerRepo.findByUserId(user.id);
+  if (!profile) throw sellerErrors.sellerProfileNotFound();
+  return profile;
 }
 
 /**

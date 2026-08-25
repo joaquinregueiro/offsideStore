@@ -3,10 +3,13 @@ import { getDatabase } from '@offside/database';
 import * as errors from '../../auth/auth.errors';
 import type { PublicUser } from '../../auth/services/auth.service';
 import { getFiscalSource } from '../infrastructure/fiscal-source/unavailable-fiscal-source.adapter';
-import * as sellerRepo from '../repositories/seller.repository';
 import * as taxRepo from '../repositories/seller-tax-profile.repository';
 import * as fiscalErrors from '../seller.errors';
 import { maskTaxId, validateTaxIdSyntax, type TaxIdType } from './fiscal-identity.service';
+// La autorizacion del modulo (resolver el perfil POR `user.id`) vive en
+// `seller.service`: una sola implementacion para identidad fiscal y para la
+// conexion con Mercado Pago.
+import { requireOwnSellerProfile } from './seller.service';
 
 /**
  * Identidad fiscal del vendedor.
@@ -50,19 +53,6 @@ function toPublicTaxProfile(row: taxRepo.SellerTaxProfileRow): PublicTaxProfile 
     validFrom: row.validFrom.toISOString(),
     createdAt: row.createdAt.toISOString(),
   };
-}
-
-/**
- * Resuelve el perfil de vendedor del usuario autenticado.
- *
- * Esta es la autorizacion: se busca el perfil POR `user.id`, nunca por un id
- * que venga del request. Asi es imposible tocar el perfil de otro vendedor —
- * no hay parametro que manipular.
- */
-async function requireOwnSellerProfile(user: PublicUser) {
-  const profile = await sellerRepo.findByUserId(user.id);
-  if (!profile) throw fiscalErrors.sellerProfileNotFound();
-  return profile;
 }
 
 /**
