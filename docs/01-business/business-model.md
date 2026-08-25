@@ -88,13 +88,14 @@ código). El histórico "~10%" queda sólo como referencia, **no** como decisió
 | **IVA** | La comisión de Offside se considera **IVA incluido**. |
 | **Mínimo / máximo** | **No** hay mínimo ni máximo de comisión. |
 | **Por categoría de producto** | **No** hay comisiones distintas según categoría de producto. |
-| **Costo de Mercado Pago** | Lo **absorbe Offside**, contemplado **dentro** de su comisión. |
+| **Costo de Mercado Pago** | ~~Lo absorbe Offside~~ → **REVOCADO por DEC-043 (2026-08-24)**: el costo de MP **no** lo absorbe Offside; rige el comportamiento nativo de Split 1:1. |
 
 > **Contradicción resuelta:** versiones previas de este documento y de
 > `payments-and-commissions.md` dejaban la **base** y **quién absorbe la comisión
 > de MP** como decisiones abiertas (🔴). **Se prioriza DEC-014**: base = total
-> cobrado; MP lo absorbe Offside. El unit economics de §7 debe leerse con esta
-> base.
+> cobrado. **Enmienda DEC-043 (2026-08-24):** la absorción del costo de MP por
+> parte de Offside quedó **revocada**; el unit economics de §7 debe recalcularse
+> con comisión **6%** y el costo de MP **fuera** de esa comisión.
 
 ### 5.2.b Cómo se cobra técnicamente
 
@@ -195,13 +196,14 @@ ingreso_bruto_offside = c_off * B
 ingreso_neto_offside ≈ (c_off * B) − costos_atribuibles
 ```
 
-donde `costos_atribuibles` incluye la **comisión de MP** (✅ DEC-014: **la absorbe
-OFFSIDE**, dentro de su comisión), soporte prorrateado, y una **provisión por
-riesgo de refund**.
+donde `costos_atribuibles` **ya no incluye la comisión de MP** (DEC-043: no la
+absorbe Offside), sino soporte prorrateado y una **provisión por riesgo de
+refund**.
 
-✅ **RESUELTO (DEC-014) — Absorción de la comisión de Mercado Pago.** La comisión de
-MP la **absorbe OFFSIDE** (contemplada dentro de su comisión). Esto reemplaza el
-"DECISION REQUIRED" anterior. Consecuencia directa: como el porcentaje de OFFSIDE
+✅ **RESUELTO — Absorción de la comisión de Mercado Pago.** ~~DEC-014: la absorbe
+OFFSIDE.~~ **Vigente (DEC-043, 2026-08-24): Offside NO absorbe la comisión de
+Mercado Pago.** Offside cobra su **6%** íntegro y el costo de MP se descuenta
+según el comportamiento nativo de Split 1:1. Consecuencia directa: como el porcentaje de OFFSIDE
 (DEC-007) todavía no está fijado, el **ingreso neto** depende de que ese % cubra la
 comisión de MP + provisión por refunds + costos. 🔵 Sigue pendiente **investigar el
 valor real de la comisión de MP** (varía por medio de pago/cuotas/plazo) para
@@ -277,10 +279,11 @@ orden está en los documentos de operaciones.
 - ✅ DEC-002: modelo marketplace intermediario, no propietario del stock.
 - ✅ DEC-003: monetización por comisión sobre la venta.
 - ✅ DEC-014: reglas de cálculo de comisión (base = total cobrado; IVA incluido;
-  sin min/máx; sin diferenciación por categoría; MP lo absorbe Offside).
+  sin min/máx; sin diferenciación por categoría). **Enmendada por DEC-043:** el
+  costo de MP **no** lo absorbe Offside.
 - ✅ DEC-015 (estructura): tipos de vendedor con comisión configurable.
 - ✅ DEC-016/017: absorción de costos de cuotas y descuentos.
-- ⚙️ DEC-007: el % de comisión es configurable desde Admin (valor 🟡).
+- ✅ DEC-007: comisión **6%** (DEC-043), configurable desde Admin (antes, valor 🟡).
 - ⚙️ DEC-018: comisión sobre refund parcial la absorbe Offside (configurable).
 
 ## 12. Decisiones pendientes

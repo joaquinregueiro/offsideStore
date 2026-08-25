@@ -32,14 +32,14 @@ pendiente) y `RISKS.md`.
 | DEC-004 | Mercado Pago Split Payments | ✅ |
 | DEC-005 | OAuth vendedores | ✅ |
 | DEC-006 | Correo Argentino (integración inicial) | ✅ dirección / 🔵 detalles |
-| DEC-007 | Comisión exacta (%) | ⚙️ / 🟡 |
+| DEC-007 | Comisión exacta (%) | ✅ **6%** (cerrada por DEC-043) / ⚙️ configurable |
 | DEC-008 | Política de refunds | ⚙️ principio / 🟡 valores |
 | DEC-009 | Sistema de disputas | 🟡 |
 | DEC-010 | Política de autenticidad | 🟡 |
 | DEC-011 | Modelo fiscal e impuestos | 🔴 |
 | DEC-012 | Stack definitivo | ✅ |
 | DEC-013 | Configurabilidad operativa desde Admin (principio) | ✅ |
-| DEC-014 | Reglas de cálculo de comisión (base, IVA, min/máx, categoría) | ✅ |
+| DEC-014 | Reglas de cálculo de comisión (base, IVA, min/máx, categoría) | ✅ (**enmendada por DEC-043**: el costo de MP ya no lo absorbe Offside) |
 | DEC-015 | Tipos de vendedor con comisión (renombrado **SELLER_TIER**, ver DEC-037) | ✅ estructura / 🟡 valores |
 | DEC-016 | Costo de cuotas (quién lo absorbe) | ✅ principio / 🔵 MP |
 | DEC-017 | Costo de descuentos (quién lo absorbe) | ✅ |
@@ -68,6 +68,7 @@ pendiente) y `RISKS.md`.
 | DEC-040 | Riesgo: hechos (`user_history_events`) vs señales (`risk_events`) | ✅ |
 | DEC-041 | Estructura de `catalog_change_requests` (gobierno de catálogos) | ✅ estructura / 🟡 permisos (DEC-023) |
 | DEC-042 | Técnica de búsqueda: `spanish` + `unaccent` + `pg_trgm`; `search_vector` desde el Service | ✅ |
+| DEC-043 | Comisión Offside = **6%**; el costo de Mercado Pago **no** lo absorbe Offside (supersede parte de DEC-014) | ✅ |
 
 ## 2. Detalle de cada decisión
 
@@ -98,11 +99,16 @@ Se mantiene Correo Argentino como **integración inicial de envíos**. API,
 credenciales, creación de envío, etiqueta, tracking, estados, webhooks/polling y
 manejo de errores/pérdidas/demoras quedan 🔵 (a investigar) y 🌐. Ref: `shipping.md`.
 
-### DEC-007 — Comisión exacta (%) — ⚙️ / 🟡
-El **porcentaje** de comisión **todavía no está definido** y **no es bloqueante**
-en esta etapa. Debe ser **configurable** desde Admin (⚙️), sin necesidad de tocar
-código. Las **reglas** de cómo se calcula sí están decididas (DEC-014). Ref:
-`business-model.md`, `payments-and-commissions.md`, `configuration-registry.md`.
+### DEC-007 — Comisión exacta (%) — ✅ 6% / ⚙️ configurable
+
+> **Cerrada el 2026-08-24 por DEC-043.** Antes: ⚙️ / 🟡 (porcentaje sin definir).
+
+El porcentaje de comisión de Offside es el **6% del total de la venta**. Sigue
+siendo **⚙️ CONFIGURABLE** desde Admin: el valor se carga en `app_settings`
+(`commission_rate_default`) y se **snapshotea** en cada orden (DEC-030); **no se
+hardcodea en código**. Las **reglas** de cómo se calcula están en DEC-014, con la
+enmienda de DEC-043. Ref: `business-model.md`, `payments-and-commissions.md`,
+`configuration-registry.md`.
 
 ### DEC-008 — Política de refunds — ⚙️ principio / 🟡 valores
 **Decidido:** todas las reglas de refunds deben ser **configurables desde Admin**
@@ -153,8 +159,9 @@ cada publicación** (no son configuración global). Catálogo en
 - **IVA:** la comisión de Offside se considera **IVA incluido**.
 - **Sin mínimo ni máximo** de comisión.
 - **Sin diferenciación por categoría de producto.**
-- **Costo de Mercado Pago:** lo **absorbe Offside**, contemplado **dentro** de su
-  comisión.
+- ~~**Costo de Mercado Pago:** lo **absorbe Offside**, contemplado **dentro** de su
+  comisión.~~ → **REVOCADO el 2026-08-24 por DEC-043.** El costo de Mercado Pago
+  **no** lo absorbe Offside: se comporta como lo define nativamente Split 1:1.
 > Esto **cierra parte de DEC-007** (antes la base era pregunta abierta). Se prioriza
 > esta decisión sobre lo que decían `business-model.md`/`payments` previos
 > (que dejaban la base y el absorbedor de MP como 🔴). Ref: `business-model.md`,
@@ -470,6 +477,45 @@ Cierra lo que `product-specification.md` §5.3 dejaba 🔵 ("técnica fina a val
   (`app_settings`), nunca hardcodeados.
 
 Ref: `database-design.md` §19.2, `product-specification.md` §5.
+
+### DEC-043 — Comisión 6% y costo de Mercado Pago independiente — ✅
+
+**Decisión del owner, 2026-08-24.** Cierra DEC-007 y **supersede el último punto
+de DEC-014**.
+
+- **Comisión de Offside: 6% del total de la venta.** Simple, sin mínimos ni
+  máximos, sin diferenciación por categoría. El resto de las reglas de cálculo de
+  DEC-014 (base = total cobrado, precio final con descuentos, IVA incluido) **se
+  mantiene sin cambios**.
+- **Técnicamente:** `marketplace_fee = orders.commission_amount`, es decir el 6%
+  íntegro. No se ajusta, no se reduce, no se recalcula.
+- **El costo de Mercado Pago es independiente de la comisión de Offside.** Offside
+  **no** intenta absorberlo. Mercado Pago cobra sus costos según medio de pago,
+  cuotas y plazo de acreditación.
+- **Comportamiento nativo de Split 1:1** 🌐: Mercado Pago descuenta primero su
+  comisión —del importe que recibe el vendedor— y recién después el
+  `marketplace_fee` sobre el remanente. Offside **adopta ese comportamiento tal
+  como es**: no lo corrige ni lo compensa.
+- **Consecuencia para el vendedor:** su neto es `total − costo de MP − 6%`, no
+  `total − 6%`. El costo de MP varía y Offside no lo controla; **debe comunicarse
+  con claridad** (queda 🟡 cómo se comunica).
+- **Fuera de alcance del MVP, por decisión explícita:** estimar el costo de MP,
+  conciliar estimado-vs-real, restringir medios de pago o cuotas para volverlo
+  predecible, y crear una cuenta corriente por vendedor para compensar
+  diferencias.
+- **Optimización comercial futura, fuera del MVP:** una negociación con Mercado
+  Pago podría mejorar el costo efectivo (tarifario preferencial, condiciones de
+  acreditación, o el esquema en que el marketplace asume la tarifa, si existiera
+  🔵). No bloquea nada.
+
+**Motivo:** priorizar un MVP simple y predecible sobre una optimización
+financiera prematura. Absorber el costo de MP exigía estimarlo antes del pago
+—Mercado Pago no expone ninguna API de tarifas 🔴—, conciliarlo después y
+sostener una cuenta corriente por vendedor; todo eso para un margen que igual
+depende de variables externas.
+
+Ref: `payments-and-commissions.md` §3.3 y §7,
+`offsideApp/docs-implementation/mercadopago-payments-spec.md` §8.
 
 ## 3. Cómo evoluciona este archivo
 

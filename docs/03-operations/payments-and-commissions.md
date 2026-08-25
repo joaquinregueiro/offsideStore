@@ -52,14 +52,17 @@ por el negocio.
 
 ### 3.3 Comisión de OFFSIDE vs comisión de MP
 
-- **Comisión de OFFSIDE:** el take rate del marketplace (🟡 ~10%, DEC-007), que se
-  aplica técnicamente vía **`marketplace_fee`** (Checkout API) o
-  **`application_fee`** (según el checkout). 🌐 **VERIFY** el campo correcto por
-  tipo de checkout.
+- **Comisión de OFFSIDE:** ✅ **6% del total de la venta** (DEC-043, cierra
+  DEC-007). Con **Checkout Pro** (DEC-027) se aplica vía **`marketplace_fee`** en
+  la preferencia; `application_fee` es el campo equivalente de Checkout
+  API/Transparente 🔴. Offside cobra ese 6% **íntegro**.
 - **Comisión de Mercado Pago:** el costo de procesamiento que cobra MP. 🌐
-  **DEPENDENCIA EXTERNA**: su valor y **quién la absorbe** en el split (vendedor,
-  OFFSIDE o repartida) **no se inventan** — a verificar en el tarifario/doc.
-  oficial. Impacta directamente los unit economics (`business-model.md`).
+  **DEPENDENCIA EXTERNA**: varía según medio de pago, cuotas y plazo de
+  acreditación, y **no existe API que lo informe antes del pago** 🔴.
+  ✅ **Quién la absorbe está decidido (DEC-043): NO la absorbe Offside.** Rige el
+  **comportamiento nativo de Split 1:1** 🔴: MP descuenta primero su comisión —del
+  importe del vendedor— y recién después el `marketplace_fee` sobre el remanente.
+  El neto del vendedor es `total − costo MP − 6%`.
 
 ## 4. OAuth del vendedor y credenciales
 
@@ -195,12 +198,21 @@ crudos de MP y los estados normalizados de Offside. Principios:
 > **Actualizado 2026-08-19 (DEC-014 a DEC-018).** Se cierran base de cálculo,
 > absorción de la comisión de MP, cuotas y descuentos.
 
-- **PC-050 (✅ DEC-014):** la comisión de OFFSIDE se define por una **tasa** (⚙️/🟡
-  DEC-007, configurable) aplicada sobre la **base = TOTAL cobrado al comprador**
-  (precio final con descuentos). **Sin mínimo/máximo**, **sin diferenciación por
-  categoría de producto**, **IVA incluido**.
-- **PC-050.b (✅ DEC-014):** la **comisión de Mercado Pago la absorbe OFFSIDE**
-  (contemplada dentro de su comisión). No se traslada al vendedor ni al comprador.
+- **PC-050 (✅ DEC-014 + DEC-043):** la comisión de OFFSIDE es una **tasa del 6%**
+  (⚙️ configurable desde Admin, valor cerrado por DEC-043) aplicada sobre la
+  **base = TOTAL cobrado al comprador** (precio final con descuentos). **Sin
+  mínimo/máximo**, **sin diferenciación por categoría de producto**, **IVA
+  incluido**.
+- **PC-050.b (❌ REVOCADO el 2026-08-24 por DEC-043):** ~~la comisión de Mercado
+  Pago la absorbe OFFSIDE (contemplada dentro de su comisión); no se traslada al
+  vendedor ni al comprador.~~
+  **Vigente:** el costo de Mercado Pago **es independiente** de la comisión de
+  Offside. Offside cobra su 6% íntegro y **no** absorbe el costo de MP, que se
+  descuenta según el comportamiento nativo de Split 1:1 (§3.3). Quedan
+  explícitamente **fuera del MVP**: estimar el costo de MP, conciliarlo,
+  restringir medios de pago/cuotas para volverlo predecible y compensar
+  diferencias por cuenta corriente. Una **optimización comercial** con Mercado
+  Pago es posible más adelante y no bloquea el MVP.
 - **PC-050.c (✅ estructura, 🟡 valores — DEC-037):** la tasa puede **variar por
   `SELLER_TIER`** (categoría comercial del vendedor; valores 🟡, no asumidos). El
   motor de comisión resuelve la tasa aplicable **desde el Config Store** (Admin), no
@@ -214,8 +226,9 @@ crudos de MP y los estados normalizados de Offside. Principios:
 - **PC-050.e (✅ DEC-017 — descuentos):** descuento del vendedor → costo del
   vendedor; descuento propio de Offside → costo de Offside. La comisión se calcula
   sobre el **precio final efectivamente cobrado**.
-- **PC-051:** la comisión se materializa en el split (`marketplace_fee` /
-  `application_fee`) en el momento del pago.
+- **PC-051 (✅ DEC-043):** la comisión se materializa en el split en el momento
+  del pago: con Checkout Pro, `marketplace_fee = commission_amount` (el 6% ya
+  snapshoteado en la orden), **sin ajustes ni estimaciones**.
 - **PC-052 (🌐/🔵):** la comisión de **MP** se registra en la orden según lo que MP
   informe (no se estima a mano en producción); su **valor** debe investigarse para
   calibrar el % de Offside.
@@ -315,9 +328,11 @@ Reglas (DEC-030):
 
 ## 13. Decisiones pendientes (DECISION REQUIRED)
 
-- 🔴 DEC-007: comisión exacta y **base de cálculo**.
-- 🔴 Checkout Pro vs API para el MVP.
-- 🔴 🌐 Quién absorbe la comisión de MP en el split.
+- ~~🔴 DEC-007: comisión exacta y **base de cálculo**.~~ ✅ **CERRADA**: 6%
+  (DEC-043); base = total cobrado (DEC-014).
+- ~~🔴 Checkout Pro vs API para el MVP.~~ ✅ **CERRADA**: Checkout Pro (DEC-027).
+- ~~🔴 🌐 Quién absorbe la comisión de MP en el split.~~ ✅ **CERRADA**: no la
+  absorbe Offside; rige el comportamiento nativo de Split 1:1 (DEC-043).
 - 🔴 🌐 Scopes de OAuth, vida de tokens, rotación de refresh, idempotencia — a
   verificar con MP.
 - 🔴 MVP en sandbox/test vs producción.
