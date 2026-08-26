@@ -17,12 +17,12 @@ import { getEnv, requireEnv } from '@offside/config';
  *   - el `data.id` de la notificacion;
  *   - HMAC-SHA256 con el secreto de la aplicacion (`MERCADOPAGO_WEBHOOK_SECRET`).
  *
- * ⚠️ 🔵 SIGUE ABIERTO: la plantilla exacta del string firmado **no esta
- * publicada** en la documentacion de Mercado Pago (verificado el 2026-08-25 en
- * las paginas de Webhooks, Split y Checkout API). MP remite a sus SDK, que la
- * resuelven internamente. Se implementa la plantilla de uso corriente,
- * AISLADA en `buildManifest()`: si la primera notificacion real de sandbox no
- * valida, se corrige ahi y en ningun otro lado.
+ * ✅ PLANTILLA VERIFICADA CONTRA MERCADO PAGO REAL (2026-08-26). Mercado Pago
+ * no la publica —remite a sus SDK—, asi que se implemento la de uso corriente
+ * y se dejo AISLADA en `buildManifest()` para poder corregirla sin tocar nada
+ * mas. La primera notificacion real (`payment.created`, pago 175705424980)
+ * valido a la primera: `payment_webhook_events.signature_valid = true`.
+ * No hizo falta ajustarla.
  *
  * 🔴 Lo que si esta documentado, y se respeta: el `data.id` que se firma es el
  * que viaja como QUERY PARAMETER (`?data.id=...`), no el del cuerpo. El SDK
@@ -37,7 +37,8 @@ function normalizeDataId(dataId: string): string {
 /**
  * Arma el string que se firma.
  *
- * ⚠️ 🔵 ÚNICO punto a ajustar si la verificacion contra Mercado Pago falla.
+ * Verificado contra una notificacion real el 2026-08-26. Sigue siendo el UNICO
+ * punto a ajustar si Mercado Pago cambiara la plantilla.
  */
 export function buildManifest(params: { dataId: string; requestId: string; ts: string }): string {
   return `id:${normalizeDataId(params.dataId)};request-id:${params.requestId};ts:${params.ts};`;

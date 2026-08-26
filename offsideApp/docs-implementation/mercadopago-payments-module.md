@@ -150,11 +150,11 @@ resuelto contra `mercadopago_accounts`; si el pago ya está vinculado, del
 vendedor de la orden. **No hay un tercer camino inventado**: sin ninguno de los
 dos, el evento queda registrado sin efecto (`unknown_payment`).
 
-⚠️ **La plantilla exacta del string firmado sigue 🔵.** Mercado Pago documenta el
-mecanismo (`x-signature` `ts=…,v1=…` + `x-request-id` + `data.id` + secreto) pero
-no publica la plantilla literal; recomienda sus SDK. Está **aislada en
-`buildManifest()`**: si la verificación real falla, se corrige ahí y en ningún
-otro lado.
+✅ **La plantilla del string firmado quedó VERIFICADA el 2026-08-26.** Mercado
+Pago documenta el mecanismo (`x-signature` `ts=…,v1=…` + `x-request-id` +
+`data.id` + secreto) pero no publica la plantilla literal; recomienda sus SDK.
+Se implementó la de uso corriente, aislada en `buildManifest()`, y la primera
+notificación real validó a la primera. Sigue aislada por si MP la cambia.
 
 ## Estados
 
@@ -253,12 +253,90 @@ rechazado por MP, auditoría y un **barrido que verifica que ningún registro de
 - **`chargebacks`, `seller_liabilities` y `reconciliation_records`** están
   migradas y vacías.
 
+## Prueba real de punta a punta (2026-08-26)
+
+Flujo completo contra Mercado Pago real, sin tocar SQL en el medio salvo para
+lo que todavía no tiene endpoint (aprobar al vendedor y crear la categoría).
+
+| Paso                         | Resultado                                                                    |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| Vendedor conectado por OAuth | `mp_user_id 3520857096`, token cifrado                                       |
+| Listing publicado por la API | `201`                                                                        |
+| Orden                        | `OFF-4EF36D2340`, total `100000`                                             |
+| Comisión snapshot            | `6000` = **6% exacto** (DEC-043)                                             |
+| Preferencia                  | `pref_id` con prefijo `3520857096` → creada **sobre la cuenta del vendedor** |
+| `marketplace_fee` enviado    | `6000`, idéntico a `orders.commission_amount`                                |
+| Pago                         | `175705424980`, aprobado, $1.000 con dinero en cuenta                        |
+| Webhook                      | `payment.created`, `signature_valid = true`, `processed = true`, sin error   |
+| Orden                        | `PENDING_PAYMENT` → **`PAID`** sin intervención                              |
+
+### El reparto real confirma DEC-043
+
+```
+amount                  100000
+marketplace_fee_amount    6000   ← Offside, 6%
+mp_fee_amount             4100   ← costo de Mercado Pago
+seller_amount            89900   ← 100000 - 6000 - 4100
+```
+
+⚠️ **`payment_splits.seller_amount` (89900) NO coincide con
+`orders.seller_amount` (94000), y está bien.** Son dos cosas distintas, tal como
+las separa el ERD §26.2: `orders` es la fuente comercial —lo que Offside promete
+descontando sólo su 6%— y `payment_splits` es lo que Mercado Pago efectivamente
+repartió.
+
+La diferencia de `4100` es el costo de MP, y **lo descuenta del lado del
+vendedor**. Es exactamente lo que decidió DEC-043 al revocar la idea de
+absorberlo: Offside cobra un 6% limpio y predecible, y el costo de MP es
+independiente. Primera confirmación empírica de esa decisión.
+
+`mp_fee_amount` **sí queda registrado**, así que el costo real es auditable.
+
+### Barrido de secretos
+
+`audit_log`, `payments.raw` y `payment_webhook_events.payload` buscando
+`APP_USR`, `access_token`, `refresh_token`, `client_secret`, `code_verifier`,
+`password` y `cookie`: **0 coincidencias en las tres**.
+
+### ⚠️ Split exige TRES cuentas de prueba, no dos
+
+El hallazgo que más tiempo costó, y que no está en la documentación de MP de
+forma evidente.
+
+En Split hay **tres** partes y Mercado Pago exige que las tres pertenezcan al
+mismo mundo. Si una es real y las otras de prueba, el checkout falla con
+_"Una de las partes con la que intentás hacer el pago es de prueba"_, sin
+aclarar cuál.
+
+| Rol                          | Qué es                                                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Marketplace / integrador** | Offside. La cuenta **dueña de la aplicación**, la que aporta `client_id`/`client_secret` y cobra el `marketplace_fee` |
+| **Vendedor**                 | quien conecta por OAuth                                                                                               |
+| **Comprador**                | quien paga                                                                                                            |
+
+El panel de cuentas de prueba tiene un tipo dedicado: **Marketplace** —
+_"para simular a los intermediarios en pruebas con Split de Pagos"_.
+
+Consecuencia práctica: **la aplicación de pruebas debe crearse desde una cuenta
+de prueba de tipo Marketplace**, no desde la cuenta real. Una cuenta de prueba
+puede iniciar sesión en el panel de developers y crear aplicaciones con
+normalidad.
+
+Al crearla hay que completar **la categoría del negocio** y poner **PKCE en
+`Sí`**: con el perfil incompleto, la autorización falla con _"La aplicación no
+está preparada para conectarse a Mercado Pago"_.
+
+⚠️ Y la cuenta que autoriza no puede ser la Marketplace: una aplicación no
+puede conectarse a sí misma, y MP responde `400` sin explicar.
+
 ## Lo que falta para usarlo de verdad
 
-1. **Publicar listings desde la app**: hoy una publicación sólo existe si se
-   inserta en la base. Es el último eslabón para probar el flujo sin SQL.
-2. **Config Store**: el 6% tiene que salir de `app_settings`, no de una constante.
-3. **Refresh de tokens de MP**: sin él, la conexión muere a los 180 días.
-4. **Registrar la app en Mercado Pago** y cargar `MERCADOPAGO_WEBHOOK_SECRET`.
-5. **Verificar en sandbox** los dos 🔵: plantilla de la firma y lista literal de
-   estados de `/v1/payments`.
+1. ~~Publicar listings desde la app~~ ✅ implementado y usado en esta prueba.
+2. ~~Registrar la app en Mercado Pago y cargar `MERCADOPAGO_WEBHOOK_SECRET`~~ ✅.
+3. ~~Verificar los dos 🔵~~ ✅ los dos cerrados: plantilla de la firma y lista
+   literal de estados de `/v1/payments`.
+4. **Config Store**: el 6% sigue siendo una constante y tiene que salir de
+   `app_settings` (§12 de CLAUDE.md).
+5. **Refresh de tokens de MP**: sin él, la conexión muere a los 180 días.
+6. **El stock no se descuenta** al aprobarse el pago.
+7. **Refunds sin probar contra MP real**: el código está, la prueba no.

@@ -514,9 +514,9 @@ trabajar en el repositorio equivocado.
 
 ---
 
-## 19. Estado de la implementación (2026-08-24)
+## 19. Estado de la implementación (2026-08-26)
 
-**Foundation + modelo de datos + primeros módulos de negocio. Todo commiteado.**
+**Cadena de venta completa contra Mercado Pago real, desplegada en producción.**
 
 > Esta sección venía desactualizada: afirmaba "schema de Drizzle vacío" y "sin
 > funcionalidades de negocio" cuando el ERD ya estaba migrado y auth funcionaba.
@@ -527,37 +527,60 @@ Qué existe en `offsideApp/`:
 
 |                                    |                                                                                |
 | ---------------------------------- | ------------------------------------------------------------------------------ |
-| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 15 rutas de API |
+| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 20 rutas de API |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)      |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 2 migraciones aplicadas** |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 3 migraciones aplicadas** |
 | `packages/jobs`                    | Redis, registro de colas y workers de BullMQ. **Sin jobs de negocio todavía**  |
 | `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                        |
 
 Módulos de dominio implementados (`apps/web/src/modules/`):
 
-| Módulo    | Alcance                                                                                                                |
-| --------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `auth`    | registro, verificación de email, login, logout, sesión, reset de password, rate limiting                               |
-| `users`   | historial de hechos (`user_history_events`, DEC-036)                                                                   |
-| `sellers` | alta de perfil (nace en `pending`), identidad fiscal CUIT/CUIL/CDI con historial y **conexión OAuth con Mercado Pago** |
-| `audit`   | escritor de `audit_log` (ERD §19.1). Transversal: lo van a usar payments, disputas y admin                             |
+| Módulo     | Alcance                                                                                                                |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `auth`     | registro, verificación de email, login, logout, sesión, reset de password, rate limiting                               |
+| `users`    | historial de hechos (`user_history_events`, DEC-036)                                                                   |
+| `sellers`  | alta de perfil (nace en `pending`), identidad fiscal CUIT/CUIL/CDI con historial y **conexión OAuth con Mercado Pago** |
+| `audit`    | escritor de `audit_log` (ERD §19.1). Transversal: lo usan sellers y payments                                           |
+| `listings` | publicación de prendas y lectura del catálogo propio                                                                   |
+| `orders`   | compra directa, snapshot económico y comisión del 6% (DEC-043)                                                         |
+| `payments` | Checkout Pro con **Split 1:1**, webhooks firmados, conciliación del reparto y refunds                                  |
 
-**De las 51 tablas migradas se usan 9.** El resto está creada y vacía.
+**De las 51 tablas migradas se usan 15.** El resto está creada y vacía.
 
-**Mercado Pago — sólo la CONEXIÓN.** Implementado según
-`offsideApp/docs-implementation/mercadopago-oauth-spec.md`: PKCE S256, `state`
-de un solo uso en Redis, tokens cifrados con AES-256-GCM, conflictos de cuenta,
-desvinculación y auditoría. **Sin cambios en el ERD**: `mercadopago_accounts` ya
-cubría todo. Detalle en `mercadopago-oauth-module.md`.
+**Mercado Pago — conexión Y pagos, verificados contra la API real.**
 
-**NO implementado:** refresh de tokens de MP, webhook `mp-connect`, payments,
-comisiones, Config Store operativo, listings, catálogo, búsqueda, carrito,
-órdenes, envíos, refunds, disputas, reviews, reputación, aprobación de vendedor,
-admin, envío de emails y frontend.
+- **Conexión** (`mercadopago-oauth-spec.md`): PKCE S256, `state` de un solo uso
+  en Redis, tokens cifrados con AES-256-GCM, conflictos de cuenta,
+  desvinculación y auditoría.
+- **Pagos** (`mercadopago-payments-spec.md`): preferencia creada **sobre la
+  cuenta del vendedor** con `marketplace_fee`, webhooks autenticados por
+  `x-signature`, reconsulta del pago a MP —nunca se confía en el payload—,
+  idempotencia y refunds.
 
-Tests: **200** (122 unitarios + 78 de integración contra PostgreSQL y Redis
+**Prueba real de punta a punta el 2026-08-26**: vendedor conectado → listing
+publicado → orden → checkout → pago aprobado en Mercado Pago → webhook firmado →
+orden en `PAID`, sin intervención manual. El reparto quedó
+`6000` de Offside + `4100` de Mercado Pago + `89900` para el vendedor sobre
+`100000`, **confirmando DEC-043**: el costo de MP se descuenta del lado del
+vendedor y la comisión de Offside es un 6% limpio. Detalle y hallazgos en
+`mercadopago-payments-module.md`.
+
+**Un solo cambio de ERD en todo el esfuerzo**: `payments.mp_preference_id`
+(migración `0002`). El resto ya estaba modelado.
+
+**NO implementado:** refresh de tokens de MP, webhook `mp-connect`, Config Store
+operativo, descuento de stock al aprobarse el pago, catálogo, búsqueda, carrito,
+envíos, disputas, reviews, reputación, aprobación de vendedor, admin, envío de
+emails y frontend. Los refunds tienen código y tests, pero **no se probaron
+contra Mercado Pago real**.
+
+Tests: **320** (188 unitarios + 132 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
+
+**Desplegado en producción** en un VPS con Coolify (DEC-012), con HTTPS y
+migraciones aplicadas al arrancar el contenedor. Ver
+`offsideApp/docs-implementation/deployment-coolify.md`.
 
 Comandos (desde `offsideApp/`): `npm run dev`, `build`, `verify`
 (format + lint + typecheck + test), `test`, `docker:up`, `db:generate`,
@@ -598,10 +621,16 @@ Lo que hoy frena el avance, en orden de impacto:
    El gate NO se relajó: hacerlo sería inventar la decisión que falta.
 2. **B1 — liberación/retención de fondos en MP Split** 🔵. Es la única
    mitigación conocida de RISK-F1, el riesgo central del negocio. **Requiere
-   investigación contra la API real; no se asume.**
-3. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()` autoriza
+   investigación contra la API real; no se asume.** La prueba del 2026-08-26
+   mostró el reparto pero **no** cómo retener fondos: al aprobarse el pago, MP
+   acredita al vendedor de inmediato.
+3. **Config Store operativo** 🟡. El 6% es hoy una constante
+   (`COMMISSION_RATE_BASIS_POINTS`) y debe salir de `app_settings` (§12).
+   `app_settings` y `seller_tiers` están migradas pero vacías y sin código que
+   las lea.
+4. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()` autoriza
    sólo por rol. Bloquea la aprobación de `catalog_change_requests` (OQ-F2).
-4. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
+5. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
    lanzamiento comercial**. El módulo fiscal está limitado a identificación.
 
 > La contradicción que esta sección señalaba entre `configuration-registry.md`

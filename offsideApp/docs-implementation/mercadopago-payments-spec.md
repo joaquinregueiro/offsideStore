@@ -586,12 +586,22 @@ Lo que sí está decidido y no depende de esa verificación: la **estructura**
 - Reintentos cada **15 minutos**; tras tres intentos los intervalos se extienden
   pero los reintentos continúan.
 
-### 11.2 Lo pendiente 🔵
+### 11.2 La plantilla de la firma ✅ CERRADO el 2026-08-26
 
 **La plantilla exacta del string que se firma** (el orden y separadores de `id`,
-`request-id` y `ts`) **no apareció literal en la documentación consultada**; MP
-recomienda usar sus SDK oficiales, que la implementan internamente. Se verifica
-antes de implementar. **No se inventa una plantilla.**
+`request-id` y `ts`) **no aparece literal en la documentación de Mercado Pago**;
+MP recomienda usar sus SDK oficiales, que la implementan internamente.
+
+Se implementó la plantilla de uso corriente, aislada en `buildManifest()`, y se
+verificó contra una notificación real:
+
+```
+id:<data.id>;request-id:<x-request-id>;ts:<ts>;
+```
+
+Pago `175705424980`, notificación `payment.created`, `signature_valid = true` a
+la primera. **No hizo falta ajustarla**, y el `data.id` firmado es el del QUERY
+STRING, como dice la documentación.
 
 ⚠️ Nótese que la spec de OAuth §11 asume el mismo mecanismo para `mp-connect`:
 lo que se verifique acá sirve para los dos, y **el validador de firma debe ser
