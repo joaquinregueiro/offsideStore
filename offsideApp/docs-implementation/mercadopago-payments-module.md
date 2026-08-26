@@ -253,6 +253,61 @@ rechazado por MP, auditoría y un **barrido que verifica que ningún registro de
 - **`chargebacks`, `seller_liabilities` y `reconciliation_records`** están
   migradas y vacías.
 
+## Stock: anti-overselling
+
+El stock **se descuenta al aprobarse el pago**, nunca antes (MF-022 / BR-022).
+Agregar al carrito no reserva, y reservar al crear la orden exigiria una
+politica de expiracion de reservas que sigue PENDIENTE (marketplace-flow.md
+§4.2).
+
+Hay dos lineas de defensa, y hacen falta las dos:
+
+**1. Revalidacion en el checkout** (UC-MF-3). Antes de crear la preferencia se
+verifica que haya stock. Si no lo hay, **no se cobra**: `LISTING_OUT_OF_STOCK`,
+y Mercado Pago ni se entera. Es una lectura, no una reserva.
+
+**2. Descuento atomico al aprobarse** (`listingRepo.decrementStock`). Corre
+dentro de la misma transaccion que el paso de la orden a `PAID`.
+
+```sql
+UPDATE listings SET stock = stock - $q
+ WHERE id = $1 AND stock >= $q
+RETURNING stock
+```
+
+La condicion va **adentro del `WHERE`, no en un `if` previo**. Leer y despues
+escribir deja una ventana entre las dos operaciones: dos pagos simultaneos de la
+ultima unidad leerian `stock = 1` y ambos escribirian `stock = 0`, vendiendo dos
+veces lo mismo. Con la condicion en el UPDATE, PostgreSQL bloquea la fila y
+reevalua el `WHERE` contra la version ya actualizada, asi que el segundo no
+encuentra fila y no descuenta. Hay un test que lo ejercita con dos descuentos
+concurrentes reales.
+
+El `CHECK (stock >= 0)` de la tabla es la ultima red, no el control.
+
+La idempotencia sale gratis: el descuento va despues de `markAsPaid`, que solo
+transiciona una vez, asi que un webhook repetido no vuelve a descontar.
+
+### El caso residual sigue sin decidir
+
+Entre la revalidacion del checkout y la aprobacion del pago hay una ventana
+—minutos, mientras el comprador tipea la tarjeta— en la que alguien puede
+llevarse la ultima unidad. Ahi **el dinero ya se cobro**.
+
+La documentacion cubre el caso en el checkout (UC-MF-3: revalidar y no cobrar)
+pero **no dice que hacer con un pago ya aprobado sin stock**. Reembolsar por
+cuenta propia seria inventar una politica de negocio.
+
+Lo implementado es deliberadamente neutral: la orden queda `PAID` y se registra
+`ORDER_PAID_WITHOUT_STOCK` en `audit_log` con las publicaciones que faltaron.
+**No decide, pero no esconde.** Cuando exista la decision, el enganche ya esta.
+
+⚠️ Tampoco esta definido si el stock **vuelve** al reembolsarse una orden, ni si
+una publicacion con `stock = 0` debe pasar a `sold_out`. Ninguna de las dos se
+implemento: el enum tiene el valor, pero la transicion inversa —y que pasa con
+un refund— no esta documentada. Con `stock = 0` la publicacion ya **no es
+comprable** (ERD §9.1), asi que no hay agujero funcional.
+
 ## Prueba real de punta a punta (2026-08-26)
 
 Flujo completo contra Mercado Pago real, sin tocar SQL en el medio salvo para
@@ -338,5 +393,8 @@ puede conectarse a sí misma, y MP responde `400` sin explicar.
 4. **Config Store**: el 6% sigue siendo una constante y tiene que salir de
    `app_settings` (§12 de CLAUDE.md).
 5. **Refresh de tokens de MP**: sin él, la conexión muere a los 180 días.
-6. **El stock no se descuenta** al aprobarse el pago.
-7. **Refunds sin probar contra MP real**: el código está, la prueba no.
+6. ~~El stock no se descuenta al aprobarse el pago~~ ✅ implementado, con
+   revalidación en el checkout y descuento atómico al aprobarse.
+7. **Qué hacer con un pago aprobado sin stock** 🟡: hoy se audita y queda para
+   resolución manual (ver arriba).
+8. **Refunds sin probar contra MP real**: el código está, la prueba no.

@@ -17,6 +17,14 @@ export const orderNotPayable = (): AuthError =>
 export const paymentDeadlineExpired = (): AuthError =>
   new AuthError('PAYMENT_DEADLINE_EXPIRED', 'La ventana de pago de esta orden venció');
 
+/**
+ * La publicacion se quedo sin stock entre la orden y el pago (UC-MF-3).
+ *
+ * Se revisa en el checkout para **no cobrar** algo que no se puede entregar.
+ */
+export const orderOutOfStock = (): AuthError =>
+  new AuthError('LISTING_OUT_OF_STOCK', 'La publicacion se quedo sin stock');
+
 export const paymentNotFound = (): AuthError =>
   new AuthError('PAYMENT_NOT_FOUND', 'El pago no existe');
 

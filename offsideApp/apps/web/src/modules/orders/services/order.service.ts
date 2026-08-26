@@ -78,6 +78,64 @@ export async function findById(orderId: string): Promise<orderRepo.OrderRow | un
  * Devuelve `false` si la orden ya no estaba en `PENDING_PAYMENT`: es el caso del
  * webhook duplicado y **no es un error**.
  */
+/** Una publicacion cuyo stock no alcanzo. */
+export interface StockShortage {
+  listingId: string;
+  requested: number;
+}
+
+/**
+ * Descuenta el stock de las publicaciones de una orden.
+ *
+ * Se llama SOLO cuando el pago quedo aprobado (MF-022 / BR-022): agregar al
+ * carrito no reserva stock, y reservarlo al crear la orden exigiria una
+ * politica de expiracion que nadie decidio.
+ *
+ * Corre dentro de la MISMA transaccion que el paso de la orden a `PAID`, y
+ * `markAsPaid` ya garantiza que eso ocurre una sola vez: un webhook repetido no
+ * vuelve a descontar.
+ *
+ * ⚠️ NO LANZA cuando el stock no alcanza. Devuelve los faltantes para que quien
+ * llama decida, porque a esta altura **el dinero ya se cobro** y que hacer con
+ * un pago aprobado sin stock es una decision de negocio que no esta tomada
+ * (ver `orders-and-refunds.md`; la doc cubre el caso en el checkout —UC-MF-3—
+ * pero no despues del cobro).
+ */
+export async function decrementStockForOrder(
+  orderId: string,
+  db?: Database,
+): Promise<StockShortage[]> {
+  const items = await orderRepo.findItems(orderId, db);
+  const faltantes: StockShortage[] = [];
+
+  for (const item of items) {
+    const restante = await listingService.decrementStock(item.listingId, item.quantity, db);
+    if (restante === undefined) {
+      faltantes.push({ listingId: item.listingId, requested: item.quantity });
+    }
+  }
+
+  return faltantes;
+}
+
+/**
+ * Hay stock suficiente para todos los items de la orden.
+ *
+ * Es una lectura, no una reserva: entre esta consulta y el cobro alguien puede
+ * llevarse la ultima unidad. Por eso NO reemplaza al descuento atomico, lo
+ * complementa: evita cobrar de mas en el caso comun (UC-MF-3).
+ */
+export async function hasStockForOrder(orderId: string, db?: Database): Promise<boolean> {
+  const items = await orderRepo.findItems(orderId, db);
+
+  for (const item of items) {
+    const listing = await listingService.findById(item.listingId);
+    if (listing === undefined || listing.stock < item.quantity) return false;
+  }
+
+  return true;
+}
+
 export async function markAsPaid(orderId: string, paidAt: Date, db?: Database): Promise<boolean> {
   const actualizada = await orderRepo.markAsPaid(orderId, paidAt, db);
   if (actualizada === undefined) return false;

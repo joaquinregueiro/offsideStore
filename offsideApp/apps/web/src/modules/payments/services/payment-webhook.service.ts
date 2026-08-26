@@ -264,8 +264,33 @@ async function aplicarAprobacion(
   const transicionó = await orderService.markAsPaid(orderId, pago.approvedAt ?? new Date(), tx);
 
   // Sin transicion, la orden ya estaba pagada: webhook duplicado. No se
-  // registra el split dos veces.
+  // registra el split dos veces ni se vuelve a descontar stock.
   if (!transicionó) return;
+
+  // STOCK (MF-022 / BR-022): se descuenta al confirmarse el pago, nunca antes.
+  // Va en la MISMA transaccion que el paso a PAID, asi que o pasan las dos
+  // cosas o no pasa ninguna.
+  const faltantes = await orderService.decrementStockForOrder(orderId, tx);
+
+  if (faltantes.length > 0) {
+    // ⚠️ EL DINERO YA SE COBRO. La documentacion cubre el caso en el checkout
+    // (UC-MF-3: revalidar y no cobrar), pero **no dice que hacer con un pago ya
+    // aprobado sin stock**. Reembolsar por cuenta propia seria inventar una
+    // politica de negocio (🟡), y dejarlo pasar en silencio seria peor.
+    //
+    // Se deja constancia auditable y la orden queda PAID para resolucion
+    // manual. Es la opcion neutral: no decide, pero no esconde.
+    await audit.record(
+      {
+        actorType: 'system',
+        action: 'ORDER_PAID_WITHOUT_STOCK',
+        entityType: 'order',
+        entityId: orderId,
+        metadata: { paymentId: local.id, shortages: faltantes },
+      },
+      tx,
+    );
+  }
 
   const order = await orderService.findById(orderId);
 

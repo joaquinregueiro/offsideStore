@@ -129,7 +129,8 @@ migraciones aplicadas, `/api/health` en `200` con `database: up` y `redis: up`, 
 - **El frontend es un placeholder**: hoy esto es una API.
 - **Sin refresh de tokens de MP**: la conexión de un vendedor muere a los 180
   días.
-- El **stock no se descuenta** al aprobarse un pago.
+- **Qué hacer con un pago aprobado sin stock** no está decidido: se audita
+  como `ORDER_PAID_WITHOUT_STOCK` y queda para resolución manual.
 
 Con credenciales de **TEST** de Mercado Pago esto es un entorno de prueba
 perfectamente útil. Con credenciales de producción, mueve dinero real.

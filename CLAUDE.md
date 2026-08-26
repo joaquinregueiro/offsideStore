@@ -568,10 +568,14 @@ vendedor y la comisión de Offside es un 6% limpio. Detalle y hallazgos en
 **Un solo cambio de ERD en todo el esfuerzo**: `payments.mp_preference_id`
 (migración `0002`). El resto ya estaba modelado.
 
+**Stock anti-overselling**: se descuenta al aprobarse el pago (MF-022 /
+BR-022), con revalidación en el checkout (UC-MF-3) y descuento **atómico** en la
+misma transacción que el paso a `PAID`. Un webhook repetido no descuenta dos
+veces.
+
 **NO implementado:** refresh de tokens de MP, webhook `mp-connect`, Config Store
-operativo, descuento de stock al aprobarse el pago, catálogo, búsqueda, carrito,
-envíos, disputas, reviews, reputación, aprobación de vendedor, admin, envío de
-emails y frontend. Los refunds tienen código y tests, pero **no se probaron
+operativo, catálogo, búsqueda, carrito, envíos, disputas, reviews, reputación,
+aprobación de vendedor, admin, envío de emails y frontend. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
 Tests: **320** (188 unitarios + 132 de integración contra PostgreSQL y Redis

@@ -71,6 +71,11 @@ export async function startCheckout(user: PublicUser, orderId: string): Promise<
     throw errors.paymentDeadlineExpired();
   }
 
+  // UC-MF-3: revalidar stock ANTES de cobrar. Es la primera linea contra el
+  // overselling; la segunda es el descuento atomico al aprobarse el pago.
+  // Sin esto, dos compradores de la ultima unidad llegan los dos a pagar.
+  if (!(await orderService.hasStockForOrder(order.id))) throw errors.orderOutOfStock();
+
   // El snapshot manda. Si no esta, es un bug de datos: no se recalcula (DEC-030).
   if (order.commissionAmount === null) throw errors.orderWithoutCommissionSnapshot();
 

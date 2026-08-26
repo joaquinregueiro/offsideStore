@@ -466,3 +466,240 @@ describe('flujo completo: publicar → ordenar → cobrar', () => {
     expect(split?.marketplaceFeeAmount).toBe(300_000n);
   });
 });
+
+/* -------------------------------------------------------------------------- */
+
+describe('stock', () => {
+  /** Cobra una orden de punta a punta: checkout + webhook aprobado. */
+  async function cobrar(
+    comprador: PublicUser,
+    orden: { id: string },
+    mpPaymentId: string,
+    mpUserId: string,
+    montoPesos: number,
+  ): Promise<string> {
+    requestAsSeller.mockImplementation((_sellerId: string, request: { path: string }) => {
+      if (request.path.startsWith('/checkout/preferences')) {
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          body: { id: `pref-${mpPaymentId}`, init_point: 'https://mp.test/x' },
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        body: {
+          id: mpPaymentId,
+          status: 'approved',
+          status_detail: 'accredited',
+          external_reference: orden.id,
+          transaction_amount: montoPesos,
+          currency_id: 'ARS',
+          date_approved: '2026-08-26T12:00:00.000Z',
+        },
+      });
+    });
+
+    await paymentService.startCheckout(comprador, orden.id);
+
+    return webhookService.handleNotification(
+      {
+        type: 'payment',
+        action: 'payment.updated',
+        dataId: mpPaymentId,
+        notificationId: `notif-${mpPaymentId}-${Date.now()}`,
+        mpUserId,
+      },
+      {},
+    );
+  }
+
+  async function stockDe(listingId: string): Promise<number> {
+    const [row] = await getDatabase()
+      .select({ stock: schema.listings.stock })
+      .from(schema.listings)
+      .where(eq(schema.listings.id, listingId));
+
+    return row!.stock;
+  }
+
+  async function repo() {
+    return import('./repositories/listing.repository');
+  }
+
+  it('se descuenta al APROBARSE el pago, no antes (MF-022)', async () => {
+    const seller = await vendedor('stk1');
+    const mpUserId = `3000000${secuencia}`;
+    const comprador = await usuario('stk1-buyer');
+    const listing = await listingService.publishListing(seller, await camiseta({ stock: 3 }));
+
+    const orden = await orderService.createOrder(comprador, {
+      listingId: listing.id,
+      quantity: 2,
+      shippingAddress: { calle: 'Falsa 123' },
+    });
+
+    // Crear la orden NO reserva: el stock sigue intacto (BR-022).
+    expect(await stockDe(listing.id)).toBe(3);
+
+    expect(await cobrar(comprador, orden, '900000001', mpUserId, 100_000)).toBe('processed');
+
+    expect(await stockDe(listing.id)).toBe(1);
+  });
+
+  it('un webhook repetido NO descuenta dos veces', async () => {
+    const seller = await vendedor('stk2');
+    const mpUserId = `3000000${secuencia}`;
+    const comprador = await usuario('stk2-buyer');
+    const listing = await listingService.publishListing(seller, await camiseta({ stock: 2 }));
+
+    const orden = await orderService.createOrder(comprador, {
+      listingId: listing.id,
+      quantity: 1,
+      shippingAddress: { calle: 'Falsa 123' },
+    });
+
+    await cobrar(comprador, orden, '900000002', mpUserId, 50_000);
+    expect(await stockDe(listing.id)).toBe(1);
+
+    // Mercado Pago reintenta el mismo pago: la orden ya esta PAID y el
+    // descuento no se repite.
+    await webhookService.handleNotification(
+      {
+        type: 'payment',
+        action: 'payment.updated',
+        dataId: '900000002',
+        notificationId: `notif-repetido-${Date.now()}`,
+        mpUserId,
+      },
+      {},
+    );
+
+    expect(await stockDe(listing.id)).toBe(1);
+  });
+
+  it('⚠️ dos descuentos SIMULTANEOS de la ultima unidad: gana uno solo', async () => {
+    // El corazon del anti-overselling. Si la condicion `stock >= cantidad`
+    // estuviera en un `if` previo al UPDATE en vez de adentro del WHERE, los
+    // dos lados leerian stock=1 y los dos escribirian stock=0.
+    const seller = await vendedor('stk3');
+    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const listingRepo = await repo();
+
+    const [a, b] = await Promise.all([
+      listingRepo.decrementStock(listing.id, 1),
+      listingRepo.decrementStock(listing.id, 1),
+    ]);
+
+    const ganadores = [a, b].filter((r) => r !== undefined);
+    expect(ganadores).toHaveLength(1);
+    expect(ganadores[0]).toBe(0);
+    expect(await stockDe(listing.id)).toBe(0);
+  });
+
+  it('nunca deja el stock en negativo', async () => {
+    const seller = await vendedor('stk4');
+    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const listingRepo = await repo();
+
+    expect(await listingRepo.decrementStock(listing.id, 5)).toBeUndefined();
+    expect(await stockDe(listing.id)).toBe(1);
+  });
+
+  it('el checkout NO cobra si la publicacion se quedo sin stock (UC-MF-3)', async () => {
+    const seller = await vendedor('stk5');
+    const comprador = await usuario('stk5-buyer');
+    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+
+    const orden = await orderService.createOrder(comprador, {
+      listingId: listing.id,
+      quantity: 1,
+      shippingAddress: { calle: 'Falsa 123' },
+    });
+
+    // Otro comprador se lleva la ultima unidad entre la orden y el pago.
+    const listingRepo = await repo();
+    await listingRepo.decrementStock(listing.id, 1);
+
+    await expect(paymentService.startCheckout(comprador, orden.id)).rejects.toMatchObject({
+      code: 'LISTING_OUT_OF_STOCK',
+    });
+
+    // Y NO se llamo a Mercado Pago: no se cobra lo que no se puede entregar.
+    expect(requestAsSeller).not.toHaveBeenCalled();
+  });
+
+  it('un pago aprobado sin stock queda AUDITADO, no silenciado', async () => {
+    // Caso residual: el checkout revalido, pero entre esa lectura y la
+    // aprobacion alguien se llevo la unidad. El dinero ya se cobro, y que hacer
+    // con eso es una decision de negocio que todavia no esta tomada.
+    const seller = await vendedor('stk6');
+    const mpUserId = `3000000${secuencia}`;
+    const comprador = await usuario('stk6-buyer');
+    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+
+    const orden = await orderService.createOrder(comprador, {
+      listingId: listing.id,
+      quantity: 1,
+      shippingAddress: { calle: 'Falsa 123' },
+    });
+
+    requestAsSeller.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        status: 201,
+        body: { id: 'pref-stk6', init_point: 'https://mp.test/x' },
+      }),
+    );
+    await paymentService.startCheckout(comprador, orden.id);
+
+    // La unidad se va DESPUES de que el checkout revalido y creo la preferencia.
+    const listingRepo = await repo();
+    await listingRepo.decrementStock(listing.id, 1);
+
+    // Se va directo al webhook: el checkout ya ocurrio y ahora rechazaria.
+    requestAsSeller.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        body: {
+          id: '900000006',
+          status: 'approved',
+          status_detail: 'accredited',
+          external_reference: orden.id,
+          transaction_amount: 50_000,
+          currency_id: 'ARS',
+          date_approved: '2026-08-26T12:00:00.000Z',
+        },
+      }),
+    );
+
+    const outcome = await webhookService.handleNotification(
+      {
+        type: 'payment',
+        action: 'payment.updated',
+        dataId: '900000006',
+        notificationId: `notif-stk6-${Date.now()}`,
+        mpUserId,
+      },
+      {},
+    );
+    expect(outcome).toBe('processed');
+
+    // La orden se paga igual —el dinero entro— pero queda el rastro.
+    const [ordenFinal] = await getDatabase()
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orden.id));
+    expect(ordenFinal?.status).toBe('PAID');
+
+    const eventos = await getDatabase()
+      .select()
+      .from(schema.auditLog)
+      .where(eq(schema.auditLog.entityId, orden.id));
+
+    expect(eventos.map((e) => e.action)).toContain('ORDER_PAID_WITHOUT_STOCK');
+  });
+});

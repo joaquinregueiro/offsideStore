@@ -1,3 +1,5 @@
+import type { Database } from '@offside/database';
+
 import type { PublicUser } from '../../auth/services/auth.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
@@ -17,6 +19,20 @@ export type { ListingRow } from '../repositories/listing.repository';
 /** Estados en los que una publicacion admite compra. */
 export function isPurchasable(listing: listingRepo.ListingRow): boolean {
   return listing.status === 'active';
+}
+
+/**
+ * Descuenta stock atomicamente. Ver `listingRepo.decrementStock`.
+ *
+ * Existe en el Service —y no se llama al repositorio desde `orders`— para no
+ * saltear el layering: cada modulo entra al de al lado por su Service.
+ */
+export async function decrementStock(
+  listingId: string,
+  quantity: number,
+  db?: Database,
+): Promise<number | undefined> {
+  return listingRepo.decrementStock(listingId, quantity, db);
 }
 
 export async function findById(listingId: string): Promise<listingRepo.ListingRow | undefined> {

@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, gte, ne, sql } from 'drizzle-orm';
 
 /**
  * Acceso a `listings` y a `categories` (ERD §9.1 y §8). Sin reglas de negocio.
@@ -24,6 +24,38 @@ export async function findById(id: string, db?: Database): Promise<ListingRow | 
     .limit(1);
 
   return row;
+}
+
+/**
+ * Descuenta stock de forma ATOMICA (MF-022 / BR-022, anti-overselling).
+ *
+ * Devuelve el stock resultante, o `undefined` si no habia suficiente y **no se
+ * descontó nada**.
+ *
+ * ⚠️ LA CONDICION `stock >= cantidad` VA EN EL `WHERE`, NO EN UN `if` PREVIO.
+ * Leer y despues escribir deja una ventana entre las dos operaciones: dos pagos
+ * simultaneos de la ultima unidad leerian `stock = 1` y ambos escribirian
+ * `stock = 0`, vendiendo dos veces lo mismo. Con la condicion adentro del
+ * UPDATE, PostgreSQL bloquea la fila y **reevalua el WHERE** contra la version
+ * ya actualizada, asi que el segundo no encuentra fila y no descuenta.
+ *
+ * El `CHECK (stock >= 0)` de la tabla es la ultima red, no el control.
+ */
+export async function decrementStock(
+  listingId: string,
+  quantity: number,
+  db?: Database,
+): Promise<number | undefined> {
+  const [row] = await conn(db)
+    .update(schema.listings)
+    .set({
+      stock: sql`${schema.listings.stock} - ${quantity}`,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(schema.listings.id, listingId), gte(schema.listings.stock, quantity)))
+    .returning({ stock: schema.listings.stock });
+
+  return row?.stock;
 }
 
 export type CategoryRow = typeof schema.categories.$inferSelect;
