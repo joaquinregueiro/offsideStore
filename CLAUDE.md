@@ -529,7 +529,7 @@ Qué existe en `offsideApp/`:
 | ---------------------------------- | ------------------------------------------------------------------------------ |
 | `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 20 rutas de API |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)      |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 3 migraciones aplicadas** |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 4 migraciones aplicadas** |
 | `packages/jobs`                    | Redis, registro de colas y workers de BullMQ. **Sin jobs de negocio todavía**  |
 | `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                        |
 
@@ -545,7 +545,7 @@ Módulos de dominio implementados (`apps/web/src/modules/`):
 | `orders`   | compra directa, snapshot económico y comisión del 6% (DEC-043)                                                         |
 | `payments` | Checkout Pro con **Split 1:1**, webhooks firmados, conciliación del reparto y refunds                                  |
 
-**De las 51 tablas migradas se usan 15.** El resto está creada y vacía.
+**De las 51 tablas migradas se usan 16.** El resto está creada y vacía.
 
 **Mercado Pago — conexión Y pagos, verificados contra la API real.**
 
@@ -567,6 +567,12 @@ vendedor y la comisión de Offside es un 6% limpio. Detalle y hallazgos en
 
 **Un solo cambio de ERD en todo el esfuerzo**: `payments.mp_preference_id`
 (migración `0002`). El resto ya estaba modelado.
+
+**Config Store operativo**: la comisión dejó de ser una constante. Vive en
+`app_settings.commission_rate_default` (600 basis points = 6%), la carga la
+migración `0003` y se puede cambiar sin redesplegar. `orders` la lee UNA vez al
+crear la orden y la congela en el snapshot (DEC-030); `payments` nunca la
+consulta. Sin panel de admin: DEC-023 sigue 🟡.
 
 **Stock anti-overselling**: se descuenta al aprobarse el pago (MF-022 /
 BR-022), con revalidación en el checkout (UC-MF-3) y descuento **atómico** en la
@@ -628,13 +634,11 @@ Lo que hoy frena el avance, en orden de impacto:
    investigación contra la API real; no se asume.** La prueba del 2026-08-26
    mostró el reparto pero **no** cómo retener fondos: al aprobarse el pago, MP
    acredita al vendedor de inmediato.
-3. **Config Store operativo** 🟡. El 6% es hoy una constante
-   (`COMMISSION_RATE_BASIS_POINTS`) y debe salir de `app_settings` (§12).
-   `app_settings` y `seller_tiers` están migradas pero vacías y sin código que
-   las lea.
-4. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()` autoriza
-   sólo por rol. Bloquea la aprobación de `catalog_change_requests` (OQ-F2).
-5. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
+3. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()`
+   autoriza sólo por rol. Bloquea la aprobación de `catalog_change_requests`
+   (OQ-F2), y es lo que impide darle un panel al Config Store: la comisión se
+   cambia por SQL porque no hay a quién autorizar.
+4. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
    lanzamiento comercial**. El módulo fiscal está limitado a identificación.
 
 > La contradicción que esta sección señalaba entre `configuration-registry.md`

@@ -87,12 +87,67 @@ Sólo tiene lo que `payments` necesita: leer una orden con sus ítems, marcarla
 repository de otro** (`modules/README.md`); crear una lectura de `orders` dentro
 de `payments` habría roto esa regla.
 
-Incluye `calculateCommission()` —el 6%— porque es donde va a vivir cuando exista
-el módulo completo. `payments` **no la usa**: lee el snapshot ya congelado.
+Incluye `calculateCommission(total, basisPoints)`, que **no conoce el 6%**:
+recibe la tasa. `payments` no la usa: lee el snapshot ya congelado.
 
-⚠️ `COMMISSION_RATE_BASIS_POINTS` es provisional en código. Su lugar definitivo
-es `app_settings.commission_rate_default` (DEC-013/DEC-038), que no existe
-todavía. Está en **una** constante para que migrarla sea un cambio de una línea.
+## La comisión: dónde vive el 6%
+
+**La comisión NO está en el código.** Vive en `app_settings`, la tabla del
+Config Store (DEC-013 / DEC-038), bajo la clave `commission_rate_default` que
+fijan el ERD §21.1 y DEC-007.
+
+|                   |                                                           |
+| ----------------- | --------------------------------------------------------- |
+| Valor por defecto | **600** = 6% (DEC-007 ✅, DEC-043)                        |
+| Unidad            | **basis points enteros**                                  |
+| Dónde             | `app_settings`, `scope = 'global'`, `value_type = 'rate'` |
+| Cómo llega ahí    | la migración `0003_seed_commission_rate`                  |
+| Quién la lee      | **sólo** `orders`, al crear la orden                      |
+
+### Por qué basis points y no un porcentaje
+
+La documentación fija la clave y su `value_type`, pero **no la unidad**. Se
+eligió basis points enteros porque un porcentaje en punto flotante no sobrevive
+el viaje por JSON: `0.06` no es representable en binario y `total * 0.06` puede
+caer del lado equivocado del centavo. Con enteros el cálculo es
+`total * bp / 10000` en `bigint`, sin redondeo intermedio.
+
+### Se lee una vez y se congela
+
+```
+app_settings.commission_rate_default   (600 bp)
+        ↓  se lee UNA vez, al crear la orden
+orders.commission_rate_at_transaction  ('0.0600')
+orders.commission_amount               (300000)
+        ↓  payments LEE el snapshot, no recalcula
+marketplace_fee enviado a Mercado Pago (3000.00)
+```
+
+**Cambiar la tasa no toca las órdenes existentes** (DEC-030). Si mañana pasa a
+700 bp, las órdenes nuevas cobran 7% y las viejas siguen con su 6% congelado.
+No hay ningún camino de código que recalcule una comisión ya emitida: `payments`
+lee `orders.commission_amount` y nunca consulta el Config Store. Hay un test que
+verifica justamente eso, espiando que la lectura de configuración **no** ocurra
+durante el checkout.
+
+### Sin valor por defecto en código
+
+Si la clave no está cargada, crear una orden **falla** con
+`SETTING_NOT_CONFIGURED`. No hay fallback al 6% a propósito: sería una segunda
+fuente de verdad, y el día que alguien cambie el setting y el código conserve su
+propio número, nadie sabría cuál rigió. La clave se carga por migración, así que
+faltar es un problema de despliegue, no un caso normal.
+
+### Cómo se cambia hoy
+
+Sin redeploy: insertando una versión nueva en `app_settings`. La tabla es
+versionada (`UNIQUE(scope, scope_id, key, version)`), así que el historial queda.
+`settingsService.setCommissionRateBasisPoints()` es el camino validado.
+
+⚠️ **No hay panel de administración** y no se agregó uno: DEC-023 —permisos
+granulares por rol— sigue 🟡, así que no hay a quién autorizar. Tampoco hay
+caché, overrides por tier ni auditoría propia; ver el encabezado de
+`settings.service.ts` para el porqué de cada ausencia.
 
 ## Endpoints
 
@@ -390,8 +445,8 @@ puede conectarse a sí misma, y MP responde `400` sin explicar.
 2. ~~Registrar la app en Mercado Pago y cargar `MERCADOPAGO_WEBHOOK_SECRET`~~ ✅.
 3. ~~Verificar los dos 🔵~~ ✅ los dos cerrados: plantilla de la firma y lista
    literal de estados de `/v1/payments`.
-4. **Config Store**: el 6% sigue siendo una constante y tiene que salir de
-   `app_settings` (§12 de CLAUDE.md).
+4. ~~Config Store: el 6% sigue siendo una constante~~ ✅ implementado; la
+   tasa vive en `app_settings.commission_rate_default` (ver arriba).
 5. **Refresh de tokens de MP**: sin él, la conexión muere a los 180 días.
 6. ~~El stock no se descuenta al aprobarse el pago~~ ✅ implementado, con
    revalidación en el checkout y descuento atómico al aprobarse.

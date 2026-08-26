@@ -57,6 +57,10 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   /** La publicacion no existe o no admite compra. */
   LISTING_NOT_AVAILABLE: 409,
   LISTING_OUT_OF_STOCK: 409,
+  // Configuracion faltante o corrupta: es un problema del servidor, no del
+  // cliente. Nada que el usuario pueda corregir reintentando distinto.
+  SETTING_NOT_CONFIGURED: 500,
+  SETTING_INVALID: 500,
   /** El vendedor no puede operar: sin aprobar o sin Mercado Pago conectado. */
   SELLER_NOT_OPERATIONAL: 409,
 };

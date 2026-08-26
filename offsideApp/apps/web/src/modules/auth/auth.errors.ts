@@ -39,7 +39,10 @@ export type AuthErrorCode =
   // --- orders ---
   | 'LISTING_NOT_AVAILABLE'
   | 'LISTING_OUT_OF_STOCK'
-  | 'SELLER_NOT_OPERATIONAL';
+  | 'SELLER_NOT_OPERATIONAL'
+  // --- config store (configuration-registry.md) ---
+  | 'SETTING_NOT_CONFIGURED'
+  | 'SETTING_INVALID';
 
 export class AuthError extends Error {
   readonly code: AuthErrorCode;

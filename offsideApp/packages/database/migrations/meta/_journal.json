@@ -22,6 +22,13 @@
       "when": 1787624013069,
       "tag": "0002_payments_mp_preference_id",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787755603263,
+      "tag": "0003_seed_commission_rate",
+      "breakpoints": true
     }
   ]
 }

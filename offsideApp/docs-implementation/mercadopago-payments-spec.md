@@ -250,16 +250,16 @@ Es una decisión de arquitectura que conviene confirmar antes de implementarla.
 
 Actualizado tras la implementacion, **2026-08-25**:
 
-| Pieza                                                             | Tablas migradas | Código                                                                            |
-| ----------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------- |
-| `mercadopago_accounts`                                            | ✅              | ✅ conexión OAuth completa                                                        |
-| `audit_log`                                                       | ✅              | ✅ `modules/audit`                                                                |
-| `seller_profiles`, `seller_tax_profiles`                          | ✅              | ✅                                                                                |
-| `orders`, `order_items`, `order_status_history`                   | ✅              | ✅ `modules/orders`                                                               |
-| `payments`, `payment_splits`, `payment_webhook_events`, `refunds` | ✅              | ✅ `modules/payments`                                                             |
-| `chargebacks`, `seller_liabilities`, `reconciliation_records`     | ✅              | ❌ sin código                                                                     |
-| `carts`, `cart_items`, `listings`                                 | ✅              | ❌ sin código: **una orden sólo puede nacer de un listing ya cargado en la base** |
-| `app_settings`, `seller_tiers` (Config Store)                     | ✅              | ❌ **vacías y sin código que las lea**: el 6% vive en una constante               |
+| Pieza                                                             | Tablas migradas | Código                                                                                              |
+| ----------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------- |
+| `mercadopago_accounts`                                            | ✅              | ✅ conexión OAuth completa                                                                          |
+| `audit_log`                                                       | ✅              | ✅ `modules/audit`                                                                                  |
+| `seller_profiles`, `seller_tax_profiles`                          | ✅              | ✅                                                                                                  |
+| `orders`, `order_items`, `order_status_history`                   | ✅              | ✅ `modules/orders`                                                                                 |
+| `payments`, `payment_splits`, `payment_webhook_events`, `refunds` | ✅              | ✅ `modules/payments`                                                                               |
+| `chargebacks`, `seller_liabilities`, `reconciliation_records`     | ✅              | ❌ sin código                                                                                       |
+| `carts`, `cart_items`, `listings`                                 | ✅              | ❌ sin código: **una orden sólo puede nacer de un listing ya cargado en la base**                   |
+| `app_settings`, `seller_tiers` (Config Store)                     | ✅              | ⚠️ `app_settings` **en uso**: guarda `commission_rate_default` (600 bp). `seller_tiers` sigue vacía |
 
 **El cobro funciona.** Lo que falta para probarlo de punta a punta sin tocar la
 base es cargar listings desde la app. Ver §28.

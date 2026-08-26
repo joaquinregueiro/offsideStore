@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import type { Database } from '@offside/database';
 
 import type { PublicUser } from '../../auth/services/auth.service';
+import * as settingsService from '../../config/services/settings.service';
 import * as listingService from '../../listings/services/listing.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
 import * as errors from '../orders.errors';
@@ -33,11 +34,7 @@ export type { OrderRow, OrderItemRow } from '../repositories/order.repository';
  * Se expresa en base 10.000 (igual que `numeric(6,4)` del ERD) para no usar
  * `float` en un calculo de dinero.
  */
-export const COMMISSION_RATE_BASIS_POINTS = 600n;
 const BASIS_POINTS_TOTAL = 10_000n;
-
-/** La tasa tal como se snapshotea en `orders.commission_rate_at_transaction`. */
-export const COMMISSION_RATE_SNAPSHOT = '0.0600';
 
 /**
  * Comision de Offside sobre el total cobrado al comprador (DEC-014 + DEC-043).
@@ -50,9 +47,9 @@ export const COMMISSION_RATE_SNAPSHOT = '0.0600';
  * NO incluye ni descuenta el costo de Mercado Pago: ese costo es independiente
  * y lo descuenta MP nativamente del lado del vendedor (DEC-043).
  */
-export function calculateCommission(totalAmount: bigint): bigint {
+export function calculateCommission(totalAmount: bigint, basisPoints: number): bigint {
   if (totalAmount <= 0n) return 0n;
-  return (totalAmount * COMMISSION_RATE_BASIS_POINTS) / BASIS_POINTS_TOTAL;
+  return (totalAmount * BigInt(basisPoints)) / BASIS_POINTS_TOTAL;
 }
 
 /** Orden con sus items, tal como la necesita el checkout. */
@@ -245,7 +242,11 @@ export async function createOrder(user: PublicUser, input: CreateOrderInput): Pr
   // Sin envio ni descuentos, el total es el producto. El CHECK de la tabla
   // (`total = producto - descuento + envio`) se cumple con ambos en 0.
   const totalAmount = productAmount;
-  const commissionAmount = calculateCommission(totalAmount);
+  // La tasa sale del Config Store (DEC-007 / DEC-013), no de una constante.
+  // Se lee UNA vez, aca, y a partir de este punto la que manda es la copia
+  // congelada en la orden: `payments` nunca vuelve a consultarla (DEC-030).
+  const basisPoints = await settingsService.getCommissionRateBasisPoints();
+  const commissionAmount = calculateCommission(totalAmount, basisPoints);
 
   const { order } = await orderRepo.insertOrder(
     {
@@ -255,7 +256,7 @@ export async function createOrder(user: PublicUser, input: CreateOrderInput): Pr
       currency: listing.currency,
       productAmount,
       totalAmount,
-      commissionRateAtTransaction: COMMISSION_RATE_SNAPSHOT,
+      commissionRateAtTransaction: settingsService.basisPointsToRateSnapshot(basisPoints),
       commissionAmount,
       sellerAmount: totalAmount - commissionAmount,
       shippingAddress: input.shippingAddress,

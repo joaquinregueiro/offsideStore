@@ -248,7 +248,7 @@ async function escenario(nombre: string, opciones: { total?: bigint } = {}): Pro
     })
     .returning();
 
-  const comision = orderService.calculateCommission(total);
+  const comision = orderService.calculateCommission(total, 600);
 
   const [order] = await db
     .insert(schema.orders)
@@ -260,7 +260,7 @@ async function escenario(nombre: string, opciones: { total?: bigint } = {}): Pro
       productAmount: total,
       totalAmount: total,
       commissionAmount: comision,
-      commissionRateAtTransaction: orderService.COMMISSION_RATE_SNAPSHOT,
+      commissionRateAtTransaction: '0.0600',
       sellerAmount: total - comision,
       shippingAddress: { calle: 'Falsa 123' },
       paymentDeadline: new Date(Date.now() + 60 * 60 * 1000),
