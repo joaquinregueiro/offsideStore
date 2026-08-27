@@ -525,13 +525,13 @@ trabajar en el repositorio equivocado.
 
 Qué existe en `offsideApp/`:
 
-|                                    |                                                                                |
-| ---------------------------------- | ------------------------------------------------------------------------------ |
-| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 20 rutas de API |
-| `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)      |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 4 migraciones aplicadas** |
-| `packages/jobs`                    | Redis, registro de colas y workers de BullMQ. **Sin jobs de negocio todavía**  |
-| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                        |
+|                                    |                                                                                 |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 20 rutas de API  |
+| `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 4 migraciones aplicadas**  |
+| `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
+| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                         |
 
 Módulos de dominio implementados (`apps/web/src/modules/`):
 
@@ -579,9 +579,17 @@ BR-022), con revalidación en el checkout (UC-MF-3) y descuento **atómico** en 
 misma transacción que el paso a `PAID`. Un webhook repetido no descuenta dos
 veces.
 
-**NO implementado:** refresh de tokens de MP, webhook `mp-connect`, Config Store
-operativo, catálogo, búsqueda, carrito, envíos, disputas, reviews, reputación,
-aprobación de vendedor, admin, envío de emails y frontend. Los refunds tienen código y tests, pero **no se probaron
+**Emails**: verificación de cuenta y reset de contraseña se envían por
+**Amazon SES** detrás de un puerto, encolados en BullMQ. El worker corre en el
+proceso web vía `instrumentation.ts` (`tech-stack.md` §5), así que **no hace
+falta un segundo servicio**. ⚠️ El proveedor NO está en DEC-012: es una decisión
+de implementación del owner, y por eso vive detrás de un adaptador.
+Detalle en `notifications-email-module.md`.
+
+**NO implementado:** refresh de tokens de MP, webhook `mp-connect`, catálogo,
+búsqueda, carrito, envíos, disputas, reviews, reputación, aprobación de vendedor,
+admin y frontend. De los nueve emails que lista la documentación sólo están los
+dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
 Tests: **320** (188 unitarios + 132 de integración contra PostgreSQL y Redis

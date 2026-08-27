@@ -1,0 +1,149 @@
+import { resetEnvCache } from '@offside/config';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createEmailSender } from './infrastructure/email/index';
+import { resetSesClient } from './infrastructure/email/ses-email.sender';
+import * as templates from './templates/auth.templates';
+
+/**
+ * Notificaciones por email.
+ *
+ * Lo que se protege acá es sobre todo **que no se filtre un token**: los emails
+ * de verificación y de reset llevan credenciales de un solo uso.
+ */
+
+const ENTORNO_BASE = {
+  DATABASE_URL: 'postgresql://unit:unit@localhost:5432/unit',
+  REDIS_URL: 'redis://localhost:6379',
+  AUTH_SESSION_SECRET: 'pepper-solo-para-tests',
+  APP_URL: 'https://offside.test',
+};
+
+function configurar(extra: Record<string, string | undefined>): void {
+  for (const [clave, valor] of Object.entries({ ...ENTORNO_BASE, ...extra })) {
+    if (valor === undefined) delete process.env[clave];
+    else process.env[clave] = valor;
+  }
+
+  resetEnvCache();
+  resetSesClient();
+}
+
+const SES = {
+  AWS_REGION: 'us-east-1',
+  AWS_ACCESS_KEY_ID: 'clave-inventada-de-test',
+  AWS_SECRET_ACCESS_KEY: 'secreto-inventado-de-test',
+  EMAIL_FROM_ADDRESS: 'hola@offside.test',
+};
+
+const SIN_SES = {
+  AWS_REGION: undefined,
+  AWS_ACCESS_KEY_ID: undefined,
+  AWS_SECRET_ACCESS_KEY: undefined,
+  EMAIL_FROM_ADDRESS: undefined,
+};
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('eleccion del adaptador', () => {
+  it('usa SES cuando esta configurado', () => {
+    configurar({ ...SES, APP_ENV: 'production' });
+
+    expect(createEmailSender().name).toBe('ses');
+  });
+
+  it('cae al log fuera de produccion cuando falta configuracion', () => {
+    configurar({ ...SIN_SES, APP_ENV: 'development' });
+
+    expect(createEmailSender().name).toBe('log');
+  });
+
+  it('⚠️ EN PRODUCCION SIN CONFIGURAR, SE ROMPE en vez de caer al log', () => {
+    // Caer al log escribiria tokens de verificacion y de reset en el log del
+    // servidor, y ademas el usuario nunca recibiria nada mientras el sistema
+    // informa exito. Es preferible fallar ruidosamente.
+    configurar({ ...SIN_SES, APP_ENV: 'production' });
+
+    expect(() => createEmailSender()).toThrowError(/produccion/i);
+  });
+
+  it('no le alcanza con credenciales sin remitente', () => {
+    configurar({
+      ...SES,
+      EMAIL_FROM_ADDRESS: undefined,
+      APP_ENV: 'production',
+    });
+
+    expect(() => createEmailSender()).toThrowError(/EMAIL_FROM_ADDRESS/);
+  });
+});
+
+describe('plantillas', () => {
+  beforeEach(() => {
+    configurar({ APP_ENV: 'development' });
+  });
+
+  it('el enlace de verificacion apunta a APP_URL y lleva el token', () => {
+    const mensaje = templates.verificacionDeEmail('alguien@ejemplo.com', 'tok-123', 24);
+
+    expect(mensaje.to).toBe('alguien@ejemplo.com');
+    expect(mensaje.text).toContain('https://offside.test/verificar-email?token=tok-123');
+    expect(mensaje.text).toContain('24 horas');
+  });
+
+  it('escapa el token en la URL', () => {
+    // Un token con caracteres especiales no puede romper el enlace.
+    const mensaje = templates.verificacionDeEmail('a@b.com', 'a+b/c=d', 24);
+
+    expect(mensaje.text).toContain('token=a%2Bb%2Fc%3Dd');
+  });
+
+  it('el reset dice que el enlace es de un solo uso', () => {
+    const mensaje = templates.resetDePassword('alguien@ejemplo.com', 'tok-456', 2);
+
+    expect(mensaje.subject).toContain('contraseña');
+    expect(mensaje.text).toContain('una sola vez');
+    expect(mensaje.text).toContain('https://offside.test/restablecer-password?token=tok-456');
+  });
+
+  it('ambas traen texto plano, no solo HTML', () => {
+    // El texto plano es el fallback universal: hay clientes que no muestran
+    // HTML y filtros que puntuan peor un email sin alternativa de texto.
+    for (const mensaje of [
+      templates.verificacionDeEmail('a@b.com', 't', 24),
+      templates.resetDePassword('a@b.com', 't', 2),
+    ]) {
+      expect(mensaje.text.length).toBeGreaterThan(0);
+      expect(mensaje.html).toBeDefined();
+    }
+  });
+
+  it('el token de verificacion y el de reset no se cruzan', () => {
+    const verificacion = templates.verificacionDeEmail('a@b.com', 'TOKEN-VERIF', 24);
+    const reset = templates.resetDePassword('a@b.com', 'TOKEN-RESET', 2);
+
+    expect(verificacion.text).not.toContain('TOKEN-RESET');
+    expect(reset.text).not.toContain('TOKEN-VERIF');
+    expect(verificacion.text).not.toContain('restablecer-password');
+    expect(reset.text).not.toContain('verificar-email');
+  });
+});
+
+describe('el adaptador de log', () => {
+  it('imprime el cuerpo: en desarrollo el log ES la casilla', async () => {
+    configurar({ ...SIN_SES, APP_ENV: 'development' });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await createEmailSender().send({
+      to: 'alguien@ejemplo.com',
+      subject: 'Asunto',
+      text: 'cuerpo con el token tok-999',
+    });
+
+    const salida = warn.mock.calls.flat().join('\n');
+    expect(salida).toContain('alguien@ejemplo.com');
+    expect(salida).toContain('tok-999');
+  });
+});

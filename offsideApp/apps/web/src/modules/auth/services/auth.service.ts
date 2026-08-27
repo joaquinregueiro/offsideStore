@@ -5,6 +5,7 @@ import { recordUserRegistered } from '../../users/services/user-history.service'
 import * as errors from '../auth.errors';
 import type { LoginInput, RegisterInput } from '../auth.schemas';
 import * as sessionRepo from '../repositories/session.repository';
+import { enqueueEmail } from '../../notifications/services/email.service';
 import { emailVerificationTokens, passwordResetTokens } from '../repositories/token.repository';
 import * as userRepo from '../repositories/user.repository';
 import { hashPassword, verifyPassword } from './password.service';
@@ -75,7 +76,7 @@ export async function register(input: RegisterInput): Promise<RegisterResult> {
   const token = generateToken();
 
   try {
-    return await getDatabase().transaction(async (tx) => {
+    const resultado = await getDatabase().transaction(async (tx) => {
       const user = await userRepo.insertUser(
         { email: input.email, passwordHash, displayName: input.displayName },
         tx,
@@ -95,6 +96,19 @@ export async function register(input: RegisterInput): Promise<RegisterResult> {
 
       return { user: toPublicUser(user), emailVerificationToken: token };
     });
+
+    // DESPUES de commitear, nunca adentro: encolar dentro de la transaccion
+    // mandaria el email de un registro que todavia puede revertirse.
+    // No se espera el envio ni se propaga su fallo (BR-001): el usuario ya
+    // existe, y un email que no salio se resuelve reenviando.
+    await enqueueEmail({
+      kind: 'email_verification',
+      to: input.email,
+      token,
+      hoursValid: env.AUTH_EMAIL_TOKEN_TTL_HOURS,
+    });
+
+    return resultado;
   } catch (error) {
     if (isUniqueViolation(error, 'users_email_key')) throw errors.emailAlreadyRegistered();
     throw error;
@@ -213,6 +227,13 @@ export async function requestPasswordReset(email: string): Promise<string | null
     userId: user.id,
     tokenHash: hashToken(token),
     expiresAt: expiresInHours(env.AUTH_PASSWORD_RESET_TTL_HOURS),
+  });
+
+  await enqueueEmail({
+    kind: 'password_reset',
+    to: user.email,
+    token,
+    hoursValid: env.AUTH_PASSWORD_RESET_TTL_HOURS,
   });
 
   return token;

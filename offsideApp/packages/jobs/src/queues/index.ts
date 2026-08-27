@@ -5,9 +5,7 @@ import { getRedisClient } from '../connection';
 /**
  * Registro de colas.
  *
- * =============================================================================
- * SIN COLAS DE NEGOCIO TODAVIA.
- * =============================================================================
+ * La primera cola de negocio es `notifications-send`. El resto sigue previsto:
  *
  * La infraestructura esta lista; los jobs concretos se agregan cuando se
  * implemente su modulo. Colas previstas (architecture.md §8, tech-stack.md §2):
@@ -26,7 +24,10 @@ import { getRedisClient } from '../connection';
  */
 
 /** Nombres de cola registrados. Se completa al agregar cada cola. */
-export const QUEUE_NAMES = {} as const satisfies Record<string, string>;
+export const QUEUE_NAMES = {
+  /** Envio de emails y avisos in-app (notifications-and-engagement.md §2.2). */
+  NOTIFICATIONS_SEND: 'notifications-send',
+} as const satisfies Record<string, string>;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 

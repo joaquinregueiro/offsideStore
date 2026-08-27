@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import * as errors from './auth.errors';
 import type * as AuthService from './services/auth.service';
 import type * as SellerService from '../sellers/services/seller.service';
+import type { EmailJobData } from '../notifications/services/email.service';
 
 /**
  * Tests de integracion contra PostgreSQL REAL.
@@ -140,6 +141,67 @@ describe('registro', () => {
         acceptedTerms: true,
       }),
     ).rejects.toMatchObject({ code: 'EMAIL_ALREADY_REGISTERED' });
+  });
+});
+
+describe('email de verificacion (BR-001)', () => {
+  it('encola el email de verificacion al registrarse', async () => {
+    // Sin este encolado, nadie puede completar el alta: BR-001 exige email
+    // verificado para operar y no hay otro canal para entregar el token.
+    const { QUEUE_NAMES, getQueue } = await import('@offside/jobs');
+    const cola = getQueue<EmailJobData>(QUEUE_NAMES.NOTIFICATIONS_SEND);
+    await cola.drain();
+
+    const { emailVerificationToken } = await authService.register({
+      email: email('encola'),
+      password: PASSWORD,
+      acceptedTerms: true,
+    });
+
+    const jobs = await cola.getJobs(['waiting', 'delayed', 'active']);
+    const job = jobs.find((j) => j.data.to === email('encola'));
+
+    expect(job).toBeDefined();
+    expect(job!.data.kind).toBe('email_verification');
+    // El token encolado es EL MISMO que verifica la cuenta.
+    expect(job!.data.token).toBe(emailVerificationToken);
+
+    await cola.drain();
+  });
+
+  it('encola el email de reset al pedir recuperacion', async () => {
+    const { QUEUE_NAMES, getQueue } = await import('@offside/jobs');
+    const cola = getQueue<EmailJobData>(QUEUE_NAMES.NOTIFICATIONS_SEND);
+    await cola.drain();
+
+    await authService.register({
+      email: email('reset-mail'),
+      password: PASSWORD,
+      acceptedTerms: true,
+    });
+    await cola.drain();
+
+    const token = await authService.requestPasswordReset(email('reset-mail'));
+
+    const jobs = await cola.getJobs(['waiting', 'delayed', 'active']);
+    const job = jobs.find((j) => j.data.kind === 'password_reset');
+
+    expect(job).toBeDefined();
+    expect(job!.data.token).toBe(token);
+
+    await cola.drain();
+  });
+
+  it('⚠️ NO encola nada para un email que no existe', async () => {
+    // requestPasswordReset no revela si la cuenta existe. Encolar un job igual
+    // seria una fuga por el costado: dejaria rastro de que se consulto.
+    const { QUEUE_NAMES, getQueue } = await import('@offside/jobs');
+    const cola = getQueue<EmailJobData>(QUEUE_NAMES.NOTIFICATIONS_SEND);
+    await cola.drain();
+
+    expect(await authService.requestPasswordReset(email('no-existe-jamas'))).toBeNull();
+
+    expect(await cola.getJobs(['waiting', 'delayed', 'active'])).toHaveLength(0);
   });
 });
 

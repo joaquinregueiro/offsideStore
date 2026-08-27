@@ -59,6 +59,16 @@ export const envSchema = z.object({
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
 
+  // --- Email (modulo notifications) ---
+  // Se exigen con `requireEnv()` en el borde del adaptador de SES, no aca: sin
+  // ellas el resto del sistema tiene que poder arrancar igual.
+  AWS_REGION: z.string().optional(),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  /** Remitente. El dominio debe estar verificado en SES o SES rechaza el envio. */
+  EMAIL_FROM_ADDRESS: z.string().email().optional(),
+  EMAIL_FROM_NAME: z.string().optional(),
+
   // --- Correo Argentino (modulo shipments: no implementado) ---
   CORREO_ARGENTINO_API_KEY: z.string().optional(),
 
