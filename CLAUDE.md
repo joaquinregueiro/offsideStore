@@ -579,6 +579,13 @@ BR-022), con revalidación en el checkout (UC-MF-3) y descuento **atómico** en 
 misma transacción que el paso a `PAID`. Un webhook repetido no descuenta dos
 veces.
 
+**Autorización por capacidad (DEC-023 ✅)**: los endpoints administrativos
+declaran QUÉ capacidad necesitan y un mapa único (`lib/permissions.ts`) traduce
+capacidad → roles. Hoy hay dos: `payments:refund` y `system_config:manage`. ⚠️
+`MODERATOR` y `SUPPORT` quedan declarados **sin capacidades** hasta que exista
+su funcionalidad. Los roles se asignan **sólo por SQL**: no hay vía de escalada
+expuesta. Detalle en `authorization-module.md`.
+
 **Aprobación de vendedores (TS-001/TS-010)**: identidad verificada = email
 verificado + identificador fiscal válido + Mercado Pago conectado. Con las tres,
 el vendedor **se aprueba solo**. La decisión quedó registrada en `docs/` como
@@ -601,7 +608,7 @@ admin y frontend. De los nueve emails que lista la documentación sólo están l
 dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **363** (199 unitarios + 164 de integración contra PostgreSQL y Redis
+Tests: **387** (211 unitarios + 176 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 
@@ -645,11 +652,7 @@ Lo que hoy frena el avance, en orden de impacto:
    investigación contra la API real; no se asume.** La prueba del 2026-08-26
    mostró el reparto pero **no** cómo retener fondos: al aprobarse el pago, MP
    acredita al vendedor de inmediato.
-2. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()`
-   autoriza sólo por rol. Bloquea la aprobación de `catalog_change_requests`
-   (OQ-F2), y es lo que impide darle un panel al Config Store: la comisión se
-   cambia por SQL porque no hay a quién autorizar.
-3. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
+2. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
    lanzamiento comercial**. El módulo fiscal está limitado a identificación.
 
 > La contradicción que esta sección señalaba entre `configuration-registry.md`

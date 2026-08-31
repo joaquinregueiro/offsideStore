@@ -48,7 +48,7 @@ pendiente) y `RISKS.md`.
 | DEC-020 | Niveles de usuario (NUEVO→…→TIENDA) | ✅ estructura / 🟡 umbrales |
 | DEC-021 | Estados de riesgo (NORMAL→RIESGO→RESTRINGIDO→SUSPENDIDO) | ✅ estructura / 🟡 umbrales |
 | DEC-022 | Historial, nivel de usuario y riesgo son conceptos distintos | ✅ |
-| DEC-023 | Roles de administración (SUPER_ADMIN…FINANCE) | ✅ set / 🟡 permisos |
+| DEC-023 | Roles de administración (SUPER_ADMIN…FINANCE) + permisos por capacidad | ✅ |
 | DEC-024 | Alcance del MVP y fuera de alcance | ✅ |
 | DEC-025 | Conjuntos de estado de producto y de autenticidad | 🟡 (conjuntos propuestos) |
 | DEC-026 | 1 orden = 1 vendedor; carrito multi-vendedor se divide en órdenes | ✅ |
@@ -66,7 +66,7 @@ pendiente) y `RISKS.md`.
 | DEC-038 | Configuration Store administrativo (simple) + snapshot económico | ✅ concepto / ✅ modelo (DEC-039) / 🟦 valores |
 | DEC-039 | ERD v1.0 cerrado + 6 decisiones de modelado (Fase 2) | ✅ |
 | DEC-040 | Riesgo: hechos (`user_history_events`) vs señales (`risk_events`) | ✅ |
-| DEC-041 | Estructura de `catalog_change_requests` (gobierno de catálogos) | ✅ estructura / 🟡 permisos (DEC-023) |
+| DEC-041 | Estructura de `catalog_change_requests` (gobierno de catálogos) | ✅ estructura / 🟡 su capacidad todavía no está en el mapa de DEC-023 |
 | DEC-042 | Técnica de búsqueda: `spanish` + `unaccent` + `pg_trgm`; `search_vector` desde el Service | ✅ |
 | DEC-043 | Comisión Offside = **6%**; el costo de Mercado Pago **no** lo absorbe Offside (supersede parte de DEC-014) | ✅ |
 | DEC-044 | Definición de "identidad verificada" (cierra **TS-001**) | ✅ |
@@ -229,9 +229,45 @@ infracciones/problemas). El "score de reputación" (si se mantiene) se **deriva 
 historial** y no es autoridad — cerrado en **DEC-036 (I-4)**. Ref:
 `trust-and-safety.md`.
 
-### DEC-023 — Roles de administración — ✅ set / 🟡 permisos
-Roles: **SUPER_ADMIN, ADMIN, MODERATOR, SUPPORT, FINANCE**. Los **permisos
-granulares por rol** quedan 🟡. Ref: `04-technical/architecture.md`.
+### DEC-023 — Roles de administración y permisos — ✅
+
+> **Permisos cerrados el 2026-08-27.** Antes: ✅ set / 🟡 permisos.
+
+**Roles** (sin cambios): `SUPER_ADMIN`, `ADMIN`, `MODERATOR`, `SUPPORT`,
+`FINANCE`. Viven en `users.admin_role`; un usuario común tiene `null`.
+
+**Autorización por capacidad, no por rol.** Cada endpoint administrativo declara
+**qué capacidad** necesita, y un mapa único traduce capacidad → roles. La lista
+de roles no se escribe en el endpoint.
+
+| Capacidad | Roles |
+|---|---|
+| `payments:refund` — emitir un reembolso | `SUPER_ADMIN`, `ADMIN`, `FINANCE` |
+| `system_config:manage` — leer y modificar el Config Store | `SUPER_ADMIN`, `ADMIN` |
+
+⚠️ **El mapa cubre sólo las capacidades que existen hoy.** `architecture.md`
+AR-006 lista nueve capacidades del back-office, pero la mayoría pertenece a
+módulos que todavía no se construyeron. Fijarles permisos ahora sería decidir
+política sobre funcionalidad no diseñada. **`MODERATOR` y `SUPPORT` quedan
+declarados sin capacidades**: el rol se puede asignar, pero hoy no habilita
+nada. Es deliberado; se amplía cuando exista cada funcionalidad.
+
+⚠️ **Sin herencia ni comodines.** `SUPER_ADMIN` figura explícitamente en cada
+capacidad. Un rol que "puede todo" por defecto convertiría cualquier capacidad
+futura en un permiso concedido sin que nadie lo decida.
+
+**Falla cerrado:** un rol `null`, ausente del mapa o desconocido no obtiene
+ninguna capacidad.
+
+**Asignación de roles: sólo por SQL**, sin endpoint ni variable de entorno. No
+existe ninguna vía de escalada de privilegios expuesta por la aplicación. Se
+revisa cuando haya un equipo de administración real.
+
+**Los ejes son independientes:** ser administrador no vuelve vendedor a nadie, y
+ser vendedor no acerca a ser administrador.
+
+Ref: `04-technical/architecture.md` AR-004,
+`offsideApp/docs-implementation/authorization-module.md`.
 
 ### DEC-024 — Alcance del MVP y fuera de alcance — ✅
 Se fija explícitamente qué queda **fuera del MVP** (app móvil, IA, chat avanzado,

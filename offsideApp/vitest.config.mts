@@ -66,6 +66,10 @@ export default defineConfig({
           // Las pruebas contra la base comparten estado: sin paralelismo.
           fileParallelism: false,
           testTimeout: 30_000,
+          // Los `beforeAll` importan modulos de forma diferida y arrastran un
+          // grafo grande (guards -> sellers -> payments). El default de 10 s se
+          // queda corto en la primera carga; se iguala al de los tests.
+          hookTimeout: 30_000,
         },
       },
     ],

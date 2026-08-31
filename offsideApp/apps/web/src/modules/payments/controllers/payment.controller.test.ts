@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 
-import { resetEnvCache } from '@offside/config';
+import { getEnv, requireEnv, resetEnvCache } from '@offside/config';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildManifest } from '@/lib/mercadopago-webhook-signature';
@@ -50,8 +50,25 @@ afterEach(() => {
   handleNotification.mockReset();
 });
 
+/**
+ * Firma como lo haria Mercado Pago.
+ *
+ * ⚠️ LEE EL SECRETO DE LA MISMA FUENTE QUE EL CONTROLLER, a proposito. Antes
+ * usaba la constante local, y eso acoplaba el test a que `process.env` tuviera
+ * exactamente ese valor en ese instante. `process.env` es del PROCESO y lo
+ * comparten todos los archivos de test del mismo worker: `loadRootEnv()` usa
+ * `process.loadEnvFile()`, que lo pisa con el `.env` antes de restaurar lo
+ * previo. Eso producia una falla intermitente rarisima y dificil de rastrear.
+ *
+ * El sujeto de este test es la LOGICA DE FIRMA —la plantilla del manifest, de
+ * donde sale el `data.id`, que falle cerrado—, no el cableado del entorno.
+ * Leyendo de la misma fuente, todas esas aserciones siguen valiendo y el
+ * acoplamiento desaparece.
+ */
 function firmar(dataId: string): string {
-  const v1 = createHmac('sha256', SECRETO)
+  const secreto = requireEnv(getEnv(), 'MERCADOPAGO_WEBHOOK_SECRET');
+
+  const v1 = createHmac('sha256', secreto)
     .update(buildManifest({ dataId, requestId: REQUEST_ID, ts: TS }))
     .digest('hex');
 

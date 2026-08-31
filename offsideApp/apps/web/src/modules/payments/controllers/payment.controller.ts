@@ -1,7 +1,8 @@
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { requireAdminRole, requireVerifiedUser } from '@/lib/auth-guard';
+import { requireCapability, requireVerifiedUser } from '@/lib/auth-guard';
+import { CAPABILITIES } from '@/lib/permissions';
 import { handleError, ok, readJson } from '@/lib/http';
 import { isValidWebhookSignature, readSignatureHeaders } from '@/lib/mercadopago-webhook-signature';
 import { consumeIpLimit } from '@/lib/rate-limit';
@@ -66,7 +67,8 @@ export async function refund(request: Request, paymentId: string): Promise<NextR
   try {
     await enforceIpLimit(request, 'refund');
 
-    const admin = await requireAdminRole(request, ['SUPER_ADMIN', 'ADMIN', 'FINANCE']);
+    // Declara la CAPACIDAD; quien la tiene lo decide `lib/permissions.ts`.
+    const admin = await requireCapability(request, CAPABILITIES.PAYMENTS_REFUND);
     const input = refundSchema.parse(await readJson(request));
 
     return ok(

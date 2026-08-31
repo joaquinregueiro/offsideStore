@@ -128,9 +128,17 @@ disputas, refunds, sanciones, autenticidad, métricas**. Requisitos:
   (`trust-and-safety.md` TS-041).
 - **AR-003:** vistas de conciliación y de `SellerLiability` (deudas por refunds
   no recuperados).
-- **AR-004 (✅ set de roles — DEC-023):** roles de administración: **`SUPER_ADMIN`,
-  `ADMIN`, `MODERATOR`, `SUPPORT`, `FINANCE`**. Los **permisos granulares por rol**
-  quedan 🟡 (a definir posteriormente).
+- **AR-004 (✅ — DEC-023):** roles de administración: **`SUPER_ADMIN`, `ADMIN`,
+  `MODERATOR`, `SUPPORT`, `FINANCE`**, en `users.admin_role`. La autorización es
+  **por capacidad, no por rol**: cada endpoint declara qué capacidad necesita y
+  un mapa único traduce capacidad → roles.
+
+  Capacidades con permisos definidos: `payments:refund`
+  (`SUPER_ADMIN`/`ADMIN`/`FINANCE`) y `system_config:manage`
+  (`SUPER_ADMIN`/`ADMIN`). ⚠️ Las demás capacidades de **AR-006** se agregarán al
+  mapa a medida que exista su funcionalidad; hasta entonces `MODERATOR` y
+  `SUPPORT` no habilitan nada. Falla cerrado y los roles se asignan sólo por
+  SQL.
 - **AR-005 (⚙️ DEC-013):** el Admin es también el lugar donde se editan las
   **configuraciones** del sistema (comisiones, refunds, reputación, publicaciones,
   envíos). Catálogo en `04-technical/configuration-registry.md`.
@@ -194,7 +202,9 @@ disputas, refunds, sanciones, autenticidad, métricas**. Requisitos:
   búsqueda, hosting).
 - 🔴 Monolito modular vs microservicios para el MVP (💡 recomendación: monolito
   modular).
-- 🔴 Modelo de roles/permascos del back-office (AR-004).
+- ~~🔴 Modelo de roles/permisos del back-office (AR-004)~~ ✅ cerrado el
+  2026-08-27 por DEC-023: autorización por capacidad, mapa acotado a lo que
+  existe.
 - 🔴 Entornos y uso de sandbox/test en el MVP.
 - 🔴 Motor de búsqueda concreto.
 
