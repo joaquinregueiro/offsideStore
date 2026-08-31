@@ -134,6 +134,9 @@ async function limpiar(): Promise<void> {
       .where(inArray(schema.mercadopagoAccounts.sellerId, sellerIds));
   }
 
+  await db
+    .delete(schema.identityVerifications)
+    .where(inArray(schema.identityVerifications.userId, ids));
   await db.delete(schema.auditLog).where(inArray(schema.auditLog.actorId, ids));
   await db.delete(schema.sellerProfiles).where(inArray(schema.sellerProfiles.userId, ids));
   await db.delete(schema.userHistoryEvents).where(inArray(schema.userHistoryEvents.userId, ids));

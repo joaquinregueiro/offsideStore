@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 
 import { resetEnvCache } from '@offside/config';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildManifest } from '@/lib/mercadopago-webhook-signature';
 
@@ -31,6 +31,18 @@ beforeAll(() => {
   process.env.AUTH_SESSION_SECRET ??= 'pepper-solo-para-tests';
   process.env.MERCADOPAGO_WEBHOOK_SECRET = SECRETO;
 
+  resetEnvCache();
+});
+
+/**
+ * Se reafirma ANTES DE CADA TEST, no solo en `beforeAll`.
+ *
+ * `process.env` es del proceso y lo comparten todos los archivos que corren en
+ * el mismo worker; otro archivo puede haberlo cambiado en el medio. Fijarlo una
+ * sola vez producia una falla intermitente que costo rastrear.
+ */
+beforeEach(() => {
+  process.env.MERCADOPAGO_WEBHOOK_SECRET = SECRETO;
   resetEnvCache();
 });
 

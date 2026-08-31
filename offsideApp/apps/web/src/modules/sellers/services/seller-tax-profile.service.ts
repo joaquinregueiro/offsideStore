@@ -9,6 +9,7 @@ import { maskTaxId, validateTaxIdSyntax, type TaxIdType } from './fiscal-identit
 // La autorizacion del modulo (resolver el perfil POR `user.id`) vive en
 // `seller.service`: una sola implementacion para identidad fiscal y para la
 // conexion con Mercado Pago.
+import * as approvalService from './seller-approval.service';
 import { requireOwnSellerProfile } from './seller.service';
 
 /**
@@ -74,7 +75,7 @@ export async function submitTaxIdentity(
   const syntax = validateTaxIdSyntax(input.taxId);
   if (!syntax.valid) throw fiscalErrors.invalidTaxId(syntax.error);
 
-  return getDatabase().transaction(async (tx) => {
+  const perfil = await getDatabase().transaction(async (tx) => {
     await taxRepo.closeCurrent(seller.id, tx);
 
     // Nace PENDING: sintaxis correcta ≠ verificado por la autoridad fiscal.
@@ -85,6 +86,20 @@ export async function submitTaxIdentity(
       ),
     );
   });
+
+  // Declarar el CUIT es una de las tres senales de TS-001: puede ser la que
+  // faltaba. Se reevalua fuera de la transaccion y sin propagar su fallo — el
+  // dato fiscal ya quedo guardado.
+  try {
+    await approvalService.evaluate(user);
+  } catch (error) {
+    console.error(
+      '[sellers] identidad fiscal guardada pero fallo la evaluacion de aprobacion:',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  return perfil;
 }
 
 /** Perfil fiscal vigente del usuario. `null` si todavia no lo cargo. */

@@ -32,6 +32,28 @@ export default defineConfig({
           environment: 'node',
           include: ['{apps,packages}/*/src/**/*.test.ts'],
           exclude: ['**/node_modules/**', '**/*.integration.test.ts'],
+          /**
+           * Entorno FIJO para los tests unitarios.
+           *
+           * ⚠️ NO ES COMODIDAD, ES AISLAMIENTO. `loadRootEnv()` usa
+           * `process.loadEnvFile()`, que PISA `process.env` con el contenido
+           * del `.env` y recien despues restaura lo que ya estaba. Los tests de
+           * integracion lo llaman, y `process.env` es del proceso: si un test
+           * unitario fijaba su secreto DESPUES de esa carga, terminaba firmando
+           * con un valor y validando con el del `.env`.
+           *
+           * Definirlas aca las deja presentes ANTES de que cargue cualquier
+           * archivo de test, asi que la restauracion de `loadRootEnv` las
+           * conserva. Era la causa de una falla intermitente en el webhook.
+           *
+           * Los valores son inventados y locales. Ninguno es una credencial.
+           */
+          env: {
+            DATABASE_URL: 'postgresql://unit:unit@localhost:5432/unit',
+            REDIS_URL: 'redis://localhost:6379',
+            AUTH_SESSION_SECRET: 'pepper-solo-para-tests',
+            MERCADOPAGO_WEBHOOK_SECRET: 'secreto-de-webhook-solo-para-tests',
+          },
         },
       },
       {

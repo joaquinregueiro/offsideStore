@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 /** Acceso a `seller_profiles` (ERD §7.2). Sin reglas de negocio. */
 
@@ -49,6 +49,27 @@ export async function insertSellerProfile(
     .returning();
 
   return row!;
+}
+
+/**
+ * Pasa el perfil a `approved` (TS-010).
+ *
+ * ⚠️ SOLO desde `pending`, y la condicion va en el WHERE, no en un `if` previo:
+ * dos evaluaciones simultaneas —conectar MP y declarar el CUIT casi a la vez—
+ * no pueden aprobar dos veces ni pisar un `approved_at` ya escrito.
+ * Devuelve `undefined` si el perfil no estaba en `pending`.
+ */
+export async function approve(
+  sellerId: string,
+  db?: Database,
+): Promise<SellerProfileRow | undefined> {
+  const [row] = await conn(db)
+    .update(schema.sellerProfiles)
+    .set({ status: 'approved', approvedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(schema.sellerProfiles.id, sellerId), eq(schema.sellerProfiles.status, 'pending')))
+    .returning();
+
+  return row;
 }
 
 export async function updateSellerProfile(

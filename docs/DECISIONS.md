@@ -69,6 +69,7 @@ pendiente) y `RISKS.md`.
 | DEC-041 | Estructura de `catalog_change_requests` (gobierno de catálogos) | ✅ estructura / 🟡 permisos (DEC-023) |
 | DEC-042 | Técnica de búsqueda: `spanish` + `unaccent` + `pg_trgm`; `search_vector` desde el Service | ✅ |
 | DEC-043 | Comisión Offside = **6%**; el costo de Mercado Pago **no** lo absorbe Offside (supersede parte de DEC-014) | ✅ |
+| DEC-044 | Definición de "identidad verificada" (cierra **TS-001**) | ✅ |
 
 ## 2. Detalle de cada decisión
 
@@ -516,6 +517,46 @@ depende de variables externas.
 
 Ref: `payments-and-commissions.md` §3.3 y §7,
 `offsideApp/docs-implementation/mercadopago-payments-spec.md` §8.
+
+### DEC-044 — Definición de "identidad verificada" (cierra TS-001) — ✅
+
+> **Cerrada el 2026-08-27.** Antes: 🟡 (`trust-and-safety.md` TS-001).
+
+**Identidad verificada en Offside** es la combinación de **las tres** señales
+siguientes, exigidas **en conjunto**:
+
+1. **email verificado**;
+2. **identificador fiscal declarado y válido** (CUIT / CUIL / CDI);
+3. **cuenta de Mercado Pago conectada por OAuth**.
+
+Ninguna reemplaza a otra: son mecanismos que **suman**
+(`trust-and-safety.md` §4.1).
+
+**Motivo:** las tres están disponibles hoy sin depender de terceros nuevos ni de
+un costo por operación. Mercado Pago realiza su propio **KYC** antes de habilitar
+a una cuenta a recibir dinero, de modo que la conexión aporta una señal de
+identidad fuerte y sin costo. El **teléfono verificado** queda **fuera** de esta
+definición: exigiría elegir un proveedor de SMS, que es una decisión de stack no
+tomada.
+
+⚠️ **Límite explícito.** El identificador fiscal se valida hoy por **formato y
+dígito verificador**, **no** contra ARCA: no existe integración con la fuente
+fiscal oficial. Por lo tanto **no prueba por sí solo la titularidad** del
+número, sólo que está bien formado. Cuando exista esa integración, esta
+definición debería exigir el identificador **verificado contra la fuente**, y no
+solamente declarado.
+
+⚠️ **No modifica BR-003.** Identidad no es confianza: conectar Mercado Pago
+sigue **sin** otorgar reputación, distintivos ni confianza automática. Un
+vendedor que cumple esta definición queda habilitado a operar (TS-010) y arranca
+igual con reputación cero.
+
+**Qué NO decide DEC-044:** la revocación de la aprobación (TS-011), los umbrales
+de los estados de riesgo (DEC-021 🟡) y qué datos expone exactamente el KYC de
+Mercado Pago (🔵). Todos siguen abiertos.
+
+Ref: `trust-and-safety.md` §4.1 y §4.2, `seller-system.md` §5 (UC-SS-1),
+`offsideApp/docs-implementation/seller-approval-module.md`.
 
 ## 3. Cómo evoluciona este archivo
 

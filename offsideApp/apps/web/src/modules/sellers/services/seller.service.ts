@@ -1,3 +1,4 @@
+import * as audit from '../../audit/services/audit.service';
 import * as errors from '../../auth/auth.errors';
 import type { CreateSellerProfileInput } from '../../auth/auth.schemas';
 import type { PublicUser } from '../../auth/services/auth.service';
@@ -88,6 +89,23 @@ export async function createSellerProfile(
     displayName: input.displayName,
     bio: input.bio,
     shippingPolicy: input.shippingPolicy,
+  });
+
+  // TERMINOS ACEPTADOS (TS-010 punto 3). El schema exige `acceptedSellerTerms`
+  // en true para llegar hasta aca, asi que la existencia del perfil YA implica
+  // la aceptacion; lo que faltaba era dejar rastro de CUANDO.
+  //
+  // ⚠️ Va a `audit_log` y no a `user_history_events`, que seria su lugar
+  // natural (DEC-036), porque `history_event_type` es un ENUM y no tiene un
+  // valor para esto. Agregarlo es un cambio de ERD y necesita autorizacion
+  // (CLAUDE.md §5). Queda señalado.
+  await audit.record({
+    actorType: 'user',
+    actorId: user.id,
+    action: 'SELLER_TERMS_ACCEPTED',
+    entityType: 'seller_profile',
+    entityId: created.id,
+    metadata: { sellerId: created.id },
   });
 
   return toPublicSellerProfile(created);

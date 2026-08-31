@@ -123,6 +123,9 @@ async function limpiar(): Promise<void> {
   await db
     .delete(schema.emailVerificationTokens)
     .where(inArray(schema.emailVerificationTokens.userId, ids));
+  await db
+    .delete(schema.identityVerifications)
+    .where(inArray(schema.identityVerifications.userId, ids));
   await db.delete(schema.users).where(inArray(schema.users.id, ids));
 
   await db.delete(schema.categories).where(eq(schema.categories.slug, 'camisetas-orditest'));

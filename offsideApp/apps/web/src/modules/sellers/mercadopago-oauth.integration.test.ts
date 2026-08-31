@@ -102,6 +102,9 @@ async function limpiar(): Promise<void> {
       .where(inArray(schema.mercadopagoAccounts.sellerId, sellerIds));
   }
 
+  await db
+    .delete(schema.identityVerifications)
+    .where(inArray(schema.identityVerifications.userId, ids));
   await db.delete(schema.auditLog).where(inArray(schema.auditLog.actorId, ids));
   await db.delete(schema.sellerProfiles).where(inArray(schema.sellerProfiles.userId, ids));
   await db.delete(schema.userHistoryEvents).where(inArray(schema.userHistoryEvents.userId, ids));
@@ -276,10 +279,27 @@ describe('inicio de la conexion', () => {
     expect(filas[0]!.actorType).toBe('user');
   });
 
-  it('RECHAZA a un vendedor que no esta aprobado', async () => {
-    // Spec §4 paso 5. Hoy le pasa a todos los vendedores: la aprobacion
-    // depende de TS-001 (🟡).
+  it('⚠️ ACEPTA a un vendedor pendiente: conectar viene ANTES de aprobar', async () => {
+    // UC-SS-1 (seller-system.md §5): "pide ser vendedor -> verifica identidad
+    // -> conecta MP -> acepta terminos -> queda aprobado". Exigir `approved`
+    // para conectar era un punto muerto, y estuvo bloqueando el onboarding
+    // completo hasta el 2026-08-27.
     const user = await vendedorPendiente('inicio-pending');
+
+    const { authorizationUrl } = await mpService.startConnection(user, puertoFalso());
+
+    expect(authorizationUrl).toContain('code_challenge');
+  });
+
+  it('RECHAZA a un vendedor suspendido', async () => {
+    // Lo que el gate SI tiene que frenar: un vendedor sancionado no conecta.
+    const user = await vendedorPendiente('inicio-suspendido');
+    const db = getDatabase();
+
+    await db
+      .update(schema.sellerProfiles)
+      .set({ status: 'suspended' })
+      .where(eq(schema.sellerProfiles.userId, user.id));
 
     await expect(mpService.startConnection(user, puertoFalso())).rejects.toMatchObject({
       code: 'MP_SELLER_NOT_APPROVED',

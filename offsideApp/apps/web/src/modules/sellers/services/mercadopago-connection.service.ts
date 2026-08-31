@@ -17,6 +17,7 @@ import * as stateStore from '../infrastructure/mercadopago/oauth-state.store';
 import * as mpRepo from '../repositories/mercadopago-account.repository';
 import type { SellerProfileRow } from '../repositories/seller.repository';
 import * as errors from '../seller.errors';
+import * as approvalService from './seller-approval.service';
 import { deriveCodeChallenge, generateCodeVerifier, generateState } from './pkce';
 import { requireOwnSellerProfile } from './seller.service';
 
@@ -86,15 +87,26 @@ function toPublicConnection(
 /**
  * Vendedor habilitado a conectar.
  *
- * ⚠️ EXIGE `approved` (spec §4 paso 5). Hoy NINGUN vendedor puede alcanzar ese
- * estado: la aprobacion depende de TS-001 —"que significa identidad
- * verificada"—, que sigue 🟡 PENDIENTE. Relajar este gate a `pending` seria
- * inventar la decision de negocio que TS-001 todavia no tomo, y contradiria
- * BR-003/SS-012.
+ * ⚠️ CORREGIDO EL 2026-08-27. Antes exigia `approved`, y eso era un PUNTO
+ * MUERTO: TS-010 y UC-SS-1 (`seller-system.md` §5) ponen la conexion de Mercado
+ * Pago ANTES de la aprobacion —"pide ser vendedor -> verifica identidad ->
+ * conecta MP -> acepta terminos -> queda aprobado"—, asi que exigir `approved`
+ * para conectar hacia inalcanzables las dos cosas a la vez.
+ *
+ * El gate invertido venia de `mercadopago-oauth-spec.md` §4 paso 5, un
+ * documento de implementacion. Por CLAUDE.md §2, `docs/` manda sobre
+ * `docs-implementation/`.
+ *
+ * Lo que SI se sigue exigiendo: tener perfil de vendedor y no estar sancionado.
+ * Un vendedor `suspended` o `expelled` no conecta nada.
  */
-async function requireApprovedSeller(user: PublicUser): Promise<SellerProfileRow> {
+async function requireConnectableSeller(user: PublicUser): Promise<SellerProfileRow> {
   const seller = await requireOwnSellerProfile(user);
-  if (seller.status !== 'approved') throw errors.sellerNotApproved();
+
+  if (seller.status === 'suspended' || seller.status === 'expelled') {
+    throw errors.sellerNotApproved();
+  }
+
   return seller;
 }
 
@@ -116,7 +128,7 @@ export async function startConnection(
   user: PublicUser,
   client: MercadoPagoOAuthPort = defaultClient(),
 ): Promise<StartConnectionResult> {
-  const seller = await requireApprovedSeller(user);
+  const seller = await requireConnectableSeller(user);
 
   const existing = await mpRepo.findBySellerId(seller.id);
   if (existing?.status === 'connected') throw errors.mercadoPagoAlreadyConnected();
@@ -211,7 +223,7 @@ export async function completeConnection(
 
   // Se vuelve a resolver el vendedor: entre `connect` y el callback pudo pasar
   // cualquier cosa (una suspension, por ejemplo). El estado se verifica AHORA.
-  const seller = await requireApprovedSeller(user);
+  const seller = await requireConnectableSeller(user);
 
   if (seller.id !== context.sellerId) {
     await auditFailure(user, 'state_invalid');
@@ -329,6 +341,21 @@ export async function completeConnection(
 
     return saved;
   });
+
+  // UC-SS-1: conectar Mercado Pago es el ultimo paso del onboarding, asi que
+  // es el momento natural para reevaluar la aprobacion. Fuera de la
+  // transaccion: aprobar es un efecto posterior, no parte de guardar el token.
+  //
+  // No se propaga su fallo: la conexion YA quedo guardada y correcta. Si la
+  // evaluacion falla, el vendedor puede reintentarla desde su panel.
+  try {
+    await approvalService.evaluate(user);
+  } catch (error) {
+    console.error(
+      '[sellers] la conexion se guardo pero fallo la evaluacion de aprobacion:',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 
   return toPublicConnection(seller, row);
 }

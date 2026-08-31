@@ -78,9 +78,22 @@ los tres de arriba (`seller-system.md`).
 - **Mercado Pago conectado.**
 - **KYC realizado por Mercado Pago** cuando corresponda 🌐.
 
-- **TS-001 (🟡):** **qué significa exactamente "identidad verificada" dentro de
-  Offside** queda **por definir** (qué combinación de señales se exige). No se
-  fija todavía.
+- **TS-001 (✅ — cerrada el 2026-08-27 por DEC-044):** **identidad verificada**
+  en Offside es la combinación de **las tres** señales siguientes, exigidas
+  **en conjunto**:
+  1. **email verificado**;
+  2. **identificador fiscal declarado y válido** (CUIT / CUIL / CDI);
+  3. **cuenta de Mercado Pago conectada por OAuth**.
+
+  Ninguna reemplaza a otra. El **teléfono verificado** queda **fuera** de esta
+  definición: exigiría elegir un proveedor de SMS, que es una decisión de stack
+  no tomada.
+
+  ⚠️ **El identificador fiscal se valida hoy por formato y dígito verificador,
+  no contra ARCA.** No existe integración con la fuente fiscal oficial, así que
+  **por sí solo no prueba la titularidad** del número: sólo que está bien
+  formado. Cuando esa integración exista, esta definición debería exigirlo
+  **verificado contra la fuente**, y no meramente declarado.
 - 🌐 **DEPENDENCIA EXTERNA:** Mercado Pago realiza su propio **KYC**. **No afirmar**
   que **conectar Mercado Pago equivale automáticamente a una verificación completa
   de identidad de Offside.** A investigar qué datos expone MP.
@@ -89,9 +102,13 @@ los tres de arriba (`seller-system.md`).
 
 ### 4.2 Eje 2 — Vendedor aprobado
 
-- **TS-010:** un vendedor pasa a "aprobado" cuando cumple: identidad (según la
-  definición pendiente TS-001) + Mercado Pago conectado por OAuth + términos
-  aceptados + no estar en estado de riesgo que lo impida (§4.5).
+- **TS-010:** un vendedor pasa a "aprobado" cuando cumple: identidad (según
+  TS-001, ya definida) + Mercado Pago conectado por OAuth + términos aceptados +
+  no estar en estado de riesgo que lo impida (§4.5).
+
+  > **Orden del onboarding:** la aprobación es el **último** paso. La conexión
+  > de Mercado Pago ocurre **antes** de aprobar, tal como describe UC-SS-1
+  > (`seller-system.md` §5); exigir "aprobado" para conectar sería circular.
 - **TS-011:** la aprobación puede ser **revocada** si el vendedor entra en estado
   de riesgo (§4.5).
 - **TS-012:** un vendedor no aprobado puede navegar y comprar, pero no publicar
@@ -340,8 +357,8 @@ Además:
 - 🟡 **DEC-009** — Disputas: motivos finales, plazos (vendedor/comprador), quién
   analiza, facultades del admin, resoluciones.
 - 🟡 Fórmula de reputación.
-- 🟡 **TS-001** — Definición de "identidad verificada" en Offside (combinación de
-  señales) y relación con el KYC de MP (🔵 investigar qué expone MP).
+- ~~🟡 **TS-001**~~ — ✅ **cerrada el 2026-08-27 por DEC-044** (ver §4.1). Sigue
+  🔵 qué datos expone exactamente el KYC de Mercado Pago.
 - 🟡 Cómo se convierte un usuario en vendedor; aprobación auto/manual; límites de
   vendedores nuevos; particular vs profesional.
 - 🔵/🌐 Alcance real de las acciones sobre fondos del vendedor (depende de MP).

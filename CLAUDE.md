@@ -46,7 +46,7 @@ C:\Users\tango\Documents\Proyects\Offside Store\   ← **RAÍZ DEL REPO GIT**
 ├── CLAUDE.md                  ← este archivo
 ├── docs/                      ← FUENTE DE VERDAD  (conceptualmente "Documentation/")
 │   ├── README.md              ← índice y orden de lectura
-│   ├── DECISIONS.md           ← decisiones oficiales (DEC-001 … DEC-038)
+│   ├── DECISIONS.md           ← decisiones oficiales (DEC-001 … DEC-044)
 │   ├── OPEN-QUESTIONS.md      ← decisiones pendientes
 │   ├── RISKS.md
 │   ├── 01-business/           ← business-model, business-rules, trust-and-safety,
@@ -535,17 +535,17 @@ Qué existe en `offsideApp/`:
 
 Módulos de dominio implementados (`apps/web/src/modules/`):
 
-| Módulo     | Alcance                                                                                                                |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `auth`     | registro, verificación de email, login, logout, sesión, reset de password, rate limiting                               |
-| `users`    | historial de hechos (`user_history_events`, DEC-036)                                                                   |
-| `sellers`  | alta de perfil (nace en `pending`), identidad fiscal CUIT/CUIL/CDI con historial y **conexión OAuth con Mercado Pago** |
-| `audit`    | escritor de `audit_log` (ERD §19.1). Transversal: lo usan sellers y payments                                           |
-| `listings` | publicación de prendas y lectura del catálogo propio                                                                   |
-| `orders`   | compra directa, snapshot económico y comisión del 6% (DEC-043)                                                         |
-| `payments` | Checkout Pro con **Split 1:1**, webhooks firmados, conciliación del reparto y refunds                                  |
+| Módulo     | Alcance                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`     | registro, verificación de email, login, logout, sesión, reset de password, rate limiting                                        |
+| `users`    | historial de hechos (`user_history_events`, DEC-036)                                                                            |
+| `sellers`  | alta de perfil, identidad fiscal CUIT/CUIL/CDI, **conexión OAuth con Mercado Pago** y **aprobación automática (TS-001/TS-010)** |
+| `audit`    | escritor de `audit_log` (ERD §19.1). Transversal: lo usan sellers y payments                                                    |
+| `listings` | publicación de prendas y lectura del catálogo propio                                                                            |
+| `orders`   | compra directa, snapshot económico y comisión del 6% (DEC-043)                                                                  |
+| `payments` | Checkout Pro con **Split 1:1**, webhooks firmados, conciliación del reparto y refunds                                           |
 
-**De las 51 tablas migradas se usan 16.** El resto está creada y vacía.
+**De las 51 tablas migradas se usan 17.** El resto está creada y vacía.
 
 **Mercado Pago — conexión Y pagos, verificados contra la API real.**
 
@@ -579,6 +579,15 @@ BR-022), con revalidación en el checkout (UC-MF-3) y descuento **atómico** en 
 misma transacción que el paso a `PAID`. Un webhook repetido no descuenta dos
 veces.
 
+**Aprobación de vendedores (TS-001/TS-010)**: identidad verificada = email
+verificado + identificador fiscal válido + Mercado Pago conectado. Con las tres,
+el vendedor **se aprueba solo**. La decisión quedó registrada en `docs/` como
+**DEC-044**, y TS-001 pasó a ✅. De paso se corrigió el gate invertido que exigía
+`approved` para conectar Mercado Pago, contra UC-SS-1.
+⚠️ El identificador fiscal se valida por formato y dígito verificador, **no**
+contra ARCA: no prueba titularidad por sí solo. Detalle en
+`seller-approval-module.md`.
+
 **Emails**: verificación de cuenta y reset de contraseña se envían por
 **Amazon SES** detrás de un puerto, encolados en BullMQ. El worker corre en el
 proceso web vía `instrumentation.ts` (`tech-stack.md` §5), así que **no hace
@@ -592,7 +601,7 @@ admin y frontend. De los nueve emails que lista la documentación sólo están l
 dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **320** (188 unitarios + 132 de integración contra PostgreSQL y Redis
+Tests: **363** (199 unitarios + 164 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 
@@ -631,22 +640,16 @@ pertenecen al Config Store (§12) y siguen 🟡.
 
 Lo que hoy frena el avance, en orden de impacto:
 
-1. **TS-001 — "qué significa identidad verificada"** 🟡. Sin esto no se puede
-   aprobar a ningún vendedor, y `seller_profiles.status` se queda en `pending`
-   para siempre. Bloquea toda la cadena de venta. **Desde la conexión con
-   Mercado Pago el bloqueo es visible en el código**: `connect` exige
-   `approved`, así que hoy todo vendedor real recibe `MP_SELLER_NOT_APPROVED`.
-   El gate NO se relajó: hacerlo sería inventar la decisión que falta.
-2. **B1 — liberación/retención de fondos en MP Split** 🔵. Es la única
+1. **B1 — liberación/retención de fondos en MP Split** 🔵. Es la única
    mitigación conocida de RISK-F1, el riesgo central del negocio. **Requiere
    investigación contra la API real; no se asume.** La prueba del 2026-08-26
    mostró el reparto pero **no** cómo retener fondos: al aprobarse el pago, MP
    acredita al vendedor de inmediato.
-3. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()`
+2. **DEC-023 — permisos granulares por rol** 🟡. `requireAdminRole()`
    autoriza sólo por rol. Bloquea la aprobación de `catalog_change_requests`
    (OQ-F2), y es lo que impide darle un panel al Config Store: la comisión se
    cambia por SQL porque no hay a quién autorizar.
-4. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
+3. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
    lanzamiento comercial**. El módulo fiscal está limitado a identificación.
 
 > La contradicción que esta sección señalaba entre `configuration-registry.md`

@@ -1,5 +1,5 @@
 import { resetEnvCache } from '@offside/config';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createEmailSender } from './infrastructure/email/index';
 import { resetSesClient } from './infrastructure/email/ses-email.sender';
@@ -43,8 +43,28 @@ const SIN_SES = {
   EMAIL_FROM_ADDRESS: undefined,
 };
 
+/**
+ * ⚠️ ESTE ARCHIVO MUTA `process.env`, QUE ES COMPARTIDO.
+ *
+ * Vitest corre los archivos en paralelo entre workers pero SECUENCIALMENTE
+ * dentro de cada uno, y `process.env` es del proceso. Un archivo que ensucia el
+ * entorno y no lo limpia rompe al siguiente que le toque el mismo worker, de
+ * forma intermitente y dificil de rastrear. Por eso se restaura entero.
+ */
+const ENTORNO_ORIGINAL = { ...process.env };
+
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+afterAll(() => {
+  for (const clave of Object.keys(process.env)) {
+    if (!(clave in ENTORNO_ORIGINAL)) delete process.env[clave];
+  }
+  Object.assign(process.env, ENTORNO_ORIGINAL);
+
+  resetEnvCache();
+  resetSesClient();
 });
 
 describe('eleccion del adaptador', () => {
