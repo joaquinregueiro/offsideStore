@@ -140,14 +140,51 @@ faltar es un problema de despliegue, no un caso normal.
 
 ### Cómo se cambia hoy
 
-Sin redeploy: insertando una versión nueva en `app_settings`. La tabla es
-versionada (`UNIQUE(scope, scope_id, key, version)`), así que el historial queda.
-`settingsService.setCommissionRateBasisPoints()` es el camino validado.
+Por API, sin redeploy y sin SQL:
 
-⚠️ **No hay panel de administración** y no se agregó uno: DEC-023 —permisos
-granulares por rol— sigue 🟡, así que no hay a quién autorizar. Tampoco hay
-caché, overrides por tier ni auditoría propia; ver el encabezado de
-`settings.service.ts` para el porqué de cada ausencia.
+| Método | Ruta                             | Capacidad              |
+| ------ | -------------------------------- | ---------------------- |
+| `GET`  | `/api/admin/settings/commission` | `system_config:manage` |
+| `PUT`  | `/api/admin/settings/commission` | `system_config:manage` |
+
+```bash
+curl -X PUT https://<dominio>/api/admin/settings/commission \
+  -H 'content-type: application/json' \
+  -b 'offside_session=<token>' \
+  -d '{"basisPoints": 700}'
+```
+
+⚠️ **`updatedBy` sale de la sesión, nunca del cuerpo.** El schema es `.strict()`,
+así que mandarlo devuelve `422` en vez de ignorarse en silencio. Es lo único que
+hace confiable el historial: si el cliente pudiera declarar el autor, el registro
+no probaría nada.
+
+⚠️ **El endpoint es específico de la comisión, no un lector genérico de
+`app_settings`.** Un `GET /api/admin/settings` que devolviera la tabla entera se
+convertiría en una fuga el día que alguien guarde ahí una clave sensible. Cada
+clave que necesite administración expone su propio endpoint acotado.
+
+La tabla es versionada (`UNIQUE(scope, scope_id, key, version)`): cada cambio
+inserta una fila nueva y el historial queda, con su `updated_by`. **No se
+duplica en `audit_log`**: sería el mismo hecho contado dos veces, con el riesgo
+de que se desincronicen.
+
+⚠️ **No hay panel de administración** (frontend). La autorización sí está
+resuelta: `system_config:manage` en el mapa de DEC-023.
+
+### El rango, y por qué no contradice a DEC-014
+
+DEC-014 dice **"sin mínimo ni máximo de comisión"**, y eso se respeta: no hay
+piso ni techo sobre el **monto** cobrado.
+
+El endpoint sí acota la **tasa** a `0…10000` basis points. No es un límite
+comercial sino **técnico**: una tasa mayor al 100% haría
+`marketplace_fee > transaction_amount`, y Mercado Pago rechaza la preferencia.
+Sin la cota, el error aparecería recién en el checkout de un comprador real.
+
+Se valida en **dos** lugares y no es duplicación: un administrador que manda
+`20000` comete un error de cliente y recibe `422`; un valor fuera de rango
+**leído** de `app_settings` es data corrupta y devuelve `500`.
 
 ## Endpoints
 

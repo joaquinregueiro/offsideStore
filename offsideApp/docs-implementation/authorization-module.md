@@ -165,8 +165,11 @@ desaparece.
 falla reapareció. Éste ataca el mecanismo en vez de la sintomatología, pero es un
 heisenbug entre procesos y no puedo probar su ausencia.
 
-## Qué desbloquea
+## Primer consumidor: el Config Store
 
-El Config Store ya tiene su capacidad definida (`system_config:manage`) y su
-guard. Construir el endpoint administrativo de configuración es ahora escribir
-el controller: la autorización está resuelta.
+`GET` y `PUT /api/admin/settings/commission` son los primeros endpoints que usan
+`requireCapability` con `system_config:manage`. Sirven de referencia para los
+que vengan: la ruta vive bajo `/admin` por claridad, pero **eso no es lo que la
+protege** —no hay middleware por prefijo—; cada handler declara su guard.
+
+Ver `mercadopago-payments-module.md` §La comisión.

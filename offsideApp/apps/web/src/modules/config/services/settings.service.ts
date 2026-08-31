@@ -16,8 +16,9 @@ import * as settingRepo from '../repositories/app-setting.repository';
  *  - **Sin cache.** Es una consulta por indice, una vez por orden creada.
  *    Cachear introduce invalidacion, que es el problema dificil, para ahorrar
  *    algo que todavia no se midio.
- *  - **Sin panel de admin ni API.** DEC-023 —permisos granulares por rol— sigue
- *    🟡, asi que no hay a quien autorizar. Hoy se cambia por SQL o migracion.
+ *  - **Sin panel de administracion** (frontend). Si hay API: la comision se
+ *    lee y se cambia por `/api/admin/settings/commission`, protegida por la
+ *    capacidad `system_config:manage` (DEC-023 ✅).
  *  - **Sin overrides por tier ni por categoria.** El ERD los contempla
  *    (`scope`), pero sus valores siguen 🟡 y no se inventa la politica.
  *  - **Sin auditoria propia.** `app_settings` ya es versionada: cada cambio deja
@@ -83,9 +84,12 @@ export async function getCommissionRateBasisPoints(db?: Database): Promise<numbe
 /**
  * Cambia la tasa. Inserta una version nueva; la anterior queda en la tabla.
  *
- * No hay endpoint que llame a esto todavia (DEC-023 🟡). Existe para que el
- * cambio tenga un unico camino validado, en vez de que cada quien escriba su
- * propio INSERT.
+ * Lo llama `PUT /api/admin/settings/commission`, protegido por la capacidad
+ * `system_config:manage` (DEC-023). Es el UNICO camino validado para cambiar la
+ * tasa: cualquier otra via seria un INSERT a mano sin validacion.
+ *
+ * ⚠️ `updatedBy` es el id del ADMINISTRADOR AUTENTICADO. El controller lo toma
+ * de la sesion, nunca del cuerpo del request.
  */
 export async function setCommissionRateBasisPoints(
   basisPoints: number,
@@ -105,6 +109,28 @@ export async function setCommissionRateBasisPoints(
   );
 
   return validado;
+}
+
+/** Fila vigente de la comision, para exponer version y fecha. */
+export async function findCurrentCommissionSetting(
+  db?: Database,
+): Promise<settingRepo.AppSettingRow | undefined> {
+  return settingRepo.findCurrent(COMMISSION_RATE_KEY, db);
+}
+
+/**
+ * La tasa en porcentaje legible: 600 -> `'6%'`, 650 -> `'6.5%'`.
+ *
+ * DERIVADO, para mostrar. No se persiste: la fuente sigue siendo el entero en
+ * basis points. Se construye con enteros, sin dividir en punto flotante.
+ */
+export function basisPointsToPercent(basisPoints: number): string {
+  const entero = Math.trunc(basisPoints / 100);
+  const decimales = basisPoints % 100;
+
+  if (decimales === 0) return `${entero}%`;
+
+  return `${entero}.${decimales.toString().padStart(2, '0').replace(/0$/, '')}%`;
 }
 
 /**

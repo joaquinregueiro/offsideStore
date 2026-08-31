@@ -527,7 +527,7 @@ Qué existe en `offsideApp/`:
 
 |                                    |                                                                                 |
 | ---------------------------------- | ------------------------------------------------------------------------------- |
-| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 20 rutas de API  |
+| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 22 rutas de API  |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
 | `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 4 migraciones aplicadas**  |
 | `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
@@ -570,9 +570,11 @@ vendedor y la comisión de Offside es un 6% limpio. Detalle y hallazgos en
 
 **Config Store operativo**: la comisión dejó de ser una constante. Vive en
 `app_settings.commission_rate_default` (600 basis points = 6%), la carga la
-migración `0003` y se puede cambiar sin redesplegar. `orders` la lee UNA vez al
-crear la orden y la congela en el snapshot (DEC-030); `payments` nunca la
-consulta. Sin panel de admin: DEC-023 sigue 🟡.
+migración `0003` y se cambia por `PUT /api/admin/settings/commission`, protegido
+por la capacidad `system_config:manage` (DEC-023 ✅) — sin redeploy y sin SQL.
+`orders` la lee UNA vez al crear la orden y la congela en el snapshot (DEC-030);
+`payments` nunca la consulta. `updatedBy` sale de la sesión, nunca del cuerpo.
+Sin panel (frontend), pero la autorización está resuelta.
 
 **Stock anti-overselling**: se descuenta al aprobarse el pago (MF-022 /
 BR-022), con revalidación en el checkout (UC-MF-3) y descuento **atómico** en la
@@ -608,7 +610,7 @@ admin y frontend. De los nueve emails que lista la documentación sólo están l
 dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **387** (211 unitarios + 176 de integración contra PostgreSQL y Redis
+Tests: **403** (211 unitarios + 192 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 

@@ -159,6 +159,19 @@ cada publicación** (no son configuración global). Catálogo en
   (con descuentos aplicados).
 - **IVA:** la comisión de Offside se considera **IVA incluido**.
 - **Sin mínimo ni máximo** de comisión.
+  > **Aclaración del 2026-08-27 (no modifica la decisión).** "Sin mínimo ni
+  > máximo" se refiere al **monto** de comisión: no hay piso ni techo en pesos
+  > sobre lo que Offside cobra en una venta.
+  >
+  > Es **distinto** del rango en el que puede configurarse la **tasa**. El Config
+  > Store acepta `0 … 10000` basis points (0 % a 100 %), y esa cota es un
+  > **invariante técnico, no un límite comercial**: una tasa mayor al 100 % haría
+  > que `marketplace_fee` supere el `transaction_amount`, y **Mercado Pago
+  > rechaza la preferencia**. Sin la cota, el error aparecería recién en el
+  > checkout de un comprador real.
+  >
+  > Fijar un mínimo o un máximo **comercial** de comisión seguiría siendo una
+  > decisión de negocio nueva, y hoy no existe.
 - **Sin diferenciación por categoría de producto.**
 - ~~**Costo de Mercado Pago:** lo **absorbe Offside**, contemplado **dentro** de su
   comisión.~~ → **REVOCADO el 2026-08-24 por DEC-043.** El costo de Mercado Pago
