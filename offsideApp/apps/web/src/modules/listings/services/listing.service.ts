@@ -217,3 +217,39 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
     sellerDisplayName: row.sellerDisplayName,
   }));
 }
+
+/** Ficha publica de una publicacion. */
+export interface PublicListingDetail extends CatalogListing {
+  description: string | null;
+  kitType: listingRepo.ListingRow['kitType'];
+  sleeve: listingRepo.ListingRow['sleeve'];
+  authenticity: listingRepo.ListingRow['authenticity'];
+  /** Cuantas unidades quedan. La ficha lo usa para avisar si queda poco. */
+  stock: number;
+}
+
+/**
+ * Ficha publica por id. No exige sesion: es parte de la vitrina.
+ *
+ * Devuelve `null` si la publicacion no existe **o no es comprable**: quien
+ * tenga un enlace viejo no deberia poder ver lo que la vitrina esconde.
+ */
+export async function findPublicListing(id: string): Promise<PublicListingDetail | null> {
+  const row = await listingRepo.findPublicById(id);
+  if (row === undefined) return null;
+
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    priceAmount: row.priceAmount.toString(),
+    currency: row.currency,
+    sizeValue: row.sizeValue,
+    condition: row.condition,
+    kitType: row.kitType,
+    sleeve: row.sleeve,
+    authenticity: row.authenticity,
+    stock: row.stock,
+    sellerDisplayName: row.sellerDisplayName,
+  };
+}

@@ -6,6 +6,8 @@
  */
 
 .ficha {
+  /* Es un <a>: se neutraliza el color de enlace global para no tenir el titulo. */
+  color: inherit;
   display: flex;
   flex-direction: column;
   background: var(--color-blanco);

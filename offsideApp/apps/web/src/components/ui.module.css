@@ -1,0 +1,115 @@
+/**
+ * Primitivas de interfaz.
+ *
+ * ⚠️ Se escribieron CON la primera pantalla que las usa (el detalle de
+ * producto), no antes. Inventar variantes por adelantado es adivinar cuales
+ * hacen falta; cada una de estas existe porque algo la pidio.
+ */
+
+/* ------------------------------------------------------------------ boton */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-5);
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-base);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.boton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.botonPrimario {
+  background: var(--color-cancha);
+  color: var(--color-papel);
+}
+
+.botonPrimario:hover:not(:disabled) {
+  background: var(--color-tiempo-extra);
+  /* Se repite el color porque `a:hover` global lo pisaria en un boton-enlace. */
+  color: var(--color-papel);
+}
+
+.botonSecundario {
+  background: transparent;
+  border-color: var(--color-cancha);
+  color: var(--color-cancha);
+}
+
+.botonSecundario:hover:not(:disabled) {
+  background: var(--color-neutro-suave);
+}
+
+/** Ocupa todo el ancho. Util en formularios y en la columna de compra. */
+.botonBloque {
+  width: 100%;
+}
+
+/* ------------------------------------------------------------- etiquetas */
+
+.etiqueta {
+  display: inline-block;
+  padding: 2px var(--espacio-2);
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio-chico);
+  background: var(--color-neutro-suave);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+}
+
+/** Variante de aviso: usa el naranja de la identidad, reservado para esto. */
+.etiquetaAviso {
+  border-color: var(--color-naranja);
+  background: transparent;
+  color: var(--color-naranja);
+}
+
+/* ---------------------------------------------------------------- avisos */
+
+.aviso {
+  padding: var(--espacio-4);
+  border: 1px solid var(--color-neutro-borde);
+  border-left-width: 3px;
+  border-radius: var(--radio);
+  background: var(--color-neutro-suave);
+  font-size: var(--texto-base);
+  color: var(--color-neutro-texto);
+}
+
+.avisoError {
+  border-color: var(--color-naranja);
+  color: var(--color-tinta);
+}
+
+/* ----------------------------------------------------------- estado vacio */
+
+.vacio {
+  border: 1px dashed var(--color-neutro-borde);
+  border-radius: var(--radio);
+  padding: var(--espacio-8);
+  text-align: center;
+  color: var(--color-neutro-texto);
+}
+
+.vacioTitulo {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  color: var(--color-tinta);
+  margin-bottom: var(--espacio-3);
+}

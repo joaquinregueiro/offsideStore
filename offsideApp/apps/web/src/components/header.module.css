@@ -1,0 +1,69 @@
+.barra {
+  background: var(--color-cancha);
+  color: var(--color-papel);
+  padding: var(--espacio-4) var(--espacio-6);
+}
+
+.contenido {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-6);
+}
+
+.marca {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-3xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-titulo);
+  color: var(--color-papel);
+  text-transform: uppercase;
+}
+
+.marca:hover {
+  color: var(--color-cambio);
+}
+
+/**
+ * El buscador es DECORATIVO. Esta en el mockup de la identidad §06, pero la
+ * busqueda (DEC-042, full-text sobre `search_vector`) no esta implementada. Se
+ * muestra deshabilitado en vez de fingir: un campo que no responde es peor que
+ * uno que avisa.
+ */
+.buscador {
+  flex: 1;
+  max-width: 420px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border: none;
+  border-radius: var(--radio);
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+}
+
+.buscador:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.acciones {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-5);
+}
+
+.enlace {
+  color: var(--color-papel);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  white-space: nowrap;
+}
+
+.enlace:hover {
+  color: var(--color-cambio);
+}

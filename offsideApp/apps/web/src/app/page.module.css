@@ -9,71 +9,6 @@
   min-height: 100vh;
 }
 
-/* ------------------------------------------------------------------ barra */
-
-.barra {
-  background: var(--color-cancha);
-  color: var(--color-papel);
-  padding: var(--espacio-4) var(--espacio-6);
-}
-
-.barraContenido {
-  max-width: var(--ancho-contenido);
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: var(--espacio-6);
-}
-
-.marca {
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-3xl);
-  /* La identidad usa el wordmark en mayusculas con interlineado apretado. */
-  line-height: 1;
-  letter-spacing: var(--tracking-titulo);
-  color: var(--color-papel);
-  text-transform: uppercase;
-}
-
-.marca:hover {
-  color: var(--color-cambio);
-}
-
-/**
- * El buscador es DECORATIVO por ahora: la identidad lo pone en el centro de la
- * home, pero la busqueda (DEC-042, full-text sobre `search_vector`) no esta
- * implementada. Se muestra deshabilitado en vez de fingir que funciona.
- */
-.buscador {
-  flex: 1;
-  max-width: 420px;
-  padding: var(--espacio-2) var(--espacio-3);
-  border: none;
-  border-radius: var(--radio);
-  background: var(--color-papel);
-  color: var(--color-tinta);
-  font-family: var(--fuente-texto);
-  font-size: var(--texto-sm);
-}
-
-.buscador:disabled {
-  cursor: not-allowed;
-  opacity: 0.75;
-}
-
-.acceso {
-  margin-left: auto;
-  color: var(--color-papel);
-  font-size: var(--texto-sm);
-  font-weight: var(--peso-medio);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-}
-
-.acceso:hover {
-  color: var(--color-cambio);
-}
-
 /* ---------------------------------------------------------------- portada */
 
 .portada {
@@ -125,21 +60,4 @@
   list-style: none;
   padding: 0;
   margin: 0;
-}
-
-/* ------------------------------------------------------------------ vacio */
-
-.vacio {
-  border: 1px dashed var(--color-neutro-borde);
-  border-radius: var(--radio);
-  padding: var(--espacio-8);
-  text-align: center;
-  color: var(--color-neutro-texto);
-}
-
-.vacioTitulo {
-  font-size: var(--texto-xl);
-  text-transform: uppercase;
-  color: var(--color-tinta);
-  margin-bottom: var(--espacio-3);
 }

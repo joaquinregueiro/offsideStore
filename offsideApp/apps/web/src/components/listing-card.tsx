@@ -13,7 +13,7 @@ import estilos from './listing-card.module.css';
 
 export function ListingCard({ listing }: { listing: CatalogListing }) {
   return (
-    <article className={estilos.ficha}>
+    <a href={`/p/${listing.id}`} className={estilos.ficha}>
       {/* Sin imagenes todavia: se muestra el patron de la identidad §05. */}
       <div className={estilos.marco} aria-hidden="true" />
 
@@ -29,6 +29,6 @@ export function ListingCard({ listing }: { listing: CatalogListing }) {
 
         <p className={estilos.vendedor}>{listing.sellerDisplayName}</p>
       </div>
-    </article>
+    </a>
   );
 }

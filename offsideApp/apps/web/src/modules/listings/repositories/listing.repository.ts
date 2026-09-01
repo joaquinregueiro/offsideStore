@@ -193,3 +193,56 @@ export async function findPublicCatalog(
     .orderBy(desc(schema.listings.createdAt))
     .limit(opciones.limite ?? 60);
 }
+
+/** Una publicacion vista en su ficha, con los datos del vendedor que se exponen. */
+export interface PublicListingDetailRow extends CatalogListingRow {
+  description: string | null;
+  kitType: ListingRow['kitType'];
+  sleeve: ListingRow['sleeve'];
+  authenticity: ListingRow['authenticity'];
+  sellerId: string;
+}
+
+/**
+ * Una publicacion del catalogo publico, por id.
+ *
+ * ⚠️ APLICA EL MISMO FILTRO QUE EL CATALOGO (ERD §9.1). Devolver una
+ * publicacion pausada, agotada o sin aprobar solo porque alguien tiene su
+ * enlace seria una via lateral para ver —y desde ahi intentar comprar— lo que
+ * la vitrina esconde. Se devuelve `undefined` y la pagina responde 404.
+ */
+export async function findPublicById(
+  id: string,
+  db?: Database,
+): Promise<PublicListingDetailRow | undefined> {
+  const [row] = await conn(db)
+    .select({
+      id: schema.listings.id,
+      title: schema.listings.title,
+      description: schema.listings.description,
+      priceAmount: schema.listings.priceAmount,
+      currency: schema.listings.currency,
+      sizeValue: schema.listings.sizeValue,
+      condition: schema.listings.condition,
+      kitType: schema.listings.kitType,
+      sleeve: schema.listings.sleeve,
+      authenticity: schema.listings.authenticity,
+      stock: schema.listings.stock,
+      createdAt: schema.listings.createdAt,
+      sellerId: schema.listings.sellerId,
+      sellerDisplayName: schema.sellerProfiles.displayName,
+    })
+    .from(schema.listings)
+    .innerJoin(schema.sellerProfiles, eq(schema.listings.sellerId, schema.sellerProfiles.id))
+    .where(
+      and(
+        eq(schema.listings.id, id),
+        eq(schema.listings.status, 'active'),
+        eq(schema.listings.moderationStatus, 'APPROVED'),
+        gte(schema.listings.stock, 1),
+      ),
+    )
+    .limit(1);
+
+  return row;
+}

@@ -1,4 +1,6 @@
+import { Header } from '@/components/header';
 import { ListingCard } from '@/components/listing-card';
+import { EstadoVacio } from '@/components/ui';
 import { listPublicCatalog } from '@/modules/listings/services/listing.service';
 
 import estilos from './page.module.css';
@@ -30,31 +32,7 @@ export default async function Home() {
 
   return (
     <div className={estilos.pagina}>
-      <header className={estilos.barra}>
-        <div className={estilos.barraContenido}>
-          <a href="/" className={estilos.marca}>
-            Offside
-          </a>
-
-          {/*
-            El buscador esta en el mockup de la identidad §06, pero la busqueda
-            (DEC-042, full-text sobre `search_vector`) no esta implementada.
-            Se muestra deshabilitado en vez de fingir que funciona: un campo que
-            no responde es peor que uno que avisa.
-          */}
-          <input
-            className={estilos.buscador}
-            type="search"
-            placeholder="Buscar camiseta, club, temporada…"
-            disabled
-            aria-label="Buscar (todavía no disponible)"
-          />
-
-          <a href="/ingresar" className={estilos.acceso}>
-            Ingresar
-          </a>
-        </div>
-      </header>
+      <Header />
 
       <section className={estilos.portada}>
         <div className={estilos.portadaContenido}>
@@ -69,10 +47,9 @@ export default async function Home() {
         <h2 className={estilos.tituloSeccion}>En venta</h2>
 
         {listings.length === 0 ? (
-          <div className={estilos.vacio}>
-            <p className={estilos.vacioTitulo}>Todavía no hay publicaciones</p>
-            <p>Cuando un vendedor publique su primera camiseta, va a aparecer acá.</p>
-          </div>
+          <EstadoVacio titulo="Todavía no hay publicaciones">
+            Cuando un vendedor publique su primera camiseta, va a aparecer acá.
+          </EstadoVacio>
         ) : (
           <ul className={estilos.grilla}>
             {listings.map((listing) => (
