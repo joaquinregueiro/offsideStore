@@ -1,0 +1,71 @@
+.pagina {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
+}
+
+.titulo {
+  font-size: var(--texto-3xl);
+  text-transform: uppercase;
+  margin-bottom: var(--espacio-6);
+}
+
+/** Resumen de lo que se esta comprando. */
+.resumen {
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  padding: var(--espacio-5);
+  margin-bottom: var(--espacio-7);
+}
+
+.linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacio-4);
+  padding: var(--espacio-2) 0;
+}
+
+.lineaTotal {
+  border-top: 1px solid var(--color-neutro-borde);
+  margin-top: var(--espacio-3);
+  padding-top: var(--espacio-4);
+}
+
+.concepto {
+  color: var(--color-neutro-texto);
+}
+
+.total {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-3xl);
+  line-height: 1;
+}
+
+.subtitulo {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  margin: var(--espacio-7) 0 var(--espacio-5);
+}
+
+/** Dos columnas para los campos cortos de la direccion. */
+.par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-4);
+}
+
+@media (max-width: 640px) {
+  .par {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nota {
+  margin-top: var(--espacio-5);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  text-align: center;
+}

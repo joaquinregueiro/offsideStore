@@ -280,3 +280,47 @@ export async function listMyOrders(user: PublicUser): Promise<PublicOrder[]> {
   const rows = await orderRepo.findByBuyerId(user.id);
   return rows.map(toPublicOrder);
 }
+
+/** Un item de la orden, tal como lo ve el comprador. */
+export interface PublicOrderItem {
+  id: string;
+  /** Snapshot del titulo al momento de comprar (DEC-030). */
+  title: string;
+  quantity: number;
+  unitPriceAmount: string;
+}
+
+export interface PublicOrderWithItems extends PublicOrder {
+  items: PublicOrderItem[];
+  /** Vencimiento de la ventana de pago, si la orden tiene una. */
+  paymentDeadline: string | null;
+}
+
+/**
+ * Una orden del comprador autenticado, con sus items.
+ *
+ * ⚠️ SE COMPARA CONTRA `user.id`, nunca contra un id que venga del request. Y
+ * una orden ajena devuelve `null`, el MISMO resultado que una inexistente:
+ * distinguirlos permitiria enumerar ordenes de otros. Es el mismo criterio que
+ * ya usa `payments.startCheckout`.
+ */
+export async function getMyOrder(
+  user: PublicUser,
+  orderId: string,
+): Promise<PublicOrderWithItems | null> {
+  const order = await orderRepo.findById(orderId);
+  if (order?.buyerId !== user.id) return null;
+
+  const items = await orderRepo.findItems(orderId);
+
+  return {
+    ...toPublicOrder(order),
+    paymentDeadline: order.paymentDeadline?.toISOString() ?? null,
+    items: items.map((item) => ({
+      id: item.id,
+      title: item.titleSnapshot,
+      quantity: item.quantity,
+      unitPriceAmount: item.unitPriceAmount.toString(),
+    })),
+  };
+}
