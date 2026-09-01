@@ -656,15 +656,31 @@ pertenecen al Config Store (§12) y siguen 🟡.
 
 Lo que hoy frena el avance, en orden de impacto:
 
-1. **B1 — liberación/retención de fondos en MP Split** 🔵. Es la única
-   mitigación conocida de RISK-F1, el riesgo central del negocio. **Requiere
-   investigación contra la API real; no se asume.** La prueba del 2026-08-26
-   mostró el reparto pero **no** cómo retener fondos: al aprobarse el pago, MP
-   acredita al vendedor de inmediato.
+1. ~~**B1 — liberación/retención de fondos en MP Split**~~ ✅ **cerrado el
+   2026-09-01, en negativo.** Mercado Pago **no ofrece retención configurable**
+   para este stack: al aprobarse el pago acredita al vendedor y no hay
+   parámetro de `hold`, `release_date` ni escrow; `capture=false` no existe en
+   Checkout Pro. DEC-019 se reescribió: **Offside asume el riesgo** y registra
+   la deuda en `seller_liabilities`, que es la primera mitigación que RISK-F1 ya
+   listaba. ⚠️ RISK-F1 pierde así su mitigación más fuerte y **sigue siendo el
+   riesgo central del modelo**.
 2. **DEC-011 — modelo fiscal** 🔴. No bloquea un MVP en sandbox; **sí bloquea el
    lanzamiento comercial**. El módulo fiscal está limitado a identificación.
 
 > La contradicción que esta sección señalaba entre `configuration-registry.md`
 > §12–13 y el ERD quedó **resuelta**: el registro fue alineado con DEC-039 y el
-> Config Store está modelado como `app_settings` + `seller_tiers`. Ambas tablas
-> están migradas pero **vacías y sin código que las lea**.
+> Config Store está modelado como `app_settings` + `seller_tiers`.
+> `app_settings` **está en uso** (la comisión); `seller_tiers` sigue vacía.
+
+### Hueco conocido en el código
+
+⚠️ **Los refunds no contemplan que el vendedor no tenga saldo.** Si Mercado Pago
+rechaza un refund por saldo insuficiente, hoy se devuelve `paymentProviderError`
+y **no queda registro de que hay una deuda**: `seller_liabilities` sigue vacía y
+sin código que la escriba.
+
+Es el agujero que deja abierto el cierre de B1, y no es hipotético: es
+exactamente el escenario de RISK-F1. Lo que **falta confirmar 🔵** es qué hace
+Mercado Pago en ese caso —rechaza, deja la cuenta en negativo, o depende del
+esquema—; hasta saberlo no se puede escribir el manejo correcto. Los refunds
+tampoco se probaron nunca contra Mercado Pago real.

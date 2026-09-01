@@ -44,7 +44,7 @@ pendiente) y `RISKS.md`.
 | DEC-016 | Costo de cuotas (quién lo absorbe) | ✅ principio / 🔵 MP |
 | DEC-017 | Costo de descuentos (quién lo absorbe) | ✅ |
 | DEC-018 | Comisión sobre refund parcial la absorbe Offside | ⚙️ (✅ default) |
-| DEC-019 | Liberación de fondos del vendedor sujeta a conformidad | ✅ principio / 🔵 MP (crítico) |
+| DEC-019 | Liberación de fondos: **MP no permite retención**; Offside asume el riesgo y registra la deuda en `seller_liabilities` | ✅ (reescrita 2026-09-01) |
 | DEC-020 | Niveles de usuario (NUEVO→…→TIENDA) | ✅ estructura / 🟡 umbrales |
 | DEC-021 | Estados de riesgo (NORMAL→RIESGO→RESTRINGIDO→SUSPENDIDO) | ✅ estructura / 🟡 umbrales |
 | DEC-022 | Historial, nivel de usuario y riesgo son conceptos distintos | ✅ |
@@ -213,6 +213,59 @@ implementa esto realmente con Mercado Pago Split Payments (fondos, reservas,
 liberación). **No se asume** que MP permite este flujo sin verificar la doc. oficial.
 Ref: `orders-and-refunds.md`, `payments-and-commissions.md`,
 `open-decisions-impact.md`.
+
+### DEC-019 — Liberación de fondos del vendedor — ✅ (reescrita)
+
+> **Reescrita el 2026-09-01.** Antes: *"el dinero del vendedor no se considera
+> definitivamente liberado hasta que el comprador confirme conformidad"* —
+> ✅ principio / 🔵 MP (crítico). **Ese principio NO es implementable** y se
+> reemplaza por lo que sigue.
+
+**Investigación cerrada (2026-09-01).** Mercado Pago **no ofrece retención de
+fondos configurable** para nuestro stack:
+
+- En **Split 1:1**, al aprobarse el pago el dinero se acredita en la cuenta del
+  vendedor según los plazos propios de esa cuenta. Offside **no puede diferirlo**.
+- **No existe parámetro público** de `hold`, `release_date` ni escrow en las APIs
+  de Checkout Pro ni de Preferences para Argentina.
+- **Checkout Pro no soporta `capture=false`**: cobra en un solo paso. La captura
+  en dos fases existe sólo en Checkout API, con una ventana de **7 días** y
+  cambiando el checkout entero.
+- El *delayed settlement* real requiere **acuerdo comercial** con Mercado Pago
+  (cuenta enterprise, volumen mínimo, evaluación de riesgo).
+
+**Decisión: Offside ASUME el riesgo y lleva contabilidad de la deuda.** No se
+retienen fondos; cuando la parte del vendedor no se recupera, queda registrada
+en `seller_liabilities` (ERD §12, ya modelada, con estados
+`OPEN / PARTIALLY_SETTLED / SETTLED / WRITTEN_OFF`).
+
+Es la **primera** mitigación que RISK-F1 ya listaba —"diseñar el sistema
+asumiendo el riesgo (registro de `SellerLiability`)"—; la investigación
+simplemente descarta la segunda ("evaluar hold de fondos", que estaba
+condicionada a 🌐 MP). El plan no cambia: se confirma cuál de los dos caminos
+previstos queda en pie.
+
+**Qué sigue vigente:** `seller_liabilities` como entidad de primera clase
+(`orders-and-refunds.md` §5.4) y sus herramientas de recupero —bloqueo de
+nuevas ventas, descuento de ventas futuras, suspensión, incobrable, límite de
+exposición—, cuyos **valores y reglas siguen 🟡**.
+
+**Qué queda sin efecto:** OR-007 (la investigación, ya hecha) y la idea de una
+"condición automática de liberación" de OR-008, que no tiene sobre qué operar
+si no hay fondos retenidos.
+
+⚠️ **Consecuencia para el riesgo:** RISK-F1 pierde su mitigación más fuerte y
+pasa a depender enteramente del recupero posterior y de las reglas de riesgo del
+vendedor. **Sigue siendo el riesgo central del modelo.**
+
+⚠️ **🔵 SIN CONFIRMAR, y afecta código ya escrito:** qué hace Mercado Pago
+exactamente cuando se pide un refund y el vendedor **no tiene saldo** —si lo
+rechaza, si deja la cuenta en negativo, o si depende del esquema—. La
+investigación de origen lo enuncia con reservas. Hasta verificarlo contra la
+documentación oficial o contra un refund real, **no se asume**. Ver RISK-F1.
+
+Ref: `orders-and-refunds.md` §4.b y §5, `RISKS.md` RISK-F1,
+`payments-and-commissions.md`.
 
 ### DEC-020 — Niveles de usuario — ✅ estructura / 🟡 umbrales
 Progresión propuesta: **NUEVO → CONFIABLE → DESTACADO → COLECCIONISTA → TIENDA**.

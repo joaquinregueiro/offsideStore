@@ -15,10 +15,19 @@ Escala: Impacto {Bajo, Medio, Alto, Crítico} · Probabilidad {Baja, Media, Alta
 En Split 1:1, el refund se reparte proporcionalmente; si el vendedor no tiene
 saldo, su parte **no se recupera automáticamente**. OFFSIDE puede terminar
 absorbiendo la pérdida.
-*Mitigación:* diseñar el sistema asumiendo el riesgo (registro de
-`SellerLiability`), evaluar hold de fondos / reserva por riesgo / recupero de
-ventas futuras (🌐 según MP), provisión contable, sanciones. **Es el riesgo
-central del modelo.** Ref: `orders-and-refunds.md`, DEC-008.
+*Mitigación:* **diseñar el sistema asumiendo el riesgo** (registro de
+`SellerLiability`), recupero de ventas futuras, provisión contable y sanciones.
+
+⚠️ **El hold de fondos quedó DESCARTADO el 2026-09-01 (DEC-019).** Mercado Pago
+no ofrece retención configurable para este stack: al aprobarse el pago el dinero
+se acredita al vendedor. Este riesgo pierde así su mitigación más fuerte y
+depende enteramente del recupero posterior. **Es el riesgo central del modelo.**
+
+⚠️ **🔵 Sin confirmar:** qué hace Mercado Pago cuando se pide un refund y el
+vendedor **no tiene saldo** —si lo rechaza, si deja la cuenta en negativo, o si
+depende del esquema—. Determina si Offside se entera de la deuda en el momento
+del refund o después, y **el código de refunds todavía no contempla ese fallo**.
+No se asume sin verificar. Ref: `orders-and-refunds.md`, DEC-008, DEC-019.
 
 ### RISK-F2 — Comisión mal calibrada — **Alto / Media**
 Si la comisión no cubre costo de MP + fiscal + provisión por refunds, el margen es

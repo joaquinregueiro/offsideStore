@@ -101,24 +101,36 @@ proporcionalmente al monto reembolsado).
   devolución?) es un **parámetro configurable** (⚙️ DEC-008) con valor por defecto
   🟡 a definir (afecta al riesgo de fraude del comprador).
 
-## 4.b Liberación de fondos del vendedor sujeta a conformidad — ✅ principio / 🔵 crítico (DEC-019)
+## 4.b Liberación de fondos del vendedor — ✅ CERRADA (DEC-019, reescrita 2026-09-01)
 
-> **Decisión del owner (2026-08-19):** el dinero correspondiente al vendedor **no
-> se considera definitivamente liberado** hasta que **el comprador confirme
-> conformidad** con la compra, o hasta que se cumpla una **condición automática de
-> liberación** que definiremos luego.
+> **La decisión original del owner (2026-08-19) NO es implementable.** Decía que
+> el dinero del vendedor no se consideraba liberado hasta que el comprador
+> confirmara conformidad. La investigación técnica de OR-007 quedó cerrada el
+> 2026-09-01 y su respuesta es que **Mercado Pago no ofrece retención de fondos
+> configurable** para este stack.
 
-- **OR-007 (🔵🌐 investigación técnica CRÍTICA):** hay que **investigar cómo
-  implementar realmente** este concepto con **Mercado Pago Split Payments** y sus
-  mecanismos de fondos/pagos/reservas/liberación. **No se asume** que MP permite
-  exactamente este flujo (hold/liberación diferida) sin verificar la documentación
-  oficial. Es probablemente la investigación más importante del proyecto porque
-  **reduce el riesgo de refunds no recuperables** (sección 5).
-- **OR-008 (🟡):** la **condición automática de liberación** (p. ej. X días tras
-  entrega sin reclamo) queda por definir y debe ser **configurable** (⚙️).
-- **Impacto ERD (no se modifica ahora):** puede requerir estados de "fondos
-  retenidos/liberados" en `orders`/`payments` o una entidad de liberación; ver
-  `open-decisions-impact.md`.
+**Lo que Mercado Pago NO permite:**
+
+- Diferir la acreditación al vendedor en **Split 1:1**: al aprobarse el pago, el
+  dinero se acredita según los plazos propios de esa cuenta.
+- Ningún parámetro público de `hold`, `release_date` ni escrow.
+- `capture=false` en **Checkout Pro** (existe sólo en Checkout API, con ventana
+  de 7 días y cambiando el checkout entero).
+
+El *delayed settlement* real exige **acuerdo comercial** con Mercado Pago.
+
+**Decisión vigente:** Offside **asume el riesgo** y lleva la deuda en
+`seller_liabilities` (§5.4). Es la primera mitigación que RISK-F1 ya listaba.
+
+- ~~**OR-007**~~ ✅ investigación cerrada: la respuesta es que no se puede.
+- ~~**OR-008**~~ sin efecto: la "condición automática de liberación" no tiene
+  sobre qué operar si no hay fondos retenidos.
+- **Impacto ERD: ninguno.** No hacen falta estados de "fondos
+  retenidos/liberados": no existen fondos retenidos. `seller_liabilities` ya
+  está en el ERD.
+
+⚠️ Verificado en la práctica el **2026-08-26**: en la primera venta real el
+reparto ocurrió al aprobarse el pago, sin paso intermedio.
 
 ## 5. Riesgo central: vendedor sin fondos
 
