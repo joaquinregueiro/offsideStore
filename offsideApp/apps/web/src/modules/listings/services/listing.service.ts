@@ -16,9 +16,22 @@ import * as listingRepo from '../repositories/listing.repository';
 
 export type { ListingRow } from '../repositories/listing.repository';
 
-/** Estados en los que una publicacion admite compra. */
+/**
+ * Una publicacion es comprable (ERD §9.1).
+ *
+ * La regla del ERD es literal: `status='active'` **y**
+ * `moderation_status='APPROVED'` **y** `stock >= 1`. Antes esta funcion solo
+ * miraba `status`, y eso contradecia al ERD: una publicacion sin moderar
+ * resultaba comprable.
+ *
+ * ⚠️ Se puede exigir `APPROVED` porque desde el 2026-09-01 las publicaciones
+ * NACEN aprobadas (ver `publishListing`). Con moderacion previa real, esta
+ * misma funcion sigue sirviendo sin cambios.
+ */
 export function isPurchasable(listing: listingRepo.ListingRow): boolean {
-  return listing.status === 'active';
+  return (
+    listing.status === 'active' && listing.moderationStatus === 'APPROVED' && listing.stock >= 1
+  );
 }
 
 /**
@@ -140,6 +153,25 @@ export async function publishListing(
     condition: input.condition,
     kitType: input.kitType,
     sleeve: input.sleeve,
+    /**
+     * ⚠️ APROBACION AUTOMATICA — DECISION TRANSITORIA del owner (2026-09-01).
+     *
+     * `configuration-registry.md` §8 lista las "reglas de moderacion
+     * (pre/post publicacion)" como configuracion administrativa SIN valor
+     * definido. Mientras eso siga abierto, las publicaciones nacen
+     * `APPROVED`.
+     *
+     * POR QUE, y no es comodidad: el ERD §9.1 exige `APPROVED` para que algo
+     * sea comprable, y nada asignaba ese estado. Nacer `PENDING` volvia la
+     * regla del ERD imposible de cumplir, y el codigo la ignoraba para
+     * compensar. Naciendo `APPROVED`, el codigo hace lo que el ERD dice.
+     *
+     * ⚠️ ESTO NO ESCALA. Es viable mientras el volumen sea bajo y el owner
+     * conozca a los vendedores. RISK-FR1 (falsificaciones) es Critico/Alta:
+     * cuando haya vendedores desconocidos hay que decidir la politica de
+     * moderacion de verdad y cambiar esta linea.
+     */
+    moderationStatus: 'APPROVED',
   });
 
   return toPublicListing(creada);
@@ -151,4 +183,37 @@ export async function listMyListings(user: PublicUser): Promise<PublicListing[]>
   const rows = await listingRepo.findBySellerId(seller.id);
 
   return rows.map(toPublicListing);
+}
+
+/** Publicacion tal como la ve cualquiera en la vitrina. NUNCA datos del vendedor. */
+export interface CatalogListing {
+  id: string;
+  title: string;
+  /** Centavos como string: el dinero es `bigint` y un `number` no lo representa. */
+  priceAmount: string;
+  currency: string;
+  sizeValue: string;
+  condition: listingRepo.ListingRow['condition'];
+  sellerDisplayName: string;
+}
+
+/**
+ * Catalogo publico. No exige sesion: es la vitrina.
+ *
+ * El filtro lo aplica el repositorio con la regla del ERD §9.1, la misma que
+ * `isPurchasable`. Lo que se ve es lo que se puede comprar; mostrar algo no
+ * comprable seria prometer lo que no se puede cumplir.
+ */
+export async function listPublicCatalog(limite?: number): Promise<CatalogListing[]> {
+  const filas = await listingRepo.findPublicCatalog(limite === undefined ? {} : { limite });
+
+  return filas.map((row) => ({
+    id: row.id,
+    title: row.title,
+    priceAmount: row.priceAmount.toString(),
+    currency: row.currency,
+    sizeValue: row.sizeValue,
+    condition: row.condition,
+    sellerDisplayName: row.sellerDisplayName,
+  }));
 }

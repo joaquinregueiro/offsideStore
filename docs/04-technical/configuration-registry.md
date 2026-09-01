@@ -119,7 +119,10 @@ Configuración administrativa (⚙️):
 - **Compresión** / generación de variantes (thumbnail/medium/large).
 - Si se admite **video** (y sus límites).
 - **Atributos obligatorios** por categoría (matriz, D4).
-- Reglas de **moderación** (pre/post publicación).
+- Reglas de **moderación** (pre/post publicación) — 🟡 sin definir.
+  > ⚠️ **Mientras tanto, DEC-045:** las publicaciones nacen `APPROVED` y no
+  > hay revisión previa. Es **transitorio**, viable sólo con volumen bajo y
+  > vendedores conocidos: RISK-FR1 (falsificaciones) es Crítico / Alta.
 - Si se permite **edición posterior** y **cambios de precio** (y si quedan en
   historial).
 

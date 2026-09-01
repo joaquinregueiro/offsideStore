@@ -1,0 +1,145 @@
+/**
+ * Home — la vitrina.
+ *
+ * Sigue el mockup de la identidad §06: barra superior verde con el wordmark y
+ * el buscador, y una grilla de fichas de producto sobre papel.
+ */
+
+.pagina {
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------------------------ barra */
+
+.barra {
+  background: var(--color-cancha);
+  color: var(--color-papel);
+  padding: var(--espacio-4) var(--espacio-6);
+}
+
+.barraContenido {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-6);
+}
+
+.marca {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-3xl);
+  /* La identidad usa el wordmark en mayusculas con interlineado apretado. */
+  line-height: 1;
+  letter-spacing: var(--tracking-titulo);
+  color: var(--color-papel);
+  text-transform: uppercase;
+}
+
+.marca:hover {
+  color: var(--color-cambio);
+}
+
+/**
+ * El buscador es DECORATIVO por ahora: la identidad lo pone en el centro de la
+ * home, pero la busqueda (DEC-042, full-text sobre `search_vector`) no esta
+ * implementada. Se muestra deshabilitado en vez de fingir que funciona.
+ */
+.buscador {
+  flex: 1;
+  max-width: 420px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border: none;
+  border-radius: var(--radio);
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+}
+
+.buscador:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.acceso {
+  margin-left: auto;
+  color: var(--color-papel);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+}
+
+.acceso:hover {
+  color: var(--color-cambio);
+}
+
+/* ---------------------------------------------------------------- portada */
+
+.portada {
+  background: var(--color-cancha);
+  color: var(--color-papel);
+  /* Sin separacion con la barra: es un solo bloque verde, como en la identidad. */
+  padding: var(--espacio-6) var(--espacio-6) var(--espacio-8);
+}
+
+.portadaContenido {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+}
+
+.titulo {
+  font-size: clamp(40px, 8vw, 76px);
+  text-transform: uppercase;
+  max-width: 16ch;
+}
+
+.bajada {
+  margin: var(--espacio-4) 0 0;
+  font-size: var(--texto-lg);
+  max-width: 48ch;
+  /* Sobre el verde, el papel puro compite con el titulo: se baja un punto. */
+  color: var(--color-neutro-borde);
+}
+
+/* --------------------------------------------------------------- catalogo */
+
+.catalogo {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
+}
+
+.tituloSeccion {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  margin-bottom: var(--espacio-6);
+}
+
+.grilla {
+  display: grid;
+  /* Se acomoda sola: sin breakpoints que mantener. */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--espacio-6);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ vacio */
+
+.vacio {
+  border: 1px dashed var(--color-neutro-borde);
+  border-radius: var(--radio);
+  padding: var(--espacio-8);
+  text-align: center;
+  color: var(--color-neutro-texto);
+}
+
+.vacioTitulo {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  color: var(--color-tinta);
+  margin-bottom: var(--espacio-3);
+}

@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, eq, gte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, ne, sql } from 'drizzle-orm';
 
 /**
  * Acceso a `listings` y a `categories` (ERD §9.1 y §8). Sin reglas de negocio.
@@ -94,6 +94,7 @@ export interface InsertListingValues {
   condition: ListingRow['condition'];
   kitType: ListingRow['kitType'];
   sleeve: ListingRow['sleeve'];
+  moderationStatus: ListingRow['moderationStatus'];
 }
 
 /**
@@ -127,8 +128,68 @@ export async function insertListing(
       // El vendedor publica: nace visible. `draft` existe para guardar sin
       // publicar, que es otro flujo y no esta implementado.
       status: 'active',
+      // Lo decide el Service, no el repositorio: es politica de moderacion.
+      moderationStatus: values.moderationStatus,
     })
     .returning();
 
   return row!;
+}
+
+/** Una publicacion del catalogo, con lo que la vitrina necesita mostrar. */
+export interface CatalogListingRow {
+  id: string;
+  title: string;
+  priceAmount: bigint;
+  currency: string;
+  sizeValue: string;
+  condition: ListingRow['condition'];
+  stock: number;
+  createdAt: Date;
+  /** Nombre de tienda del vendedor. La vitrina lo muestra en la ficha. */
+  sellerDisplayName: string;
+}
+
+/**
+ * Catalogo publico: lo que cualquiera puede ver y comprar.
+ *
+ * ⚠️ EL FILTRO ES LA REGLA DEL ERD §9.1, no una eleccion de presentacion:
+ * `status='active'` Y `moderation_status='APPROVED'` Y `stock >= 1`. Es el
+ * mismo predicado que `isPurchasable`, pero expresado en SQL porque filtrar en
+ * memoria exigiria traer la tabla entera.
+ *
+ * ⚠️ SIN BUSQUEDA NI FACETAS. DEC-042 define la busqueda full-text sobre
+ * `search_vector`, que todavia no se puebla. Esto es un listado por fecha, y
+ * cuando exista la busqueda la reemplaza.
+ *
+ * ⚠️ NO EXPONE al vendedor mas que su nombre de tienda: ni su id de usuario, ni
+ * su estado, ni datos fiscales.
+ */
+export async function findPublicCatalog(
+  opciones: { limite?: number } = {},
+  db?: Database,
+): Promise<CatalogListingRow[]> {
+  return conn(db)
+    .select({
+      id: schema.listings.id,
+      title: schema.listings.title,
+      priceAmount: schema.listings.priceAmount,
+      currency: schema.listings.currency,
+      sizeValue: schema.listings.sizeValue,
+      condition: schema.listings.condition,
+      stock: schema.listings.stock,
+      createdAt: schema.listings.createdAt,
+      sellerDisplayName: schema.sellerProfiles.displayName,
+    })
+    .from(schema.listings)
+    .innerJoin(schema.sellerProfiles, eq(schema.listings.sellerId, schema.sellerProfiles.id))
+    .where(
+      and(
+        eq(schema.listings.status, 'active'),
+        eq(schema.listings.moderationStatus, 'APPROVED'),
+        gte(schema.listings.stock, 1),
+      ),
+    )
+    .orderBy(desc(schema.listings.createdAt))
+    .limit(opciones.limite ?? 60);
 }

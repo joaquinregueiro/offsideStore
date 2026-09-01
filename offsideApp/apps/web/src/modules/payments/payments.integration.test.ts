@@ -241,6 +241,9 @@ async function escenario(nombre: string, opciones: { total?: bigint } = {}): Pro
   const [listing] = await db
     .insert(schema.listings)
     .values({
+      // ERD §9.1: comprable exige `APPROVED`. Las publicaciones nacen
+      // aprobadas desde el Service; al insertar por SQL hay que replicarlo.
+      moderationStatus: 'APPROVED',
       sellerId: perfil.id,
       categoryId: await categoria(),
       title: `Camiseta ${nombre}`,

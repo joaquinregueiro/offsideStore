@@ -259,14 +259,18 @@ describe('publicar', () => {
     expect(listing.title).toBe('Camiseta Boca 2001 titular');
   });
 
-  it('nace con moderacion PENDIENTE, independiente del estado', async () => {
-    // ERD §9.1: `moderation_status` es independiente de `status`. Quien modera
-    // sigue 🟡 sin decidir, asi que la publicacion no espera aprobacion.
+  it('⚠️ nace APROBADA: aprobacion automatica transitoria', async () => {
+    // Decision del owner (2026-09-01). El ERD §9.1 exige `APPROVED` para que
+    // algo sea comprable y nada asignaba ese estado: naciendo `PENDING`, la
+    // regla del ERD era imposible de cumplir y el codigo la ignoraba.
+    //
+    // ⚠️ NO ESCALA. Cuando haya vendedores desconocidos hay que decidir la
+    // politica de moderacion de verdad (RISK-FR1 es Critico/Alta).
     const seller = await vendedor('moderacion');
 
     const listing = await listingService.publishListing(seller, await camiseta());
 
-    expect(listing.moderationStatus).toBe('PENDING');
+    expect(listing.moderationStatus).toBe('APPROVED');
     expect(listing.status).toBe('active');
   });
 
@@ -704,5 +708,73 @@ describe('stock', () => {
       .where(eq(schema.auditLog.entityId, orden.id));
 
     expect(eventos.map((e) => e.action)).toContain('ORDER_PAID_WITHOUT_STOCK');
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+
+describe('catalogo publico', () => {
+  it('lista lo publicado, sin exigir sesion', async () => {
+    const seller = await vendedor('cat-visible');
+    const publicada = await listingService.publishListing(seller, await camiseta());
+
+    const catalogo = await listingService.listPublicCatalog();
+    const mia = catalogo.find((l) => l.id === publicada.id);
+
+    expect(mia).toBeDefined();
+    expect(mia!.title).toBe(publicada.title);
+    expect(mia!.priceAmount).toBe(PRECIO);
+    expect(mia!.sellerDisplayName).toBe('Tienda cat-visible');
+  });
+
+  it('⚠️ NO expone datos del vendedor mas que su nombre de tienda', async () => {
+    const seller = await vendedor('cat-privacidad');
+    await listingService.publishListing(seller, await camiseta());
+
+    const catalogo = await listingService.listPublicCatalog();
+    const serializado = JSON.stringify(catalogo);
+
+    // Ni el email del usuario ni ningun identificador interno del vendedor.
+    expect(serializado).not.toContain(seller.email);
+    expect(serializado).not.toContain(seller.id);
+  });
+
+  it('⚠️ excluye lo que NO se puede comprar (ERD §9.1)', async () => {
+    // Lo que se ve tiene que ser comprable: mostrar algo agotado o sin aprobar
+    // lleva a un checkout que falla.
+    const seller = await vendedor('cat-filtros');
+    const db = getDatabase();
+
+    const agotada = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const pausada = await listingService.publishListing(seller, await camiseta());
+    const sinAprobar = await listingService.publishListing(seller, await camiseta());
+
+    await db.update(schema.listings).set({ stock: 0 }).where(eq(schema.listings.id, agotada.id));
+    await db
+      .update(schema.listings)
+      .set({ status: 'paused' })
+      .where(eq(schema.listings.id, pausada.id));
+    await db
+      .update(schema.listings)
+      .set({ moderationStatus: 'PENDING' })
+      .where(eq(schema.listings.id, sinAprobar.id));
+
+    const ids = (await listingService.listPublicCatalog()).map((l) => l.id);
+
+    expect(ids).not.toContain(agotada.id);
+    expect(ids).not.toContain(pausada.id);
+    expect(ids).not.toContain(sinAprobar.id);
+  });
+
+  it('el filtro del catalogo coincide con isPurchasable', async () => {
+    // Son la misma regla expresada en dos lugares —SQL y memoria— y tienen que
+    // dar lo mismo: si se separan, la vitrina promete lo que la compra rechaza.
+    const seller = await vendedor('cat-coherencia');
+    const publicada = await listingService.publishListing(seller, await camiseta());
+
+    const fila = await listingService.findById(publicada.id);
+
+    expect(listingService.isPurchasable(fila!)).toBe(true);
+    expect((await listingService.listPublicCatalog()).map((l) => l.id)).toContain(publicada.id);
   });
 });

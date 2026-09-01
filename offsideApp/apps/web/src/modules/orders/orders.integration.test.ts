@@ -218,6 +218,9 @@ async function vendedorConPublicacion(
       sizeValue: 'L',
       condition: 'NUEVO',
       status: opciones.estado ?? 'active',
+      // ERD §9.1: comprable exige `APPROVED`. Las publicaciones nacen
+      // aprobadas desde el Service; al insertar por SQL hay que replicarlo.
+      moderationStatus: 'APPROVED',
       stock: opciones.stock ?? 5,
     })
     .returning();

@@ -70,6 +70,7 @@ pendiente) y `RISKS.md`.
 | DEC-042 | Técnica de búsqueda: `spanish` + `unaccent` + `pg_trgm`; `search_vector` desde el Service | ✅ |
 | DEC-043 | Comisión Offside = **6%**; el costo de Mercado Pago **no** lo absorbe Offside (supersede parte de DEC-014) | ✅ |
 | DEC-044 | Definición de "identidad verificada" (cierra **TS-001**) | ✅ |
+| DEC-045 | Moderación de publicaciones: **aprobación automática** mientras el volumen sea bajo | ✅ transitoria / 🟡 política definitiva |
 
 ## 2. Detalle de cada decisión
 
@@ -659,6 +660,38 @@ Mercado Pago (🔵). Todos siguen abiertos.
 
 Ref: `trust-and-safety.md` §4.1 y §4.2, `seller-system.md` §5 (UC-SS-1),
 `offsideApp/docs-implementation/seller-approval-module.md`.
+
+### DEC-045 — Moderación de publicaciones: aprobación automática — ✅ transitoria
+
+> **Decidida el 2026-09-01.** Cierra una contradicción entre el ERD y el código,
+> **no** la política de moderación definitiva.
+
+**Las publicaciones nacen `moderation_status = 'APPROVED'`.** No hay revisión
+previa: lo que un vendedor publica queda visible y comprable de inmediato.
+
+**Por qué, y no es comodidad.** El ERD §9.1 define que algo es comprable sólo si
+`status='active'` **y** `moderation_status='APPROVED'` **y** `stock ≥ 1`. Pero
+las publicaciones nacían `PENDING` y **nada asignaba `APPROVED`**: no existe
+flujo de moderación. La regla del ERD era imposible de cumplir, y el código la
+ignoraba para compensar —verificaba sólo `status`—, de modo que una publicación
+sin moderar resultaba comprable igual.
+
+Naciendo aprobadas, **el código hace lo que el ERD dice** en vez de contradecirlo
+en silencio.
+
+⚠️ **ES TRANSITORIA Y NO ESCALA.** Es viable mientras el volumen sea bajo y el
+owner conozca a los vendedores. **RISK-FR1 (falsificaciones) es Crítico / Alta**,
+el riesgo más probable del proyecto: con vendedores desconocidos, publicar sin
+revisión es exactamente su escenario.
+
+**Lo que esta decisión NO decide:** si la moderación definitiva es **previa o
+posterior** a la publicación. `configuration-registry.md` §8 la lista como
+configuración administrativa ⚙️ y su valor sigue 🟡. Cuando se defina, cambia
+**una línea** en `publishListing`; `isPurchasable` y el filtro del catálogo ya
+aplican la regla completa y no necesitan tocarse.
+
+Ref: `04-technical/database-design.md` §9.1,
+`04-technical/configuration-registry.md` §8, `RISKS.md` RISK-FR1.
 
 ## 3. Cómo evoluciona este archivo
 
