@@ -604,13 +604,20 @@ falta un segundo servicio**. ⚠️ El proveedor NO está en DEC-012: es una dec
 de implementación del owner, y por eso vive detrás de un adaptador.
 Detalle en `notifications-email-module.md`.
 
-**NO implementado:** refresh de tokens de MP, webhook `mp-connect`, catálogo,
+**Refresh de tokens de MP**: barrido diario (BullMQ, 04:00) que renueva las
+conexiones que vencen dentro de 30 días. ⚠️ Mercado Pago **rota** el
+`refresh_token`, así que hay lock en Redis por vendedor: dos renovaciones
+simultáneas dejarían la conexión sin poder renovarse nunca más. Un rechazo la
+pasa a `expired`; una caída de red la deja intacta. Sin migraciones:
+`last_refreshed_at` ya estaba en el ERD. **No probado contra MP real.**
+
+**NO implementado:** webhook `mp-connect`, catálogo,
 búsqueda, carrito, envíos, disputas, reviews, reputación, aprobación de vendedor,
 admin y frontend. De los nueve emails que lista la documentación sólo están los
 dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **403** (211 unitarios + 192 de integración contra PostgreSQL y Redis
+Tests: **418** (211 unitarios + 207 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 

@@ -211,6 +211,11 @@ function puertoFalso(
         liveMode: false,
       });
     },
+
+    refreshAccessToken() {
+      // Este archivo cubre la CONEXION. El refresh tiene sus propios tests.
+      return Promise.reject(new Error('no se usa en estos tests'));
+    },
   };
 }
 

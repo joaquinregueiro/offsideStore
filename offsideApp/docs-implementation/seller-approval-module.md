@@ -194,19 +194,11 @@ y lo comparten todos los archivos de test que corren en el mismo worker**.
 Vitest paraleliza entre workers pero corre los archivos secuencialmente dentro
 de cada uno, así que un archivo que ensucia el entorno rompe al siguiente.
 
-La causa raíz estaba un nivel más abajo de lo que parecía. `loadRootEnv()` usa
-`process.loadEnvFile()`, que **pisa** `process.env` con el contenido del `.env`
-y recién después restaura lo que ya estaba. Los tests de integración lo llaman;
-si un test unitario fijaba su secreto **después** de esa carga, terminaba
-firmando el webhook con un valor y validándolo con el del `.env`.
+⚠️ **El diagnóstico de esta sección resultó equivocado.** Se creyó que la causa
+era contaminación de `process.env` entre archivos de test. La causa real —un
+timeout de carga de módulos— se encontró después y está documentada en
+[authorization-module.md](authorization-module.md) §La falla intermitente.
 
-Arreglado en tres lugares:
-
-1. El proyecto `unit` de Vitest define su entorno en `vitest.config.mts`, así
-   las variables están presentes **antes** de que cargue cualquier archivo de
-   test y la restauración de `loadRootEnv` las conserva.
-2. El archivo que muta el entorno lo restaura entero en `afterAll`.
-3. El que depende de una variable la reafirma en `beforeEach` en vez de una sola
-   vez en `beforeAll`.
-
-Seis corridas completas y tres `npm run verify` seguidos en verde.
+Los cambios que se hicieron acá (aislar el entorno del proyecto `unit`,
+restaurarlo en `afterAll`) se conservan porque eliminan un acoplamiento real,
+pero **no eran el arreglo**.

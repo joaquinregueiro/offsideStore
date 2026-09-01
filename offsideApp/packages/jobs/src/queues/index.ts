@@ -27,6 +27,8 @@ import { getRedisClient } from '../connection';
 export const QUEUE_NAMES = {
   /** Envio de emails y avisos in-app (notifications-and-engagement.md §2.2). */
   NOTIFICATIONS_SEND: 'notifications-send',
+  /** Renovacion de los tokens de Mercado Pago (mercadopago-oauth-spec.md §10). */
+  MERCADOPAGO_TOKEN_REFRESH: 'mercadopago-token-refresh',
 } as const satisfies Record<string, string>;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

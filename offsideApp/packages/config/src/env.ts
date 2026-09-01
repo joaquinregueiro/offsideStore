@@ -58,6 +58,17 @@ export const envSchema = z.object({
   MERCADOPAGO_REDIRECT_URI: z.string().url().optional(),
   MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
+  /**
+   * Cuantos dias ANTES del vencimiento se renueva el token de un vendedor.
+   *
+   * El `access_token` de Mercado Pago dura 180 dias. Renovar con margen evita
+   * que un vendedor dormido pierda la conexion, y deja lugar a varios
+   * reintentos si Mercado Pago no responde en el primer barrido.
+   *
+   * Es un parametro OPERABLE de seguridad, no una regla de negocio del
+   * marketplace: vive en entorno igual que los `AUTH_*`, no en el Config Store.
+   */
+  MERCADOPAGO_TOKEN_REFRESH_WINDOW_DAYS: z.coerce.number().int().positive().default(30),
 
   // --- Email (modulo notifications) ---
   // Se exigen con `requireEnv()` en el borde del adaptador de SES, no aca: sin

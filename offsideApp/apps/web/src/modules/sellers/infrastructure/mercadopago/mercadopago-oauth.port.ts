@@ -43,6 +43,15 @@ export interface EncryptedMercadoPagoCredentials {
 export type MercadoPagoOAuthFailure =
   /** Mercado Pago rechazo el intercambio (code vencido, PKCE incorrecto, etc.). */
   | 'exchange_rejected'
+  /**
+   * Mercado Pago rechazo la RENOVACION (spec §10).
+   *
+   * Se distingue de `exchange_rejected` porque las consecuencias son
+   * opuestas: un intercambio rechazado deja al vendedor donde estaba, mientras
+   * que una renovacion rechazada significa que la conexion existente dejo de
+   * servir y hay que marcarla.
+   */
+  | 'refresh_rejected'
   /** No hubo respuesta: red caida, timeout, DNS. */
   | 'unreachable'
   /** Respondio 2xx pero el cuerpo no trae lo que hace falta para persistir. */
@@ -83,6 +92,14 @@ export interface ExchangeAuthorizationCodeParams {
   codeVerifier: string;
 }
 
+export interface RefreshAccessTokenParams {
+  /**
+   * ⚠️ CIFRADO. El dominio nunca ve un `refresh_token` en claro: lo pasa tal
+   * como lo tiene guardado y `infrastructure/` lo descifra para usarlo.
+   */
+  encryptedRefreshToken: string;
+}
+
 export interface MercadoPagoOAuthPort {
   /** URL a la que el FRONTEND debe navegar (MP-OAUTH-014). */
   buildAuthorizationUrl(params: BuildAuthorizationUrlParams): string;
@@ -91,4 +108,13 @@ export interface MercadoPagoOAuthPort {
   exchangeAuthorizationCode(
     params: ExchangeAuthorizationCodeParams,
   ): Promise<EncryptedMercadoPagoCredentials>;
+
+  /**
+   * Renueva las credenciales (spec §10).
+   *
+   * ⚠️ Mercado Pago ROTA el `refresh_token`: la respuesta trae uno NUEVO y hay
+   * que persistirlo. Perder esa rotacion deja la conexion sin forma de volver a
+   * renovarse.
+   */
+  refreshAccessToken(params: RefreshAccessTokenParams): Promise<EncryptedMercadoPagoCredentials>;
 }

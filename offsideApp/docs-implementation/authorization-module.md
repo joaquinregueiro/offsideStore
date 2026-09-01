@@ -144,26 +144,37 @@ Lo que cubren, más allá de permitido/denegado:
 - **Un `ADMIN` sin perfil de vendedor no pasa `requireSeller`.**
 - **Un rol inválido y una capacidad desconocida** no conceden nada.
 
-### Nota sobre la falla intermitente
+### La falla intermitente: causa real
 
-Se volvió a tocar el test de firma del webhook, que seguía fallando ~1 de cada
-15 corridas completas pese al arreglo anterior.
+⚠️ **Esta sección corrige dos diagnósticos anteriores equivocados.**
 
-La causa es real y está identificada: `process.env` es del **proceso** y lo
-comparten los archivos de test del mismo worker; `loadRootEnv()` usa
-`process.loadEnvFile()`, que lo pisa con el `.env` antes de restaurar lo previo.
-El test firmaba con una constante local y el controller validaba con lo que
-hubiera en el entorno en ese instante.
+El síntoma era un test de firma de webhook que fallaba ~1 de cada 15 corridas de
+`npm run verify`. Se atribuyó dos veces a contaminación de `process.env` entre
+archivos de test, y las dos veces el "arreglo" pareció funcionar por casualidad.
 
-**Arreglo definitivo:** el test lee el secreto de **la misma fuente que el
-controller**. El sujeto de ese test es la lógica de firma —la plantilla del
-manifest, de dónde sale el `data.id`, que falle cerrado—, no el cableado del
-entorno, así que todas sus aserciones siguen valiendo y el acoplamiento
-desaparece.
+**La causa real es un timeout de carga de módulos**, no de firma:
 
-⚠️ **Honestidad sobre esto:** el arreglo anterior también parecía funcionar y la
-falla reapareció. Éste ataca el mecanismo en vez de la sintomatología, pero es un
-heisenbug entre procesos y no puedo probar su ausencia.
+```
+Error: Test timed out in 5000ms
+```
+
+El test hace `await import('./payment.controller')`, y eso arrastra un grafo
+grande —payments → sellers → clientes de Mercado Pago → database—. El proyecto
+`unit` no tenía `testTimeout`, así que usaba el default de **5 s**. Dentro de
+`npm run verify`, los tests corren **después** de format, lint y typecheck: la
+máquina está caliente y esa primera carga en frío a veces supera el límite.
+
+Eso explica todo lo que antes no cerraba: por qué sólo aparecía bajo `verify` y
+no al correr `vitest` suelto, por qué era tan rara, y por qué empeoró al crecer
+el módulo `sellers`.
+
+**Arreglo:** `testTimeout: 30_000` en el proyecto `unit` de `vitest.config.mts`,
+igual que el `hookTimeout` de integración. No es lógica lenta: es carga de
+módulos, y medirla contra un presupuesto de 5 s era el error.
+
+Los cambios anteriores —restaurar el entorno en `afterAll`, leer el secreto de
+la misma fuente que el controller— **se conservan**: no arreglaban esto, pero
+son correctos por su cuenta y eliminan un acoplamiento real.
 
 ## Primer consumidor: el Config Store
 

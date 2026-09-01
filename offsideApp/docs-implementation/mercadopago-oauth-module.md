@@ -204,6 +204,103 @@ intercambio fallido sin persistir nada, los casos **B, C y D** de la spec §9,
 credenciales de MP justamente para que quitar la inyección lo haga fallar en vez
 de salir a la red.
 
+## Renovación de tokens (spec §10)
+
+**Implementada el 2026-09-01.** El `access_token` de Mercado Pago dura **180
+días** y renovarlo exige `scope=offline_access`, que Offside ya pide desde la
+primera autorización.
+
+### Por qué un job y no renovación perezosa
+
+Decisión del owner. Un vendedor puede pasar meses sin vender; con renovación
+perezosa se enteraría del vencimiento **en medio de un checkout**, que es el
+peor momento posible. Un barrido programado cubre al vendedor dormido.
+
+Corre a diario a las 04:00 (`upsertJobScheduler`, cola
+`mercadopago-token-refresh`) y renueva todo lo que vence dentro de
+`MERCADOPAGO_TOKEN_REFRESH_WINDOW_DAYS` (por defecto **30**). Ese margen deja
+lugar a varios reintentos antes de que el token muera.
+
+⚠️ **BullMQ 6 reemplazó `add({ repeat })` por `upsertJobScheduler`.** El upsert
+es idempotente por su id: aunque el proceso arranque en cada deploy, queda UNA
+programación. Con la API vieja, cada arranque agregaba otra repetición.
+
+### El lock no es una optimización
+
+⚠️ **Mercado Pago ROTA el `refresh_token`**: cada renovación devuelve uno nuevo
+y descarta el anterior. Dos renovaciones simultáneas del mismo vendedor
+obtendrían dos tokens y el segundo pisaría al primero, dejando guardado uno que
+Mercado Pago ya considera reemplazado — **la conexión quedaría sin forma de
+renovarse nunca más**.
+
+Por eso hay un lock en Redis por vendedor (`mp:refresh:lock:{sellerId}`,
+`SET NX EX 60`), el mismo mecanismo que ya usa el `state` de OAuth. Hay un test
+que lanza dos renovaciones concurrentes y verifica que **sólo una** llame a
+Mercado Pago.
+
+### El orden de las operaciones
+
+```
+1. tomar el lock          sin él, dos refresh se pisan el token rotado
+2. RELEER la conexión     pudo cambiar entre que se la eligió y ahora
+3. revalidar que aplique  sigue `connected`, sigue por vencer
+4. pedir el token a MP
+5. persistir              condicionado otra vez a `connected` en el WHERE
+6. soltar el lock         en `finally`, pase lo que pase
+```
+
+Los pasos 2, 3 y 5 existen por las reglas de concurrencia de la spec §10:
+
+- **Desconexión durante un refresh:** el `UPDATE` lleva `status = 'connected'`
+  en el `WHERE`. Una renovación en vuelo **no puede reactivar** una conexión que
+  el vendedor dio de baja. Hay test.
+- **Renovar no es reconectar:** no se tocan `connected_at` ni `mp_user_id`. La
+  cuenta es la misma y la fecha de vinculación original tiene que sobrevivir.
+
+### Rechazo y caída de red no son lo mismo
+
+| Fallo                                         | Qué pasa                                                                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Mercado Pago **rechaza** (`refresh_rejected`) | la conexión pasa a **`expired`**: el `refresh_token` dejó de servir y el vendedor tiene que reconectar                          |
+| **No responde** (`unreachable`)               | la conexión **queda como está**: el token probablemente siga bien, y marcarla rompería una conexión sana por un problema de red |
+
+Se agregó `refresh_rejected` como categoría de fallo propia, separada de
+`exchange_rejected`, justamente porque las consecuencias son opuestas.
+
+### Qué se barre
+
+`findExpiringConnections` trae las `connected` con `refresh_token` y vencimiento
+dentro de la ventana.
+
+⚠️ **Incluye las YA VENCIDAS**, sin piso inferior: si un barrido no corrió
+—proceso caído, deploy largo— hay que intentarlas igual. Mercado Pago puede
+seguir aceptando el `refresh_token` después de que venció el `access_token`;
+darlas por perdidas sin intentar sería peor.
+
+⚠️ **Excluye las que no tienen `refresh_token`**: sin token que rotar no hay
+nada que renovar, y traerlas sólo produciría fallos garantizados en cada
+barrido.
+
+Un vendedor que falla **no frena a los demás**: cada uno se maneja por separado
+y el barrido devuelve un resumen en vez de propagar el primer error.
+
+### Sin cambios de schema
+
+`mercadopago_accounts.last_refreshed_at` ya existía en el ERD y estaba migrada
+sin usar. Ahora se escribe. **Ninguna migración nueva.**
+
+### Lo que sigue 🔵
+
+- **Si el `refresh_token` anterior queda invalidado al rotar** no está
+  documentado por Mercado Pago (spec §10). No afecta al camino feliz, pero
+  determina si un reintento tras un fallo parcial puede recuperarse.
+- **La renovación no se probó contra Mercado Pago real.** El código y los tests
+  están; la primera renovación real recién puede ocurrir cerca del vencimiento,
+  el **2027-02-22**.
+- **El webhook `mp-connect`** (spec §11) sigue sin implementar: Offside no se
+  entera si el vendedor revoca la autorización desde Mercado Pago. El barrido lo
+  detectaría recién en su próxima corrida, marcando `expired`.
+
 ## Puesta en marcha contra Mercado Pago real
 
 Verificado end-to-end el **2026-08-25** contra un VPS con Coolify y una cuenta
@@ -277,8 +374,9 @@ porque en la primera prueba real no existía:
    viene**; el fallback previsto en MP-OAUTH-007 no hizo falta.
 3. **Cerrar TS-001**, o el gate `approved` deja el flujo inalcanzable para
    cualquier vendedor real. Hoy se aprueba escribiendo en la base.
-4. **Refresh de tokens** (spec §10 y §18): sin él, una conexión muere a los 180
-   días. La primera conexión real vence el **2027-02-21**.
+4. ~~Refresh de tokens~~ ✅ implementado (ver arriba). ⚠️ **No probado contra
+   Mercado Pago real**: la primera renovación real recién puede ocurrir cerca
+   del vencimiento, el **2027-02-22**.
 5. **Webhook `mp-connect`** (§11): sin él, Offside no se entera si el vendedor
    revoca la autorización desde Mercado Pago.
 6. Siguen 🔵: códigos de error exactos del intercambio y del refresh, scopes

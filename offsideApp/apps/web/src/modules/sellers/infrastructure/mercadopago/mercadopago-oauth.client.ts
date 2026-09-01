@@ -2,12 +2,14 @@ import { getEnv, requireEnv } from '@offside/config';
 
 import {
   MercadoPagoOAuthError,
+  type MercadoPagoOAuthFailure,
+  type RefreshAccessTokenParams,
   type BuildAuthorizationUrlParams,
   type EncryptedMercadoPagoCredentials,
   type ExchangeAuthorizationCodeParams,
   type MercadoPagoOAuthPort,
 } from './mercadopago-oauth.port';
-import { encryptToken } from './token-cipher';
+import { decryptToken, encryptToken } from './token-cipher';
 
 /**
  * Adapter HTTP de OAuth de Mercado Pago.
@@ -124,6 +126,107 @@ function readOptionalString(value: unknown): string | null {
   return typeof value === 'string' && value !== '' ? value : null;
 }
 
+/**
+ * Pide credenciales a `/oauth/token` y devuelve el resultado YA CIFRADO.
+ *
+ * La usan los dos flujos —`authorization_code` y `refresh_token`—, que a
+ * Mercado Pago le difieren solo en el cuerpo del POST: mismo endpoint, misma
+ * forma de respuesta, mismas validaciones. Tenerla una sola vez evita que la
+ * validacion de una se endurezca y la de la otra quede atras.
+ *
+ * ⚠️ NUNCA loguea ni propaga el cuerpo: ahi viajan `code`, `code_verifier`,
+ * `client_secret` y el `refresh_token`.
+ */
+async function pedirToken(
+  body: Record<string, unknown>,
+  rechazo: MercadoPagoOAuthFailure,
+  mensajeDeRechazo: string,
+): Promise<EncryptedMercadoPagoCredentials> {
+  let response: Response;
+  try {
+    response = await fetch(TOKEN_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    // Sin respuesta: red, DNS o timeout. Se registra el TIPO de error, no el
+    // error completo, que podria arrastrar la request.
+    throw new MercadoPagoOAuthError(
+      'unreachable',
+      `No se pudo contactar a Mercado Pago (${error instanceof Error ? error.name : 'error desconocido'})`,
+    );
+  }
+
+  if (!response.ok) {
+    // ⚠️ El cuerpo del error NO se lee ni se propaga. Los codigos exactos de
+    // Mercado Pago estan 🔵 pendientes (spec §11): mapearlos ahora seria
+    // inventarlos. El estado HTTP alcanza para diagnosticar y no es secreto.
+    throw new MercadoPagoOAuthError(rechazo, mensajeDeRechazo, response.status);
+  }
+
+  let payload: TokenResponse;
+  try {
+    payload = (await response.json()) as TokenResponse;
+  } catch {
+    throw new MercadoPagoOAuthError(
+      'invalid_response',
+      'La respuesta de Mercado Pago no es JSON valido',
+      response.status,
+    );
+  }
+
+  const accessToken = readOptionalString(payload.access_token);
+  const mpUserId = readMpUserId(payload.user_id);
+  const expiresIn = typeof payload.expires_in === 'number' ? payload.expires_in : null;
+
+  if (accessToken === null) {
+    throw new MercadoPagoOAuthError(
+      'invalid_response',
+      'La respuesta de Mercado Pago no incluye access_token',
+      response.status,
+    );
+  }
+
+  // ⚠️ `user_id` esta documentado para el flujo de refresh, y quedo CONFIRMADO
+  // el 2026-08-25 para el de authorization_code contra Mercado Pago real. Su
+  // ausencia falla de forma explicita: sin `mp_user_id` no hay forma de saber
+  // que cuenta se conecto, y las reglas de conflicto de la spec §9 dependen
+  // enteramente de ese dato.
+  if (mpUserId === null) {
+    throw new MercadoPagoOAuthError(
+      'invalid_response',
+      'La respuesta de Mercado Pago no incluye user_id',
+      response.status,
+    );
+  }
+
+  // Sin `expires_in` no se puede calcular el vencimiento. Suponer 180 dias
+  // seria inventar un dato del proveedor.
+  if (expiresIn === null) {
+    throw new MercadoPagoOAuthError(
+      'invalid_response',
+      'La respuesta de Mercado Pago no incluye expires_in',
+      response.status,
+    );
+  }
+
+  const refreshToken = readOptionalString(payload.refresh_token);
+
+  // ⚠️ EL CIFRADO OCURRE ACA, ANTES DE DEVOLVER: los secretos no cruzan la
+  // frontera hacia el dominio en claro (spec §2 y §8).
+  return {
+    mpUserId,
+    encryptedAccessToken: encryptToken(accessToken),
+    encryptedRefreshToken: refreshToken === null ? null : encryptToken(refreshToken),
+    expiresAt: new Date(Date.now() + expiresIn * 1000),
+    scopes: readScopes(payload.scope),
+    publicKey: readOptionalString(payload.public_key),
+    liveMode: typeof payload.live_mode === 'boolean' ? payload.live_mode : null,
+  };
+}
+
 export function createMercadoPagoOAuthClient(): MercadoPagoOAuthPort {
   return {
     buildAuthorizationUrl({ state, codeChallenge }: BuildAuthorizationUrlParams): string {
@@ -150,102 +253,37 @@ export function createMercadoPagoOAuthClient(): MercadoPagoOAuthPort {
     }: ExchangeAuthorizationCodeParams): Promise<EncryptedMercadoPagoCredentials> {
       const { clientId, clientSecret, redirectUri } = config();
 
-      let response: Response;
-      try {
-        response = await fetch(TOKEN_URL, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', accept: 'application/json' },
-          body: JSON.stringify({
-            client_id: clientId,
-            client_secret: clientSecret,
-            code,
-            grant_type: 'authorization_code',
-            redirect_uri: redirectUri,
-            code_verifier: codeVerifier,
-          }),
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-      } catch (error) {
-        // Sin respuesta: red, DNS o timeout. Se registra el TIPO de error, no
-        // el error completo, que podria arrastrar la request.
-        throw new MercadoPagoOAuthError(
-          'unreachable',
-          `No se pudo contactar a Mercado Pago (${error instanceof Error ? error.name : 'error desconocido'})`,
-        );
-      }
+      return pedirToken(
+        {
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: redirectUri,
+          code_verifier: codeVerifier,
+        },
+        'exchange_rejected',
+        'Mercado Pago rechazo el intercambio del codigo de autorizacion',
+      );
+    },
 
-      if (!response.ok) {
-        // ⚠️ El cuerpo del error NO se lee ni se propaga. Los codigos exactos
-        // de Mercado Pago estan 🔵 pendientes (spec §11): mapearlos ahora seria
-        // inventarlos. El estado HTTP alcanza para diagnosticar y no es secreto.
-        throw new MercadoPagoOAuthError(
-          'exchange_rejected',
-          'Mercado Pago rechazo el intercambio del codigo de autorizacion',
-          response.status,
-        );
-      }
+    async refreshAccessToken({
+      encryptedRefreshToken,
+    }: RefreshAccessTokenParams): Promise<EncryptedMercadoPagoCredentials> {
+      const { clientId, clientSecret } = config();
 
-      let payload: TokenResponse;
-      try {
-        payload = (await response.json()) as TokenResponse;
-      } catch {
-        throw new MercadoPagoOAuthError(
-          'invalid_response',
-          'La respuesta de Mercado Pago no es JSON valido',
-          response.status,
-        );
-      }
-
-      const accessToken = readOptionalString(payload.access_token);
-      const mpUserId = readMpUserId(payload.user_id);
-      const expiresIn = typeof payload.expires_in === 'number' ? payload.expires_in : null;
-
-      if (accessToken === null) {
-        throw new MercadoPagoOAuthError(
-          'invalid_response',
-          'La respuesta de Mercado Pago no incluye access_token',
-          response.status,
-        );
-      }
-
-      // ⚠️ `user_id` esta documentado para el flujo de refresh; que venga en el
-      // de authorization_code esta 🔵 PENDIENTE de confirmar (MP-OAUTH-007 y
-      // spec §20). La spec preve un fallback contra "un endpoint autenticado de
-      // MP", pero NO dice cual, y ese endpoint no se inventa aca (CLAUDE.md
-      // §16). Hasta confirmarlo, la ausencia falla de forma explicita: sin
-      // `mp_user_id` no hay forma de saber que cuenta se conecto, y las reglas
-      // de conflicto de la spec §9 dependen enteramente de ese dato.
-      if (mpUserId === null) {
-        throw new MercadoPagoOAuthError(
-          'invalid_response',
-          'La respuesta de Mercado Pago no incluye user_id',
-          response.status,
-        );
-      }
-
-      // Sin `expires_in` no se puede calcular el vencimiento. Suponer 180 dias
-      // seria inventar un dato del proveedor.
-      if (expiresIn === null) {
-        throw new MercadoPagoOAuthError(
-          'invalid_response',
-          'La respuesta de Mercado Pago no incluye expires_in',
-          response.status,
-        );
-      }
-
-      const refreshToken = readOptionalString(payload.refresh_token);
-
-      // ⚠️ EL CIFRADO OCURRE ACA, ANTES DE DEVOLVER: los secretos no cruzan la
-      // frontera hacia el dominio en claro (spec §2 y §8).
-      return {
-        mpUserId,
-        encryptedAccessToken: encryptToken(accessToken),
-        encryptedRefreshToken: refreshToken === null ? null : encryptToken(refreshToken),
-        expiresAt: new Date(Date.now() + expiresIn * 1000),
-        scopes: readScopes(payload.scope),
-        publicKey: readOptionalString(payload.public_key),
-        liveMode: typeof payload.live_mode === 'boolean' ? payload.live_mode : null,
-      };
+      // ⚠️ EL DESCIFRADO OCURRE ACA Y EL VALOR NO SALE DE ESTA FUNCION. El
+      // dominio pasa el token cifrado y nunca ve el claro (spec §2 y §8).
+      return pedirToken(
+        {
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: 'refresh_token',
+          refresh_token: decryptToken(encryptedRefreshToken),
+        },
+        'refresh_rejected',
+        'Mercado Pago rechazo la renovacion del token',
+      );
     },
   };
 }

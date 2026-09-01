@@ -29,5 +29,45 @@ export async function register(): Promise<void> {
     await processEmailJob(job.data);
   });
 
-  console.warn('[instrumentation] worker de notificaciones registrado');
+  await registrarRefreshDeTokens();
+
+  console.warn('[instrumentation] workers registrados');
+}
+
+/**
+ * Barrido diario de renovacion de tokens de Mercado Pago (spec §10).
+ *
+ * ⚠️ SE USA `upsertJobScheduler`, NO `add({ repeat })`. BullMQ 6 reemplazo la
+ * segunda por la primera. El upsert es idempotente por su id: aunque el proceso
+ * arranque muchas veces —cada deploy, cada reinicio— queda UNA programacion.
+ * Con la API vieja, cada arranque agregaba otra repeticion y el barrido corria
+ * N veces por dia.
+ *
+ * Corre de madrugada: la ventana de renovacion es de dias, asi que no hay
+ * urgencia, y conviene no competir con el trafico de compra.
+ */
+async function registrarRefreshDeTokens(): Promise<void> {
+  const { QUEUE_NAMES, createWorker, getQueue } = await import('@offside/jobs');
+  const { refreshExpiring } =
+    await import('./modules/sellers/services/mercadopago-refresh.service');
+
+  createWorker(QUEUE_NAMES.MERCADOPAGO_TOKEN_REFRESH, async () => {
+    await refreshExpiring();
+  });
+
+  try {
+    await getQueue(QUEUE_NAMES.MERCADOPAGO_TOKEN_REFRESH).upsertJobScheduler(
+      'mercadopago-token-refresh-diario',
+      { pattern: '0 4 * * *' },
+      { name: 'barrido-diario', data: {} },
+    );
+  } catch (error) {
+    // Que no se pueda programar el barrido NO puede impedir que la aplicacion
+    // levante: sin el, los tokens siguen sirviendo por meses. Se registra y se
+    // sigue.
+    console.error(
+      '[instrumentation] no se pudo programar el refresh de tokens:',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 }

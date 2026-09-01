@@ -48,6 +48,20 @@ export default defineConfig({
            *
            * Los valores son inventados y locales. Ninguno es una credencial.
            */
+          /**
+           * ⚠️ NO ES POR LOGICA LENTA, ES POR CARGA DE MODULOS.
+           *
+           * Algunos tests unitarios importan un controller con `await
+           * import()`, y eso arrastra un grafo grande (payments -> sellers ->
+           * clientes de Mercado Pago -> database). Esa primera carga, en frio y
+           * con la maquina ocupada —dentro de `npm run verify` corre despues de
+           * format, lint y typecheck—, supera a veces los 5 s del default.
+           *
+           * Era la causa REAL de una falla intermitente que se atribuyo dos
+           * veces a contaminacion de `process.env`. El sintoma era "la firma
+           * del webhook no valida"; el error de fondo, un timeout.
+           */
+          testTimeout: 30_000,
           env: {
             DATABASE_URL: 'postgresql://unit:unit@localhost:5432/unit',
             REDIS_URL: 'redis://localhost:6379',

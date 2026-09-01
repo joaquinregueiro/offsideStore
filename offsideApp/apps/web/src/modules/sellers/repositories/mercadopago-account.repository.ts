@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull, lte } from 'drizzle-orm';
 
 /**
  * Acceso a `mercadopago_accounts` (ERD §7.3). Sin reglas de negocio.
@@ -123,6 +123,83 @@ export async function updateStatus(
     .update(schema.mercadopagoAccounts)
     .set({ status, updatedAt: new Date() })
     .where(eq(schema.mercadopagoAccounts.sellerId, sellerId))
+    .returning();
+
+  return row;
+}
+
+/**
+ * Conexiones `connected` cuyo token vence antes de `limite`.
+ *
+ * ⚠️ EXIGE `refresh_token_encrypted`: sin el no hay nada que renovar, y
+ * traerlas solo produciria fallos garantizados en cada barrido.
+ *
+ * ⚠️ Incluye las YA VENCIDAS a proposito (`token_expires_at <= limite` sin piso
+ * inferior): si un barrido no corrio —el proceso estuvo caido— hay que
+ * intentarlas igual. Mercado Pago puede seguir aceptando el `refresh_token`
+ * despues del vencimiento del `access_token`; darlas por perdidas sin intentar
+ * seria peor.
+ */
+export async function findExpiringConnections(
+  limite: Date,
+  db?: Database,
+): Promise<MercadoPagoAccountRow[]> {
+  return conn(db)
+    .select()
+    .from(schema.mercadopagoAccounts)
+    .where(
+      and(
+        eq(schema.mercadopagoAccounts.status, 'connected'),
+        isNotNull(schema.mercadopagoAccounts.refreshTokenEncrypted),
+        isNotNull(schema.mercadopagoAccounts.tokenExpiresAt),
+        lte(schema.mercadopagoAccounts.tokenExpiresAt, limite),
+      ),
+    )
+    .orderBy(schema.mercadopagoAccounts.tokenExpiresAt);
+}
+
+/**
+ * Persiste unas credenciales RENOVADAS (spec §10).
+ *
+ * ⚠️ NO TOCA `connected_at` NI `mp_user_id`: renovar no es reconectar. La
+ * cuenta vinculada es la misma y la fecha de vinculacion original tiene que
+ * sobrevivir; pisarlas haria imposible distinguir una conexion vieja renovada
+ * de una recien hecha.
+ *
+ * ⚠️ SOLO ACTUALIZA SI SIGUE `connected`. La condicion va en el WHERE, no en un
+ * `if` previo: entre que el barrido eligio la fila y que Mercado Pago responde
+ * pasan segundos, y en el medio el vendedor pudo desconectarse. Un refresh no
+ * puede reactivar una conexion que alguien dio de baja (spec §10, reglas de
+ * concurrencia). Devuelve `undefined` si ya no correspondia.
+ */
+export async function updateRefreshedCredentials(
+  sellerId: string,
+  credentials: {
+    encryptedAccessToken: string;
+    encryptedRefreshToken: string | null;
+    expiresAt: Date;
+    scopes: string[] | null;
+  },
+  db?: Database,
+): Promise<MercadoPagoAccountRow | undefined> {
+  const now = new Date();
+
+  const [row] = await conn(db)
+    .update(schema.mercadopagoAccounts)
+    .set({
+      accessTokenEncrypted: credentials.encryptedAccessToken,
+      refreshTokenEncrypted: credentials.encryptedRefreshToken,
+      tokenExpiresAt: credentials.expiresAt,
+      scopes: credentials.scopes,
+      lastRefreshedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(schema.mercadopagoAccounts.sellerId, sellerId),
+        eq(schema.mercadopagoAccounts.status, 'connected'),
+      ),
+    )
     .returning();
 
   return row;
