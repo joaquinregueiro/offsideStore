@@ -1,0 +1,203 @@
+/**
+ * TOKENS DEL SISTEMA VISUAL DE OFFSIDE
+ * =============================================================================
+ *
+ * ⚠️ ESTO ES UNA TRANSCRIPCION, NO UN DISENIO. La fuente de verdad es
+ * `design/Offside Identidad.dc.html`, que es SOLO LECTURA (CLAUDE.md §3). Si
+ * algo de aca contradice ese archivo, gana el archivo y hay que reportarlo.
+ *
+ * ⚠️ HAY UN ARCHIVO ANTERIOR, `Offside Identidad Visual.html`, con una version
+ * VIEJA del sistema: usaba Big Shoulders Display para titulares y una
+ * terracota `#C4562E` como acento. **No es la vigente.**
+ *
+ * El isotipo de la marca es la BANDERA DEL JUEZ DE LINEA —asta y pano a
+ * cuadros—, la senial literal de fuera de juego. Todo el sistema sale de ahi:
+ * anguloso, editorial, con el verde de la cancha como base.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- color */
+  /*
+   * Los nombres son los de la identidad, no descripciones genericas. Se
+   * conservan a proposito: "Verde Cancha" dice algo que "--verde-primario" no.
+   */
+
+  /** Verde Cancha — el color de marca. */
+  --color-cancha: #0f7a45;
+  /** Verde Tiempo Extra — hover y estados presionados. */
+  --color-tiempo-extra: #0b5a34;
+  /** Amarillo Cambio — acento calido y seleccion de texto. */
+  --color-cambio: #f5efae;
+  /** Tinta — texto principal y fondos oscuros. */
+  --color-tinta: #10231a;
+  /** Papel — el fondo base de la aplicacion. */
+  --color-papel: #fafaf7;
+
+  /**
+   * Naranja — "vendido", ofertas y errores.
+   *
+   * ⚠️ La identidad describe este acento como construido con el mismo croma
+   * que el verde de marca en oklch, cambiando solo el matiz. Esa descripcion
+   * venia del acento anterior (una terracota `#C4562E`) y con este naranja, mas
+   * saturado y luminoso, ya no se cumple al pie de la letra. Se usa el hex que
+   * la identidad indica; la coherencia cromatica es cuestion de disenio, no de
+   * codigo, y quedo reportada.
+   */
+  --color-naranja: #ff902d;
+
+  /* Neutros derivados, para bordes y texto secundario. */
+  --color-neutro-borde: #e4e6de;
+  --color-neutro-suave: #f2f3ea;
+  --color-neutro-texto: #5b6459;
+  --color-neutro-tenue: #8a9186;
+  --color-neutro-apagado: #9aa396;
+  --color-blanco: #ffffff;
+
+  /* ----------------------------------------------------------- tipografia */
+  /*
+   * Dos familias con roles ASIGNADOS por la identidad, no intercambiables:
+   *
+   *   Big Noodle Titling  titulares, precios, numeros de camiseta  regular y oblicua
+   *   Inter               cuerpo, fichas de producto, UI            400-600
+   *
+   * Big Noodle es una fuente PROPIA (archivos en `app/fonts/`), no de Google.
+   * Es muy CONDENSADA: los titulares ocupan mucho menos ancho que con una
+   * sans normal, y el sistema cuenta con eso.
+   */
+  --fuente-titulo: var(--font-titulo), 'Arial Narrow', sans-serif;
+  --fuente-texto: var(--font-texto), system-ui, sans-serif;
+
+  /**
+   * Escala tipografica.
+   *
+   * ⚠️ DECISION DE IMPLEMENTACION, no transcripcion. La identidad usa tamanios
+   * sueltos (12, 13, 15, 16, 18, 20, 22, 36 px) sin escala regular, porque es
+   * una pieza de presentacion y no un sistema de producto. Se ordenan en una
+   * escala manteniendo los valores que la identidad usa de verdad —13 y 12 son
+   * los mas frecuentes, 36 el titular— y se completan los huecos.
+   */
+  --texto-xs: 12px;
+  --texto-sm: 13px;
+  --texto-base: 15px;
+  --texto-md: 16px;
+  --texto-lg: 18px;
+  --texto-xl: 22px;
+  --texto-2xl: 28px;
+  --texto-3xl: 36px;
+  --texto-4xl: 48px;
+
+  /**
+   * ⚠️ Los pesos son de INTER. Big Noodle tiene un solo peso y su variacion es
+   * el estilo OBLICUO (`font-style: italic`), no un peso mas alto. Pedirle 700
+   * hace que el navegador lo simule engordando el trazo, que se ve mal.
+   */
+  --peso-normal: 400;
+  --peso-medio: 500;
+  --peso-semi: 600;
+
+  /**
+   * Interlineado APRETADO en titulares (0.9-0.95). Es lo que le da el
+   * caracter de camiseta; con 1.2 el sistema se vuelve genérico.
+   */
+  --interlineado-titulo: 0.95;
+  --interlineado-texto: 1.5;
+
+  /** Mayusculas con tracking, para etiquetas y categorias. */
+  --tracking-etiqueta: 0.08em;
+  --tracking-amplio: 0.2em;
+  --tracking-titulo: -0.01em;
+
+  /* --------------------------------------------------------------- forma */
+  /**
+   * ⚠️ EL SISTEMA ES ANGULOSO, NO REDONDEADO. En la identidad el radio de 4px
+   * aparece 18 veces contra 2 de 8px. Redondear de mas lo convierte en otra
+   * marca.
+   */
+  --radio: 4px;
+  --radio-chico: 1px;
+  --radio-grande: 8px;
+  /** Solo para pastillas y avatares, donde la forma ES el elemento. */
+  --radio-pastilla: 999px;
+
+  /** Iconos: trazo de 1.5px, sin relleno, coherente con la linea del logo. */
+  --trazo-icono: 1.5px;
+
+  /* ------------------------------------------------------------- espacio */
+  --espacio-1: 4px;
+  --espacio-2: 6px;
+  --espacio-3: 12px;
+  --espacio-4: 16px;
+  --espacio-5: 20px;
+  --espacio-6: 24px;
+  --espacio-7: 32px;
+  --espacio-8: 48px;
+  --espacio-9: 80px;
+  --espacio-10: 100px;
+
+  /** Ancho maximo del contenido. */
+  --ancho-contenido: 1200px;
+}
+
+/* ------------------------------------------------------------------ base */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-md);
+  line-height: var(--interlineado-texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Los titulares usan la familia de titulos y su interlineado apretado. */
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  /* Peso normal: Big Noodle no tiene bold real (ver nota arriba). */
+  font-weight: var(--peso-normal);
+  line-height: var(--interlineado-titulo);
+  letter-spacing: var(--tracking-titulo);
+}
+
+a {
+  color: var(--color-cancha);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-tiempo-extra);
+}
+
+/** Tomado literal de la identidad. */
+::selection {
+  background: var(--color-cambio);
+}
+
+/**
+ * Foco visible SIEMPRE. No viene de la identidad: es accesibilidad. Usa el
+ * verde de marca, que contrasta contra el papel y contra las tarjetas claras.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-cancha);
+  outline-offset: 2px;
+}
+
+/**
+ * Respeta a quien pidió menos movimiento en su sistema operativo.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
