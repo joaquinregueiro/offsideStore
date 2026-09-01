@@ -1,3 +1,4 @@
+import { condicion, precio } from '@/lib/formato';
 import type { CatalogListing } from '@/modules/listings/services/listing.service';
 
 import estilos from './listing-card.module.css';
@@ -10,29 +11,6 @@ import estilos from './listing-card.module.css';
  * componente al bundle sin ganar nada.
  */
 
-/**
- * Formatea centavos como precio argentino.
- *
- * ⚠️ CONVIERTE A `number` PARA MOSTRAR, y solo para eso. El dinero viaja como
- * string de centavos justamente para no perder precision; aca ya no se opera
- * con el, solo se dibuja. `Number.MAX_SAFE_INTEGER` son mas de 90 mil millones
- * de pesos: no hay riesgo real de perder un centavo en el camino.
- */
-function formatearPrecio(centavos: string, moneda: string): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: moneda,
-    maximumFractionDigits: 0,
-  }).format(Number(centavos) / 100);
-}
-
-/** `COMO_NUEVO` -> `Como nuevo`. El enum es del ERD; esto es presentacion. */
-function condicionLegible(condicion: string): string {
-  const texto = condicion.replaceAll('_', ' ').toLowerCase();
-
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
-}
-
 export function ListingCard({ listing }: { listing: CatalogListing }) {
   return (
     <article className={estilos.ficha}>
@@ -42,11 +20,11 @@ export function ListingCard({ listing }: { listing: CatalogListing }) {
       <div className={estilos.cuerpo}>
         <h3 className={estilos.titulo}>{listing.title}</h3>
 
-        <p className={estilos.precio}>{formatearPrecio(listing.priceAmount, listing.currency)}</p>
+        <p className={estilos.precio}>{precio(listing.priceAmount, listing.currency)}</p>
 
         <div className={estilos.metadatos}>
           <span className={estilos.etiqueta}>Talle {listing.sizeValue}</span>
-          <span className={estilos.etiqueta}>{condicionLegible(listing.condition)}</span>
+          <span className={estilos.etiqueta}>{condicion(listing.condition)}</span>
         </div>
 
         <p className={estilos.vendedor}>{listing.sellerDisplayName}</p>
