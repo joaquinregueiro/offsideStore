@@ -67,3 +67,21 @@
 .enlace:hover {
   color: var(--color-cambio);
 }
+
+/** Boton que se ve como los enlaces de la barra. Es un boton porque muta. */
+.enlaceBoton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-papel);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  cursor: pointer;
+}
+
+.enlaceBoton:hover {
+  color: var(--color-cambio);
+}

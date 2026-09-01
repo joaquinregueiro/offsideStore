@@ -1,0 +1,82 @@
+/** Formularios de autenticacion y del resto de la aplicacion. */
+
+.pagina {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: var(--espacio-9) var(--espacio-6);
+}
+
+.titulo {
+  font-size: var(--texto-3xl);
+  text-transform: uppercase;
+  margin-bottom: var(--espacio-3);
+}
+
+.bajada {
+  margin: 0 0 var(--espacio-7);
+  color: var(--color-neutro-texto);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.etiqueta {
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+}
+
+.control {
+  padding: var(--espacio-3);
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-md);
+}
+
+.control:focus {
+  border-color: var(--color-cancha);
+}
+
+.ayuda {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+}
+
+/* Casilla de verificacion: el texto al lado, no debajo. */
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.casilla input {
+  margin-top: 3px;
+  accent-color: var(--color-cancha);
+}
+
+.pie {
+  margin-top: var(--espacio-6);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  text-align: center;
+}
+
+.pieSeparado {
+  margin-top: var(--espacio-3);
+}

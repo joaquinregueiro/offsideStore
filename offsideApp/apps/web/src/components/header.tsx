@@ -1,3 +1,4 @@
+import { salir } from '@/app/(auth)/acciones';
 import { getSessionUser } from '@/lib/session';
 
 import estilos from './header.module.css';
@@ -45,6 +46,17 @@ export async function Header() {
               <a href="/vendedor" className={estilos.enlace}>
                 Vender
               </a>
+              {/*
+                Salir es una MUTACION —invalida la sesion en la base—, asi que
+                va en un `<form>` con POST, no en un enlace. Un GET que cambia
+                estado se dispara con un prefetch del navegador o con una imagen
+                incrustada en otro sitio.
+              */}
+              <form action={salir}>
+                <button type="submit" className={estilos.enlaceBoton}>
+                  Salir
+                </button>
+              </form>
             </>
           )}
         </nav>

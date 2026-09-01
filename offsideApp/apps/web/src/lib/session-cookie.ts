@@ -16,7 +16,15 @@ import type { NextResponse } from 'next/server';
 
 export const SESSION_COOKIE_NAME = 'offside_session';
 
-function baseOptions() {
+/**
+ * Opciones de la cookie, en UN solo lugar.
+ *
+ * Las usan los dos caminos que crean sesion: los Route Handlers (via
+ * `setSessionCookie`) y las Server Actions (via `session-cookie-actions.ts`).
+ * Si divergieran, una sesion tendria distinta proteccion segun por donde se
+ * creo, y nadie lo notaria hasta que fuera un problema.
+ */
+export function sessionCookieOptions() {
   return {
     httpOnly: true,
     sameSite: 'lax',
@@ -29,7 +37,7 @@ export function setSessionCookie(response: NextResponse, token: string, expiresA
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: token,
-    ...baseOptions(),
+    ...sessionCookieOptions(),
     expires: expiresAt,
   });
 }
@@ -39,7 +47,7 @@ export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: '',
-    ...baseOptions(),
+    ...sessionCookieOptions(),
     maxAge: 0,
   });
 }
