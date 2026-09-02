@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { resolveSession, type PublicUser } from '@/modules/auth/services/auth.service';
 import { getMySellerProfile } from '@/modules/sellers/services/seller.service';
 
-import { hasCapability, type Capability } from './permissions';
+import { capabilitiesFor, hasCapability, type Capability } from './permissions';
 import { SESSION_COOKIE_NAME } from './session-cookie';
 
 /**
@@ -86,6 +86,24 @@ export async function requireCapabilitySessionUser(
 ): Promise<PublicUser> {
   const user = await requireSessionUser(volverA);
   if (!hasCapability(user.adminRole, capability)) notFound();
+
+  return user;
+}
+
+/**
+ * Exige tener AL MENOS UNA capacidad administrativa.
+ *
+ * Es el guard del indice del back-office, que no corresponde a una capacidad
+ * concreta. Cada pantalla de adentro sigue exigiendo la suya: entrar al indice
+ * no habilita nada.
+ *
+ * ⚠️ Sin ninguna capacidad devuelve 404, igual que
+ * `requireCapabilitySessionUser` y por la misma razon: para quien no es
+ * administrador, el back-office no deberia existir.
+ */
+export async function requireAnyCapabilitySessionUser(volverA?: string): Promise<PublicUser> {
+  const user = await requireSessionUser(volverA);
+  if (capabilitiesFor(user.adminRole).length === 0) notFound();
 
   return user;
 }

@@ -96,6 +96,22 @@ export function hasCapability(role: AdminRole | null | undefined, capability: Ca
 }
 
 /**
+ * Capacidades que habilita un rol.
+ *
+ * Existe para el back-office: el indice necesita saber QUE mostrarle a cada
+ * administrador, y decidir si tiene que existir para el. Se deriva del MISMO
+ * mapa, asi que no puede desincronizarse de `hasCapability`.
+ *
+ * ⚠️ Sigue sin autorizar. Autorizar es `hasCapability` contra una capacidad
+ * concreta; esto solo enumera.
+ */
+export function capabilitiesFor(role: AdminRole | null | undefined): Capability[] {
+  if (role === null || role === undefined) return [];
+
+  return (Object.keys(MAPA) as Capability[]).filter((capacidad) => MAPA[capacidad].includes(role));
+}
+
+/**
  * Rol efectivo de un actor, para mostrarlo o registrarlo.
  *
  * ⚠️ ES DESCRIPTIVO, NO AUTORIZA. Autorizar se hace con `hasCapability` o con

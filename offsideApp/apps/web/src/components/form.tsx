@@ -34,6 +34,7 @@ export function Formulario({
   return (
     <form action={action} className={estilos.formulario} noValidate>
       {estado.error !== undefined && <Aviso error>{estado.error}</Aviso>}
+      {estado.ok !== undefined && <Aviso>{estado.ok}</Aviso>}
 
       {children}
 

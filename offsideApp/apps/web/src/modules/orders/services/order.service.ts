@@ -302,6 +302,19 @@ export async function listMySales(user: PublicUser): Promise<PublicOrder[]> {
   return rows.map(toPublicOrder);
 }
 
+/**
+ * Orden por su numero visible. Para el back-office.
+ *
+ * ⚠️ NO AUTORIZA. Devuelve la orden de cualquiera: quien llama tiene que
+ * haber verificado la capacidad administrativa primero. Se llama distinto que
+ * `getMyOrder` justamente para que la diferencia se vea en el punto de uso.
+ */
+export async function findByOrderNumber(orderNumber: string): Promise<PublicOrder | null> {
+  const row = await orderRepo.findByOrderNumber(orderNumber);
+
+  return row === undefined ? null : toPublicOrder(row);
+}
+
 /** Un item de la orden, tal como lo ve el comprador. */
 export interface PublicOrderItem {
   id: string;

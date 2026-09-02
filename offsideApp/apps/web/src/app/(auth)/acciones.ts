@@ -29,9 +29,16 @@ import * as authService from '@/modules/auth/services/auth.service';
  * entrada. Duplicar la validacion garantizaria que las dos se desincronicen.
  */
 
-/** Lo que la accion devuelve al formulario para que muestre el error. */
+/**
+ * Lo que la accion devuelve al formulario.
+ *
+ * La mayoria de las acciones redirigen cuando salen bien, asi que solo tienen
+ * `error`. `ok` existe para las que se quedan en la misma pantalla —cambiar la
+ * comision, emitir un reembolso— y necesitan confirmar que algo paso.
+ */
 export interface EstadoFormulario {
   error?: string;
+  ok?: string;
 }
 
 /**

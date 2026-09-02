@@ -209,3 +209,69 @@ export async function listRefunds(paymentId: string): Promise<PublicRefund[]> {
   const rows = await refundRepo.findByPaymentId(paymentId);
   return rows.map(toPublicRefund);
 }
+
+/** Un pago de la orden, tal como lo ve el back-office. */
+export interface AdminPayment {
+  id: string;
+  status: paymentRepo.PaymentStatus;
+  /** Estado crudo de Mercado Pago (DEC-035). Se muestra junto al mapeado. */
+  mpStatus: string | null;
+  mpPaymentId: string | null;
+  amount: string;
+  currency: string;
+  /** Suma de los reembolsos que consumieron saldo. */
+  refundedAmount: string;
+  /** Lo que todavia se puede devolver. `'0'` si no queda nada. */
+  refundableAmount: string;
+  refunds: PublicRefund[];
+  createdAt: string;
+}
+
+export interface AdminOrderPayments {
+  order: orderService.PublicOrder;
+  payments: AdminPayment[];
+}
+
+/**
+ * Pagos de una orden, buscada por su numero visible. Consola de reembolsos.
+ *
+ * ⚠️ NO AUTORIZA. Devuelve datos de cualquier orden: quien llama tiene que
+ * haber verificado `payments:refund` antes. Es lectura pura; no toca Mercado
+ * Pago ni escribe nada.
+ *
+ * ⚠️ `refundableAmount` SE CALCULA CON LA MISMA REGLA QUE `refundPayment`
+ * —importe menos lo ya devuelto, sin contar los rechazados—, para que la
+ * pantalla no ofrezca un importe que el Service va a rechazar. Sigue siendo el
+ * Service el que decide: esto es una vista, no una validacion.
+ */
+export async function findOrderPaymentsForAdmin(
+  orderNumber: string,
+): Promise<AdminOrderPayments | null> {
+  const order = await orderService.findByOrderNumber(orderNumber);
+  if (order === null) return null;
+
+  const pagos = await paymentRepo.findByOrderId(order.id);
+
+  const payments = await Promise.all(
+    pagos.map(async (pago): Promise<AdminPayment> => {
+      const refunds = await refundRepo.findByPaymentId(pago.id);
+      const devuelto = totalDevuelto(refunds);
+      const disponible = REEMBOLSABLES.has(pago.status) ? pago.amount - devuelto : 0n;
+
+      return {
+        id: pago.id,
+        status: pago.status,
+        mpStatus: pago.mpStatus,
+        mpPaymentId: pago.mpPaymentId,
+        amount: pago.amount.toString(),
+        currency: pago.currency,
+        refundedAmount: devuelto.toString(),
+        refundableAmount: (disponible > 0n ? disponible : 0n).toString(),
+        refunds: refunds.map(toPublicRefund),
+        createdAt: pago.createdAt.toISOString(),
+      };
+    }),
+  );
+
+  return { order, payments };
+}

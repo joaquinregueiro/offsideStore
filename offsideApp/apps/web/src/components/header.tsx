@@ -1,4 +1,5 @@
 import { salir } from '@/app/(auth)/acciones';
+import { capabilitiesFor } from '@/lib/permissions';
 import { getSessionUser } from '@/lib/session';
 
 import estilos from './header.module.css';
@@ -46,6 +47,17 @@ export async function Header() {
               <a href="/vendedor" className={estilos.enlace}>
                 Vender
               </a>
+              {/*
+                El acceso al back-office aparece SOLO para quien tiene alguna
+                capacidad. No es una medida de seguridad —cada pantalla y cada
+                Server Action exigen la suya—, sino la unica forma de llegar sin
+                escribir la URL a mano.
+              */}
+              {capabilitiesFor(user.adminRole).length > 0 && (
+                <a href="/admin" className={estilos.enlace}>
+                  Admin
+                </a>
+              )}
               {/*
                 Salir es una MUTACION —invalida la sesion en la base—, asi que
                 va en un `<form>` con POST, no en un enlace. Un GET que cambia
