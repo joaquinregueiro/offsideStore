@@ -3,8 +3,9 @@
 > Reglas de trabajo para Claude Code dentro de este repositorio.
 > Ámbito: **todo el desarrollo de Offside Store**.
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
-> Estado: ERD migrado; auth, sellers y conexión con Mercado Pago implementados (ver §19).
-> Última actualización: 2026-08-24.
+> Estado: marketplace operable de punta a punta —registro, publicación, compra y
+> cobro con Mercado Pago— con frontend propio. Falta el panel de admin (ver §19).
+> Última actualización: 2026-09-01.
 
 ---
 
@@ -514,9 +515,10 @@ trabajar en el repositorio equivocado.
 
 ---
 
-## 19. Estado de la implementación (2026-08-26)
+## 19. Estado de la implementación (2026-09-01)
 
-**Cadena de venta completa contra Mercado Pago real, desplegada en producción.**
+**Marketplace operable de punta a punta: alguien puede registrarse, publicar,
+comprar y cobrar sin tocar la API a mano.** Desplegado en producción.
 
 > Esta sección venía desactualizada: afirmaba "schema de Drizzle vacío" y "sin
 > funcionalidades de negocio" cuando el ERD ya estaba migrado y auth funcionaba.
@@ -527,9 +529,9 @@ Qué existe en `offsideApp/`:
 
 |                                    |                                                                                 |
 | ---------------------------------- | ------------------------------------------------------------------------------- |
-| `apps/web`                         | Next.js 16 + React 19. **Frontend: sigue siendo placeholder.** 22 rutas de API  |
+| `apps/web`                         | Next.js 16 + React 19. **18 pantallas** y **22 rutas de API**                   |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 4 migraciones aplicadas**  |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 5 migraciones aplicadas**  |
 | `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
 | `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                         |
 
@@ -541,11 +543,12 @@ Módulos de dominio implementados (`apps/web/src/modules/`):
 | `users`    | historial de hechos (`user_history_events`, DEC-036)                                                                            |
 | `sellers`  | alta de perfil, identidad fiscal CUIT/CUIL/CDI, **conexión OAuth con Mercado Pago** y **aprobación automática (TS-001/TS-010)** |
 | `audit`    | escritor de `audit_log` (ERD §19.1). Transversal: lo usan sellers y payments                                                    |
-| `listings` | publicación de prendas y lectura del catálogo propio                                                                            |
-| `orders`   | compra directa, snapshot económico y comisión del 6% (DEC-043)                                                                  |
+| `listings` | publicación de prendas, catálogo propio y **vitrina pública** + catálogo de categorías                                          |
+| `orders`   | compra directa, snapshot económico, comisión del 6% (DEC-043) y bandeja de ventas del vendedor                                  |
 | `payments` | Checkout Pro con **Split 1:1**, webhooks firmados, conciliación del reparto y refunds                                           |
 
 **De las 51 tablas migradas se usan 17.** El resto está creada y vacía.
+`categories` dejó de estar vacía: la migración `0004` carga sus seis filas.
 
 **Mercado Pago — conexión Y pagos, verificados contra la API real.**
 
@@ -566,7 +569,15 @@ vendedor y la comisión de Offside es un 6% limpio. Detalle y hallazgos en
 `mercadopago-payments-module.md`.
 
 **Un solo cambio de ERD en todo el esfuerzo**: `payments.mp_preference_id`
-(migración `0002`). El resto ya estaba modelado.
+(migración `0002`). El resto ya estaba modelado. Las migraciones `0003` y `0004`
+**no tocan el esquema**: cargan datos —la comisión y las categorías—.
+
+**Categorías (migración `0004`)**: `categories` estaba vacía y
+`listings.category_id` es FK `NOT NULL`, así que publicar era imposible. Se
+cargan las **seis** filas del enum `garment_category`, que `database-design.md`
+§5 define como conjunto fijo y excluye de `catalog_change_requests` (DEC-041):
+no se inventó taxonomía. ⚠️ `required_attributes` y `aliases` quedan NULL — son
+🟦 y dependen de decisiones y módulos que todavía no existen.
 
 **Config Store operativo**: la comisión dejó de ser una constante. Vive en
 `app_settings.commission_rate_default` (600 basis points = 6%), la carga la
@@ -611,15 +622,42 @@ simultáneas dejarían la conexión sin poder renovarse nunca más. Un rechazo l
 pasa a `expired`; una caída de red la deja intacta. Sin migraciones:
 `last_refreshed_at` ya estaba en el ERD. **No probado contra MP real.**
 
-**NO implementado:** webhook `mp-connect`, catálogo,
-búsqueda, carrito, envíos, disputas, reviews, reputación, aprobación de vendedor,
-admin y frontend. De los nueve emails que lista la documentación sólo están los
-dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
-contra Mercado Pago real**.
+**Frontend (2026-09-01)**: Server Components + Server Actions, CSS Modules y el
+sistema visual de `design/` (Big Noodle + Inter, Verde Cancha). **Los formularios
+funcionan sin JavaScript**: sin JS el navegador hace el POST nativo; con JS,
+`useActionState` muestra el error sin recargar. Cuatro grupos de rutas:
 
-Tests: **418** (211 unitarios + 207 de integración contra PostgreSQL y Redis
+| Grupo        | Pantallas                                                                     |
+| ------------ | ----------------------------------------------------------------------------- |
+| público      | home/vitrina, detalle de publicación, errores                                 |
+| `(auth)`     | registro, ingreso, verificación de email, olvidé/restablecer contraseña       |
+| `(compra)`   | confirmar compra, checkout/pago y mis compras                                 |
+| `(vendedor)` | panel, alta, identidad fiscal, Mercado Pago, publicaciones, publicar y ventas |
+
+⚠️ **El retorno de Mercado Pago NO confirma el pago** (BS-072 / DEC-028): con
+`?status=success` y la orden todavía en `PENDING_PAYMENT`, el checkout dice
+"estamos confirmando", nunca "pagado". La fuente de verdad es el webhook.
+
+⚠️ **La autorización de las pantallas NO se duplica.** `lib/session.ts` lee la
+cookie con `cookies()` porque un Server Component no tiene `Request`, pero la
+regla sigue siendo `resolveSession` y el mapa de `lib/permissions.ts`. Diferencia
+deliberada con la API: una pantalla **redirige**, un endpoint **lanza** 401/403;
+y sin capacidad administrativa se devuelve **404, no 403** (el back-office no
+debería existir para quien no es admin). Cada Server Action revalida por su
+cuenta: son alcanzables por POST directo sin pasar por la pantalla.
+
+**NO implementado:** webhook `mp-connect`, **fotos de publicaciones** (no hay
+S3), búsqueda, carrito, envíos, disputas, reviews, reputación, **panel de
+administración**, y editar/pausar/eliminar publicaciones (SS-040/SS-050). De los
+nueve emails que lista la documentación sólo están los dos de `auth`. Los refunds
+tienen código y tests, pero **no se probaron contra Mercado Pago real**.
+
+Tests: **433** (222 unitarios + 211 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
+⚠️ Los fixtures **leen** las categorías que carga la migración `0004`; no crean
+las suyas. `categories.code` es UNIQUE y son un conjunto fijo, así que inventar
+una de test chocaba contra la fila real.
 
 **Desplegado en producción** en un VPS con Coolify (DEC-012), con HTTPS y
 migraciones aplicadas al arrancar el contenedor. Ver
@@ -672,7 +710,15 @@ Lo que hoy frena el avance, en orden de impacto:
 > Config Store está modelado como `app_settings` + `seller_tiers`.
 > `app_settings` **está en uso** (la comisión); `seller_tiers` sigue vacía.
 
-### Hueco conocido en el código
+### Huecos conocidos en el código
+
+⚠️ **La vitrina muestra publicaciones que no se pueden comprar.** Si un vendedor
+desconecta Mercado Pago, `POST /api/orders` responde `409 SELLER_NOT_OPERATIONAL`
+—SS-013 se cumple—, pero la publicación **sigue visible** en el catálogo público:
+`isPurchasable` mira `status`, `moderation_status` y stock, no si el vendedor
+puede operar. El comprador la ve, entra, completa la dirección y recién ahí choca
+contra el rechazo. Filtrar el catálogo por `canSell` cambia **qué muestra la
+vitrina**, así que es una decisión de producto y no se tomó desde el código.
 
 ⚠️ **Los refunds no contemplan que el vendedor no tenga saldo.** Si Mercado Pago
 rechaza un refund por saldo insuficiente, hoy se devuelve `paymentProviderError`
