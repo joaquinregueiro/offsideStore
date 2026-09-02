@@ -177,6 +177,26 @@ export async function publishListing(
   return toPublicListing(creada);
 }
 
+/** Categoria tal como la elige el vendedor al publicar. */
+export interface PublicCategory {
+  id: string;
+  name: string;
+  /** `camiseta` obliga a declarar `kitType` y `sleeve` (ERD §9.1). */
+  code: string;
+}
+
+/**
+ * Categorias disponibles para publicar.
+ *
+ * No exige sesion: es catalogo publico, y el mismo listado sirve para filtrar
+ * la vitrina el dia que exista la busqueda.
+ */
+export async function listActiveCategories(): Promise<PublicCategory[]> {
+  const rows = await listingRepo.findActiveCategories();
+
+  return rows.map((row) => ({ id: row.id, name: row.name, code: row.code }));
+}
+
 /** Publicaciones propias del vendedor autenticado. */
 export async function listMyListings(user: PublicUser): Promise<PublicListing[]> {
   const seller = await requireOwnSellerProfile(user);

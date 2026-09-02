@@ -43,6 +43,11 @@ export async function findByBuyerId(buyerId: string, db?: Database): Promise<Ord
   return conn(db).select().from(schema.orders).where(eq(schema.orders.buyerId, buyerId));
 }
 
+/** Ordenes recibidas por un vendedor (SS-070). */
+export async function findBySellerId(sellerId: string, db?: Database): Promise<OrderRow[]> {
+  return conn(db).select().from(schema.orders).where(eq(schema.orders.sellerId, sellerId));
+}
+
 export async function findItems(orderId: string, db?: Database): Promise<OrderItemRow[]> {
   return conn(db).select().from(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
 }

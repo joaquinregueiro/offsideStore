@@ -74,6 +74,20 @@ export async function findCategoryById(
   return row;
 }
 
+/**
+ * Categorias activas del catalogo.
+ *
+ * Es un conjunto fijo de seis filas respaldado por el enum `garment_category`
+ * (database-design.md §5), asi que no se pagina ni se filtra.
+ */
+export async function findActiveCategories(db?: Database): Promise<CategoryRow[]> {
+  return conn(db)
+    .select()
+    .from(schema.categories)
+    .where(eq(schema.categories.isActive, true))
+    .orderBy(schema.categories.name);
+}
+
 /** Publicaciones de un vendedor, sin las borradas. */
 export async function findBySellerId(sellerId: string, db?: Database): Promise<ListingRow[]> {
   return conn(db)

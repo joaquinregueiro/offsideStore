@@ -1,0 +1,162 @@
+.pagina {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
+}
+
+.encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacio-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--espacio-6);
+}
+
+.titulo {
+  font-size: var(--texto-3xl);
+  text-transform: uppercase;
+}
+
+.bajada {
+  color: var(--color-neutro-texto);
+  margin-bottom: var(--espacio-7);
+  max-width: 60ch;
+}
+
+.subtitulo {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  margin: var(--espacio-7) 0 var(--espacio-4);
+}
+
+/** Tarjeta generica: checklist, publicacion, venta. */
+.tarjeta {
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  padding: var(--espacio-5);
+  margin-bottom: var(--espacio-4);
+}
+
+.linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacio-4);
+  padding: var(--espacio-2) 0;
+}
+
+.concepto {
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * Pasos del alta (TS-001). El estado se comunica con texto y con un simbolo,
+ * NUNCA solo con color: quien no distingue verde de gris tiene que poder leer
+ * igual si el paso esta hecho.
+ */
+.paso {
+  display: flex;
+  gap: var(--espacio-4);
+  align-items: flex-start;
+  padding: var(--espacio-4) 0;
+  border-bottom: 1px solid var(--color-neutro-borde);
+}
+
+.paso:last-child {
+  border-bottom: none;
+}
+
+.marca {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: 1.2;
+  width: 1.5em;
+  flex: none;
+  text-align: center;
+}
+
+.marcaHecha {
+  color: var(--color-cancha);
+}
+
+.marcaPendiente {
+  color: var(--color-neutro-tenue);
+}
+
+.pasoCuerpo {
+  flex: 1;
+}
+
+.pasoTitulo {
+  font-weight: 600;
+  margin-bottom: var(--espacio-1);
+}
+
+.pasoDetalle {
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+  margin-bottom: var(--espacio-3);
+}
+
+/** Grilla de accesos del panel. */
+.accesos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--espacio-4);
+  margin-top: var(--espacio-5);
+}
+
+.acceso {
+  display: block;
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  padding: var(--espacio-5);
+  color: inherit;
+  text-decoration: none;
+}
+
+.acceso:hover {
+  border-color: var(--color-cancha);
+}
+
+.accesoTitulo {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  margin-bottom: var(--espacio-1);
+}
+
+.accesoDetalle {
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+}
+
+/** Dos columnas para campos cortos del formulario de publicacion. */
+.par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-4);
+}
+
+@media (max-width: 640px) {
+  .par {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nota {
+  margin-top: var(--espacio-5);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--espacio-4);
+  flex-wrap: wrap;
+  margin-top: var(--espacio-5);
+}

@@ -6,6 +6,7 @@ import type { PublicUser } from '../../auth/services/auth.service';
 import * as settingsService from '../../config/services/settings.service';
 import * as listingService from '../../listings/services/listing.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
+import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../orders.errors';
 import * as orderRepo from '../repositories/order.repository';
 
@@ -278,6 +279,26 @@ export async function createOrder(user: PublicUser, input: CreateOrderInput): Pr
 /** Ordenes del comprador. */
 export async function listMyOrders(user: PublicUser): Promise<PublicOrder[]> {
   const rows = await orderRepo.findByBuyerId(user.id);
+  return rows.map(toPublicOrder);
+}
+
+/**
+ * Ordenes recibidas por el vendedor autenticado (SS-070).
+ *
+ * AUTORIZACION: el perfil se resuelve POR `user.id` con el MISMO helper que usa
+ * el resto del modulo `sellers`. No hay parametro de vendedor que manipular.
+ *
+ * Devuelve `PublicOrder`, que ya trae `commissionAmount` y `sellerAmount`: son
+ * el snapshot congelado al crear la orden (DEC-030), no un calculo de ahora.
+ *
+ * ⚠️ NO INCLUYE LOS DATOS DEL COMPRADOR. SS-071 los pide para despachar, pero
+ * el envio no existe todavia y exponer nombre y direccion sin una pantalla que
+ * los use seria filtrar datos personales sin motivo.
+ */
+export async function listMySales(user: PublicUser): Promise<PublicOrder[]> {
+  const seller = await requireOwnSellerProfile(user);
+  const rows = await orderRepo.findBySellerId(seller.id);
+
   return rows.map(toPublicOrder);
 }
 

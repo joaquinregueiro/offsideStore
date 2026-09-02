@@ -29,6 +29,13 @@
       "when": 1787755603263,
       "tag": "0003_seed_commission_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787842003263,
+      "tag": "0004_seed_categories",
+      "breakpoints": true
     }
   ]
 }

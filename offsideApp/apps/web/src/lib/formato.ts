@@ -52,6 +52,38 @@ export function estadoDeOrden(valor: string): string {
   return ESTADOS_DE_ORDEN[valor] ?? valor;
 }
 
+/**
+ * Estado de una publicacion, para el inventario del vendedor (SS-060).
+ *
+ * `draft` y `deleted` estan en el enum aunque hoy ningun flujo los produzca:
+ * el listado los mostraria igual si aparecieran, en vez de imprimir el valor
+ * crudo de la base.
+ */
+const ESTADOS_DE_PUBLICACION: Record<string, string> = {
+  draft: 'Borrador',
+  active: 'Activa',
+  paused: 'Pausada',
+  sold_out: 'Agotada',
+  deleted: 'Eliminada',
+};
+
+export function estadoDePublicacion(valor: string): string {
+  return ESTADOS_DE_PUBLICACION[valor] ?? valor;
+}
+
+/** Estado de la habilitacion del vendedor (seller-system.md §6). */
+const ESTADOS_DE_VENDEDOR: Record<string, string> = {
+  pending: 'Pendiente',
+  approved: 'Aprobado',
+  limited: 'Limitado',
+  suspended: 'Suspendido',
+  expelled: 'Expulsado',
+};
+
+export function estadoDeVendedor(valor: string): string {
+  return ESTADOS_DE_VENDEDOR[valor] ?? valor;
+}
+
 /** Fecha corta en formato argentino: `1 sep 2026`. */
 export function fecha(iso: string): string {
   return new Intl.DateTimeFormat('es-AR', {

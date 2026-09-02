@@ -111,6 +111,109 @@ export function Casilla({ nombre, children }: { nombre: string; children: ReactN
   );
 }
 
+/** Opcion de un `Seleccion`. `valor` es lo que viaja; `etiqueta` lo que se lee. */
+export interface Opcion {
+  valor: string;
+  etiqueta: string;
+}
+
+/**
+ * Lista desplegable.
+ *
+ * ⚠️ SIN OPCION VACIA CUANDO ES REQUERIDA. Un `<select required>` cuyo primer
+ * item ya es valido nunca puede quedar sin elegir, que es lo que queremos para
+ * campos como la condicion. Cuando el campo es opcional —`vacio`— la primera
+ * opcion vale cadena vacia y el Server Action la trata como ausente.
+ */
+export function Seleccion({
+  nombre,
+  etiqueta,
+  opciones,
+  vacio,
+  ayuda,
+  defaultValue,
+}: {
+  nombre: string;
+  etiqueta: string;
+  opciones: Opcion[];
+  vacio?: string;
+  ayuda?: string;
+  // `| undefined` explicito: con `exactOptionalPropertyTypes` un opcional NO
+  // acepta que le pasen `undefined` a proposito, y quien arma la lista puede
+  // no tener todavia un valor por defecto.
+  defaultValue?: string | undefined;
+}) {
+  const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
+
+  return (
+    <div className={estilos.campo}>
+      <label htmlFor={nombre} className={estilos.etiqueta}>
+        {etiqueta}
+      </label>
+      <select
+        id={nombre}
+        name={nombre}
+        className={estilos.control}
+        defaultValue={defaultValue}
+        aria-describedby={idAyuda}
+      >
+        {vacio !== undefined && <option value="">{vacio}</option>}
+        {opciones.map((opcion) => (
+          <option key={opcion.valor} value={opcion.valor}>
+            {opcion.etiqueta}
+          </option>
+        ))}
+      </select>
+      {ayuda !== undefined && (
+        <span id={idAyuda} className={estilos.ayuda}>
+          {ayuda}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** Campo de texto largo: bio, politica de envios, descripcion. */
+export function AreaDeTexto({
+  nombre,
+  etiqueta,
+  ayuda,
+  requerido = false,
+  filas = 4,
+  defaultValue,
+}: {
+  nombre: string;
+  etiqueta: string;
+  ayuda?: string;
+  requerido?: boolean;
+  filas?: number;
+  defaultValue?: string;
+}) {
+  const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
+
+  return (
+    <div className={estilos.campo}>
+      <label htmlFor={nombre} className={estilos.etiqueta}>
+        {etiqueta}
+      </label>
+      <textarea
+        id={nombre}
+        name={nombre}
+        rows={filas}
+        className={estilos.control}
+        required={requerido}
+        defaultValue={defaultValue}
+        aria-describedby={idAyuda}
+      />
+      {ayuda !== undefined && (
+        <span id={idAyuda} className={estilos.ayuda}>
+          {ayuda}
+        </span>
+      )}
+    </div>
+  );
+}
+
 /** Valor que viaja con el formulario sin que la persona lo vea ni lo edite. */
 export function CampoOculto({ nombre, valor }: { nombre: string; valor: string }) {
   return <input type="hidden" name={nombre} value={valor} />;

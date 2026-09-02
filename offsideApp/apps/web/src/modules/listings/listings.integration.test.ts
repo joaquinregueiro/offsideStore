@@ -161,33 +161,34 @@ async function usuario(nombre: string): Promise<PublicUser> {
   return authService.verifyEmail(emailVerificationToken);
 }
 
-/** Categoria del catalogo. `camiseta` exige `kitType` y `sleeve` (ERD §9.1). */
-async function categoria(
-  code: 'camiseta' | 'short' = 'camiseta',
-  opciones: { activa?: boolean } = {},
-): Promise<string> {
-  const slug = code === 'camiseta' ? 'camisetas-lstitest' : 'shorts-lstitest';
-  const db = getDatabase();
-
-  const [existente] = await db
+/**
+ * Categoria del catalogo.
+ *
+ * Se LEE la que carga la migracion 0004; no se crea una de test. `code` es
+ * UNIQUE y las seis categorias son un conjunto fijo respaldado por el enum
+ * `garment_category` (database-design.md §5), asi que insertar una propia
+ * chocaria contra la fila real. Ademas los tests corren contra el mismo
+ * catalogo que produccion, que es lo que se quiere.
+ */
+async function categoriaPorCodigo(code: 'camiseta' | 'short'): Promise<string> {
+  const [fila] = await getDatabase()
     .select()
     .from(schema.categories)
-    .where(eq(schema.categories.slug, slug))
+    .where(eq(schema.categories.code, code))
     .limit(1);
 
-  if (existente) return existente.id;
+  if (!fila) {
+    throw new Error(
+      `Falta la categoria '${code}'. Corre las migraciones: la 0004 carga el catalogo.`,
+    );
+  }
 
-  const [creada] = await db
-    .insert(schema.categories)
-    .values({
-      name: `Categoria ${code} (test)`,
-      slug,
-      code,
-      isActive: opciones.activa ?? true,
-    })
-    .returning();
+  return fila.id;
+}
 
-  return creada!.id;
+/** `camiseta` exige `kitType` y `sleeve` (ERD §9.1); `short` no. */
+async function categoria(code: 'camiseta' | 'short' = 'camiseta'): Promise<string> {
+  return categoriaPorCodigo(code);
 }
 
 /**
