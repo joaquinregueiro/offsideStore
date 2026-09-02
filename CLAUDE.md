@@ -609,12 +609,26 @@ el vendedor **se aprueba solo**. La decisión quedó registrada en `docs/` como
 contra ARCA: no prueba titularidad por sí solo. Detalle en
 `seller-approval-module.md`.
 
-**Emails**: verificación de cuenta y reset de contraseña se envían por
-**Amazon SES** detrás de un puerto, encolados en BullMQ. El worker corre en el
-proceso web vía `instrumentation.ts` (`tech-stack.md` §5), así que **no hace
-falta un segundo servicio**. ⚠️ El proveedor NO está en DEC-012: es una decisión
-de implementación del owner, y por eso vive detrás de un adaptador.
-Detalle en `notifications-email-module.md`.
+**Emails**: verificación de cuenta, **reenvío de la verificación** y reset de
+contraseña se envían por **Amazon SES** detrás de un puerto, encolados en BullMQ.
+El worker corre en el proceso web vía `instrumentation.ts` (`tech-stack.md`
+§5), así que **no hace falta un segundo servicio**. ⚠️ El proveedor NO está en
+DEC-012: es una decisión de implementación del owner, y por eso vive detrás de
+un adaptador. Detalle en `notifications-email-module.md`.
+
+El **reenvío** (2026-09-02) cerró un agujero, no agregó una comodidad: una cuenta
+cuyo email no llegaba quedaba **muerta** —no podía ingresar por BR-001 y no
+había forma de emitir otro token—, y la pantalla prometía un reenvío que no
+existía. No revela si la cuenta existe ni si ya está verificada.
+
+⚠️ **LAS SERVER ACTIONS DE `auth` NO PASAN POR EL RATE LIMIT.** Llaman al
+Service directo, salteando el Controller, que es donde vive `consumeIpLimit`. El
+límite protege la API y **no protege la pantalla, que es el camino que usa todo
+el mundo**. Se cerró sólo lo que manda emails —reset y reenvío, con un límite
+POR CUENTA que cuenta los intentos exitosos, porque ahí el éxito ES el daño:
+inunda la casilla de un tercero y quema la reputación de envío—. **`ingresar` y
+`crearCuenta` siguen sin límite desde la pantalla**: la fuerza bruta de login por
+el navegador queda abierta y merece su propia pasada.
 
 **Refresh de tokens de MP**: barrido diario (BullMQ, 04:00) que renueva las
 conexiones que vencen dentro de 30 días. ⚠️ Mercado Pago **rota** el
@@ -673,9 +687,15 @@ que no haya drift entre el schema de Drizzle y las migraciones.
 las suyas. `categories.code` es UNIQUE y son un conjunto fijo, así que inventar
 una de test chocaba contra la fila real.
 
-**Desplegado en producción** en un VPS con Coolify (DEC-012), con HTTPS y
-migraciones aplicadas al arrancar el contenedor. Ver
+**Desplegado en producción** en **`offside.com.ar`**, en un VPS con Coolify
+(DEC-012), con HTTPS y migraciones aplicadas al arrancar el contenedor. Ver
 `offsideApp/docs-implementation/deployment-coolify.md`.
+
+⚠️ **El dominio propio reemplazó al `sslip.io` del principio (2026-09-02).** Eso
+obliga a mantener alineados `APP_URL`, `MERCADOPAGO_REDIRECT_URI` y la Redirect
+URI del panel de Mercado Pago —MP exige coincidencia **exacta** y, si no
+coincide, conectar un vendedor falla sin decir por qué—. `APP_URL` además
+construye los enlaces de los emails.
 
 Comandos (desde `offsideApp/`): `npm run dev`, `build`, `verify`
 (format + lint + typecheck + test), `test`, `docker:up`, `db:generate`,

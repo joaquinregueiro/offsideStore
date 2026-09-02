@@ -4,6 +4,7 @@ import {
   checkAccountLimit,
   clientIp,
   consume,
+  consumeAccountLimit,
   registerFailedAttempt,
   type RateLimitStore,
 } from './rate-limit';
@@ -138,6 +139,53 @@ describe('limite por cuenta', () => {
     await registerFailedAttempt(EMAIL, store);
 
     // El email es un dato personal y Redis no es su almacen: se guarda su HMAC.
+    expect(incr.mock.calls[0]?.[0]).not.toContain(EMAIL);
+  });
+});
+
+describe('limite por cuenta que SI consume (envio de emails)', () => {
+  const EMAIL = 'victima@offside.test';
+
+  beforeEach(() => {
+    process.env.DATABASE_URL ??= 'postgresql://unit:unit@localhost:5432/unit';
+    process.env.REDIS_URL ??= 'redis://localhost:6379';
+    process.env.AUTH_SESSION_SECRET ??= 'pepper-solo-para-tests';
+  });
+
+  it('⚠️ bloquea aunque TODOS los intentos sean exitosos', async () => {
+    // Es la diferencia con `checkAccountLimit`. Aca el intento exitoso ES el
+    // dano: cada uno manda un email real. Sin esto, el reenvio de verificacion
+    // inunda la casilla de un tercero.
+    const store = fakeStore();
+    const max = Number(process.env.AUTH_RATE_LIMIT_MAX_PER_ACCOUNT ?? 5);
+
+    for (let i = 0; i < max; i += 1) {
+      expect((await consumeAccountLimit('verify-resend', EMAIL, store)).allowed).toBe(true);
+    }
+
+    expect((await consumeAccountLimit('verify-resend', EMAIL, store)).allowed).toBe(false);
+  });
+
+  it('no comparte contador con el login ni entre scopes', async () => {
+    // Si compartieran clave, pedir reenvios dejaria a la victima sin poder
+    // iniciar sesion: un DoS contra su propia cuenta.
+    const store = fakeStore();
+    const max = Number(process.env.AUTH_RATE_LIMIT_MAX_PER_ACCOUNT ?? 5);
+
+    for (let i = 0; i < max + 1; i += 1) {
+      await consumeAccountLimit('verify-resend', EMAIL, store);
+    }
+
+    expect((await consumeAccountLimit('password-forgot', EMAIL, store)).allowed).toBe(true);
+    expect((await checkAccountLimit(EMAIL, store)).allowed).toBe(true);
+  });
+
+  it('no escribe el email en claro en la clave', async () => {
+    const store = fakeStore();
+    const incr = vi.spyOn(store, 'incr');
+
+    await consumeAccountLimit('verify-resend', EMAIL, store);
+
     expect(incr.mock.calls[0]?.[0]).not.toContain(EMAIL);
   });
 });

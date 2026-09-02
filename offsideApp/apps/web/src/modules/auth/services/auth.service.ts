@@ -211,6 +211,61 @@ export async function verifyEmail(token: string): Promise<PublicUser> {
 }
 
 /**
+ * Reenvia el email de verificacion.
+ *
+ * POR QUE EXISTE: sin esto, una cuenta cuyo email nunca llego queda MUERTA. No
+ * puede ingresar —BR-001 exige el email verificado— y no habia ningun camino
+ * para emitir un token nuevo: la unica salida era un UPDATE a mano en la base.
+ * Un email se pierde por motivos triviales y frecuentes (spam, un corte de SES,
+ * el job agotando sus reintentos), asi que no es un caso de borde.
+ *
+ * ⚠️ NO REVELA NADA POR LA RESPUESTA. Devuelve `null` tanto si el email no
+ * existe como si la cuenta YA esta verificada, y el Controller responde siempre
+ * lo mismo. Si distinguiera, seria un enumerador de cuentas —y ademas delataria
+ * cuales estan verificadas—. Mismo criterio que `requestPasswordReset`.
+ *
+ * ⚠️ EL TIEMPO SI SE DISTINGUE, y conviene saberlo: una cuenta valida hace un
+ * INSERT y encola un job, una inexistente corta en el SELECT. Con suficientes
+ * muestras la diferencia es medible. Se acota con el rate limit, no con trabajo
+ * ficticio equivalente como hace `login` con su hash de descarte.
+ *
+ * ⚠️ NO INVALIDA LOS TOKENS ANTERIORES, igual que el reset. Los tokens previos
+ * siguen sirviendo hasta vencer, y eso es lo deseable: alguien que pide un
+ * reenvio porque el primero "no llego" puede encontrarlo despues y usarlo.
+ * Todos son de un solo uso y vencen solos.
+ */
+export async function resendEmailVerification(email: string): Promise<string | null> {
+  const env = getEnv();
+  const user = await userRepo.findByEmail(email);
+  if (!user) return null;
+
+  // Ya verificada: no se reenvia nada. Mandar un email de verificacion a una
+  // cuenta verificada confunde, y responder distinto delataria su estado.
+  if (user.emailVerifiedAt !== null) return null;
+
+  // Una cuenta suspendida o expulsada no se reactiva verificando el email
+  // (BR-004 / DEC-021). Tampoco se le avisa por que.
+  if (user.status !== 'active') return null;
+
+  const token = generateToken();
+
+  await emailVerificationTokens.insert({
+    userId: user.id,
+    tokenHash: hashToken(token),
+    expiresAt: expiresInHours(env.AUTH_EMAIL_TOKEN_TTL_HOURS),
+  });
+
+  await enqueueEmail({
+    kind: 'email_verification',
+    to: user.email,
+    token,
+    hoursValid: env.AUTH_EMAIL_TOKEN_TTL_HOURS,
+  });
+
+  return token;
+}
+
+/**
  * Inicia la recuperacion de contrasena (BS-011).
  *
  * ⚠️ NO revela si el email existe: devuelve el token solo cuando hay usuario, y

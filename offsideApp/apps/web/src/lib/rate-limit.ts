@@ -140,6 +140,7 @@ export type RateLimitScope =
   | 'register'
   | 'password-forgot'
   | 'password-reset'
+  | 'verify-resend'
   | 'mp-connect'
   | 'mp-callback'
   | 'checkout'
@@ -188,6 +189,36 @@ export async function checkAccountLimit(
     console.error('[rate-limit] Redis no respondio, se deja pasar el intento:', error);
     return ALLOWED;
   }
+}
+
+/**
+ * Consume el limite POR CUENTA de un scope, contando TODOS los intentos.
+ *
+ * ⚠️ ES DISTINTO DE `checkAccountLimit`, y la diferencia importa. Aquel es una
+ * lectura pura sobre la clave de login, donde solo cuentan los FALLOS: un login
+ * legitimo no debe acercar a nadie a su propio bloqueo.
+ *
+ * Aca cuenta cada intento, tenga exito o no, porque el intento exitoso ES el
+ * dano: cada uno manda un email real a una persona real. Sin este limite, el
+ * reenvio de verificacion es una maquina de inundar la casilla de un tercero
+ * —basta con repetir el POST desde IPs distintas para saltear el limite por
+ * IP—, y ademas destruye la reputacion de envio ante el proveedor.
+ *
+ * La clave lleva el scope, asi que NO comparte contador con el login.
+ */
+export async function consumeAccountLimit(
+  scope: RateLimitScope,
+  email: string,
+  store: RateLimitStore = getRedisClient(),
+): Promise<RateLimitDecision> {
+  const { windowSeconds, maxPerAccount } = limits();
+
+  return consume(
+    store,
+    `rl:${scope}:account:${accountKeyPart(email)}`,
+    maxPerAccount,
+    windowSeconds,
+  );
 }
 
 /**

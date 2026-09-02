@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { rutaInternaSegura } from '@/lib/formato';
+import { consumeAccountLimit } from '@/lib/rate-limit';
 import { SESSION_COOKIE_NAME } from '@/lib/session-cookie';
 import { borrarSesion, guardarSesion } from '@/lib/session-cookie-actions';
 import { AuthError } from '@/modules/auth/auth.errors';
@@ -146,6 +147,13 @@ export async function pedirResetDePassword(
   try {
     const input = forgotPasswordSchema.parse({ email: texto(formData, 'email') });
 
+    // ⚠️ LIMITE POR CUENTA. Esta accion manda un email REAL a una direccion
+    // real, y las Server Actions NO pasan por el rate limit de los Route
+    // Handlers: sin esto, repetir el POST inunda la casilla de un tercero y
+    // quema la reputacion de envio del dominio.
+    const cuenta = await consumeAccountLimit('password-forgot', input.email);
+    if (!cuenta.allowed) return { error: 'Probá de nuevo en unos minutos.' };
+
     // ⚠️ El Service devuelve `null` si el email no existe y NO se distingue:
     // responder distinto convertiria esta pantalla en un enumerador de cuentas.
     await authService.requestPasswordReset(input.email);
@@ -154,6 +162,38 @@ export async function pedirResetDePassword(
   }
 
   redirect('/revisa-tu-email?motivo=reset');
+}
+
+/**
+ * Reenvia el email de verificacion.
+ *
+ * ⚠️ NO REDIRIGE Y NO DISTINGUE. Se queda en la pantalla y responde siempre
+ * lo mismo, exista la cuenta o no y este verificada o no: distinguir la
+ * convertiria en un enumerador de cuentas.
+ *
+ * Antes de esto, `/verificar-email` prometia "Ingresa y te mandamos otro" y no
+ * pasaba nada: no habia ningun camino para emitir un token nuevo.
+ */
+export async function reenviarVerificacion(
+  _estado: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  try {
+    const input = forgotPasswordSchema.parse({ email: texto(formData, 'email') });
+
+    // ⚠️ Mismo motivo que en el reset: cada llamada exitosa manda un email a
+    // una persona real, y esta accion no pasa por el limite del endpoint.
+    const cuenta = await consumeAccountLimit('verify-resend', input.email);
+    if (!cuenta.allowed) return { error: 'Probá de nuevo en unos minutos.' };
+
+    await authService.resendEmailVerification(input.email);
+  } catch (error) {
+    return { error: mensajeDeError(error) };
+  }
+
+  return {
+    ok: 'Si esa cuenta existe y todavía no está verificada, te mandamos un email. Revisá también el correo no deseado.',
+  };
 }
 
 export async function restablecerPassword(

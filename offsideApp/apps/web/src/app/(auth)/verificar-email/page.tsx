@@ -27,8 +27,8 @@ export default async function VerificarEmail({
           <p style={{ marginBottom: 24 }}>
             Te mandamos un enlace para confirmar tu dirección. Abrilo desde tu casilla.
           </p>
-          <BotonEnlace href="/" variante="secundario">
-            Ir al catálogo
+          <BotonEnlace href="/revisa-tu-email" variante="secundario">
+            No me llegó
           </BotonEnlace>
         </EstadoVacio>
       </main>
@@ -43,10 +43,16 @@ export default async function VerificarEmail({
     return (
       <main className={estilos.pagina}>
         <EstadoVacio titulo="El enlace no sirve">
+          {/*
+            ⚠️ ESTE TEXTO DECIA "Ingresá y te mandamos otro" Y ERA FALSO: no
+            existia ningun reenvio, y quien llegaba acá con un token vencido no
+            tenia salida —ingresar esta bloqueado sin verificar (BR-001)—.
+            Ahora manda al reenvio, que si existe.
+          */}
           <p style={{ marginBottom: 24 }}>
-            Puede que ya lo hayas usado o que haya vencido. Ingresá y te mandamos otro.
+            Puede que ya lo hayas usado o que haya vencido. Pedinos uno nuevo.
           </p>
-          <BotonEnlace href="/ingresar">Ingresar</BotonEnlace>
+          <BotonEnlace href="/revisa-tu-email">Reenviar el email</BotonEnlace>
         </EstadoVacio>
       </main>
     );

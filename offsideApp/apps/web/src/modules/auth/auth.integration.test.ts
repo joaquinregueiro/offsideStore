@@ -209,6 +209,89 @@ describe('email de verificacion (BR-001)', () => {
   });
 });
 
+describe('reenvio del email de verificacion', () => {
+  it('emite un token NUEVO y lo encola', async () => {
+    // Sin reenvio, una cuenta cuyo email no llego queda MUERTA: no puede
+    // ingresar (BR-001) y no habia forma de emitir otro token.
+    const { QUEUE_NAMES, getQueue } = await import('@offside/jobs');
+    const cola = getQueue<EmailJobData>(QUEUE_NAMES.NOTIFICATIONS_SEND);
+
+    const { emailVerificationToken: primero } = await authService.register({
+      email: email('reenvio'),
+      password: PASSWORD,
+      acceptedTerms: true,
+    });
+    await cola.drain();
+
+    const segundo = await authService.resendEmailVerification(email('reenvio'));
+
+    expect(segundo).not.toBeNull();
+    expect(segundo).not.toBe(primero);
+
+    const jobs = await cola.getJobs(['waiting', 'delayed', 'active']);
+    const job = jobs.find((j) => j.data.to === email('reenvio'));
+
+    expect(job?.data.kind).toBe('email_verification');
+    expect(job?.data.token).toBe(segundo);
+
+    await cola.drain();
+  });
+
+  it('el token reenviado verifica la cuenta', async () => {
+    await authService.register({
+      email: email('reenvio-sirve'),
+      password: PASSWORD,
+      acceptedTerms: true,
+    });
+
+    const token = await authService.resendEmailVerification(email('reenvio-sirve'));
+    const user = await authService.verifyEmail(token!);
+
+    expect(user.emailVerified).toBe(true);
+  });
+
+  it('el token ORIGINAL sigue sirviendo despues de reenviar', async () => {
+    // Deliberado: quien pidio otro porque "no llego" puede encontrar el primero
+    // despues. Los dos son de un solo uso y vencen solos.
+    const { emailVerificationToken: primero } = await authService.register({
+      email: email('reenvio-viejo'),
+      password: PASSWORD,
+      acceptedTerms: true,
+    });
+
+    await authService.resendEmailVerification(email('reenvio-viejo'));
+
+    const user = await authService.verifyEmail(primero);
+    expect(user.emailVerified).toBe(true);
+  });
+
+  it('⚠️ NO reenvia a una cuenta YA verificada, y no lo dice', async () => {
+    // Responder distinto delataria cuales cuentas estan sin verificar.
+    const { QUEUE_NAMES, getQueue } = await import('@offside/jobs');
+    const cola = getQueue<EmailJobData>(QUEUE_NAMES.NOTIFICATIONS_SEND);
+
+    const { emailVerificationToken } = await authService.register({
+      email: email('reenvio-verificada'),
+      password: PASSWORD,
+      acceptedTerms: true,
+    });
+    await authService.verifyEmail(emailVerificationToken);
+    await cola.drain();
+
+    expect(await authService.resendEmailVerification(email('reenvio-verificada'))).toBeNull();
+    expect(await cola.getJobs(['waiting', 'delayed', 'active'])).toHaveLength(0);
+  });
+
+  it('⚠️ NO encola nada para un email que no existe', async () => {
+    const { QUEUE_NAMES, getQueue } = await import('@offside/jobs');
+    const cola = getQueue<EmailJobData>(QUEUE_NAMES.NOTIFICATIONS_SEND);
+    await cola.drain();
+
+    expect(await authService.resendEmailVerification(email('jamas-existio'))).toBeNull();
+    expect(await cola.getJobs(['waiting', 'delayed', 'active'])).toHaveLength(0);
+  });
+});
+
 describe('verificacion de email', () => {
   it('marca el email como verificado', async () => {
     const { emailVerificationToken } = await authService.register({

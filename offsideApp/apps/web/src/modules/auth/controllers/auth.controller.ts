@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth-guard';
 import { handleError, ok, readJson } from '@/lib/http';
 import {
   checkAccountLimit,
+  consumeAccountLimit,
   consumeIpLimit,
   registerFailedAttempt,
   type RateLimitScope,
@@ -123,6 +124,50 @@ export async function verifyEmail(request: Request): Promise<NextResponse> {
   try {
     const { token } = verifyEmailSchema.parse(await readJson(request));
     return ok({ user: await authService.verifyEmail(token) });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+/**
+ * Reenvio del email de verificacion.
+ *
+ * ⚠️ LA RESPUESTA ES SIEMPRE LA MISMA: exista o no el email, este verificado o
+ * no. Distinguir convertiria el endpoint en un enumerador de cuentas y, peor,
+ * revelaria cuales estan sin verificar.
+ *
+ * ⚠️ LO QUE NO SE IGUALA ES EL TIEMPO. Una cuenta que existe y no esta
+ * verificada hace un INSERT y encola un job; una inexistente corta en el
+ * SELECT. La diferencia es medible con suficientes muestras. Es la misma
+ * exposicion que ya tiene `requestPasswordReset` y se acota por el mismo lado:
+ * el rate limit. Igualarla exigiria trabajo ficticio equivalente, como el hash
+ * de descarte del login.
+ *
+ * ⚠️ DOBLE LIMITE, Y EL DE CUENTA ES EL QUE IMPORTA. Cada llamada exitosa
+ * manda un email REAL a una persona real, asi que el limite por IP no alcanza:
+ * repitiendo el POST desde IPs distintas se inunda la casilla de un tercero y
+ * se quema la reputacion de envio del dominio. Por eso se consume tambien el
+ * cupo POR CUENTA, contando todos los intentos y no solo los fallidos.
+ *
+ * El limite por cuenta va DESPUES de validar el cuerpo: sin un email valido no
+ * hay cuenta contra la cual contar.
+ *
+ * Se reusa `forgotPasswordSchema` porque el cuerpo es identico —un email— y son
+ * la misma regla de validacion. Duplicarlo garantizaria que se separen.
+ */
+export async function resendVerification(request: Request): Promise<NextResponse> {
+  try {
+    await enforceIpLimit(request, 'verify-resend');
+    const { email } = forgotPasswordSchema.parse(await readJson(request));
+
+    const cuenta = await consumeAccountLimit('verify-resend', email);
+    if (!cuenta.allowed) throw errors.rateLimited(cuenta.retryAfterSeconds);
+    const token = await authService.resendEmailVerification(email);
+
+    return ok({
+      message: 'Si esa cuenta existe y todavia no esta verificada, te mandamos un email',
+      ...(token ? exposeTokenInDev(token) : {}),
+    });
   } catch (error) {
     return handleError(error);
   }

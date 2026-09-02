@@ -41,7 +41,18 @@ MERCADOPAGO_CLIENT_ID=<APP_ID>
 MERCADOPAGO_CLIENT_SECRET=<secreto>
 MERCADOPAGO_REDIRECT_URI=https://<dominio>/api/sellers/mercadopago/callback
 MERCADOPAGO_WEBHOOK_SECRET=<secreto del panel de MP>
+AWS_REGION=<region de SES, ej. us-east-1>
+AWS_ACCESS_KEY_ID=<del usuario IAM con ses:SendEmail>
+AWS_SECRET_ACCESS_KEY=<idem>
+EMAIL_FROM_ADDRESS=<casilla del dominio verificado en SES>
+EMAIL_FROM_NAME=Offside Store
 ```
+
+⚠️ **Sin las cuatro variables de SES, en produccion el envio de emails se
+rompe a proposito** y nadie puede completar un alta: el token de verificacion se
+genera pero no se entrega, y BR-001 exige el email verificado para operar. No se
+cae al adaptador de log porque eso escribiria tokens en el log del servidor. El
+fallo es ruidoso y el job se reintenta, pero el usuario no recibe nada.
 
 ⚠️ `TOKEN_ENCRYPTION_KEY` debe ser **base64 de 32 bytes**. Una clave hex de 64
 caracteres decodifica a 48 bytes y el código la rechaza al arrancar.
