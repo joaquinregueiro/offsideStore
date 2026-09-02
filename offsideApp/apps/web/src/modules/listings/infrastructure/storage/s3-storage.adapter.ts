@@ -1,0 +1,116 @@
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getEnv, requireEnv } from '@offside/config';
+
+import {
+  StorageError,
+  type PutObjectInput,
+  type StoragePort,
+  type StoredObject,
+} from './storage.port';
+
+/**
+ * Adaptador de storage S3-compatible. Hoy apunta a **Cloudflare R2**.
+ *
+ * UNICO lugar del sistema que conoce S3. No sabe que es una publicacion ni un
+ * vendedor: recibe bytes y una clave.
+ *
+ * ⚠️ `forcePathStyle: true`. R2 no soporta el estilo `bucket.host/...` que usa
+ * S3 por defecto; espera `host/bucket/...`. Sin esto, cada subida falla con un
+ * error de DNS que no dice nada sobre la causa real.
+ *
+ * ⚠️ NO SE FIRMA LA LECTURA. Las fotos de una publicacion son publicas por
+ * definicion —estan en la vitrina—, asi que se sirven desde `S3_PUBLIC_URL` sin
+ * credenciales. Firmar cada lectura obligaria a que el servidor intervenga en
+ * cada imagen de cada visita, que es exactamente lo que un CDN viene a evitar.
+ */
+
+let client: S3Client | null = null;
+
+/** Se construye una sola vez: el cliente mantiene su pool de conexiones. */
+function getClient(): S3Client {
+  if (client !== null) return client;
+
+  const env = getEnv();
+
+  client = new S3Client({
+    endpoint: requireEnv(env, 'S3_ENDPOINT'),
+    // R2 ignora la region pero el SDK exige una.
+    region: env.S3_REGION ?? 'auto',
+    credentials: {
+      accessKeyId: requireEnv(env, 'S3_ACCESS_KEY'),
+      secretAccessKey: requireEnv(env, 'S3_SECRET_KEY'),
+    },
+    forcePathStyle: true,
+  });
+
+  return client;
+}
+
+/** Para tests: fuerza reconstruir el cliente tras cambiar el entorno. */
+export function resetS3Client(): void {
+  client = null;
+}
+
+/** URL publica de una clave. Sin barra doble aunque la base la traiga. */
+export function publicUrlFor(key: string): string {
+  const base = requireEnv(getEnv(), 'S3_PUBLIC_URL').replace(/\/$/, '');
+
+  return `${base}/${key}`;
+}
+
+export function createS3Storage(): StoragePort {
+  return {
+    name: 's3',
+
+    async put(input: PutObjectInput): Promise<StoredObject> {
+      const env = getEnv();
+
+      try {
+        await getClient().send(
+          new PutObjectCommand({
+            Bucket: requireEnv(env, 'S3_BUCKET'),
+            Key: input.key,
+            Body: input.body,
+            ContentType: input.contentType,
+            /**
+             * ⚠️ SEGURIDAD, NO OPTIMIZACION. `Content-Disposition: inline` con
+             * un `Content-Type` de imagen fijado por NOSOTROS —nunca el que
+             * declaro el cliente— impide que el navegador interprete el archivo
+             * como otra cosa. Combinado con no aceptar SVG, cierra el vector de
+             * XSS almacenado.
+             */
+            ContentDisposition: 'inline',
+            // Las fotos no cambian: la clave lleva un hash, asi que una URL
+            // siempre devuelve el mismo contenido y se puede cachear para
+            // siempre.
+            CacheControl: 'public, max-age=31536000, immutable',
+          }),
+        );
+      } catch (error) {
+        // Se propaga la CATEGORIA del fallo y el nombre del error del SDK.
+        // Nunca el contenido del archivo ni las credenciales.
+        const nombre = error instanceof Error ? error.name : 'desconocido';
+
+        throw new StorageError('rejected', `El storage rechazo la subida (${nombre})`);
+      }
+
+      return {
+        key: input.key,
+        url: publicUrlFor(input.key),
+        sizeBytes: input.body.byteLength,
+      };
+    },
+
+    async delete(key: string): Promise<void> {
+      try {
+        await getClient().send(
+          new DeleteObjectCommand({ Bucket: requireEnv(getEnv(), 'S3_BUCKET'), Key: key }),
+        );
+      } catch (error) {
+        const nombre = error instanceof Error ? error.name : 'desconocido';
+
+        throw new StorageError('rejected', `El storage rechazo el borrado (${nombre})`);
+      }
+    },
+  };
+}

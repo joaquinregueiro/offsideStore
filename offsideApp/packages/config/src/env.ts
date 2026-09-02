@@ -34,12 +34,29 @@ export const envSchema = z.object({
     'REDIS_URL debe ser una connection string de Redis',
   ),
 
-  // --- S3 (modulo de archivos: no implementado) ---
+  // --- Storage de imagenes, S3 compatible (DEC-012 / OQ-I3) ---
+  // Se exigen con `requireEnv()` en el borde del adaptador, no aca: sin ellas
+  // el resto del sistema tiene que arrancar igual, y fuera de produccion se usa
+  // el adaptador local.
+  //
+  // ⚠️ El proveedor elegido es Cloudflare R2 (owner, 2026-09-02), que habla el
+  // protocolo de S3. Las variables se llaman S3_* y no R2_* a proposito:
+  // nombran el PROTOCOLO, que es lo que el codigo conoce, no el proveedor.
   S3_ENDPOINT: z.string().optional(),
+  /** R2 usa `auto`; el SDK exige alguna region aunque no signifique nada. */
   S3_REGION: z.string().optional(),
   S3_BUCKET: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
+  /**
+   * Base publica desde la que el navegador LEE las imagenes.
+   *
+   * ⚠️ SE SEPARA DEL ENDPOINT A PROPOSITO. `S3_ENDPOINT` es por donde se
+   * ESCRIBE, con credenciales y sin exponer. Esta es el dominio publico o el
+   * CDN. Confundirlos obligaria a exponer el endpoint de escritura, o a firmar
+   * cada lectura de cada foto de la vitrina.
+   */
+  S3_PUBLIC_URL: z.string().url().optional(),
 
   // --- Mercado Pago ---
   // `CLIENT_ID`, `CLIENT_SECRET` y `REDIRECT_URI` los usa la conexion OAuth de

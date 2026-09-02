@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1125.0",
     "@aws-sdk/client-sesv2": "^3.1118.0",
     "@node-rs/argon2": "^2.1.0",
     "@offside/config": "*",
@@ -18,7 +19,8 @@
     "@offside/utils": "*",
     "next": "^16.3.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
