@@ -623,14 +623,31 @@ cuyo email no llegaba quedaba **muerta** —no podía ingresar por BR-001 y no
 había forma de emitir otro token—, y la pantalla prometía un reenvío que no
 existía. No revela si la cuenta existe ni si ya está verificada.
 
-⚠️ **LAS SERVER ACTIONS DE `auth` NO PASAN POR EL RATE LIMIT.** Llaman al
-Service directo, salteando el Controller, que es donde vive `consumeIpLimit`. El
-límite protege la API y **no protege la pantalla, que es el camino que usa todo
-el mundo**. Se cerró sólo lo que manda emails —reset y reenvío, con un límite
-POR CUENTA que cuenta los intentos exitosos, porque ahí el éxito ES el daño:
-inunda la casilla de un tercero y quema la reputación de envío—. **`ingresar` y
-`crearCuenta` siguen sin límite desde la pantalla**: la fuerza bruta de login por
-el navegador queda abierta y merece su propia pasada.
+**Rate limiting — cerrado en las Server Actions de `auth` (2026-09-02)**: el
+limitador vivía **sólo en los Controllers**, y las Server Actions llaman al
+Service directo. O sea que `POST /api/auth/login` estaba limitado y **el
+formulario de `/ingresar` no**: la puerta protegida era la que casi nadie usa.
+Eso dejaba abiertos el credential stuffing y, peor, el agotamiento de recursos
+—argon2id usa ~19 MB por intento a propósito, así que sin techo cada intento
+fallido cuesta memoria del servidor y **no hace falta acertar una sola password
+para voltear el sitio**—.
+
+`lib/rate-limit-actions.ts` reusa las MISMAS funciones y por lo tanto las mismas
+claves de Redis: si contaran aparte, un atacante bloqueado por un camino
+seguiría libre por el otro. Dos criterios opuestos y los dos correctos: en login
+el cupo por cuenta lo consumen **sólo los fallos** —si no, mandar cinco intentos
+con el email ajeno dejaría a esa persona afuera de su cuenta—; en los envíos de
+email lo consumen **todos**, porque ahí el intento exitoso ES el daño.
+Detalle en `rate-limiting.md`.
+
+⚠️ Costo aceptado: cinco fallos contra una cuenta la bloquean por la ventana,
+así que **un atacante puede dejar a alguien afuera**. Es inherente a cualquier
+límite por cuenta y ya estaba en la API. La salida cuando moleste no es subir el
+número: es pedir prueba de humanidad tras los primeros fallos.
+
+⚠️ **Las demás Server Actions siguen sin límite** —publicar, comprar, checkout,
+back-office—. Es menos grave porque todas exigen sesión verificada, pero es el
+mismo patrón y conviene cerrarlo.
 
 **Refresh de tokens de MP**: barrido diario (BullMQ, 04:00) que renueva las
 conexiones que vencen dentro de 30 días. ⚠️ Mercado Pago **rota** el

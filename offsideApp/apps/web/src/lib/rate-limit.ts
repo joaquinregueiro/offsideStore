@@ -159,8 +159,28 @@ export async function consumeIpLimit(
   scope: RateLimitScope,
   store: RateLimitStore = getRedisClient(),
 ): Promise<RateLimitDecision> {
+  return consumeIpLimitFor(clientIp(request), scope, store);
+}
+
+/**
+ * Igual que `consumeIpLimit`, pero recibe la IP ya resuelta.
+ *
+ * Existe porque una **Server Action no tiene `Request`**: lee las cabeceras con
+ * `headers()` de `next/headers`. Son dos formas de averiguar la MISMA IP, y el
+ * conteo tiene que caer en la MISMA clave de Redis —si no, un atacante bloqueado
+ * por la API seguiria libre por la pantalla, y al reves—.
+ *
+ * `next/headers` no se importa aca a proposito: este modulo lo usan tambien los
+ * Route Handlers, y esa dependencia solo tiene sentido del lado de las
+ * acciones. El helper que la usa vive en `rate-limit-actions.ts`.
+ */
+export async function consumeIpLimitFor(
+  ip: string,
+  scope: RateLimitScope,
+  store: RateLimitStore = getRedisClient(),
+): Promise<RateLimitDecision> {
   const { windowSeconds, maxPerIp } = limits();
-  return consume(store, `rl:${scope}:ip:${clientIp(request)}`, maxPerIp, windowSeconds);
+  return consume(store, `rl:${scope}:ip:${ip}`, maxPerIp, windowSeconds);
 }
 
 /**

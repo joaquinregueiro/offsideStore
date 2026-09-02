@@ -5,6 +5,8 @@ import {
   clientIp,
   consume,
   consumeAccountLimit,
+  consumeIpLimit,
+  consumeIpLimitFor,
   registerFailedAttempt,
   type RateLimitStore,
 } from './rate-limit';
@@ -187,6 +189,63 @@ describe('limite por cuenta que SI consume (envio de emails)', () => {
     await consumeAccountLimit('verify-resend', EMAIL, store);
 
     expect(incr.mock.calls[0]?.[0]).not.toContain(EMAIL);
+  });
+});
+
+describe('el limite por IP es el MISMO para la API y para las Server Actions', () => {
+  const IP = '203.0.113.7';
+
+  beforeEach(() => {
+    process.env.DATABASE_URL ??= 'postgresql://unit:unit@localhost:5432/unit';
+    process.env.REDIS_URL ??= 'redis://localhost:6379';
+    process.env.AUTH_SESSION_SECRET ??= 'pepper-solo-para-tests';
+  });
+
+  it('⚠️ comparten la clave de Redis', async () => {
+    // ES EL INVARIANTE QUE HACE QUE EL LIMITE VALGA ALGO. Un Route Handler
+    // resuelve la IP desde `Request` y una Server Action desde `headers()`. Si
+    // cada camino contara en su propia clave, un atacante bloqueado por la API
+    // seguiria libre por la pantalla —y al reves—, que es exactamente el
+    // agujero que este trabajo vino a cerrar.
+    const store = fakeStore();
+    const incr = vi.spyOn(store, 'incr');
+
+    const request = new Request('https://offside.com.ar/api/auth/login', {
+      headers: { 'x-forwarded-for': IP },
+    });
+
+    await consumeIpLimit(request, 'login', store);
+    await consumeIpLimitFor(IP, 'login', store);
+
+    expect(incr.mock.calls[0]?.[0]).toBe(incr.mock.calls[1]?.[0]);
+  });
+
+  it('el conteo se acumula entre los dos caminos', async () => {
+    const store = fakeStore();
+    const max = Number(process.env.AUTH_RATE_LIMIT_MAX_PER_IP ?? 20);
+
+    const request = new Request('https://offside.com.ar/api/auth/login', {
+      headers: { 'x-forwarded-for': IP },
+    });
+
+    // Se gasta el cupo entero por la API...
+    for (let i = 0; i < max; i += 1) {
+      expect((await consumeIpLimit(request, 'login', store)).allowed).toBe(true);
+    }
+
+    // ...y la pantalla ya no puede intentar.
+    expect((await consumeIpLimitFor(IP, 'login', store)).allowed).toBe(false);
+  });
+
+  it('scopes distintos no se pisan', async () => {
+    const store = fakeStore();
+    const max = Number(process.env.AUTH_RATE_LIMIT_MAX_PER_IP ?? 20);
+
+    for (let i = 0; i < max + 1; i += 1) {
+      await consumeIpLimitFor(IP, 'login', store);
+    }
+
+    expect((await consumeIpLimitFor(IP, 'register', store)).allowed).toBe(true);
   });
 });
 

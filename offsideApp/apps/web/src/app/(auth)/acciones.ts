@@ -5,7 +5,12 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { rutaInternaSegura } from '@/lib/formato';
-import { consumeAccountLimit } from '@/lib/rate-limit';
+import {
+  exigirLimiteDeEnvio,
+  exigirLimitePorCuenta,
+  exigirLimitePorIp,
+  registrarLoginFallido,
+} from '@/lib/rate-limit-actions';
 import { SESSION_COOKIE_NAME } from '@/lib/session-cookie';
 import { borrarSesion, guardarSesion } from '@/lib/session-cookie-actions';
 import { AuthError } from '@/modules/auth/auth.errors';
@@ -89,6 +94,10 @@ export async function crearCuenta(
   formData: FormData,
 ): Promise<EstadoFormulario> {
   try {
+    // El limite va ANTES de parsear y de tocar la base: el sentido de un rate
+    // limit es no gastar recursos en el intento numero mil.
+    await exigirLimitePorIp('register');
+
     const input = registerSchema.parse({
       email: texto(formData, 'email'),
       password: texto(formData, 'password'),
@@ -112,13 +121,32 @@ export async function ingresar(
   const destino = rutaInternaSegura(texto(formData, 'next'));
 
   try {
+    await exigirLimitePorIp('login');
+
     const input = loginSchema.parse({
       email: texto(formData, 'email'),
       password: texto(formData, 'password'),
     });
 
-    const { sessionToken, expiresAt } = await authService.login(input);
-    await guardarSesion(sessionToken, expiresAt);
+    // ⚠️ LIMITE POR CUENTA: lectura pura, NO consume cupo. Frena la fuerza
+    // bruta distribuida, donde cada IP prueba pocas veces contra la misma
+    // cuenta y por eso el limite por IP no la ve.
+    await exigirLimitePorCuenta(input.email);
+
+    let sesion;
+    try {
+      sesion = await authService.login(input);
+    } catch (error) {
+      // ⚠️ SOLO LOS FALLOS CONSUMEN EL CUPO DE LA CUENTA. Si lo consumiera
+      // cualquier intento, mandar cinco con el email de otra persona la dejaria
+      // afuera de su propia cuenta: la proteccion seria el ataque.
+      if (error instanceof AuthError && error.code === 'INVALID_CREDENTIALS') {
+        await registrarLoginFallido(input.email);
+      }
+      throw error;
+    }
+
+    await guardarSesion(sesion.sessionToken, sesion.expiresAt);
   } catch (error) {
     return { error: mensajeDeError(error) };
   }
@@ -145,14 +173,14 @@ export async function pedirResetDePassword(
   formData: FormData,
 ): Promise<EstadoFormulario> {
   try {
+    await exigirLimitePorIp('password-forgot');
     const input = forgotPasswordSchema.parse({ email: texto(formData, 'email') });
 
-    // ⚠️ LIMITE POR CUENTA. Esta accion manda un email REAL a una direccion
-    // real, y las Server Actions NO pasan por el rate limit de los Route
-    // Handlers: sin esto, repetir el POST inunda la casilla de un tercero y
+    // ⚠️ DOS LIMITES. Por IP, contra el abuso general; y por CUENTA, porque
+    // esta accion manda un email REAL a una direccion real: sin el segundo,
+    // repetir el POST desde IPs distintas inunda la casilla de un tercero y
     // quema la reputacion de envio del dominio.
-    const cuenta = await consumeAccountLimit('password-forgot', input.email);
-    if (!cuenta.allowed) return { error: 'Probá de nuevo en unos minutos.' };
+    await exigirLimiteDeEnvio('password-forgot', input.email);
 
     // ⚠️ El Service devuelve `null` si el email no existe y NO se distingue:
     // responder distinto convertiria esta pantalla en un enumerador de cuentas.
@@ -179,12 +207,12 @@ export async function reenviarVerificacion(
   formData: FormData,
 ): Promise<EstadoFormulario> {
   try {
+    await exigirLimitePorIp('verify-resend');
     const input = forgotPasswordSchema.parse({ email: texto(formData, 'email') });
 
-    // ⚠️ Mismo motivo que en el reset: cada llamada exitosa manda un email a
-    // una persona real, y esta accion no pasa por el limite del endpoint.
-    const cuenta = await consumeAccountLimit('verify-resend', input.email);
-    if (!cuenta.allowed) return { error: 'Probá de nuevo en unos minutos.' };
+    // Mismo motivo que en el reset: cada llamada exitosa manda un email a una
+    // persona real.
+    await exigirLimiteDeEnvio('verify-resend', input.email);
 
     await authService.resendEmailVerification(input.email);
   } catch (error) {
@@ -201,6 +229,8 @@ export async function restablecerPassword(
   formData: FormData,
 ): Promise<EstadoFormulario> {
   try {
+    await exigirLimitePorIp('password-reset');
+
     const input = resetPasswordSchema.parse({
       token: texto(formData, 'token'),
       password: texto(formData, 'password'),
