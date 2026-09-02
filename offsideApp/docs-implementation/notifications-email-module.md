@@ -198,14 +198,42 @@ ellas el resto del sistema tiene que poder levantar igual.
 
 ## Puesta en marcha de SES
 
-**Estado al 2026-09-02: dominio `offside.com.ar` en producción y SES
-configurada por el owner.** Falta la única prueba que vale: un alta real con una
-dirección real. Ninguna credencial pasa por el repositorio.
+**✅ FUNCIONANDO EN PRODUCCIÓN (2026-09-02).** Dominio `offside.com.ar`, SES
+configurada, y **emails entregados de verdad**. Con esto cae el último bloqueo
+del alta: hasta hoy nadie podía completar un registro sin un `UPDATE` a mano.
+Ninguna credencial pasó por el repositorio.
 
-`APP_URL` quedó apuntando al dominio nuevo —verificado contra producción—, lo
-que importa porque **los enlaces de los emails se construyen con ella**: si
-hubiera quedado en `sslip.io`, cada verificación habría llegado apuntando al
-host viejo.
+`APP_URL` apunta al dominio nuevo —verificado contra producción—, lo que importa
+porque **los enlaces de los emails se construyen con ella**: si hubiera quedado
+en `sslip.io`, cada verificación habría llegado apuntando al host viejo.
+
+### El error que hubo, y por qué se diagnosticó rápido
+
+El primer intento falló con `AccessDeniedException`, cinco veces por job con
+backoff. **No era el dominio, ni DKIM, ni el sandbox**: era IAM —el usuario no
+tenía `ses:SendEmail`—. Crear el usuario y sus access keys no otorga nada por
+sí solo.
+
+Se resolvió adjuntando una política mínima y **reiniciando el contenedor**: el
+cliente de SES se construye una sola vez y se cachea, así que no toma
+credenciales nuevas en caliente.
+
+⚠️ Vale la pena registrar por qué se diagnosticó en un paso: el adaptador
+propaga el **nombre** del error de AWS y nunca el cuerpo del mensaje. Ese nombre
+solo alcanzó, sin filtrar un solo token al log.
+
+⚠️ `AccessDeniedException` es un fallo **permanente**: reintentarlo cinco veces
+no podía cambiar nada. Hoy la cola trata igual a un fallo transitorio —SES
+caído— que a uno de configuración. Distinguirlos es una mejora pendiente.
+
+### Verificado contra producción
+
+- El adaptador elegido es **SES**, no el de log.
+- El **límite por cuenta** del reenvío: cinco llamadas pasan, la sexta devuelve
+  `429`. Se comprobó con una dirección inexistente, así que no se le mandó un
+  solo email a nadie.
+- Las respuestas **no traen `devToken`**: en producción una cuenta existente y
+  una inexistente responden idéntico, que es lo que impide enumerar cuentas.
 
 Los pasos de abajo quedan como referencia de lo que se hizo y de lo que hay que
 rehacer si alguna vez se cambia de dominio o de cuenta.

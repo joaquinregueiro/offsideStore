@@ -609,8 +609,10 @@ el vendedor **se aprueba solo**. La decisión quedó registrada en `docs/` como
 contra ARCA: no prueba titularidad por sí solo. Detalle en
 `seller-approval-module.md`.
 
-**Emails**: verificación de cuenta, **reenvío de la verificación** y reset de
-contraseña se envían por **Amazon SES** detrás de un puerto, encolados en BullMQ.
+**Emails — ✅ ENTREGANDO EN PRODUCCIÓN (2026-09-02)**: verificación de cuenta,
+**reenvío de la verificación** y reset de contraseña se envían por **Amazon SES**
+detrás de un puerto, encolados en BullMQ. **Con esto cae el último bloqueo del
+alta**: hasta ahora nadie podía completar un registro sin un `UPDATE` a mano.
 El worker corre en el proceso web vía `instrumentation.ts` (`tech-stack.md`
 §5), así que **no hace falta un segundo servicio**. ⚠️ El proveedor NO está en
 DEC-012: es una decisión de implementación del owner, y por eso vive detrás de
