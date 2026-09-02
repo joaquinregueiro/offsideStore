@@ -4,8 +4,8 @@
 > Ámbito: **todo el desarrollo de Offside Store**.
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
 > Estado: marketplace operable de punta a punta —registro, publicación, compra y
-> cobro con Mercado Pago— con frontend propio. Falta el panel de admin (ver §19).
-> Última actualización: 2026-09-01.
+> cobro con Mercado Pago— con frontend propio, incluido el back-office (ver §19).
+> Última actualización: 2026-09-02.
 
 ---
 
@@ -515,10 +515,11 @@ trabajar en el repositorio equivocado.
 
 ---
 
-## 19. Estado de la implementación (2026-09-01)
+## 19. Estado de la implementación (2026-09-02)
 
 **Marketplace operable de punta a punta: alguien puede registrarse, publicar,
-comprar y cobrar sin tocar la API a mano.** Desplegado en producción.
+comprar y cobrar —y Offside administrarlo— sin tocar la API a mano.**
+Desplegado en producción.
 
 > Esta sección venía desactualizada: afirmaba "schema de Drizzle vacío" y "sin
 > funcionalidades de negocio" cuando el ERD ya estaba migrado y auth funcionaba.
@@ -529,7 +530,7 @@ Qué existe en `offsideApp/`:
 
 |                                    |                                                                                 |
 | ---------------------------------- | ------------------------------------------------------------------------------- |
-| `apps/web`                         | Next.js 16 + React 19. **18 pantallas** y **22 rutas de API**                   |
+| `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                   |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
 | `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 5 migraciones aplicadas**  |
 | `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
@@ -585,7 +586,7 @@ migración `0003` y se cambia por `PUT /api/admin/settings/commission`, protegid
 por la capacidad `system_config:manage` (DEC-023 ✅) — sin redeploy y sin SQL.
 `orders` la lee UNA vez al crear la orden y la congela en el snapshot (DEC-030);
 `payments` nunca la consulta. `updatedBy` sale de la sesión, nunca del cuerpo.
-Sin panel (frontend), pero la autorización está resuelta.
+Se opera desde `/admin/comision`.
 
 **Stock anti-overselling**: se descuenta al aprobarse el pago (MF-022 /
 BR-022), con revalidación en el checkout (UC-MF-3) y descuento **atómico** en la
@@ -622,10 +623,10 @@ simultáneas dejarían la conexión sin poder renovarse nunca más. Un rechazo l
 pasa a `expired`; una caída de red la deja intacta. Sin migraciones:
 `last_refreshed_at` ya estaba en el ERD. **No probado contra MP real.**
 
-**Frontend (2026-09-01)**: Server Components + Server Actions, CSS Modules y el
+**Frontend (2026-09-02)**: Server Components + Server Actions, CSS Modules y el
 sistema visual de `design/` (Big Noodle + Inter, Verde Cancha). **Los formularios
 funcionan sin JavaScript**: sin JS el navegador hace el POST nativo; con JS,
-`useActionState` muestra el error sin recargar. Cuatro grupos de rutas:
+`useActionState` muestra el error sin recargar. Cinco grupos de rutas:
 
 | Grupo        | Pantallas                                                                     |
 | ------------ | ----------------------------------------------------------------------------- |
@@ -633,6 +634,7 @@ funcionan sin JavaScript**: sin JS el navegador hace el POST nativo; con JS,
 | `(auth)`     | registro, ingreso, verificación de email, olvidé/restablecer contraseña       |
 | `(compra)`   | confirmar compra, checkout/pago y mis compras                                 |
 | `(vendedor)` | panel, alta, identidad fiscal, Mercado Pago, publicaciones, publicar y ventas |
+| `(admin)`    | índice del back-office, comisión y consola de pagos/reembolsos                |
 
 ⚠️ **El retorno de Mercado Pago NO confirma el pago** (BS-072 / DEC-028): con
 `?status=success` y la orden todavía en `PENDING_PAYMENT`, el checkout dice
@@ -646,11 +648,23 @@ y sin capacidad administrativa se devuelve **404, no 403** (el back-office no
 debería existir para quien no es admin). Cada Server Action revalida por su
 cuenta: son alcanzables por POST directo sin pasar por la pantalla.
 
+**Back-office (DEC-023)**: el índice muestra sólo las capacidades del rol, y eso
+es **cortesía, no seguridad** — cada pantalla y cada Server Action vuelven a
+exigir la suya contra el mismo mapa de `lib/permissions.ts`. Verificado por rol:
+`ADMIN` entra a todo, `FINANCE` opera pagos y recibe 404 en comisión, `MODERATOR`
+recibe 404 en todo, y un usuario común contra la API recibe 403.
+⚠️ La consola de reembolsos **avisa en pantalla** que nunca se ejecutaron contra
+Mercado Pago real y que la deuda por saldo insuficiente no se registra.
+⚠️ La consola **no lista** todos los pagos: se busca por número de orden. Un
+listado global de pagos de la plataforma sería una fuga esperando.
+
 **NO implementado:** webhook `mp-connect`, **fotos de publicaciones** (no hay
-S3), búsqueda, carrito, envíos, disputas, reviews, reputación, **panel de
-administración**, y editar/pausar/eliminar publicaciones (SS-040/SS-050). De los
-nueve emails que lista la documentación sólo están los dos de `auth`. Los refunds
-tienen código y tests, pero **no se probaron contra Mercado Pago real**.
+S3), búsqueda, carrito, envíos, disputas, reviews, reputación, y
+editar/pausar/eliminar publicaciones (SS-040/SS-050). Del back-office existen
+**dos** de las nueve capacidades que lista `AR-006`: el resto pertenece a módulos
+que todavía no existen. De los nueve emails que lista la documentación sólo están
+los dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
+contra Mercado Pago real**.
 
 Tests: **433** (222 unitarios + 211 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
