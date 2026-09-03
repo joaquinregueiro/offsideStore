@@ -53,6 +53,17 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   PAYMENT_PROVIDER_ERROR: 502,
   REFUND_AMOUNT_INVALID: 422,
 
+  // --- Imagenes de publicaciones (PS-010 / PS-012) ---
+  /** La publicacion no existe o no es del vendedor. No se distinguen. */
+  LISTING_NOT_FOUND: 404,
+  LISTING_IMAGE_NOT_FOUND: 404,
+  /** El archivo no es una imagen procesable o su formato no esta permitido. */
+  IMAGE_INVALID: 422,
+  /** Supera el tamaño maximo configurado. */
+  IMAGE_TOO_LARGE: 413,
+  /** Ya llego al maximo de fotos configurado: conflicto de estado. */
+  TOO_MANY_IMAGES: 409,
+
   // --- Orders ---
   /** La publicacion no existe o no admite compra. */
   LISTING_NOT_AVAILABLE: 409,

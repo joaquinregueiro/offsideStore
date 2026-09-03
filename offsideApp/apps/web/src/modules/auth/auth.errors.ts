@@ -40,6 +40,12 @@ export type AuthErrorCode =
   | 'LISTING_NOT_AVAILABLE'
   | 'LISTING_OUT_OF_STOCK'
   | 'SELLER_NOT_OPERATIONAL'
+  // --- listings: imagenes (PS-010 / PS-012) ---
+  | 'LISTING_NOT_FOUND'
+  | 'LISTING_IMAGE_NOT_FOUND'
+  | 'IMAGE_INVALID'
+  | 'IMAGE_TOO_LARGE'
+  | 'TOO_MANY_IMAGES'
   // --- config store (configuration-registry.md) ---
   | 'SETTING_NOT_CONFIGURED'
   | 'SETTING_INVALID';

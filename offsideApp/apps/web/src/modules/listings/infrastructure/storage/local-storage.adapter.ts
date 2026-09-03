@@ -26,7 +26,14 @@ import {
  * quiere en desarrollo y exactamente lo que NO se quiere en produccion.
  */
 
-/** Carpeta raiz de las subidas locales. */
+/**
+ * Carpeta raiz de las subidas locales.
+ *
+ * ⚠️ Es relativa a `process.cwd()`, que NO es el mismo directorio siempre:
+ * con `next dev` es `apps/web/` —y entonces cae en el `public/` que Next sirve,
+ * que es lo que se quiere—; corriendo los tests es la raiz del monorepo. Las
+ * dos rutas estan en `.gitignore`.
+ */
 const RAIZ = resolve(process.cwd(), 'public', 'uploads');
 
 /**

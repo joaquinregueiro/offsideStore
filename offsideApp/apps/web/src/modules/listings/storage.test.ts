@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type * as StorageIndex from './infrastructure/storage/index';
+
 import {
   ALLOWED_IMAGE_TYPES_KEY,
   FORMATOS_SOPORTADOS,
@@ -29,7 +31,9 @@ function limpiarS3(): void {
   for (const clave of Object.keys(S3)) delete process.env[clave];
 }
 
-async function cargarSelector(): Promise<typeof import('./infrastructure/storage/index')> {
+type Selector = typeof StorageIndex;
+
+async function cargarSelector(): Promise<Selector> {
   // `getEnv()` cachea, asi que hay que reimportar tras cambiar el entorno.
   const { resetEnvCache } = await import('@offside/config');
   resetEnvCache();

@@ -8,6 +8,9 @@ import type * as AuthService from '../auth/services/auth.service';
 import type { PublicUser } from '../auth/services/auth.service';
 import type * as MpConnectionService from '../sellers/services/mercadopago-connection.service';
 import type * as SellerService from '../sellers/services/seller.service';
+import type Sharp from 'sharp';
+
+import type * as ListingImageService from './services/listing-image.service';
 import type * as ListingService from './services/listing.service';
 import type * as OrderService from '../orders/services/order.service';
 import type * as PaymentService from '../payments/services/payment.service';
@@ -777,5 +780,138 @@ describe('catalogo publico', () => {
 
     expect(listingService.isPurchasable(fila!)).toBe(true);
     expect((await listingService.listPublicCatalog()).map((l) => l.id)).toContain(publicada.id);
+  });
+});
+
+describe('fotos de la publicacion (PS-010 / ERD §9.2)', () => {
+  let imageService: typeof ListingImageService;
+  let sharp: typeof Sharp;
+
+  beforeAll(async () => {
+    imageService = await import('./services/listing-image.service');
+    sharp = (await import('sharp')).default;
+  });
+
+  /** Foto valida generada al vuelo: no se versionan binarios en el repo. */
+  async function foto(ancho = 900, alto = 600): Promise<Buffer> {
+    return sharp({
+      create: { width: ancho, height: alto, channels: 3, background: '#0f7a45' },
+    })
+      .jpeg()
+      .toBuffer();
+  }
+
+  it('sube una foto y guarda las tres variantes', async () => {
+    const seller = await vendedor('fotos');
+    const listing = await listingService.publishListing(seller, await camiseta());
+
+    const imagen = await imageService.uploadImage(seller, {
+      listingId: listing.id,
+      bytes: await foto(),
+      alt: 'Frente de la camiseta',
+    });
+
+    expect(imagen.position).toBe(0);
+    expect(imagen.alt).toBe('Frente de la camiseta');
+    expect(Object.keys(imagen.variants).sort()).toEqual(['large', 'medium', 'thumb']);
+    expect(imagen.url).not.toBe('');
+
+    const listado = await imageService.listImages(listing.id);
+    expect(listado).toHaveLength(1);
+  });
+
+  it('las posiciones se asignan en orden', async () => {
+    const seller = await vendedor('fotos-orden');
+    const listing = await listingService.publishListing(seller, await camiseta());
+
+    const primera = await imageService.uploadImage(seller, {
+      listingId: listing.id,
+      bytes: await foto(800, 600),
+    });
+    const segunda = await imageService.uploadImage(seller, {
+      listingId: listing.id,
+      bytes: await foto(801, 600),
+    });
+
+    expect(primera.position).toBe(0);
+    expect(segunda.position).toBe(1);
+  });
+
+  it('⚠️ NO se pueden subir fotos a la publicacion de OTRO vendedor', async () => {
+    // La autorizacion resuelve el perfil por `user.id` y lo compara contra
+    // `listings.seller_id`. El error es el mismo que "no existe": distinguirlos
+    // permitiria averiguar que publicaciones hay.
+    const dueno = await vendedor('fotos-dueno');
+    const ajeno = await vendedor('fotos-ajeno');
+    const listing = await listingService.publishListing(dueno, await camiseta());
+
+    await expect(
+      imageService.uploadImage(ajeno, { listingId: listing.id, bytes: await foto() }),
+    ).rejects.toMatchObject({ code: 'LISTING_NOT_FOUND' });
+  });
+
+  it('⚠️ rechaza un archivo que no es una imagen', async () => {
+    const seller = await vendedor('fotos-basura');
+    const listing = await listingService.publishListing(seller, await camiseta());
+
+    await expect(
+      imageService.uploadImage(seller, {
+        listingId: listing.id,
+        bytes: Buffer.from('esto no es una imagen', 'utf8'),
+      }),
+    ).rejects.toMatchObject({ code: 'IMAGE_INVALID' });
+  });
+
+  it('respeta el maximo de fotos del Config Store', async () => {
+    const db = getDatabase();
+    const seller = await vendedor('fotos-cupo');
+    const listing = await listingService.publishListing(seller, await camiseta());
+
+    // Se baja el cupo a 1 con una version nueva del setting, que es como se
+    // cambia de verdad desde Admin.
+    await db.insert(schema.appSettings).values({
+      scope: 'global',
+      scopeId: null,
+      key: 'listing_max_images',
+      value: 1,
+      valueType: 'number',
+      version: 999,
+    });
+
+    try {
+      await imageService.uploadImage(seller, { listingId: listing.id, bytes: await foto() });
+
+      await expect(
+        imageService.uploadImage(seller, { listingId: listing.id, bytes: await foto(901, 600) }),
+      ).rejects.toMatchObject({ code: 'TOO_MANY_IMAGES' });
+    } finally {
+      await db.delete(schema.appSettings).where(eq(schema.appSettings.version, 999));
+    }
+  });
+
+  it('borra una foto y la saca del listado', async () => {
+    const seller = await vendedor('fotos-borrar');
+    const listing = await listingService.publishListing(seller, await camiseta());
+
+    const imagen = await imageService.uploadImage(seller, {
+      listingId: listing.id,
+      bytes: await foto(),
+    });
+
+    await imageService.deleteImage(seller, listing.id, imagen.id);
+
+    expect(await imageService.listImages(listing.id)).toHaveLength(0);
+  });
+
+  it('borrar la publicacion se lleva sus fotos (FK CASCADE)', async () => {
+    const db = getDatabase();
+    const seller = await vendedor('fotos-cascade');
+    const listing = await listingService.publishListing(seller, await camiseta());
+
+    await imageService.uploadImage(seller, { listingId: listing.id, bytes: await foto() });
+
+    await db.delete(schema.listings).where(eq(schema.listings.id, listing.id));
+
+    expect(await imageService.listImages(listing.id)).toHaveLength(0);
   });
 });
