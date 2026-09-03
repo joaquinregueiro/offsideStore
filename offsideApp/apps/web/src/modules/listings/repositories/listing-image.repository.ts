@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, asc, eq, max } from 'drizzle-orm';
+import { and, asc, eq, inArray, max } from 'drizzle-orm';
 
 /**
  * Acceso a `listing_images` (ERD §9.2). Sin reglas de negocio.
@@ -22,6 +22,30 @@ export async function findByListingId(
     .from(schema.listingImages)
     .where(eq(schema.listingImages.listingId, listingId))
     .orderBy(asc(schema.listingImages.position));
+}
+
+/**
+ * Imagenes de VARIAS publicaciones, para la vitrina.
+ *
+ * ⚠️ UNA SOLA CONSULTA para todas las publicaciones de la pagina. Pedir las
+ * imagenes de cada una por separado seria el problema N+1: veinticuatro
+ * consultas para pintar una grilla.
+ *
+ * Devuelve TODAS las imagenes ordenadas; quien llama se queda con la primera de
+ * cada publicacion. Traer solo `position = 0` seria mas corto pero fallaria
+ * cuando esa foto se borro: las posiciones son unicas, no consecutivas.
+ */
+export async function findByListingIds(
+  listingIds: string[],
+  db?: Database,
+): Promise<ListingImageRow[]> {
+  if (listingIds.length === 0) return [];
+
+  return conn(db)
+    .select()
+    .from(schema.listingImages)
+    .where(inArray(schema.listingImages.listingId, listingIds))
+    .orderBy(asc(schema.listingImages.listingId), asc(schema.listingImages.position));
 }
 
 export async function countByListingId(listingId: string, db?: Database): Promise<number> {

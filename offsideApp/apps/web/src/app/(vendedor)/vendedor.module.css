@@ -164,3 +164,40 @@
   flex-wrap: wrap;
   margin-top: var(--espacio-5);
 }
+
+/** Galeria de fotos de una publicacion (vista del vendedor). */
+.galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--espacio-4);
+  margin-bottom: var(--espacio-6);
+}
+
+.miniatura {
+  margin: 0;
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  overflow: hidden;
+}
+
+.miniatura img {
+  display: block;
+  width: 100%;
+  /* Cuadrado uniforme: las fotos vienen con proporciones distintas y una
+     grilla despareja se lee como un error. `cover` recorta, no deforma. */
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--color-neutro-suave);
+}
+
+.miniatura figcaption {
+  padding: var(--espacio-3);
+  font-size: var(--texto-sm);
+}
+
+.portada {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--espacio-2);
+}

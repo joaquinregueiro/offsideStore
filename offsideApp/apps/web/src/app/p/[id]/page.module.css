@@ -97,3 +97,24 @@
   padding-top: var(--espacio-6);
   border-top: 1px solid var(--color-neutro-borde);
 }
+
+/**
+ * Galeria del detalle: las fotos apiladas, sin carrusel.
+ *
+ * ⚠️ Un carrusel necesitaria JavaScript y esconderia detras de flechas
+ * justamente lo que hay que mirar al comprar una camiseta usada: la etiqueta,
+ * el dorso y los defectos. Apilarlas las muestra todas.
+ */
+.galeria {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.foto {
+  width: 100%;
+  display: block;
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-neutro-suave);
+}

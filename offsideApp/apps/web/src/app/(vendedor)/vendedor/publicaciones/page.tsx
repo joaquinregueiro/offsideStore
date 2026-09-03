@@ -64,6 +64,9 @@ export default async function MisPublicaciones() {
               </span>
               <span>{precio(publicacion.priceAmount, publicacion.currency)}</span>
             </div>
+            <div className={estilos.linea}>
+              <a href={`/vendedor/publicaciones/${publicacion.id}/fotos`}>Fotos</a>
+            </div>
           </article>
         ))
       )}

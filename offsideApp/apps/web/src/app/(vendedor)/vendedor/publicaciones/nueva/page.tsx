@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
-import { AreaDeTexto, Campo, Formulario, Seleccion } from '@/components/form';
-import { Aviso } from '@/components/ui';
+import { AreaDeTexto, Campo, CampoArchivos, Formulario, Seleccion } from '@/components/form';
 import { requireSellerSessionUser } from '@/lib/session';
+import { getImageSettings } from '@/modules/config/services/image-settings.service';
 import { listActiveCategories } from '@/modules/listings/services/listing.service';
 import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
 
@@ -16,10 +16,14 @@ export const dynamic = 'force-dynamic';
 /**
  * Formulario de publicación (SS-030 / SS-031).
  *
- * ⚠️ SIN FOTOS, Y ES LA CARENCIA MAS GRANDE DE ESTA PANTALLA. SS-031 pide al
- * menos una imagen y el almacenamiento S3 no está implementado. Se avisa acá
- * arriba en vez de dejar que el vendedor publique y descubra después que su
- * camiseta se ve vacía en la vitrina.
+ * ⚠️ LAS FOTOS SON OPCIONALES TODAVIA. PS-010 exige al menos una, pero la
+ * regla no se aplica aun —es la fase 4— porque hay publicaciones creadas antes
+ * de que existieran las fotos. Se pide de la forma mas fuerte que se puede sin
+ * bloquear: la pantalla insiste, el sistema no rechaza.
+ *
+ * ⚠️ SI UNA FOTO FALLA, LA PUBLICACION SE CREA IGUAL y se avisa cuantas
+ * fallaron. Tirar abajo la publicacion entera le haria perder al vendedor todo
+ * lo que escribio por un problema de una imagen.
  *
  * ⚠️ `kitType` y `sleeve` SE PIDEN SIEMPRE, no sólo para camiseta. El ERD §9.1
  * los hace obligatorios únicamente para esa categoría, y quien conoce la
@@ -30,9 +34,10 @@ export const dynamic = 'force-dynamic';
 export default async function NuevaPublicacion() {
   const user = await requireSellerSessionUser('/vendedor/publicaciones/nueva');
 
-  const [categorias, conexion] = await Promise.all([
+  const [categorias, conexion, imagenes] = await Promise.all([
     listActiveCategories(),
     getConnectionStatus(user),
+    getImageSettings(),
   ]);
 
   // El Service rechaza igual, pero llevar a alguien a llenar un formulario que
@@ -45,11 +50,6 @@ export default async function NuevaPublicacion() {
   return (
     <main className={estilos.pagina}>
       <h1 className={estilos.titulo}>Publicar</h1>
-
-      <Aviso>
-        Todavía no se pueden subir fotos. Tu publicación va a salir sin imágenes hasta que
-        habilitemos la carga.
-      </Aviso>
 
       <Formulario accion={publicar} enviar="Publicar">
         {/*
@@ -130,6 +130,11 @@ export default async function NuevaPublicacion() {
             ]}
           />
         </div>
+        <CampoArchivos
+          nombre="fotos"
+          etiqueta="Fotos"
+          ayuda={`Hasta ${imagenes.maxImages} fotos, ${Math.floor(imagenes.maxBytes / (1024 * 1024))} MB cada una. La primera es la portada. Si es usada o retro, sumá una de la etiqueta: es la mejor señal de autenticidad.`}
+        />
       </Formulario>
 
       {/*
@@ -138,7 +143,8 @@ export default async function NuevaPublicacion() {
       */}
       <p className={estilos.nota}>
         Tu publicación queda visible apenas la publicás. El stock se descuenta cuando el pago del
-        comprador se aprueba, no antes.
+        comprador se aprueba, no antes. Sin fotos casi nadie compra: podés agregarlas después desde
+        tus publicaciones.
       </p>
     </main>
   );

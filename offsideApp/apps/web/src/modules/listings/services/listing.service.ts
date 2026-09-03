@@ -4,6 +4,7 @@ import type { PublicUser } from '../../auth/services/auth.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../listings.errors';
+import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
 
 /**
@@ -215,6 +216,15 @@ export interface CatalogListing {
   sizeValue: string;
   condition: listingRepo.ListingRow['condition'];
   sellerDisplayName: string;
+  /**
+   * Foto de portada, o `null` si la publicacion no tiene ninguna.
+   *
+   * ⚠️ PUEDE SER `null` MIENTRAS PS-010 NO SE EXIJA. La regla dice que hace
+   * falta al menos una foto para publicar, pero todavia no se aplica —eso es la
+   * fase 4— y hay publicaciones creadas antes de que existieran las fotos.
+   * La vitrina tiene que saber pintar esa fila igual.
+   */
+  coverUrl: string | null;
 }
 
 /**
@@ -227,6 +237,10 @@ export interface CatalogListing {
 export async function listPublicCatalog(limite?: number): Promise<CatalogListing[]> {
   const filas = await listingRepo.findPublicCatalog(limite === undefined ? {} : { limite });
 
+  // Las portadas salen en UNA consulta para toda la pagina, no una por fila:
+  // pedirlas de a una seria el problema N+1.
+  const portadas = await coverUrls(filas.map((row) => row.id));
+
   return filas.map((row) => ({
     id: row.id,
     title: row.title,
@@ -235,7 +249,40 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
     sizeValue: row.sizeValue,
     condition: row.condition,
     sellerDisplayName: row.sellerDisplayName,
+    coverUrl: portadas.get(row.id) ?? null,
   }));
+}
+
+/**
+ * Portada de cada publicacion: la imagen de menor `position`.
+ *
+ * Se usa la variante `medium`, no la `thumb`: en una grilla las tarjetas se
+ * ven a ~400px de ancho pero en pantallas de alta densidad eso son 800 fisicos,
+ * y la miniatura se veria borrosa.
+ */
+async function coverUrls(listingIds: string[]): Promise<Map<string, string>> {
+  const imagenes = await imageRepo.findByListingIds(listingIds);
+  const portadas = new Map<string, string>();
+
+  for (const imagen of imagenes) {
+    // Vienen ordenadas por posicion: la primera de cada listing es la portada.
+    if (portadas.has(imagen.listingId)) continue;
+
+    const url = urlDeVariante(imagen, 'medium');
+    if (url !== null) portadas.set(imagen.listingId, url);
+  }
+
+  return portadas;
+}
+
+/** URL de una variante, con la desnormalizada como respaldo. */
+function urlDeVariante(imagen: imageRepo.ListingImageRow, variante: string): string | null {
+  const variants =
+    imagen.variants !== null && typeof imagen.variants === 'object'
+      ? (imagen.variants as Record<string, string>)
+      : {};
+
+  return variants[variante] ?? imagen.url ?? null;
 }
 
 /** Ficha publica de una publicacion. */
@@ -246,6 +293,8 @@ export interface PublicListingDetail extends CatalogListing {
   authenticity: listingRepo.ListingRow['authenticity'];
   /** Cuantas unidades quedan. La ficha lo usa para avisar si queda poco. */
   stock: number;
+  /** Galeria completa, en orden. Vacia si la publicacion no tiene fotos. */
+  images: { url: string; alt: string | null }[];
 }
 
 /**
@@ -257,6 +306,8 @@ export interface PublicListingDetail extends CatalogListing {
 export async function findPublicListing(id: string): Promise<PublicListingDetail | null> {
   const row = await listingRepo.findPublicById(id);
   if (row === undefined) return null;
+
+  const imagenes = await imageRepo.findByListingId(row.id);
 
   return {
     id: row.id,
@@ -271,5 +322,12 @@ export async function findPublicListing(id: string): Promise<PublicListingDetail
     authenticity: row.authenticity,
     stock: row.stock,
     sellerDisplayName: row.sellerDisplayName,
+    // La ficha usa la variante grande; la portada del detalle es la primera.
+    coverUrl: imagenes[0] === undefined ? null : urlDeVariante(imagenes[0], 'medium'),
+    images: imagenes.flatMap((imagen) => {
+      const url = urlDeVariante(imagen, 'large');
+
+      return url === null ? [] : [{ url, alt: imagen.alt }];
+    }),
   };
 }

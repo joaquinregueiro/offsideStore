@@ -32,6 +32,10 @@
  */
 .marco {
   aspect-ratio: 4 / 5;
+  /* Cuando es un <img>, `cover` recorta sin deformar: las fotos vienen con
+     proporciones distintas y una grilla despareja se lee como un error. */
+  width: 100%;
+  object-fit: cover;
   background-color: var(--color-neutro-suave);
   /*
    * El rombo de la bandera en su escala de TEXTURA FINA, no de bloque.

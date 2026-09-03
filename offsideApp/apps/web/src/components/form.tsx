@@ -32,7 +32,20 @@ export function Formulario({
   const [estado, action, pending] = useActionState(accion, {});
 
   return (
-    <form action={action} className={estilos.formulario} noValidate>
+    <form
+      action={action}
+      className={estilos.formulario}
+      noValidate
+      /**
+       * ⚠️ `multipart/form-data` HACE FALTA PARA LOS ARCHIVOS SIN JAVASCRIPT.
+       * Con JS, React serializa el FormData por su cuenta y lo ignora; sin JS,
+       * el navegador hace el POST nativo y el `enctype` por defecto
+       * (`urlencoded`) mandaria solo el NOMBRE del archivo, no su contenido.
+       * Ponerlo siempre no cuesta nada y evita que un formulario con archivos
+       * se rompa en silencio justamente en el modo degradado.
+       */
+      encType="multipart/form-data"
+    >
       {estado.error !== undefined && <Aviso error>{estado.error}</Aviso>}
       {estado.ok !== undefined && <Aviso>{estado.ok}</Aviso>}
 
@@ -204,6 +217,52 @@ export function AreaDeTexto({
         className={estilos.control}
         required={requerido}
         defaultValue={defaultValue}
+        aria-describedby={idAyuda}
+      />
+      {ayuda !== undefined && (
+        <span id={idAyuda} className={estilos.ayuda}>
+          {ayuda}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Selector de archivos.
+ *
+ * ⚠️ `accept` es una AYUDA, NO UNA VALIDACION. Le dice al navegador que
+ * mostrar en el dialogo; cualquiera puede mandar otra cosa. Quien decide es el
+ * Service, que decodifica los bytes.
+ */
+export function CampoArchivos({
+  nombre,
+  etiqueta,
+  ayuda,
+  multiple = true,
+  requerido = false,
+}: {
+  nombre: string;
+  etiqueta: string;
+  ayuda?: string;
+  multiple?: boolean;
+  requerido?: boolean;
+}) {
+  const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
+
+  return (
+    <div className={estilos.campo}>
+      <label htmlFor={nombre} className={estilos.etiqueta}>
+        {etiqueta}
+      </label>
+      <input
+        id={nombre}
+        name={nombre}
+        type="file"
+        className={estilos.control}
+        accept="image/jpeg,image/png,image/webp"
+        multiple={multiple}
+        required={requerido}
         aria-describedby={idAyuda}
       />
       {ayuda !== undefined && (

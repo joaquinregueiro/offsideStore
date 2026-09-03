@@ -69,7 +69,36 @@ export default async function DetalleDePublicacion({
         </a>
 
         <div className={estilos.grilla}>
-          <div className={estilos.marco} aria-hidden="true" />
+          {/*
+            Galeria. Sin fotos, el patron de la identidad §05 reserva el mismo
+            espacio para que la ficha no cambie de forma segun tenga o no.
+
+            ⚠️ SIN JAVASCRIPT: las fotos se apilan y se desplazan con scroll,
+            no hay carrusel. Un carrusel exige JS y esconde detras de flechas
+            justamente lo que un comprador de camisetas usadas necesita ver
+            —etiqueta, defectos, dorso—.
+
+            ⚠️ La PRIMERA carga con `eager` y las demas con `lazy`: la portada
+            es lo primero que se ve y esperar a que el navegador decida
+            retrasaria lo unico que importa al abrir la pagina.
+          */}
+          {listing.images.length === 0 ? (
+            <div className={estilos.marco} aria-hidden="true" />
+          ) : (
+            <div className={estilos.galeria}>
+              {listing.images.map((imagen, indice) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={imagen.url}
+                  className={estilos.foto}
+                  src={imagen.url}
+                  alt={imagen.alt ?? `${listing.title} — foto ${indice + 1}`}
+                  loading={indice === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                />
+              ))}
+            </div>
+          )}
 
           <div>
             <h1 className={estilos.titulo}>{listing.title}</h1>

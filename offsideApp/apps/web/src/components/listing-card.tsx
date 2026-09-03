@@ -14,8 +14,28 @@ import estilos from './listing-card.module.css';
 export function ListingCard({ listing }: { listing: CatalogListing }) {
   return (
     <a href={`/p/${listing.id}`} className={estilos.ficha}>
-      {/* Sin imagenes todavia: se muestra el patron de la identidad §05. */}
-      <div className={estilos.marco} aria-hidden="true" />
+      {/*
+        La portada, o el patron de la identidad §05 si la publicacion no tiene
+        fotos. El marco reserva la proporcion en los dos casos, asi que la
+        grilla no se reacomoda segun cuales tengan imagen.
+
+        ⚠️ `<img>` y no `next/image`: la foto ya viene redimensionada desde el
+        CDN del bucket —el procesador genera tres variantes—. Pasarla otra vez
+        por el optimizador de Next la procesaria dos veces y meteria al servidor
+        en el camino de cada imagen de cada visita, que es lo que un CDN evita.
+      */}
+      {listing.coverUrl === null ? (
+        <div className={estilos.marco} aria-hidden="true" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className={estilos.marco}
+          src={listing.coverUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      )}
 
       <div className={estilos.cuerpo}>
         <h3 className={estilos.titulo}>{listing.title}</h3>

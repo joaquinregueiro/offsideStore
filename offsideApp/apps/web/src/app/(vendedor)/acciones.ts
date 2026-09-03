@@ -1,12 +1,15 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { requireVerifiedSessionUser } from '@/lib/session';
+import type { PublicUser } from '@/modules/auth/services/auth.service';
 import { AuthError } from '@/modules/auth/auth.errors';
 import { createSellerProfileSchema, submitTaxIdentitySchema } from '@/modules/auth/auth.schemas';
 import { publishListing } from '@/modules/listings/services/listing.service';
+import { deleteImage, uploadImage } from '@/modules/listings/services/listing-image.service';
 import {
   disconnect,
   startConnection,
@@ -29,6 +32,7 @@ import { submitTaxIdentity } from '@/modules/sellers/services/seller-tax-profile
 
 export interface EstadoVendedor {
   error?: string;
+  ok?: string;
 }
 
 /**
@@ -236,7 +240,7 @@ export async function publicar(
       sleeve: texto(formData, 'sleeve'),
     });
 
-    await publishListing(user, {
+    const listing = await publishListing(user, {
       categoryId: input.categoryId,
       title: input.title,
       description: input.description ?? null,
@@ -247,9 +251,132 @@ export async function publicar(
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
     });
+
+    /**
+     * Las fotos van DESPUES de crear la publicacion, y su fallo NO revierte la
+     * publicacion.
+     *
+     * ⚠️ ES DELIBERADO Y TIENE UN COSTO. Una foto rota deja la publicacion
+     * creada sin ella, y el vendedor tiene que ir a agregarla. La alternativa
+     * —tirar abajo una publicacion entera porque una imagen fallo— le haria
+     * perder todo lo que escribio, que es peor. Se le dice cuantas fallaron.
+     *
+     * Cuando PS-010 se exija (fase 4) esto cambia: sin al menos una foto la
+     * publicacion no deberia llegar a existir.
+     */
+    const fallidas = await subirFotos(user, listing.id, formData);
+
+    if (fallidas > 0) {
+      return {
+        error: `Publicamos tu prenda, pero ${fallidas === 1 ? 'una foto no se pudo subir' : `${fallidas} fotos no se pudieron subir`}. Agregalas desde tus publicaciones.`,
+      };
+    }
   } catch (error) {
     return { error: mensajeDeError(error) };
   }
 
   redirect('/vendedor/publicaciones');
+}
+
+/**
+ * Sube las fotos que vinieron en el formulario. Devuelve cuantas fallaron.
+ *
+ * ⚠️ UNA POR UNA, NO EN PARALELO. Cada una decodifica y genera tres variantes;
+ * ocho a la vez en un VPS chico es un pico de memoria evitable. La diferencia
+ * de tiempo la paga una persona que ya esta esperando, no un lote.
+ *
+ * ⚠️ NO SE VALIDA EL TIPO ACA. `File.type` lo declara el navegador y el
+ * Service no le cree: decodifica los bytes. Filtrar aca por `type` seria una
+ * comodidad, nunca una garantia.
+ */
+async function subirFotos(
+  user: PublicUser,
+  listingId: string,
+  formData: FormData,
+): Promise<number> {
+  const archivos = formData
+    .getAll('fotos')
+    .filter((v): v is File => v instanceof File && v.size > 0);
+
+  let fallidas = 0;
+
+  for (const archivo of archivos) {
+    try {
+      await uploadImage(user, {
+        listingId,
+        bytes: Buffer.from(await archivo.arrayBuffer()),
+      });
+    } catch (error) {
+      fallidas += 1;
+      console.error(
+        '[vendedor] no se pudo subir una foto:',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  return fallidas;
+}
+
+/* ----------------------------------------------------------------- fotos -- */
+
+const fotosSchema = z.object({ listingId: z.string().uuid() });
+
+/** Agrega fotos a una publicacion que ya existe. */
+export async function agregarFotos(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    const { listingId } = fotosSchema.parse({ listingId: texto(formData, 'listingId') });
+
+    const archivos = formData
+      .getAll('fotos')
+      .filter((v): v is File => v instanceof File && v.size > 0);
+
+    if (archivos.length === 0) return { error: 'Elegí al menos una foto.' };
+
+    const fallidas = await subirFotos(user, listingId, formData);
+
+    if (fallidas === archivos.length) {
+      return { error: 'No pudimos subir ninguna de las fotos. Revisá que sean JPG, PNG o WebP.' };
+    }
+
+    if (fallidas > 0) return { error: `${fallidas} de las fotos no se pudieron subir.` };
+  } catch (error) {
+    return { error: mensajeDeError(error) };
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+
+  return { ok: 'Listo, subimos las fotos.' };
+}
+
+const borrarFotoSchema = z.object({
+  listingId: z.string().uuid(),
+  imageId: z.string().uuid(),
+});
+
+/** Borra una foto de una publicacion. */
+export async function borrarFoto(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+
+    const input = borrarFotoSchema.parse({
+      listingId: texto(formData, 'listingId'),
+      imageId: texto(formData, 'imageId'),
+    });
+
+    await deleteImage(user, input.listingId, input.imageId);
+  } catch (error) {
+    return { error: mensajeDeError(error) };
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+
+  return { ok: 'Foto borrada.' };
 }
