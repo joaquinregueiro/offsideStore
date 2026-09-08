@@ -139,9 +139,19 @@ export async function insertListing(
       condition: values.condition,
       kitType: values.kitType,
       sleeve: values.sleeve,
-      // El vendedor publica: nace visible. `draft` existe para guardar sin
-      // publicar, que es otro flujo y no esta implementado.
-      status: 'active',
+      /**
+       * ⚠️ NACE EN BORRADOR (SS-032, y es el default del ERD §9.1).
+       *
+       * Antes nacia `active` porque las fotos no existian. Con PS-010 —"al
+       * menos 1 foto obligatoria"— eso ya no se puede: la publicacion tiene que
+       * existir ANTES que sus fotos, porque `listing_images.listing_id` es una
+       * FK. Validar "tiene una foto" en el insert es literalmente imposible.
+       *
+       * El borrador resuelve el orden: se crea, se le cuelgan las fotos, y
+       * recien ahi se activa. Una publicacion sin fotos se queda en borrador y
+       * NO aparece en la vitrina, que es exactamente lo que PS-010 quiere.
+       */
+      status: 'draft',
       // Lo decide el Service, no el repositorio: es politica de moderacion.
       moderationStatus: values.moderationStatus,
     })
@@ -179,6 +189,29 @@ export interface CatalogListingRow {
  * ⚠️ NO EXPONE al vendedor mas que su nombre de tienda: ni su id de usuario, ni
  * su estado, ni datos fiscales.
  */
+/**
+ * Cambia el estado de una publicacion.
+ *
+ * ⚠️ LA CONDICION DE ORIGEN VA EN EL WHERE, no en una lectura previa. Asi la
+ * transicion es ATOMICA: dos peticiones simultaneas no pueden activar dos veces
+ * la misma publicacion. Devuelve `false` si la fila ya no estaba en el estado
+ * esperado, y quien llama decide que significa.
+ */
+export async function transitionStatus(
+  id: string,
+  desde: ListingRow['status'],
+  hacia: ListingRow['status'],
+  db?: Database,
+): Promise<boolean> {
+  const filas = await conn(db)
+    .update(schema.listings)
+    .set({ status: hacia, updatedAt: new Date() })
+    .where(and(eq(schema.listings.id, id), eq(schema.listings.status, desde)))
+    .returning({ id: schema.listings.id });
+
+  return filas.length === 1;
+}
+
 export async function findPublicCatalog(
   opciones: { limite?: number } = {},
   db?: Database,

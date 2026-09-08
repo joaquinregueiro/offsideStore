@@ -63,6 +63,8 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   IMAGE_TOO_LARGE: 413,
   /** Ya llego al maximo de fotos configurado: conflicto de estado. */
   TOO_MANY_IMAGES: 409,
+  /** Borrar dejaria una publicacion activa sin fotos: conflicto de estado. */
+  LAST_IMAGE_REQUIRED: 409,
 
   // --- Orders ---
   /** La publicacion no existe o no admite compra. */

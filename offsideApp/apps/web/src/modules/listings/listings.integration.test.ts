@@ -249,18 +249,57 @@ async function camiseta(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * Publicacion lista para vender: publicada, con una foto y ACTIVA.
+ *
+ * ⚠️ LA FOTO NO ES DECORACION. PS-010 exige al menos una imagen, asi que una
+ * publicacion sin fotos se queda en BORRADOR y no es comprable. Este helper
+ * refleja esa regla en vez de saltearla: inserta la fila de imagen —sin pasar
+ * por el procesador, que no aporta nada a estos tests— y despues activa.
+ */
+async function publicacionActiva(
+  seller: PublicUser,
+  overrides: Record<string, unknown> = {},
+): Promise<Awaited<ReturnType<typeof listingService.publishListing>>> {
+  const listing = await listingService.publishListing(seller, await camiseta(overrides));
+
+  await getDatabase()
+    .insert(schema.listingImages)
+    .values({
+      listingId: listing.id,
+      storageKey: `listings/${listing.id}/test-large.webp`,
+      url: null,
+      variants: { large: `listings/${listing.id}/test-large.webp` },
+      position: 0,
+      hash: 'hash-de-prueba',
+    });
+
+  await getDatabase()
+    .update(schema.listings)
+    .set({ status: 'active' })
+    .where(eq(schema.listings.id, listing.id));
+
+  return { ...listing, status: 'active' as const };
+}
+
 /* -------------------------------------------------------------------------- */
 
 describe('publicar', () => {
-  it('publica y la deja activa', async () => {
+  it('⚠️ nace en BORRADOR: sin fotos no sale a la vitrina (PS-010 / SS-032)', async () => {
+    // Antes nacia `active`. PS-010 exige al menos una foto, y una foto no
+    // puede existir antes que la publicacion —es una FK—, asi que la
+    // publicacion nace en borrador y se activa cuando tiene imagen.
     const seller = await vendedor('ok');
 
     const listing = await listingService.publishListing(seller, await camiseta());
 
-    expect(listing.status).toBe('active');
+    expect(listing.status).toBe('draft');
     expect(listing.priceAmount).toBe(PRECIO);
     expect(listing.stock).toBe(3);
     expect(listing.title).toBe('Camiseta Boca 2001 titular');
+
+    // Y no aparece en la vitrina.
+    expect(await listingService.findPublicListing(listing.id)).toBeNull();
   });
 
   it('⚠️ nace APROBADA: aprobacion automatica transitoria', async () => {
@@ -275,7 +314,8 @@ describe('publicar', () => {
     const listing = await listingService.publishListing(seller, await camiseta());
 
     expect(listing.moderationStatus).toBe('APPROVED');
-    expect(listing.status).toBe('active');
+    // El status es otra dimension: nace en borrador hasta tener foto (PS-010).
+    expect(listing.status).toBe('draft');
   });
 
   it('queda asociada al perfil del vendedor autenticado', async () => {
@@ -357,7 +397,9 @@ describe('publicar', () => {
       sleeve: null,
     });
 
-    expect(listing.status).toBe('active');
+    // Nace en borrador como cualquier publicacion; lo que se prueba aca es que
+    // NO se rechazo por faltarle atributos de camiseta.
+    expect(listing.status).toBe('draft');
   });
 
   it('lista las publicaciones propias', async () => {
@@ -385,9 +427,26 @@ describe('flujo completo: publicar → ordenar → cobrar', () => {
     const seller = await vendedor('flujo');
     const comprador = await usuario('flujo-buyer');
 
-    // 1. El vendedor publica.
+    // 1. El vendedor publica. Nace en BORRADOR: sin fotos no sale a la vitrina.
     const listing = await listingService.publishListing(seller, await camiseta());
-    expect(listing.status).toBe('active');
+    expect(listing.status).toBe('draft');
+
+    // 1.b Sube una foto y la publicacion se activa (PS-010 / SS-032). Se hace
+    // con el Service de verdad, no con SQL: el punto de este test es que el
+    // circuito cierre sin atajos.
+    const imgService = await import('./services/listing-image.service');
+    const sharpLib = (await import('sharp')).default;
+
+    await imgService.uploadImage(seller, {
+      listingId: listing.id,
+      bytes: await sharpLib({
+        create: { width: 600, height: 400, channels: 3, background: '#0f7a45' },
+      })
+        .jpeg()
+        .toBuffer(),
+    });
+
+    expect(await imgService.activateListing(seller, listing.id)).toBe(true);
 
     // 2. El comprador ordena.
     const orden = await orderService.createOrder(comprador, {
@@ -544,7 +603,7 @@ describe('stock', () => {
     const seller = await vendedor('stk1');
     const mpUserId = `3000000${secuencia}`;
     const comprador = await usuario('stk1-buyer');
-    const listing = await listingService.publishListing(seller, await camiseta({ stock: 3 }));
+    const listing = await publicacionActiva(seller, { stock: 3 });
 
     const orden = await orderService.createOrder(comprador, {
       listingId: listing.id,
@@ -564,7 +623,7 @@ describe('stock', () => {
     const seller = await vendedor('stk2');
     const mpUserId = `3000000${secuencia}`;
     const comprador = await usuario('stk2-buyer');
-    const listing = await listingService.publishListing(seller, await camiseta({ stock: 2 }));
+    const listing = await publicacionActiva(seller, { stock: 2 });
 
     const orden = await orderService.createOrder(comprador, {
       listingId: listing.id,
@@ -596,7 +655,7 @@ describe('stock', () => {
     // estuviera en un `if` previo al UPDATE en vez de adentro del WHERE, los
     // dos lados leerian stock=1 y los dos escribirian stock=0.
     const seller = await vendedor('stk3');
-    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const listing = await publicacionActiva(seller, { stock: 1 });
     const listingRepo = await repo();
 
     const [a, b] = await Promise.all([
@@ -612,7 +671,7 @@ describe('stock', () => {
 
   it('nunca deja el stock en negativo', async () => {
     const seller = await vendedor('stk4');
-    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const listing = await publicacionActiva(seller, { stock: 1 });
     const listingRepo = await repo();
 
     expect(await listingRepo.decrementStock(listing.id, 5)).toBeUndefined();
@@ -622,7 +681,7 @@ describe('stock', () => {
   it('el checkout NO cobra si la publicacion se quedo sin stock (UC-MF-3)', async () => {
     const seller = await vendedor('stk5');
     const comprador = await usuario('stk5-buyer');
-    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const listing = await publicacionActiva(seller, { stock: 1 });
 
     const orden = await orderService.createOrder(comprador, {
       listingId: listing.id,
@@ -649,7 +708,7 @@ describe('stock', () => {
     const seller = await vendedor('stk6');
     const mpUserId = `3000000${secuencia}`;
     const comprador = await usuario('stk6-buyer');
-    const listing = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const listing = await publicacionActiva(seller, { stock: 1 });
 
     const orden = await orderService.createOrder(comprador, {
       listingId: listing.id,
@@ -720,7 +779,7 @@ describe('stock', () => {
 describe('catalogo publico', () => {
   it('lista lo publicado, sin exigir sesion', async () => {
     const seller = await vendedor('cat-visible');
-    const publicada = await listingService.publishListing(seller, await camiseta());
+    const publicada = await publicacionActiva(seller);
 
     const catalogo = await listingService.listPublicCatalog();
     const mia = catalogo.find((l) => l.id === publicada.id);
@@ -749,7 +808,7 @@ describe('catalogo publico', () => {
     const seller = await vendedor('cat-filtros');
     const db = getDatabase();
 
-    const agotada = await listingService.publishListing(seller, await camiseta({ stock: 1 }));
+    const agotada = await publicacionActiva(seller, { stock: 1 });
     const pausada = await listingService.publishListing(seller, await camiseta());
     const sinAprobar = await listingService.publishListing(seller, await camiseta());
 
@@ -774,7 +833,7 @@ describe('catalogo publico', () => {
     // Son la misma regla expresada en dos lugares —SQL y memoria— y tienen que
     // dar lo mismo: si se separan, la vitrina promete lo que la compra rechaza.
     const seller = await vendedor('cat-coherencia');
-    const publicada = await listingService.publishListing(seller, await camiseta());
+    const publicada = await publicacionActiva(seller);
 
     const fila = await listingService.findById(publicada.id);
 

@@ -9,7 +9,11 @@ import type { PublicUser } from '@/modules/auth/services/auth.service';
 import { AuthError } from '@/modules/auth/auth.errors';
 import { createSellerProfileSchema, submitTaxIdentitySchema } from '@/modules/auth/auth.schemas';
 import { publishListing } from '@/modules/listings/services/listing.service';
-import { deleteImage, uploadImage } from '@/modules/listings/services/listing-image.service';
+import {
+  activateListing,
+  deleteImage,
+  uploadImage,
+} from '@/modules/listings/services/listing-image.service';
 import {
   disconnect,
   startConnection,
@@ -253,22 +257,29 @@ export async function publicar(
     });
 
     /**
-     * Las fotos van DESPUES de crear la publicacion, y su fallo NO revierte la
-     * publicacion.
+     * ⚠️ LA PUBLICACION NACE EN BORRADOR y se activa recien si quedo con al
+     * menos una foto (PS-010 / SS-032). No se puede validar antes: las fotos
+     * necesitan que la publicacion exista, por la FK.
      *
-     * ⚠️ ES DELIBERADO Y TIENE UN COSTO. Una foto rota deja la publicacion
-     * creada sin ella, y el vendedor tiene que ir a agregarla. La alternativa
-     * —tirar abajo una publicacion entera porque una imagen fallo— le haria
-     * perder todo lo que escribio, que es peor. Se le dice cuantas fallaron.
-     *
-     * Cuando PS-010 se exija (fase 4) esto cambia: sin al menos una foto la
-     * publicacion no deberia llegar a existir.
+     * Si ninguna foto entra, la publicacion NO se pierde: queda en borrador,
+     * fuera de la vitrina, y el vendedor la completa desde sus publicaciones.
+     * Tirarla abajo le haria perder todo lo que escribio por un problema de
+     * una imagen.
      */
     const fallidas = await subirFotos(user, listing.id, formData);
+    const activada = await activateListing(user, listing.id);
+
+    if (!activada) {
+      return {
+        error:
+          'Guardamos tu publicación como borrador, pero no pudimos subir ninguna foto. ' +
+          'Necesita al menos una para salir a la venta: agregala desde tus publicaciones.',
+      };
+    }
 
     if (fallidas > 0) {
       return {
-        error: `Publicamos tu prenda, pero ${fallidas === 1 ? 'una foto no se pudo subir' : `${fallidas} fotos no se pudieron subir`}. Agregalas desde tus publicaciones.`,
+        ok: `Publicamos tu prenda. ${fallidas === 1 ? 'Una foto no se pudo subir' : `${fallidas} fotos no se pudieron subir`}: agregala desde tus publicaciones.`,
       };
     }
   } catch (error) {
@@ -343,7 +354,16 @@ export async function agregarFotos(
       return { error: 'No pudimos subir ninguna de las fotos. Revisá que sean JPG, PNG o WebP.' };
     }
 
+    // Si estaba en borrador por no tener fotos, ahora ya puede salir a la
+    // vitrina. Es idempotente: si ya estaba activa no hace nada.
+    const activada = await activateListing(user, listingId);
+
     if (fallidas > 0) return { error: `${fallidas} de las fotos no se pudieron subir.` };
+
+    if (activada) {
+      revalidatePath('/vendedor/publicaciones');
+      return { ok: 'Listo, subimos las fotos. Tu publicación ya está a la venta.' };
+    }
   } catch (error) {
     return { error: mensajeDeError(error) };
   }

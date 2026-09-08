@@ -5,7 +5,7 @@
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
 > Estado: marketplace operable de punta a punta —registro, publicación, compra y
 > cobro con Mercado Pago— con frontend propio, incluido el back-office (ver §19).
-> Última actualización: 2026-09-02.
+> Última actualización: 2026-09-08.
 
 ---
 
@@ -515,7 +515,7 @@ trabajar en el repositorio equivocado.
 
 ---
 
-## 19. Estado de la implementación (2026-09-02)
+## 19. Estado de la implementación (2026-09-08)
 
 **Marketplace operable de punta a punta: alguien puede registrarse, publicar,
 comprar y cobrar —y Offside administrarlo— sin tocar la API a mano.**
@@ -532,7 +532,7 @@ Qué existe en `offsideApp/`:
 | ---------------------------------- | ------------------------------------------------------------------------------- |
 | `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                   |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 5 migraciones aplicadas**  |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 6 migraciones aplicadas**  |
 | `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
 | `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                         |
 
@@ -691,9 +691,39 @@ Mercado Pago real y que la deuda por saldo insuficiente no se registra.
 ⚠️ La consola **no lista** todos los pagos: se busca por número de orden. Un
 listado global de pagos de la plataforma sería una fuga esperando.
 
-**NO implementado:** webhook `mp-connect`, **fotos de publicaciones** (no hay
-S3), búsqueda, carrito, envíos, disputas, reviews, reputación, y
-editar/pausar/eliminar publicaciones (SS-040/SS-050). Del back-office existen
+**Fotos de publicaciones — ✅ EN PRODUCCIÓN (2026-09-08)**: subida, procesamiento
+y entrega desde **Cloudflare R2**, detrás de un puerto igual que SES. ⚠️ El
+proveedor NO está en DEC-012 —OQ-I3 sigue abierta—: es una decisión de
+implementación del owner. La configuración (8 fotos, 5 MB, JPEG/PNG/WebP) vive
+en `app_settings` (migración `0005`), no hardcodeada.
+
+⚠️ **Es la primera entrada BINARIA del sistema**, y `image-processor.ts` es su
+frontera de seguridad: se decodifica el archivo en vez de creerle al
+`Content-Type`, hay techo de píxeles contra bombas de descompresión, **se borra
+el EXIF** —una foto de celular lleva las coordenadas de la casa de quien vende—
+y **nunca se guardan los bytes originales**: todo se recodifica a WebP, así que
+lo que llega al bucket es lo que produjo el codificador.
+
+⚠️ **Se guarda la CLAVE del objeto, no la URL.** El dominio público es
+configuración y puede cambiar; la dirección se compone al leer. Cambiar
+`S3_PUBLIC_URL` reapunta **todas** las fotos sin migrar filas. Hoy se sirve desde
+la URL de desarrollo de R2, que Cloudflare desaconseja para producción: el
+dominio propio requiere mover el DNS de `offside.com.ar` a Cloudflare, y esa
+migración arrastra los registros DKIM/SPF de SES.
+
+**PS-010 en vigor (2026-09-08)**: al menos una foto para publicar. No se puede
+validar al crear —las imágenes necesitan que la publicación exista, por la FK—,
+así que se implementó **SS-032**: la publicación **nace en `draft`** y se activa
+recién cuando tiene una imagen. Sin fotos queda en borrador, fuera de la
+vitrina, y el vendedor la completa desde sus publicaciones. Borrar la última
+foto de una activa se **rechaza**: bajarla en silencio sería dejar de vender sin
+enterarse.
+⚠️ Las publicaciones creadas ANTES de esto siguen `active` sin fotos: no se
+tocaron retroactivamente.
+
+**NO implementado:** webhook `mp-connect`, búsqueda, carrito, envíos, disputas,
+reviews, reputación, reordenar fotos, y editar/pausar/eliminar publicaciones
+(SS-040/SS-050). Del back-office existen
 **dos** de las nueve capacidades que lista `AR-006`: el resto pertenece a módulos
 que todavía no existen. De los nueve emails que lista la documentación sólo están
 los dos de `auth`. Los refunds tienen código y tests, pero **no se probaron

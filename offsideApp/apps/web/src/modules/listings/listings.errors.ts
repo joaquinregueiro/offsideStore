@@ -57,3 +57,15 @@ export const imageTooLarge = (maxBytes: number): AuthError =>
 /** Cupo de fotos alcanzado. El maximo es configurable (⚙️ DEC-013). */
 export const tooManyImages = (maximo: number): AuthError =>
   new AuthError('TOO_MANY_IMAGES', `Ya tenes el maximo de ${maximo} fotos en esta publicacion`);
+
+/**
+ * Se intento borrar la unica foto de una publicacion ACTIVA.
+ *
+ * PS-010 exige al menos una foto. Se rechaza en vez de bajar la publicacion a
+ * borrador en silencio: dejar de vender sin enterarse es peor que un error.
+ */
+export const lastImageOfActiveListing = (): AuthError =>
+  new AuthError(
+    'LAST_IMAGE_REQUIRED',
+    'Es la unica foto de una publicacion activa. Subi otra antes de borrar esta',
+  );

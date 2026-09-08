@@ -66,6 +66,16 @@ export default async function MisPublicaciones() {
             </div>
             <div className={estilos.linea}>
               <a href={`/vendedor/publicaciones/${publicacion.id}/fotos`}>Fotos</a>
+              {/*
+                ⚠️ UN BORRADOR NO SE VE EN LA VITRINA, y el vendedor tiene que
+                saber por que. Sin este aviso, una publicacion que quedo sin
+                fotos parece publicada y no vende, sin explicacion.
+              */}
+              {publicacion.status === 'draft' && (
+                <span className={estilos.concepto}>
+                  Sin fotos: no está a la venta hasta que subas al menos una
+                </span>
+              )}
             </div>
           </article>
         ))

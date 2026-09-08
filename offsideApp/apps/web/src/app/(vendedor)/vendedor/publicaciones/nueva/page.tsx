@@ -143,8 +143,7 @@ export default async function NuevaPublicacion() {
       */}
       <p className={estilos.nota}>
         Tu publicación queda visible apenas la publicás. El stock se descuenta cuando el pago del
-        comprador se aprueba, no antes. Sin fotos casi nadie compra: podés agregarlas después desde
-        tus publicaciones.
+        comprador se aprueba, no antes.
       </p>
     </main>
   );

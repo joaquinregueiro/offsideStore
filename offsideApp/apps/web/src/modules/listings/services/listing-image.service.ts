@@ -192,6 +192,32 @@ export async function uploadImage(
 }
 
 /**
+ * Activa una publicacion en borrador (SS-032).
+ *
+ * ⚠️ ESTE ES EL PUNTO DONDE SE HACE CUMPLIR PS-010: "al menos 1 foto
+ * obligatoria". No se puede validar al crear la publicacion —las fotos
+ * necesitan que exista primero, por la FK—, asi que se valida al activarla.
+ * Una publicacion sin fotos se queda en borrador y no llega a la vitrina.
+ *
+ * ⚠️ IDEMPOTENTE. Si ya estaba activa devuelve `true` sin tocar nada: el
+ * vendedor que agrega una segunda foto no tiene que enterarse de que la
+ * transicion ya habia ocurrido.
+ *
+ * Devuelve `false` si no se pudo activar por falta de fotos.
+ */
+export async function activateListing(user: PublicUser, listingId: string): Promise<boolean> {
+  const listing = await requireOwnListing(user, listingId);
+
+  if (listing.status === 'active') return true;
+  if (listing.status !== 'draft') return false;
+
+  if ((await imageRepo.countByListingId(listing.id)) === 0) return false;
+
+  // La condicion de origen va en el UPDATE: la transicion es atomica.
+  return listingRepo.transitionStatus(listing.id, 'draft', 'active');
+}
+
+/**
  * Borra una foto.
  *
  * ⚠️ NO REACOMODA LAS POSICIONES de las que quedan. El ERD sólo exige que sean
@@ -208,6 +234,19 @@ export async function deleteImage(user: PublicUser, listingId: string, imageId: 
 
   const imagen = await imageRepo.findByIdAndListing(imageId, listing.id);
   if (imagen === undefined) throw errors.imageNotFound();
+
+  /**
+   * ⚠️ NO SE PUEDE DEJAR UNA PUBLICACION VISIBLE SIN FOTOS. Borrar la ultima
+   * de una activa violaria PS-010 por la puerta de atras.
+   *
+   * Se RECHAZA en vez de mandarla sola a borrador: bajar una publicacion de la
+   * vitrina en silencio, como efecto secundario de borrar una foto, es una
+   * sorpresa cara —deja de venderse y nadie se entera—. Para cambiar la unica
+   * foto, se sube la nueva y despues se borra la vieja.
+   */
+  if (listing.status === 'active' && (await imageRepo.countByListingId(listing.id)) <= 1) {
+    throw errors.lastImageOfActiveListing();
+  }
 
   await imageRepo.deleteImage(imagen.id);
 

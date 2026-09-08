@@ -249,10 +249,18 @@ async function vendedor(nombre: string): Promise<PublicUser> {
   return user;
 }
 
+/**
+ * Publicacion lista para vender.
+ *
+ * ⚠️ LA FOTO ES PARTE DE LA REGLA, no un detalle del fixture. PS-010 exige
+ * al menos una imagen: sin ella la publicacion se queda en BORRADOR y no es
+ * comprable, y estos tests necesitan comprarla para verificar la comision.
+ * La fila de imagen se inserta directo —el procesador no aporta nada aca—.
+ */
 async function publicacion(nombre: string) {
   const seller = await vendedor(nombre);
 
-  return listingService.publishListing(seller, {
+  const listing = await listingService.publishListing(seller, {
     categoryId: await categoria(),
     title: 'Camiseta de prueba',
     description: null,
@@ -263,6 +271,24 @@ async function publicacion(nombre: string) {
     kitType: 'home',
     sleeve: 'short',
   });
+
+  const db = getDatabase();
+
+  await db.insert(schema.listingImages).values({
+    listingId: listing.id,
+    storageKey: `listings/${listing.id}/test-large.webp`,
+    url: null,
+    variants: { large: `listings/${listing.id}/test-large.webp` },
+    position: 0,
+    hash: 'hash-de-prueba',
+  });
+
+  await db
+    .update(schema.listings)
+    .set({ status: 'active' })
+    .where(eq(schema.listings.id, listing.id));
+
+  return { ...listing, status: 'active' as const };
 }
 
 /* -------------------------------------------------------------------------- */
