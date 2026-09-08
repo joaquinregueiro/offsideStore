@@ -128,7 +128,28 @@ function registrarFallo(operacion: string, key: string, error: unknown): void {
       ? ` | causa: ${error.cause.name}: ${error.cause.message}`
       : '';
 
-  console.error(`[storage] fallo la ${operacion} de "${key}": ${detalle}${causa}`);
+  // ⚠️ SE LOGUEA CONTRA QUE HOST SE INTENTO. Un fallo de red o de TLS no dice
+  // nada sin saber a donde se estaba conectando: un handshake rechazado puede
+  // ser el endpoint equivocado, un dominio publico puesto donde va el privado,
+  // o el VPS sin salida. El host distingue los tres. NO es un secreto —sale
+  // del id de cuenta— y las credenciales no se tocan.
+  const destino = hostDelEndpoint();
+
+  console.error(
+    `[storage] fallo la ${operacion} de "${key}" contra ${destino}: ${detalle}${causa}`,
+  );
+}
+
+/** Host configurado, o el motivo por el que no se pudo leer. */
+function hostDelEndpoint(): string {
+  const valor = getEnv().S3_ENDPOINT;
+  if (valor === undefined) return 'S3_ENDPOINT sin configurar';
+
+  try {
+    return new URL(valor).host;
+  } catch {
+    return `endpoint invalido (${valor})`;
+  }
 }
 
 export function createS3Storage(): StoragePort {
