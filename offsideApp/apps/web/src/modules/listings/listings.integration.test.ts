@@ -820,6 +820,38 @@ describe('fotos de la publicacion (PS-010 / ERD §9.2)', () => {
     expect(listado).toHaveLength(1);
   });
 
+  it('⚠️ guarda CLAVES, no URLs: cambiar el dominio reapunta TODAS las fotos', async () => {
+    // Es el punto del diseno. Si se guardara la URL completa, cambiar el
+    // dominio publico dejaria las fotos ya subidas apuntando al lugar viejo y
+    // habria que migrar filas.
+    const { getDatabase: db2, schema: sch } = await import('@offside/database');
+    const seller = await vendedor('fotos-claves');
+    const listing = await listingService.publishListing(seller, await camiseta());
+
+    const imagen = await imageService.uploadImage(seller, {
+      listingId: listing.id,
+      bytes: await foto(),
+    });
+
+    const [fila] = await db2()
+      .select()
+      .from(sch.listingImages)
+      .where(eq(sch.listingImages.id, imagen.id));
+
+    const guardadas = fila!.variants as Record<string, string>;
+
+    // Lo persistido es una clave, no una direccion.
+    expect(guardadas.large).toMatch(/^listings\//);
+    expect(guardadas.large).not.toMatch(/^https?:/);
+    // Y `url` queda NULL: congelarla seria el mismo problema.
+    expect(fila!.url).toBeNull();
+
+    // Lo que se DEVUELVE si es una direccion completa.
+    const devuelta = imagen.variants.large!;
+    expect(devuelta).toMatch(/^https?:\/\//);
+    expect(devuelta.endsWith(guardadas.large!)).toBe(true);
+  });
+
   it('las posiciones se asignan en orden', async () => {
     const seller = await vendedor('fotos-orden');
     const listing = await listingService.publishListing(seller, await camiseta());

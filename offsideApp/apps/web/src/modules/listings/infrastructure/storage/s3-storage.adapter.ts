@@ -156,6 +156,8 @@ export function createS3Storage(): StoragePort {
   return {
     name: 's3',
 
+    publicUrl: publicUrlFor,
+
     async put(input: PutObjectInput): Promise<StoredObject> {
       const env = getEnv();
 

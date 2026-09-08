@@ -71,7 +71,13 @@ export async function nextPosition(listingId: string, db?: Database): Promise<nu
 export interface InsertImageValues {
   listingId: string;
   storageKey: string;
-  url: string;
+  /**
+   * URL absoluta. `null` es lo normal: la direccion publica depende de
+   * configuracion y se compone al leer, asi que congelarla aca dejaria las
+   * fotos apuntando al dominio viejo si algun dia cambia. La columna existe
+   * porque el ERD §9.2 la define, y es anulable.
+   */
+  url: string | null;
   variants: unknown;
   position: number;
   alt: string | null;

@@ -49,6 +49,18 @@ export class StorageError extends Error {
 export interface StoragePort {
   /** Nombre del adaptador, para poder leerlo en los logs. */
   readonly name: string;
+  /**
+   * Direccion publica de una clave.
+   *
+   * ⚠️ SE COMPONE AL LEER, NO SE GUARDA. La base guarda la CLAVE del objeto;
+   * el dominio desde el que se sirve es configuracion y puede cambiar —una URL
+   * de prueba hoy, un dominio propio manana—. Si la URL completa quedara
+   * persistida, cambiar el dominio dejaria a todas las fotos ya subidas
+   * apuntando al lugar viejo y habria que migrar filas.
+   *
+   * Es una funcion pura sobre la configuracion: no consulta al proveedor.
+   */
+  publicUrl(key: string): string;
   put(input: PutObjectInput): Promise<StoredObject>;
   /**
    * Borra un objeto. Idempotente: borrar algo que no existe no es un error.

@@ -4,6 +4,7 @@ import type { PublicUser } from '../../auth/services/auth.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../listings.errors';
+import { createStorage } from '../infrastructure/storage/index';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
 
@@ -275,14 +276,23 @@ async function coverUrls(listingIds: string[]): Promise<Map<string, string>> {
   return portadas;
 }
 
-/** URL de una variante, con la desnormalizada como respaldo. */
+/**
+ * URL de una variante.
+ *
+ * ⚠️ `variants` guarda CLAVES, no URLs: el dominio publico es configuracion y
+ * puede cambiar, asi que la direccion se compone al leer. Un valor que ya sea
+ * absoluto se devuelve tal cual —las primeras filas guardaron URLs completas—.
+ */
 function urlDeVariante(imagen: imageRepo.ListingImageRow, variante: string): string | null {
   const variants =
     imagen.variants !== null && typeof imagen.variants === 'object'
       ? (imagen.variants as Record<string, string>)
       : {};
 
-  return variants[variante] ?? imagen.url ?? null;
+  const guardado = variants[variante] ?? imagen.storageKey;
+  if (guardado === undefined || guardado === '') return imagen.url ?? null;
+
+  return /^https?:\/\//.test(guardado) ? guardado : createStorage().publicUrl(guardado);
 }
 
 /** Ficha publica de una publicacion. */

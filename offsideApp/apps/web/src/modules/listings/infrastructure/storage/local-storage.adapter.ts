@@ -55,9 +55,18 @@ function rutaSegura(key: string): string {
   return destino;
 }
 
+/** `public/` la sirve Next, asi que la clave se mapea directo a `/uploads/...`. */
+function urlLocal(key: string): string {
+  const base = getEnv().APP_URL.replace(/\/$/, '');
+
+  return `${base}${join('/uploads', key).replaceAll(sep, '/')}`;
+}
+
 export function createLocalStorage(): StoragePort {
   return {
     name: 'local',
+
+    publicUrl: urlLocal,
 
     async put(input: PutObjectInput): Promise<StoredObject> {
       const destino = rutaSegura(input.key);
@@ -67,7 +76,7 @@ export function createLocalStorage(): StoragePort {
 
       return {
         key: input.key,
-        url: `${getEnv().APP_URL.replace(/\/$/, '')}${join('/uploads', input.key).replaceAll(sep, '/')}`,
+        url: urlLocal(input.key),
         sizeBytes: input.body.byteLength,
       };
     },

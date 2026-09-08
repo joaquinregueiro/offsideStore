@@ -10,7 +10,7 @@ import {
   procesarImagen,
   type NombreDeVariante,
 } from '../infrastructure/storage/image-processor';
-import { createStorage } from '../infrastructure/storage/index';
+import { createStorage, type StoragePort } from '../infrastructure/storage/index';
 
 /**
  * Fotos de una publicacion (PS-010 / PS-012, ERD §9.2).
@@ -37,17 +37,32 @@ export interface PublicListingImage {
   alt: string | null;
 }
 
-function toPublicImage(row: imageRepo.ListingImageRow): PublicListingImage {
-  const variants =
+/**
+ * Claves guardadas en `variants`, como mapa `variante -> clave`.
+ *
+ * ⚠️ COMPATIBILIDAD: las primeras filas guardaron URLs COMPLETAS ahi. Si el
+ * valor ya es absoluto se devuelve tal cual; si es una clave, se compone. Sin
+ * esta rama, una fila vieja produciria una direccion imposible del estilo
+ * `https://dominio/https://otro-dominio/...`.
+ */
+function urlDe(valor: string, storage: StoragePort): string {
+  return /^https?:\/\//.test(valor) ? valor : storage.publicUrl(valor);
+}
+
+function toPublicImage(row: imageRepo.ListingImageRow, storage: StoragePort): PublicListingImage {
+  const guardadas =
     row.variants !== null && typeof row.variants === 'object'
       ? (row.variants as Record<string, string>)
       : {};
 
+  const variants = Object.fromEntries(
+    Object.entries(guardadas).map(([nombre, valor]) => [nombre, urlDe(valor, storage)]),
+  );
+
   return {
     id: row.id,
-    // `url` es la de la variante grande; se guarda desnormalizada para no tener
-    // que leer el jsonb cuando sólo hace falta una.
-    url: row.url ?? variants.large ?? '',
+    // La `large` es la que se usa cuando hace falta una sola.
+    url: variants.large ?? row.url ?? '',
     variants,
     position: row.position,
     alt: row.alt,
@@ -57,8 +72,9 @@ function toPublicImage(row: imageRepo.ListingImageRow): PublicListingImage {
 /** Imagenes de una publicacion. Publico: no revela nada del vendedor. */
 export async function listImages(listingId: string): Promise<PublicListingImage[]> {
   const rows = await imageRepo.findByListingId(listingId);
+  const storage = createStorage();
 
-  return rows.map(toPublicImage);
+  return rows.map((row) => toPublicImage(row, storage));
 }
 
 /**
@@ -140,7 +156,11 @@ export async function uploadImage(
         contentType: FORMATO_DE_SALIDA,
       });
 
-      return [variante.nombre, objeto.url] as const;
+      // ⚠️ SE GUARDA LA CLAVE, NO LA URL. El dominio publico es configuracion y
+      // puede cambiar; la clave del objeto no. Guardar la URL completa dejaria
+      // a todas las fotos ya subidas apuntando al dominio viejo el dia que se
+      // cambie, y obligaria a migrar filas.
+      return [variante.nombre, objeto.key] as const;
     }),
   );
 
@@ -155,14 +175,20 @@ export async function uploadImage(
   const fila = await imageRepo.insertImage({
     listingId: listing.id,
     storageKey: claveDe('large'),
-    url: variants.large ?? '',
+    /**
+     * ⚠️ `url` QUEDA NULL A PROPOSITO. La columna existe en el ERD §9.2 y es
+     * anulable; guardarla seria congelar una direccion que depende de
+     * configuracion. La fuente de verdad es la clave, y la URL se compone al
+     * leer. No se elimina la columna porque eso seria un cambio de ERD.
+     */
+    url: null,
     variants,
     position,
     alt: input.alt?.trim() === '' ? null : (input.alt ?? null),
     hash: procesada.hash,
   });
 
-  return toPublicImage(fila);
+  return toPublicImage(fila, storage);
 }
 
 /**
