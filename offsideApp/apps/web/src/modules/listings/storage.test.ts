@@ -91,6 +91,44 @@ describe('eleccion del adaptador de storage', () => {
   });
 });
 
+describe('validacion del endpoint de S3', () => {
+  /** Fuerza construir el cliente: el endpoint se valida ahi. */
+  async function subirCon(endpoint: string): Promise<void> {
+    Object.assign(process.env, S3, { S3_ENDPOINT: endpoint });
+    process.env.APP_ENV = 'development';
+
+    const { resetEnvCache } = await import('@offside/config');
+    resetEnvCache();
+
+    const { createS3Storage, resetS3Client } =
+      await import('./infrastructure/storage/s3-storage.adapter');
+    resetS3Client();
+
+    await createS3Storage().put({
+      key: 'x.webp',
+      body: Buffer.from([0]),
+      contentType: 'image/webp',
+    });
+  }
+
+  it('⚠️ rechaza un endpoint SIN esquema con un mensaje que dice que falta', async () => {
+    // Sin esta validacion el SDK reventaba con un `TypeError` pelado, sin
+    // decir cual de las cinco variables estaba mal.
+    await expect(subirCon('cuenta.r2.cloudflarestorage.com')).rejects.toThrow(
+      /S3_ENDPOINT no es una URL valida/,
+    );
+  });
+
+  it('⚠️ rechaza un endpoint CON el bucket en la ruta', async () => {
+    // Es la causa de "Bucket does not exist": con `forcePathStyle` el SDK arma
+    // `<endpoint>/<bucket>/<key>`, asi que un endpoint que ya trae el bucket
+    // produce `/bucket/bucket/key`.
+    await expect(
+      subirCon('https://cuenta.r2.cloudflarestorage.com/offside-imagenes'),
+    ).rejects.toThrow(/no debe llevar ruta/);
+  });
+});
+
 describe('formatos de imagen', () => {
   it('⚠️ SVG NO es un formato soportado', () => {
     // Un SVG es un documento que puede ejecutar JavaScript. Servido desde
