@@ -10,6 +10,7 @@ import type * as MpConnectionService from '../sellers/services/mercadopago-conne
 import type * as SellerService from '../sellers/services/seller.service';
 import type Sharp from 'sharp';
 
+import type * as ListingEditingService from './services/listing-editing.service';
 import type * as ListingImageService from './services/listing-image.service';
 import type * as ListingService from './services/listing.service';
 import type * as OrderService from '../orders/services/order.service';
@@ -1004,5 +1005,140 @@ describe('fotos de la publicacion (PS-010 / ERD §9.2)', () => {
     await db.delete(schema.listings).where(eq(schema.listings.id, listing.id));
 
     expect(await imageService.listImages(listing.id)).toHaveLength(0);
+  });
+});
+
+describe('editar y ciclo de vida (SS-040 / SS-050 / SS-051)', () => {
+  let editService: typeof ListingEditingService;
+
+  beforeAll(async () => {
+    editService = await import('./services/listing-editing.service');
+  });
+
+  it('⚠️ un cambio de precio queda en listing_price_history (BR-015 / ERD §9.3)', async () => {
+    const seller = await vendedor('editar-precio');
+    const listing = await publicacionActiva(seller);
+
+    await editService.editListing(seller, listing.id, { priceAmount: 7_000_000n });
+
+    const historia = await getDatabase()
+      .select()
+      .from(schema.listingPriceHistory)
+      .where(eq(schema.listingPriceHistory.listingId, listing.id));
+
+    expect(historia).toHaveLength(1);
+    expect(historia[0]!.oldPriceAmount).toBe(BigInt(PRECIO));
+    expect(historia[0]!.newPriceAmount).toBe(7_000_000n);
+    expect(historia[0]!.changedBy).toBe(seller.id);
+  });
+
+  it('editar el titulo NO ensucia el historial de precios', async () => {
+    // BR-015 pide auditar lo SENSIBLE. Registrar cada correccion de un typo
+    // llenaria las tablas de ruido y esconderia lo que importa.
+    const seller = await vendedor('editar-titulo');
+    const listing = await publicacionActiva(seller);
+
+    await editService.editListing(seller, listing.id, { title: 'Otro titulo' });
+
+    const historia = await getDatabase()
+      .select()
+      .from(schema.listingPriceHistory)
+      .where(eq(schema.listingPriceHistory.listingId, listing.id));
+
+    expect(historia).toHaveLength(0);
+  });
+
+  it('⚠️ cambiar el precio NO afecta a una orden ya creada (BR-023 / SS-041)', async () => {
+    // La orden congelo su importe al crearse (DEC-030) y nunca vuelve a leer el
+    // precio de la publicacion. Es por construccion, pero vale fijarlo: es
+    // plata de alguien.
+    const seller = await vendedor('editar-orden');
+    const comprador = await usuario('editar-orden-buyer');
+    const listing = await publicacionActiva(seller);
+
+    const orden = await orderService.createOrder(comprador, {
+      listingId: listing.id,
+      quantity: 1,
+      shippingAddress: { calle: 'Falsa 123' },
+    });
+
+    await editService.editListing(seller, listing.id, { priceAmount: 1n });
+
+    const despues = await orderService.findById(orden.id);
+    expect(despues!.totalAmount).toBe(BigInt(PRECIO));
+  });
+
+  it('⚠️ NO se puede editar la publicacion de otro vendedor', async () => {
+    const dueno = await vendedor('editar-dueno');
+    const ajeno = await vendedor('editar-ajeno');
+    const listing = await publicacionActiva(dueno);
+
+    await expect(
+      editService.editListing(ajeno, listing.id, { title: 'Secuestrada' }),
+    ).rejects.toMatchObject({ code: 'LISTING_NOT_FOUND' });
+  });
+
+  it('pausar la saca de la vitrina; reactivar la devuelve', async () => {
+    const seller = await vendedor('pausar');
+    const listing = await publicacionActiva(seller);
+
+    await editService.pauseListing(seller, listing.id);
+
+    expect(await listingService.findPublicListing(listing.id)).toBeNull();
+
+    await editService.resumeListing(seller, listing.id);
+
+    expect(await listingService.findPublicListing(listing.id)).not.toBeNull();
+  });
+
+  it('⚠️ reactivar SIN fotos se rechaza (PS-010 por la puerta de atras)', async () => {
+    const seller = await vendedor('pausar-sin-fotos');
+    const listing = await publicacionActiva(seller);
+
+    await editService.pauseListing(seller, listing.id);
+
+    // Se borran las fotos con la publicacion pausada, que es cuando el guard de
+    // "ultima foto de una activa" no aplica.
+    await getDatabase()
+      .delete(schema.listingImages)
+      .where(eq(schema.listingImages.listingId, listing.id));
+
+    await expect(editService.resumeListing(seller, listing.id)).rejects.toMatchObject({
+      code: 'IMAGE_REQUIRED',
+    });
+  });
+
+  it('eliminar es LOGICO y terminal: no rompe el historial ni se puede editar', async () => {
+    const seller = await vendedor('eliminar');
+    const listing = await publicacionActiva(seller);
+
+    await editService.deleteListing(seller, listing.id);
+
+    // La fila sigue existiendo: `order_items` la referencia.
+    const fila = await listingService.findById(listing.id);
+    expect(fila!.status).toBe('deleted');
+
+    // Y ya no se opera sobre ella.
+    await expect(
+      editService.editListing(seller, listing.id, { title: 'Revivida' }),
+    ).rejects.toMatchObject({ code: 'LISTING_DELETED' });
+  });
+
+  it('⚠️ SS-051: vender la ultima unidad la marca AGOTADA sola', async () => {
+    const seller = await vendedor('agotada');
+    const comprador = await usuario('agotada-buyer');
+    const listing = await publicacionActiva(seller, { stock: 1 });
+
+    const orden = await orderService.createOrder(comprador, {
+      listingId: listing.id,
+      quantity: 1,
+      shippingAddress: { calle: 'Falsa 123' },
+    });
+
+    await orderService.decrementStockForOrder(orden.id);
+
+    const fila = await listingService.findById(listing.id);
+    expect(fila!.stock).toBe(0);
+    expect(fila!.status).toBe('sold_out');
   });
 });

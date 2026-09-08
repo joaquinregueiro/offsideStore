@@ -47,6 +47,10 @@ export type AuthErrorCode =
   | 'IMAGE_TOO_LARGE'
   | 'TOO_MANY_IMAGES'
   | 'LAST_IMAGE_REQUIRED'
+  | 'LISTING_DELETED'
+  | 'LISTING_NOT_PAUSABLE'
+  | 'LISTING_NOT_RESUMABLE'
+  | 'IMAGE_REQUIRED'
   // --- config store (configuration-registry.md) ---
   | 'SETTING_NOT_CONFIGURED'
   | 'SETTING_INVALID';

@@ -212,6 +212,58 @@ export async function transitionStatus(
   return filas.length === 1;
 }
 
+export interface UpdateListingValues {
+  title?: string;
+  description?: string | null;
+  priceAmount?: bigint;
+  stock?: number;
+  sizeValue?: string;
+  condition?: ListingRow['condition'];
+  kitType?: ListingRow['kitType'];
+  sleeve?: ListingRow['sleeve'];
+  categoryId?: string;
+  status?: ListingRow['status'];
+}
+
+/** Actualiza una publicacion. Solo los campos presentes. */
+export async function updateListing(
+  id: string,
+  values: UpdateListingValues,
+  db?: Database,
+): Promise<ListingRow | undefined> {
+  const [row] = await conn(db)
+    .update(schema.listings)
+    .set({ ...values, updatedAt: new Date() })
+    .where(eq(schema.listings.id, id))
+    .returning();
+
+  return row;
+}
+
+/**
+ * Registra un cambio de precio (ERD §9.3, BR-015).
+ *
+ * ⚠️ NO ES OPCIONAL NI DECORATIVO. BR-015 es un MUST: los cambios sensibles
+ * quedan auditados. El precio ademas tiene su propia tabla porque su historia
+ * se consulta como serie —cuanto costaba esto antes—, cosa que `audit_log` no
+ * responde bien.
+ *
+ * ⚠️ NO afecta a las ordenes ya creadas (BR-023): cada orden congelo su
+ * importe en el snapshot al crearse y nunca vuelve a leer el precio.
+ */
+export async function insertPriceChange(
+  values: {
+    listingId: string;
+    oldPriceAmount: bigint;
+    newPriceAmount: bigint;
+    currency: string;
+    changedBy: string;
+  },
+  db?: Database,
+): Promise<void> {
+  await conn(db).insert(schema.listingPriceHistory).values(values);
+}
+
 export async function findPublicCatalog(
   opciones: { limite?: number } = {},
   db?: Database,

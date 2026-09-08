@@ -69,3 +69,27 @@ export const lastImageOfActiveListing = (): AuthError =>
     'LAST_IMAGE_REQUIRED',
     'Es la unica foto de una publicacion activa. Subi otra antes de borrar esta',
   );
+
+/* ------------------------------------------ ciclo de vida (SS-040 / SS-050) */
+
+/** Una publicacion eliminada es historia: no se edita ni se revive. */
+export const listingDeleted = (): AuthError =>
+  new AuthError('LISTING_DELETED', 'Esa publicacion fue eliminada');
+
+export const listingNotPausable = (): AuthError =>
+  new AuthError('LISTING_NOT_PAUSABLE', 'Solo se puede pausar una publicacion que este a la venta');
+
+export const listingNotResumable = (): AuthError =>
+  new AuthError('LISTING_NOT_RESUMABLE', 'Solo se puede reactivar una publicacion pausada');
+
+/**
+ * Reactivar exige al menos una foto (PS-010).
+ *
+ * Sin esto, borrar las fotos con la publicacion pausada y reactivarla seria la
+ * puerta de atras a la regla.
+ */
+export const imageRequiredToPublish = (): AuthError =>
+  new AuthError(
+    'IMAGE_REQUIRED',
+    'Necesita al menos una foto para volver a la venta. Subi una y reactivala',
+  );

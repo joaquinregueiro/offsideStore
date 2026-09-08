@@ -65,6 +65,12 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   TOO_MANY_IMAGES: 409,
   /** Borrar dejaria una publicacion activa sin fotos: conflicto de estado. */
   LAST_IMAGE_REQUIRED: 409,
+  /** Eliminada: existe, pero ya no se opera sobre ella. */
+  LISTING_DELETED: 409,
+  LISTING_NOT_PAUSABLE: 409,
+  LISTING_NOT_RESUMABLE: 409,
+  /** Falta la foto que PS-010 exige para estar en la vitrina. */
+  IMAGE_REQUIRED: 409,
 
   // --- Orders ---
   /** La publicacion no existe o no admite compra. */

@@ -85,6 +85,9 @@ export interface PublicListing {
   stock: number;
   sizeValue: string;
   condition: listingRepo.ListingRow['condition'];
+  /** Obligatorios para camiseta (ERD §9.1). El formulario de edicion los necesita. */
+  kitType: listingRepo.ListingRow['kitType'];
+  sleeve: listingRepo.ListingRow['sleeve'];
   categoryId: string;
   createdAt: string;
 }
@@ -101,6 +104,8 @@ export function toPublicListing(row: listingRepo.ListingRow): PublicListing {
     stock: row.stock,
     sizeValue: row.sizeValue,
     condition: row.condition,
+    kitType: row.kitType,
+    sleeve: row.sleeve,
     categoryId: row.categoryId,
     createdAt: row.createdAt.toISOString(),
   };
@@ -197,6 +202,17 @@ export async function listActiveCategories(): Promise<PublicCategory[]> {
   const rows = await listingRepo.findActiveCategories();
 
   return rows.map((row) => ({ id: row.id, name: row.name, code: row.code }));
+}
+
+/**
+ * Marca una publicacion como AGOTADA (SS-051).
+ *
+ * ⚠️ SOLO DESDE `active`. Una pausada o eliminada no pasa a agotada: su
+ * estado lo decidio una persona y no lo pisa un efecto secundario del stock.
+ * La condicion de origen va en el WHERE, asi que es atomica.
+ */
+export async function markSoldOut(listingId: string, db?: Database): Promise<void> {
+  await listingRepo.transitionStatus(listingId, 'active', 'sold_out', db);
 }
 
 /** Publicaciones propias del vendedor autenticado. */

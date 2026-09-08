@@ -108,8 +108,25 @@ export async function decrementStockForOrder(
 
   for (const item of items) {
     const restante = await listingService.decrementStock(item.listingId, item.quantity, db);
+
     if (restante === undefined) {
       faltantes.push({ listingId: item.listingId, requested: item.quantity });
+      continue;
+    }
+
+    /**
+     * SS-051 — sin stock, la publicacion pasa a AGOTADA automaticamente.
+     *
+     * ⚠️ VA ACA Y NO EN UN BARRIDO POSTERIOR: este es el unico punto donde el
+     * stock baja, y hacerlo en la MISMA transaccion que el descuento evita la
+     * ventana en la que la vitrina ofrece algo que ya no existe.
+     *
+     * ⚠️ `isPurchasable` ya exige `stock >= 1`, asi que esto no cambia si algo
+     * se puede comprar: cambia lo que el VENDEDOR ve en su inventario, que es
+     * lo que SS-051 pide.
+     */
+    if (restante === 0) {
+      await listingService.markSoldOut(item.listingId, db);
     }
   }
 

@@ -8,6 +8,12 @@ import { requireVerifiedSessionUser } from '@/lib/session';
 import type { PublicUser } from '@/modules/auth/services/auth.service';
 import { AuthError } from '@/modules/auth/auth.errors';
 import { createSellerProfileSchema, submitTaxIdentitySchema } from '@/modules/auth/auth.schemas';
+import {
+  deleteListing,
+  editListing,
+  pauseListing,
+  resumeListing,
+} from '@/modules/listings/services/listing-editing.service';
 import { publishListing } from '@/modules/listings/services/listing.service';
 import {
   activateListing,
@@ -399,4 +405,126 @@ export async function borrarFoto(
   revalidatePath('/vendedor/publicaciones');
 
   return { ok: 'Foto borrada.' };
+}
+
+/* --------------------------------------------- editar / pausar / eliminar -- */
+
+/**
+ * Campos editables (SS-040).
+ *
+ * ⚠️ LA CATEGORIA NO ESTA. Cambiarla puede volver obligatorios atributos que
+ * la publicacion no tiene (ERD §9.1); si hace falta, se publica de nuevo.
+ */
+const editarSchema = z.object({
+  listingId: z.string().uuid(),
+  title: z.string().trim().min(3, 'El título es muy corto').max(140),
+  description: z.string().trim().max(5_000).optional(),
+  precioPesos: z.coerce
+    .number()
+    .positive('El precio tiene que ser mayor a cero')
+    .max(PRECIO_MAXIMO_PESOS, 'Ese precio es demasiado alto'),
+  stock: z.coerce
+    .number()
+    .int('El stock tiene que ser un número entero')
+    .min(0, 'El stock no puede ser negativo')
+    .max(1_000),
+  sizeValue: z.string().trim().min(1, 'Ingresá el talle').max(20),
+  condition: z.enum(['NUEVO', 'COMO_NUEVO', 'EXCELENTE', 'MUY_BUENO', 'BUENO', 'ACEPTABLE']),
+  kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
+  sleeve: z.enum(['short', 'long']).optional(),
+});
+
+export async function editar(_estado: EstadoVendedor, formData: FormData): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+
+    const input = editarSchema.parse({
+      listingId: texto(formData, 'listingId'),
+      title: texto(formData, 'title'),
+      description: texto(formData, 'description'),
+      precioPesos: texto(formData, 'precioPesos'),
+      stock: texto(formData, 'stock'),
+      sizeValue: texto(formData, 'sizeValue'),
+      condition: texto(formData, 'condition'),
+      kitType: texto(formData, 'kitType'),
+      sleeve: texto(formData, 'sleeve'),
+    });
+
+    await editListing(user, input.listingId, {
+      title: input.title,
+      description: input.description ?? null,
+      priceAmount: BigInt(Math.round(input.precioPesos * 100)),
+      stock: input.stock,
+      sizeValue: input.sizeValue,
+      condition: input.condition,
+      kitType: input.kitType ?? null,
+      sleeve: input.sleeve ?? null,
+    });
+  } catch (error) {
+    return { error: mensajeDeError(error) };
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+
+  return { ok: 'Guardamos los cambios.' };
+}
+
+const publicacionSchema = z.object({ listingId: z.string().uuid() });
+
+export async function pausar(_estado: EstadoVendedor, formData: FormData): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    const { listingId } = publicacionSchema.parse({ listingId: texto(formData, 'listingId') });
+
+    await pauseListing(user, listingId);
+  } catch (error) {
+    return { error: mensajeDeError(error) };
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+
+  return { ok: 'La pausamos: ya no aparece en la vitrina.' };
+}
+
+export async function reactivar(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    const { listingId } = publicacionSchema.parse({ listingId: texto(formData, 'listingId') });
+
+    await resumeListing(user, listingId);
+  } catch (error) {
+    return { error: mensajeDeError(error) };
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+
+  return { ok: 'Volvió a la venta.' };
+}
+
+/**
+ * Elimina una publicacion (SS-050).
+ *
+ * ⚠️ ES IRREVERSIBLE y la pantalla lo dice antes de que se apriete. El
+ * borrado es logico —`order_items` referencia la publicacion—, pero para el
+ * vendedor no hay vuelta atras.
+ */
+export async function eliminar(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    const { listingId } = publicacionSchema.parse({ listingId: texto(formData, 'listingId') });
+
+    await deleteListing(user, listingId);
+  } catch (error) {
+    return { error: mensajeDeError(error) };
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+
+  return { ok: 'La eliminamos.' };
 }

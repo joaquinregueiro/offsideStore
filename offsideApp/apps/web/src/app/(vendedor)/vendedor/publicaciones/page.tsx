@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 
+import { CampoOculto, Formulario } from '@/components/form';
 import { Aviso, BotonEnlace, EstadoVacio, Etiqueta } from '@/components/ui';
 import { condicion, estadoDePublicacion, precio } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
 import { listMyListings } from '@/modules/listings/services/listing.service';
 import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
 
+import { eliminar, pausar, reactivar } from '../../acciones';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mis publicaciones — Offside Store' };
@@ -65,25 +67,55 @@ export default async function MisPublicaciones() {
               <span>{precio(publicacion.priceAmount, publicacion.currency)}</span>
             </div>
             <div className={estilos.linea}>
+              <a href={`/vendedor/publicaciones/${publicacion.id}/editar`}>Editar</a>
               <a href={`/vendedor/publicaciones/${publicacion.id}/fotos`}>Fotos</a>
-              {/*
-                ⚠️ UN BORRADOR NO SE VE EN LA VITRINA, y el vendedor tiene que
-                saber por que. Sin este aviso, una publicacion que quedo sin
-                fotos parece publicada y no vende, sin explicacion.
-              */}
-              {publicacion.status === 'draft' && (
-                <span className={estilos.concepto}>
-                  Sin fotos: no está a la venta hasta que subas al menos una
-                </span>
+            </div>
+
+            {/*
+              ⚠️ UN BORRADOR NO SE VE EN LA VITRINA, y el vendedor tiene que
+              saber por que. Sin este aviso, una publicacion que quedo sin fotos
+              parece publicada y no vende, sin explicacion.
+            */}
+            {publicacion.status === 'draft' && (
+              <p className={estilos.pasoDetalle}>
+                Sin fotos: no está a la venta hasta que subas al menos una.
+              </p>
+            )}
+
+            {/*
+              SS-050. Cada accion es un formulario propio: son mutaciones y van
+              por POST, no por enlace —un GET que cambia estado se dispara con
+              el prefetch del navegador—.
+            */}
+            <div className={estilos.acciones}>
+              {(publicacion.status === 'active' || publicacion.status === 'sold_out') && (
+                <Formulario accion={pausar} enviar="Pausar">
+                  <CampoOculto nombre="listingId" valor={publicacion.id} />
+                </Formulario>
               )}
+
+              {publicacion.status === 'paused' && (
+                <Formulario accion={reactivar} enviar="Volver a la venta">
+                  <CampoOculto nombre="listingId" valor={publicacion.id} />
+                </Formulario>
+              )}
+
+              {/*
+                ⚠️ ELIMINAR ES IRREVERSIBLE para el vendedor. Se avisa ANTES,
+                junto al boton, no en un cartel que se lee despues.
+              */}
+              <Formulario accion={eliminar} enviar="Eliminar">
+                <CampoOculto nombre="listingId" valor={publicacion.id} />
+                <p className={estilos.pasoDetalle}>Eliminar no se puede deshacer.</p>
+              </Formulario>
             </div>
           </article>
         ))
       )}
 
       <p className={estilos.nota}>
-        Todavía no se puede editar, pausar ni eliminar una publicación desde acá. Si necesitás bajar
-        algo, escribinos.
+        Pausar la saca de la vitrina y podés volver a activarla cuando quieras. Eliminar es
+        definitivo. Cambiar el precio no afecta a las órdenes ya hechas.
       </p>
     </main>
   );
