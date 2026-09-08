@@ -46,7 +46,49 @@ AWS_ACCESS_KEY_ID=<del usuario IAM con ses:SendEmail>
 AWS_SECRET_ACCESS_KEY=<idem>
 EMAIL_FROM_ADDRESS=<casilla del dominio verificado en SES>
 EMAIL_FROM_NAME=Offside Store
+S3_ENDPOINT=https://<cloudflare-account-id>.r2.cloudflarestorage.com
+S3_BUCKET=<nombre del bucket en R2>
+S3_ACCESS_KEY=<Access Key ID del token R2>
+S3_SECRET_KEY=<Secret Access Key del token R2>
+S3_PUBLIC_URL=https://<dominio publico del bucket>
+S3_REGION=auto
 ```
+
+⚠️ **LAS CREDENCIALES DE STORAGE Y LAS DE SES SON DE PROVEEDORES DISTINTOS.**
+`AWS_*` es Amazon SES (emails); `S3_*` es Cloudflare R2 (fotos). Se llaman
+`S3_*` porque nombran el PROTOCOLO, que R2 habla, no al proveedor. Mezclarlas es
+un error facil y real: una `S3_ACCESS_KEY` que empieza con `AKIA` es de AWS IAM,
+no de R2 —las de R2 son 32 caracteres hexadecimales sin prefijo—.
+
+⚠️ **`S3_ENDPOINT` lleva el ACCOUNT ID de Cloudflare, no el Access Key ID.**
+Los dos son 32 caracteres hex y se confunden. El Account ID esta en la URL del
+panel: `dash.cloudflare.com/<ACCOUNT_ID>/r2/overview`. Con el equivocado, el
+edge de Cloudflare **corta el handshake de TLS** (`SSL alert number 40`), porque
+hay DNS comodin pero el certificado se provisiona por cuenta.
+
+⚠️ **`S3_ENDPOINT` no lleva el bucket.** Con `forcePathStyle` el SDK arma
+`<endpoint>/<bucket>/<key>`; si el endpoint ya lo trae, R2 responde "Bucket does
+not exist". El bucket va solo en `S3_BUCKET`.
+
+⚠️ **`S3_PUBLIC_URL` es por donde se LEE, `S3_ENDPOINT` por donde se ESCRIBE.**
+El bucket tiene que tener acceso publico habilitado —dominio propio, o la URL
+`r2.dev` que Cloudflare limita y desaconseja para produccion—. Si falta, se
+sube bien y despues no se ve ninguna foto.
+
+⚠️ **Sin las cinco variables de storage, en produccion la subida de fotos se
+rompe a proposito.** No se cae al adaptador local porque escribiria dentro del
+contenedor: las fotos desapareceran en el proximo deploy mientras el sistema
+informa exito.
+
+### Como verificar el endpoint ANTES de deployar
+
+```bash
+curl -sv https://<account-id>.r2.cloudflarestorage.com 2>&1 | tail -20
+```
+
+Exito = handshake de TLS completo y un **HTTP 400 con XML** quejandose de falta
+de autenticacion. Ese 400 prueba que el host, el certificado y la salida a
+internet funcionan. Si aparece `alert number 40`, el Account ID esta mal.
 
 ⚠️ **Sin las cuatro variables de SES, en produccion el envio de emails se
 rompe a proposito** y nadie puede completar un alta: el token de verificacion se
