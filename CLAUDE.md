@@ -682,6 +682,51 @@ bajo para un script. Valores 🟡 pendientes de confirmación.
 suma el cupo de todas desde una sola máquina. Cada cuenta cuesta un email real y
 pasa por `register`/`verify-resend`, que sí se limitan por IP.
 
+**Vendedor desconectado — SS-013 / UC-SS-4 (2026-09-09)**: si un vendedor
+desconecta Mercado Pago, sus publicaciones dejan de mostrarse en la vitrina, en
+la búsqueda y en su ficha, y vuelven solas al reconectar.
+
+Cierra el hueco que esta misma sección listaba: la compra ya rechazaba con `409
+SELLER_NOT_OPERATIONAL`, pero la vitrina seguía ofreciendo la publicación, así
+que el comprador se enteraba **después** de entrar, completar la dirección y
+apretar comprar.
+
+⚠️ **No era una decisión de producto abierta, como se venía diciendo acá.** Al
+leer la documentación para implementarlo apareció que ya estaba decidida:
+SS-013 dice que esas publicaciones "no pueden venderse" y que "el sistema debe
+detectar y **comunicar** este estado", y UC-SS-4 es literal —"marca la cuenta
+como MP desconectado y **pausa la venta hasta reconectar**"—. El código no
+eligió una política: la cumplía a medias.
+
+⚠️ **"Pausa la venta" se implementa como PREDICADO DERIVADO, no pisando
+`listings.status`.** Es la decisión de diseño que más importa: si la desconexión
+materializara `paused`, al reconectar sería imposible distinguir las que el
+vendedor había pausado a mano (SS-050) de las que apagó la desconexión, y se
+reactivarían publicaciones que su dueño quería abajo. Con un predicado, el
+estado nunca se toca y reconectar no puede romper nada. Hay test que lo fija.
+
+Alcance: vitrina, ficha (`/p/[id]` → **404**) y búsqueda —resultados, total y
+facetas—. La ficha importa más de lo que parece: el enlace se comparte por
+WhatsApp y sobrevive al catálogo. Las facetas también: si contaran lo invisible
+ofrecerían "Talle L (1)" y al tocarlo no habría nada.
+
+⚠️ **El panel del vendedor NO filtra**, al revés que la vitrina y a propósito:
+esconderle sus propias publicaciones sería hacerle creer que las perdió, y la
+reacción natural —borrarlas y republicar— destruye su historial. Lo que cambia
+es el aviso, que es la mitad "comunicar" de SS-013 y era la que faltaba: dice
+cuántas dejaron de verse y que **vuelven solas**, para que no toque nada.
+
+⚠️ El predicado queda expresado **dos veces** —Drizzle para vitrina/ficha, un
+`EXISTS` para la búsqueda— además del `canSell()` de `sellers`. Es la misma
+duplicación consciente que ya existía entre `isPurchasable()` y el WHERE del
+catálogo, y se acota igual: un solo lugar por lenguaje y tests que fijan que
+digan lo mismo.
+
+Verificado en el navegador: con MP conectado la camiseta aparece en vitrina,
+búsqueda y ficha; desconectando queda vitrina en 0, búsqueda en "0
+publicaciones" y ficha en **404**; reconectando vuelven las tres, y la
+publicación siguió en `active` todo el tiempo.
+
 **Rebotes y quejas de email — ✅ EN PRODUCCIÓN (2026-09-08)**:
 `POST /api/webhooks/ses/notifications` recibe por SNS lo que publica SES y las
 direcciones afectadas dejan de recibir email.
@@ -887,7 +932,7 @@ que todavía no existen. De los nueve emails que lista la documentación sólo e
 los dos de `auth`; sus rebotes y quejas sí se procesan. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **531** (281 unitarios + 250 de integración contra PostgreSQL y Redis
+Tests: **538** (281 unitarios + 257 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 ⚠️ Los fixtures **leen** las categorías que carga la migración `0004`; no crean
@@ -952,14 +997,6 @@ Lo que hoy frena el avance, en orden de impacto:
 > `app_settings` **está en uso** (la comisión); `seller_tiers` sigue vacía.
 
 ### Huecos conocidos en el código
-
-⚠️ **La vitrina muestra publicaciones que no se pueden comprar.** Si un vendedor
-desconecta Mercado Pago, `POST /api/orders` responde `409 SELLER_NOT_OPERATIONAL`
-—SS-013 se cumple—, pero la publicación **sigue visible** en el catálogo público:
-`isPurchasable` mira `status`, `moderation_status` y stock, no si el vendedor
-puede operar. El comprador la ve, entra, completa la dirección y recién ahí choca
-contra el rechazo. Filtrar el catálogo por `canSell` cambia **qué muestra la
-vitrina**, así que es una decisión de producto y no se tomó desde el código.
 
 ⚠️ **Los refunds no contemplan que el vendedor no tenga saldo.** Si Mercado Pago
 rechaza un refund por saldo insuficiente, hoy se devuelve `paymentProviderError`

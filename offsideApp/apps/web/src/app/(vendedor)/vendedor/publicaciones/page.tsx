@@ -16,11 +16,14 @@ export const dynamic = 'force-dynamic';
 /**
  * Inventario del vendedor (SS-060).
  *
- * ⚠️ SOLO LECTURA POR AHORA. SS-040 (editar) y SS-050 (pausar, reactivar,
- * eliminar) son MVP y NO estan implementados: no existe el Service que los
- * haga, y SS-040 ademas exige auditar los cambios sensibles de precio y
- * autenticidad (BR-015). Se avisa en la pantalla en vez de mostrar botones que
- * no hacen nada.
+ * ⚠️ ESTA PANTALLA NO FILTRA POR SS-013, y es lo contrario de la vitrina a
+ * proposito. Si un vendedor desconecta Mercado Pago, sus publicaciones
+ * desaparecen del catalogo publico pero **siguen siendo suyas y siguen aca**:
+ * esconderselas a el tambien seria hacerle creer que las perdio.
+ *
+ * Lo que si cambia es el aviso: SS-013 pide "detectar y COMUNICAR" ese estado, y
+ * comunicarlo es justamente lo que faltaba —la vitrina se apagaba y el vendedor
+ * no tenia forma de enterarse—.
  */
 export default async function MisPublicaciones() {
   const user = await requireSellerSessionUser('/vendedor/publicaciones');
@@ -29,6 +32,15 @@ export default async function MisPublicaciones() {
     listMyListings(user),
     getConnectionStatus(user),
   ]);
+
+  /**
+   * Cuantas dejaron de verse por la desconexion.
+   *
+   * Solo las `active`: una pausada o un borrador tampoco se muestran, pero eso
+   * lo decidio el vendedor y meterlas en la cuenta convertiria el aviso en un
+   * numero que no explica nada.
+   */
+  const activas = publicaciones.filter((p) => p.status === 'active').length;
 
   return (
     <main className={estilos.pagina}>
@@ -41,6 +53,22 @@ export default async function MisPublicaciones() {
 
       {!conexion.canSell && (
         <Aviso error>
+          {activas > 0 &&
+            (activas === 1 ? (
+              <>
+                <strong>Tu publicación activa no se está mostrando.</strong> Mientras Mercado Pago
+                no esté conectado nadie puede verla ni comprarla, porque no podríamos cobrarte la
+                venta. <strong>Vuelve sola al reconectar</strong>: no hace falta que la republiques
+                ni que toques nada.{' '}
+              </>
+            ) : (
+              <>
+                <strong>Tus {activas} publicaciones activas no se están mostrando.</strong> Mientras
+                Mercado Pago no esté conectado nadie puede verlas ni comprarlas, porque no podríamos
+                cobrarte la venta. <strong>Vuelven solas al reconectar</strong>: no hace falta que
+                las republiques ni que toques nada.{' '}
+              </>
+            ))}
           Para publicar necesitás estar habilitado y tener Mercado Pago conectado.{' '}
           <a href="/vendedor">Ver qué te falta</a>.
         </Aviso>

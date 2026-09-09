@@ -9,9 +9,10 @@ import { eq, sql } from 'drizzle-orm';
  * que realmente corre. Todo parametro del usuario va **parametrizado**, nunca
  * interpolado: `sql` de Drizzle produce placeholders, no concatenacion.
  *
- * ⚠️ EL FILTRO DE VISIBILIDAD ES EL MISMO QUE EL DE LA VITRINA (ERD §9.1):
- * `status = 'active'`, `moderation_status = 'APPROVED'`, `stock >= 1`. Si la
- * busqueda mostrara algo que la compra rechaza, prometeria lo que no cumple.
+ * ⚠️ EL FILTRO DE VISIBILIDAD ES EL MISMO QUE EL DE LA VITRINA (ERD §9.1 +
+ * SS-013): `status = 'active'`, `moderation_status = 'APPROVED'`, `stock >= 1`
+ * y **el vendedor puede operar**. Si la busqueda mostrara algo que la compra
+ * rechaza, prometeria lo que no cumple.
  */
 
 const conn = (db?: Database): Database => db ?? getDatabase();
@@ -77,6 +78,28 @@ export async function reindexListing(
   `);
 }
 
+/**
+ * El vendedor puede operar (SS-013), expresado en SQL.
+ *
+ * ⚠️ ES UN `EXISTS` Y NO UN JOIN A PROPOSITO. Esta condicion la usan los tres
+ * caminos —resultados, conteo total y CADA faceta—, y dos de ellos consultan
+ * `FROM listings l` a secas. Con un join habria que agregarlo en tres lugares y
+ * acordarse de sumarlo a cada faceta nueva; dentro de `condiciones()` entra
+ * solo. Ademas un `EXISTS` no puede multiplicar filas, asi que los conteos de
+ * las facetas siguen siendo exactos.
+ *
+ * Si las facetas no lo aplicaran, dirian "River Plate (3)" y la busqueda
+ * devolveria dos: un filtro que miente sobre lo que hay.
+ */
+const VENDEDOR_OPERATIVO = sql`EXISTS (
+  SELECT 1
+    FROM seller_profiles sp
+    JOIN mercadopago_accounts mp ON mp.seller_id = sp.id
+   WHERE sp.id = l.seller_id
+     AND sp.status = 'approved'
+     AND mp.status = 'connected'
+)`;
+
 /** Condiciones de visibilidad + filtros. Se comparte entre resultados y facetas. */
 function condiciones(filtros: SearchFilters) {
   const partes = [
@@ -84,6 +107,7 @@ function condiciones(filtros: SearchFilters) {
     sql`l.moderation_status = 'APPROVED'`,
     sql`l.stock >= 1`,
     sql`l.deleted_at IS NULL`,
+    VENDEDOR_OPERATIVO,
   ];
 
   if (filtros.categoryId !== undefined) partes.push(sql`l.category_id = ${filtros.categoryId}`);

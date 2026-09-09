@@ -16,6 +16,34 @@ export type ListingRow = typeof schema.listings.$inferSelect;
 
 const conn = (db?: Database): Database => db ?? getDatabase();
 
+/**
+ * El vendedor puede operar (SS-013), expresado en SQL.
+ *
+ * =============================================================================
+ * ⚠️ ES EL MISMO PREDICADO QUE `canSell()` DE `sellers`, EN OTRO LENGUAJE
+ * =============================================================================
+ *
+ * `canSell(sellerStatus, mpStatus)` decide `approved` + `connected`. Aca hace
+ * falta la version SQL porque el filtro tiene que correr EN LA BASE: traerse el
+ * catalogo entero a memoria para descartar despues no escala, y ademas rompe la
+ * paginacion —el LIMIT se aplicaria antes de filtrar—.
+ *
+ * Es la misma duplicacion consciente que ya existe entre `isPurchasable()` y el
+ * WHERE del catalogo, y se acota igual: **un solo lugar** por lenguaje y un test
+ * que fija que los dos digan lo mismo. Si algun dia divergen, la vitrina ofrece
+ * lo que la compra rechaza, que es exactamente el problema que esto cierra.
+ *
+ * ⚠️ `INNER JOIN` Y NO `LEFT JOIN`: quien nunca conecto Mercado Pago no tiene
+ * fila en `mercadopago_accounts`, y tampoco puede vender. Con `LEFT JOIN`
+ * habria que acordarse de descartar el NULL a mano; asi es imposible olvidarlo.
+ * `mercadopago_accounts` tiene `UNIQUE(seller_id)` (ERD §7.3), asi que el join
+ * no puede multiplicar filas.
+ */
+const VENDEDOR_OPERATIVO = [
+  eq(schema.sellerProfiles.status, 'approved'),
+  eq(schema.mercadopagoAccounts.status, 'connected'),
+] as const;
+
 export async function findById(id: string, db?: Database): Promise<ListingRow | undefined> {
   const [row] = await conn(db)
     .select()
@@ -199,6 +227,12 @@ export interface CatalogListingRow {
  *
  * ⚠️ NO EXPONE al vendedor mas que su nombre de tienda: ni su id de usuario, ni
  * su estado, ni datos fiscales.
+ *
+ * ⚠️ TAMBIEN EXIGE QUE EL VENDEDOR PUEDA OPERAR (SS-013 / UC-SS-4). Antes no lo
+ * hacia, y el resultado era una vitrina que prometia lo que la compra rechaza:
+ * el comprador entraba, completaba la direccion y recien ahi chocaba contra un
+ * `409 SELLER_NOT_OPERATIONAL`. La documentacion es explicita —"pausa la venta
+ * hasta reconectar"—, asi que esto no elige una politica: la cumple.
  */
 /**
  * Cambia el estado de una publicacion.
@@ -298,11 +332,16 @@ export async function findPublicCatalog(
     })
     .from(schema.listings)
     .innerJoin(schema.sellerProfiles, eq(schema.listings.sellerId, schema.sellerProfiles.id))
+    .innerJoin(
+      schema.mercadopagoAccounts,
+      eq(schema.mercadopagoAccounts.sellerId, schema.sellerProfiles.id),
+    )
     .where(
       and(
         eq(schema.listings.status, 'active'),
         eq(schema.listings.moderationStatus, 'APPROVED'),
         gte(schema.listings.stock, 1),
+        ...VENDEDOR_OPERATIVO,
       ),
     )
     .orderBy(desc(schema.listings.createdAt))
@@ -321,10 +360,15 @@ export interface PublicListingDetailRow extends CatalogListingRow {
 /**
  * Una publicacion del catalogo publico, por id.
  *
- * ⚠️ APLICA EL MISMO FILTRO QUE EL CATALOGO (ERD §9.1). Devolver una
- * publicacion pausada, agotada o sin aprobar solo porque alguien tiene su
- * enlace seria una via lateral para ver —y desde ahi intentar comprar— lo que
- * la vitrina esconde. Se devuelve `undefined` y la pagina responde 404.
+ * ⚠️ APLICA EL MISMO FILTRO QUE EL CATALOGO (ERD §9.1 + SS-013). Devolver una
+ * publicacion pausada, agotada, sin aprobar o de un vendedor que no puede
+ * operar solo porque alguien tiene su enlace seria una via lateral para ver —y
+ * desde ahi intentar comprar— lo que la vitrina esconde. Se devuelve
+ * `undefined` y la pagina responde 404.
+ *
+ * Esto importa mas de lo que parece: el enlace de una publicacion se comparte
+ * por WhatsApp y sobrevive al catalogo. Sin este filtro, esos enlaces seguirian
+ * llevando a una compra imposible mucho despues de la desconexion.
  */
 export async function findPublicById(
   id: string,
@@ -349,12 +393,17 @@ export async function findPublicById(
     })
     .from(schema.listings)
     .innerJoin(schema.sellerProfiles, eq(schema.listings.sellerId, schema.sellerProfiles.id))
+    .innerJoin(
+      schema.mercadopagoAccounts,
+      eq(schema.mercadopagoAccounts.sellerId, schema.sellerProfiles.id),
+    )
     .where(
       and(
         eq(schema.listings.id, id),
         eq(schema.listings.status, 'active'),
         eq(schema.listings.moderationStatus, 'APPROVED'),
         gte(schema.listings.stock, 1),
+        ...VENDEDOR_OPERATIVO,
       ),
     )
     .limit(1);

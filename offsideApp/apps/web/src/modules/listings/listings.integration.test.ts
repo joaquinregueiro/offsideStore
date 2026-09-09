@@ -842,6 +842,122 @@ describe('catalogo publico', () => {
     expect(listingService.isPurchasable(fila!)).toBe(true);
     expect((await listingService.listPublicCatalog()).map((l) => l.id)).toContain(publicada.id);
   });
+  /**
+   * SS-013 / UC-SS-4 — "pausa la venta hasta reconectar".
+   *
+   * ⚠️ EL AGUJERO QUE CIERRA: antes la vitrina mostraba publicaciones de
+   * vendedores que habian desconectado Mercado Pago. `POST /api/orders` las
+   * rechazaba con `409 SELLER_NOT_OPERATIONAL` —SS-013 se cumplia del lado de
+   * la compra—, pero el comprador se enteraba recien despues de entrar,
+   * completar la direccion y apretar comprar.
+   */
+  describe('el vendedor tiene que poder operar (SS-013)', () => {
+    /** Desconecta Mercado Pago SIN tocar la publicacion. */
+    async function desconectar(sellerId: string) {
+      await getDatabase()
+        .update(schema.mercadopagoAccounts)
+        .set({ status: 'disconnected' })
+        .where(eq(schema.mercadopagoAccounts.sellerId, sellerId));
+    }
+
+    async function perfilDe(user: PublicUser) {
+      const [perfil] = await getDatabase()
+        .select({ id: schema.sellerProfiles.id })
+        .from(schema.sellerProfiles)
+        .where(eq(schema.sellerProfiles.userId, user.id));
+
+      return perfil!.id;
+    }
+
+    it('desconectar Mercado Pago saca la publicacion de la vitrina', async () => {
+      const seller = await vendedor('ss013-vitrina');
+      const publicada = await publicacionActiva(seller);
+
+      expect((await listingService.listPublicCatalog()).map((l) => l.id)).toContain(publicada.id);
+
+      await desconectar(await perfilDe(seller));
+
+      expect((await listingService.listPublicCatalog()).map((l) => l.id)).not.toContain(
+        publicada.id,
+      );
+    });
+
+    it('⚠️ tambien saca la FICHA, no solo el listado', async () => {
+      // El enlace de una publicacion se comparte por WhatsApp y sobrevive al
+      // catalogo. Si la ficha siguiera respondiendo, esos enlaces llevarian a
+      // una compra imposible mucho despues de la desconexion.
+      const seller = await vendedor('ss013-ficha');
+      const publicada = await publicacionActiva(seller);
+
+      expect(await listingService.findPublicListing(publicada.id)).not.toBeNull();
+
+      await desconectar(await perfilDe(seller));
+
+      expect(await listingService.findPublicListing(publicada.id)).toBeNull();
+    });
+
+    it('⚠️ NO cambia el estado de la publicacion: sigue `active`', async () => {
+      // ES LA DECISION DE DISEÑO MAS IMPORTANTE DE SS-013. "Pausa la venta" se
+      // implementa como un PREDICADO DERIVADO, no pisando `listings.status`.
+      // Si se materializara, al reconectar seria imposible distinguir las que
+      // el vendedor habia pausado a mano de las que apago la desconexion, y se
+      // reactivarian publicaciones que su dueño queria abajo.
+      const seller = await vendedor('ss013-estado');
+      const publicada = await publicacionActiva(seller);
+
+      await desconectar(await perfilDe(seller));
+
+      const fila = await listingService.findById(publicada.id);
+
+      expect(fila?.status).toBe('active');
+    });
+
+    it('reconectar la devuelve sola, sin republicar nada', async () => {
+      const seller = await vendedor('ss013-reconecta');
+      const publicada = await publicacionActiva(seller);
+      const sellerId = await perfilDe(seller);
+
+      await desconectar(sellerId);
+      expect((await listingService.listPublicCatalog()).map((l) => l.id)).not.toContain(
+        publicada.id,
+      );
+
+      await getDatabase()
+        .update(schema.mercadopagoAccounts)
+        .set({ status: 'connected' })
+        .where(eq(schema.mercadopagoAccounts.sellerId, sellerId));
+
+      expect((await listingService.listPublicCatalog()).map((l) => l.id)).toContain(publicada.id);
+    });
+
+    it('⚠️ el vendedor SIGUE viendo sus publicaciones', async () => {
+      // Esconderselas a el tambien seria hacerle creer que las perdio, y la
+      // reaccion natural —borrarlas y republicar— destruye su historial.
+      const seller = await vendedor('ss013-panel');
+      const publicada = await publicacionActiva(seller);
+
+      await desconectar(await perfilDe(seller));
+
+      expect((await listingService.listMyListings(seller)).map((l) => l.id)).toContain(
+        publicada.id,
+      );
+    });
+
+    it('un vendedor SUSPENDIDO tampoco aparece, aunque tenga MP conectado', async () => {
+      // `canSell` son DOS condiciones, no una: `approved` Y `connected`.
+      const seller = await vendedor('ss013-suspendido');
+      const publicada = await publicacionActiva(seller);
+
+      await getDatabase()
+        .update(schema.sellerProfiles)
+        .set({ status: 'suspended' })
+        .where(eq(schema.sellerProfiles.id, await perfilDe(seller)));
+
+      expect((await listingService.listPublicCatalog()).map((l) => l.id)).not.toContain(
+        publicada.id,
+      );
+    });
+  });
 });
 
 describe('fotos de la publicacion (PS-010 / ERD §9.2)', () => {
@@ -1369,5 +1485,39 @@ describe('catalogos y alias (PS-023 / PS-024, DEC-041)', () => {
 
     const filtrado = await searchService.searchListings({ clubId: boca });
     expect(filtrado.total).toBeGreaterThanOrEqual(2);
+  });
+
+  it('⚠️ la busqueda tampoco muestra a un vendedor desconectado (SS-013)', async () => {
+    // La busqueda usa EL MISMO filtro de visibilidad que la vitrina. Si se
+    // quedara afuera de SS-013, seria la puerta de atras: la camiseta no
+    // aparece en el catalogo pero si buscandola por nombre.
+    const seller = await vendedor('ss013-busqueda');
+    const listing = await publicacionActiva(seller, {
+      title: 'Camiseta Sarmiento desconectada 1994',
+    });
+    await searchService.reindex(listing.id);
+
+    const antes = await searchService.searchListings({ texto: 'Sarmiento desconectada' });
+    expect(antes.resultados.map((r) => r.id)).toContain(listing.id);
+
+    const [perfil] = await getDatabase()
+      .select({ id: schema.sellerProfiles.id })
+      .from(schema.sellerProfiles)
+      .where(eq(schema.sellerProfiles.userId, seller.id));
+
+    await getDatabase()
+      .update(schema.mercadopagoAccounts)
+      .set({ status: 'disconnected' })
+      .where(eq(schema.mercadopagoAccounts.sellerId, perfil!.id));
+
+    const despues = await searchService.searchListings({ texto: 'Sarmiento desconectada' });
+
+    expect(despues.resultados.map((r) => r.id)).not.toContain(listing.id);
+    // ⚠️ Y EL TOTAL TAMBIEN. Un contador que dice "1 publicacion" sobre una
+    // lista vacia es peor que no mostrarlo.
+    expect(despues.total).toBe(0);
+    // ⚠️ Y LAS FACETAS. Si contaran lo invisible, el filtro ofreceria "Talle L
+    // (1)" y al tocarlo no habria nada: un filtro que miente sobre lo que hay.
+    expect(despues.facetas.talle).toHaveLength(0);
   });
 });
