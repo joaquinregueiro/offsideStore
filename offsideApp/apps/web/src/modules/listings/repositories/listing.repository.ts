@@ -97,6 +97,12 @@ export async function findBySellerId(sellerId: string, db?: Database): Promise<L
 }
 
 export interface InsertListingValues {
+  /** Referencias de catalogo (ERD §8). Opcionales: alimentan las facetas. */
+  clubId?: string | null;
+  nationalTeamId?: string | null;
+  brandId?: string | null;
+  competitionId?: string | null;
+  seasonId?: string | null;
   sellerId: string;
   categoryId: string;
   title: string;
@@ -139,6 +145,11 @@ export async function insertListing(
       condition: values.condition,
       kitType: values.kitType,
       sleeve: values.sleeve,
+      clubId: values.clubId ?? null,
+      nationalTeamId: values.nationalTeamId ?? null,
+      brandId: values.brandId ?? null,
+      competitionId: values.competitionId ?? null,
+      seasonId: values.seasonId ?? null,
       /**
        * ⚠️ NACE EN BORRADOR (SS-032, y es el default del ERD §9.1).
        *
@@ -213,6 +224,11 @@ export async function transitionStatus(
 }
 
 export interface UpdateListingValues {
+  clubId?: string | null;
+  nationalTeamId?: string | null;
+  brandId?: string | null;
+  competitionId?: string | null;
+  seasonId?: string | null;
   title?: string;
   description?: string | null;
   priceAmount?: bigint;

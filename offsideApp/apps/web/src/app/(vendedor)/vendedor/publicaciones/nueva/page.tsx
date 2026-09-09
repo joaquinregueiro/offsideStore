@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { AreaDeTexto, Campo, CampoArchivos, Formulario, Seleccion } from '@/components/form';
 import { requireSellerSessionUser } from '@/lib/session';
 import { getImageSettings } from '@/modules/config/services/image-settings.service';
-import { listActiveCategories } from '@/modules/listings/services/listing.service';
+import { listActiveCategories, listCatalogs } from '@/modules/listings/services/listing.service';
 import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
 
 import { publicar } from '../../../acciones';
@@ -34,10 +34,11 @@ export const dynamic = 'force-dynamic';
 export default async function NuevaPublicacion() {
   const user = await requireSellerSessionUser('/vendedor/publicaciones/nueva');
 
-  const [categorias, conexion, imagenes] = await Promise.all([
+  const [categorias, conexion, imagenes, catalogos] = await Promise.all([
     listActiveCategories(),
     getConnectionStatus(user),
     getImageSettings(),
+    listCatalogs(),
   ]);
 
   // El Service rechaza igual, pero llevar a alguien a llenar un formulario que
@@ -104,6 +105,54 @@ export default async function NuevaPublicacion() {
             ]}
           />
         </div>
+
+        {/*
+          ⚠️ TODOS OPCIONALES. Son los que alimentan las facetas de la busqueda,
+          pero exigirlos dejaria afuera cualquier camiseta cuyo club o marca no
+          este en el catalogo, y el flujo para proponer altas (DEC-041) todavia
+          no existe. Se pide de la forma mas fuerte que se puede sin bloquear.
+        */}
+        <p className={estilos.subtitulo}>Para que te encuentren</p>
+
+        <div className={estilos.par}>
+          <Seleccion
+            nombre="clubId"
+            etiqueta="Club"
+            vacio="No corresponde"
+            ayuda="Si es de un club, elegílo: es el filtro que más se usa."
+            opciones={catalogos.clubes.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+          />
+          <Seleccion
+            nombre="nationalTeamId"
+            etiqueta="Selección"
+            vacio="No corresponde"
+            opciones={catalogos.selecciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+          />
+        </div>
+
+        <div className={estilos.par}>
+          <Seleccion
+            nombre="brandId"
+            etiqueta="Marca"
+            vacio="No la sé"
+            opciones={catalogos.marcas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+          />
+          <Seleccion
+            nombre="seasonId"
+            etiqueta="Temporada"
+            vacio="No la sé"
+            ayuda="El año o la temporada de la camiseta."
+            opciones={catalogos.temporadas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+          />
+        </div>
+
+        <Seleccion
+          nombre="competitionId"
+          etiqueta="Competencia"
+          vacio="No corresponde"
+          ayuda="Si es una camiseta de una copa o torneo puntual."
+          opciones={catalogos.competiciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+        />
 
         <div className={estilos.par}>
           <Seleccion

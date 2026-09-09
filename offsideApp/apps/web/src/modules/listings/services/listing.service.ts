@@ -5,6 +5,7 @@ import { canSellerOperate } from '../../sellers/services/mercadopago-connection.
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../listings.errors';
 import { createStorage } from '../infrastructure/storage/index';
+import * as catalogRepo from '../repositories/catalog.repository';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
 import { reindex } from './search.service';
@@ -73,6 +74,16 @@ export interface PublishListingInput {
   condition: listingRepo.ListingRow['condition'];
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
+  /**
+   * Referencias de catalogo. Todas OPCIONALES: son las que alimentan las
+   * facetas, pero exigirlas dejaria afuera cualquier camiseta cuyo club o marca
+   * no este sembrado, y el flujo de propuestas (DEC-041) todavia no existe.
+   */
+  clubId?: string | null;
+  nationalTeamId?: string | null;
+  brandId?: string | null;
+  competitionId?: string | null;
+  seasonId?: string | null;
 }
 
 export interface PublicListing {
@@ -161,6 +172,11 @@ export async function publishListing(
     condition: input.condition,
     kitType: input.kitType,
     sleeve: input.sleeve,
+    clubId: input.clubId ?? null,
+    nationalTeamId: input.nationalTeamId ?? null,
+    brandId: input.brandId ?? null,
+    competitionId: input.competitionId ?? null,
+    seasonId: input.seasonId ?? null,
     /**
      * ⚠️ APROBACION AUTOMATICA — DECISION TRANSITORIA del owner (2026-09-01).
      *
@@ -217,6 +233,32 @@ export async function listActiveCategories(): Promise<PublicCategory[]> {
  */
 export async function markSoldOut(listingId: string, db?: Database): Promise<void> {
   await listingRepo.transitionStatus(listingId, 'active', 'sold_out', db);
+}
+
+/** Catalogos que el formulario de publicar ofrece (ERD §8). */
+export interface CatalogosDePublicacion {
+  clubes: catalogRepo.CatalogRow[];
+  selecciones: catalogRepo.CatalogRow[];
+  marcas: catalogRepo.CatalogRow[];
+  competiciones: catalogRepo.CatalogRow[];
+  temporadas: catalogRepo.CatalogRow[];
+}
+
+/**
+ * Los cinco catalogos elegibles, para armar el formulario.
+ *
+ * No exige sesion: son datos publicos, los mismos que se usan para filtrar.
+ */
+export async function listCatalogs(): Promise<CatalogosDePublicacion> {
+  const [clubes, selecciones, marcas, competiciones, temporadas] = await Promise.all([
+    catalogRepo.findActive('club'),
+    catalogRepo.findActive('nationalTeam'),
+    catalogRepo.findActive('brand'),
+    catalogRepo.findActive('competition'),
+    catalogRepo.findActive('season'),
+  ]);
+
+  return { clubes, selecciones, marcas, competiciones, temporadas };
 }
 
 /** Publicaciones propias del vendedor autenticado. */

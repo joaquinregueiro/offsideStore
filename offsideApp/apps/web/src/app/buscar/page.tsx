@@ -35,11 +35,9 @@ const KIT: Record<string, string> = {
  * cliente rompería las tres cosas, y además obligaría a JavaScript para algo
  * que el navegador ya sabe hacer.
  *
- * ⚠️ LAS FACETAS DE CATÁLOGO —club, marca, temporada, competición— NO ESTÁN, y
- * no es una omisión del buscador: las seis tablas de catálogo están vacías y el
- * formulario de publicar no pide esos datos, así que cada publicación tiene
- * NULL ahí. Se muestran las facetas que tienen datos reales; inventar filtros
- * que no filtran nada sería peor que no tenerlos.
+ * ⚠️ UNA FACETA VACÍA NO SE MUESTRA. Los campos de catálogo son opcionales al
+ * publicar, así que puede no haber ninguna camiseta con club cargado. Ofrecer
+ * un filtro que no filtra nada es peor que no ofrecerlo.
  */
 export default async function Buscar({
   searchParams,
@@ -63,6 +61,11 @@ export default async function Buscar({
     ...(uno('condicion') === undefined ? {} : { condition: uno('condicion')! }),
     ...(uno('kit') === undefined ? {} : { kitType: uno('kit')! }),
     ...(uno('manga') === undefined ? {} : { sleeve: uno('manga')! }),
+    ...(uno('club') === undefined ? {} : { clubId: uno('club')! }),
+    ...(uno('seleccion') === undefined ? {} : { nationalTeamId: uno('seleccion')! }),
+    ...(uno('marca') === undefined ? {} : { brandId: uno('marca')! }),
+    ...(uno('competicion') === undefined ? {} : { competitionId: uno('competicion')! }),
+    ...(uno('temporada') === undefined ? {} : { seasonId: uno('temporada')! }),
     ...(uno('orden') === undefined
       ? {}
       : { orden: uno('orden') as 'relevancia' | 'precio_asc' | 'precio_desc' | 'recientes' }),
@@ -131,6 +134,15 @@ export default async function Buscar({
 
         <div className={estilos.columnas}>
           <aside className={estilos.filtros}>
+            {/*
+              El catalogo va PRIMERO: club y marca son lo que la gente busca de
+              verdad en una camiseta. Categoria y talle son secundarios.
+            */}
+            {grupo('Club', 'club', resultado.facetas.club)}
+            {grupo('Selección', 'seleccion', resultado.facetas.seleccion)}
+            {grupo('Marca', 'marca', resultado.facetas.marca)}
+            {grupo('Temporada', 'temporada', resultado.facetas.temporada)}
+            {grupo('Competencia', 'competicion', resultado.facetas.competicion)}
             {grupo('Categoría', 'categoria', resultado.facetas.categoria)}
             {grupo('Talle', 'talle', resultado.facetas.talle)}
             {grupo('Estado', 'condicion', resultado.facetas.condicion, condicion)}
@@ -138,12 +150,13 @@ export default async function Buscar({
             {grupo('Mangas', 'manga', resultado.facetas.manga, (valor) => MANGA[valor] ?? valor)}
 
             {/*
-              ⚠️ Se dice qué falta y por qué. Un buscador de camisetas sin filtro
-              por club se nota; callarlo haría parecer que está roto.
+              ⚠️ Una faceta VACIA no se muestra: los campos de catalogo son
+              opcionales al publicar. Ofrecer un filtro que no filtra nada es
+              peor que no ofrecerlo.
             */}
             <p className={estilos.nota}>
-              Todavía no se puede filtrar por club, marca ni temporada: esos datos aún no se cargan
-              al publicar.
+              Los filtros muestran sólo lo que hay publicado. Si un club o una marca no aparecen, es
+              porque todavía nadie publicó una camiseta así.
             </p>
           </aside>
 

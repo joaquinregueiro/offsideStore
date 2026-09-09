@@ -22,6 +22,11 @@ export interface SearchFilters {
   condition?: string;
   kitType?: string;
   sleeve?: string;
+  clubId?: string;
+  nationalTeamId?: string;
+  brandId?: string;
+  competitionId?: string;
+  seasonId?: string;
   /** Centavos. */
   precioMin?: bigint;
   precioMax?: bigint;
@@ -43,20 +48,29 @@ export interface SearchRow {
 /**
  * Recalcula el `search_vector` de una publicacion.
  *
- * ⚠️ LO PUEBLA EL SERVICE, NO UN TRIGGER (DEC-042). El motivo esta escrito en
- * la decision: una columna generada no puede leer los `aliases` de los
- * catalogos (PS-024), y un trigger meteria logica de ranking dentro de
- * PL/pgSQL. Hoy los catalogos estan vacios, pero la puerta queda abierta.
+ * ⚠️ LO PUEBLA EL SERVICE, NO UN TRIGGER (DEC-042), y ahora se ve por que: el
+ * `textoDeCatalogos` que recibe trae los NOMBRES Y ALIAS del club, la marca, la
+ * competicion y la temporada, leidos de otras tablas. Una columna generada no
+ * puede hacer eso, y un trigger meteria logica de ranking en PL/pgSQL.
+ *
+ * ⚠️ LOS ALIAS PESAN COMO EL TITULO ('A'). Es lo que hace que "CARP" encuentre
+ * "River Plate" con la misma fuerza que si el vendedor lo hubiera escrito
+ * (PS-024). Ponerlos en 'C' los volveria casi invisibles frente al titulo.
  *
  * Las etiquetas A..D son ESTRUCTURA —que campo pesa en que categoria—; cuanto
  * pesa cada categoria es ⚙️ configurable y se aplica al CONSULTAR, no al
  * indexar. Por eso cambiar los pesos no obliga a reindexar nada.
  */
-export async function reindexListing(listingId: string, db?: Database): Promise<void> {
+export async function reindexListing(
+  listingId: string,
+  textoDeCatalogos: string,
+  db?: Database,
+): Promise<void> {
   await conn(db).execute(sql`
     UPDATE listings
        SET search_vector =
              setweight(to_tsvector('spanish', unaccent(coalesce(title, ''))), 'A')
+          || setweight(to_tsvector('spanish', unaccent(${textoDeCatalogos})), 'A')
           || setweight(to_tsvector('spanish', unaccent(coalesce(player_name, '') || ' ' || coalesce(model, ''))), 'B')
           || setweight(to_tsvector('spanish', unaccent(coalesce(description, ''))), 'C')
      WHERE id = ${listingId}
@@ -79,6 +93,15 @@ function condiciones(filtros: SearchFilters) {
   }
   if (filtros.kitType !== undefined) partes.push(sql`l.kit_type = ${filtros.kitType}::kit_type`);
   if (filtros.sleeve !== undefined) partes.push(sql`l.sleeve = ${filtros.sleeve}::sleeve`);
+  if (filtros.clubId !== undefined) partes.push(sql`l.club_id = ${filtros.clubId}`);
+  if (filtros.nationalTeamId !== undefined) {
+    partes.push(sql`l.national_team_id = ${filtros.nationalTeamId}`);
+  }
+  if (filtros.brandId !== undefined) partes.push(sql`l.brand_id = ${filtros.brandId}`);
+  if (filtros.competitionId !== undefined) {
+    partes.push(sql`l.competition_id = ${filtros.competitionId}`);
+  }
+  if (filtros.seasonId !== undefined) partes.push(sql`l.season_id = ${filtros.seasonId}`);
   if (filtros.precioMin !== undefined) partes.push(sql`l.price_amount >= ${filtros.precioMin}`);
   if (filtros.precioMax !== undefined) partes.push(sql`l.price_amount <= ${filtros.precioMax}`);
 
@@ -203,6 +226,11 @@ const COLUMNA_DE_FACETA = {
   condition: 'condition',
   kitType: 'kit_type',
   sleeve: 'sleeve',
+  clubId: 'club_id',
+  nationalTeamId: 'national_team_id',
+  brandId: 'brand_id',
+  competitionId: 'competition_id',
+  seasonId: 'season_id',
 } as const;
 
 export type NombreDeFaceta = keyof typeof COLUMNA_DE_FACETA;
@@ -246,11 +274,11 @@ export async function categoryNames(ids: string[], db?: Database): Promise<Map<s
   return new Map(filas.filter((f) => ids.includes(f.id)).map((f) => [f.id, f.name]));
 }
 
-/** Para tests: fuerza reindexar todo. */
-export async function reindexAll(db?: Database): Promise<void> {
-  const filas = await conn(db).select({ id: schema.listings.id }).from(schema.listings);
-
-  for (const fila of filas) await reindexListing(fila.id, db);
-}
+/**
+ * ⚠️ Las facetas de catalogo se ordenan por CANTIDAD y se recortan. Un desplegable
+ * con 135 temporadas o 38 clubes no es un filtro, es una lista: se muestran los
+ * mas frecuentes, que es lo que la gente busca.
+ */
+export const MAX_VALORES_POR_FACETA = 12;
 
 export { eq };

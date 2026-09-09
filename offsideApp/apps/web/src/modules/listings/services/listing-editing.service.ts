@@ -53,6 +53,12 @@ export interface EditListingInput {
   condition?: listingRepo.ListingRow['condition'];
   kitType?: listingRepo.ListingRow['kitType'];
   sleeve?: listingRepo.ListingRow['sleeve'];
+  /** Referencias de catalogo. Cambiarlas obliga a reindexar: llevan alias. */
+  clubId?: string | null;
+  nationalTeamId?: string | null;
+  brandId?: string | null;
+  competitionId?: string | null;
+  seasonId?: string | null;
 }
 
 /**

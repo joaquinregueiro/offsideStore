@@ -1,7 +1,9 @@
 import type { Database } from '@offside/database';
 
 import { getSearchRankWeights } from '../../config/services/image-settings.service';
+import * as catalogRepo from '../repositories/catalog.repository';
 import type * as listingRepo from '../repositories/listing.repository';
+import * as listingRepoRuntime from '../repositories/listing.repository';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as searchRepo from '../repositories/search.repository';
 import { createStorage } from '../infrastructure/storage/index';
@@ -9,17 +11,14 @@ import { createStorage } from '../infrastructure/storage/index';
 /**
  * Busqueda de publicaciones (PS-020 … PS-023, DEC-042).
  *
- * ⚠️ ALCANCE DE ESTA FASE, decidido con el owner (2026-09-08): texto libre mas
- * las facetas que **existen en los datos**. Las que `product-specification.md`
- * §5.1 lista sobre catalogo —club, seleccion, marca, competicion, temporada,
- * jugador— **no se pueden construir todavia**: las seis tablas de catalogo
- * estan vacias y el formulario de publicar no pide esos campos, asi que cada
- * publicacion tiene NULL ahi. No es un problema del motor: es que el dato no
- * existe.
+ * Cubre PS-020 (full-text + filtros combinables), PS-020.b (typos, via
+ * trigramas), PS-022 (conteos por faceta), PS-023 (filtros por club,
+ * seleccion, marca, competicion y temporada) y PS-024 (alias: "CARP" encuentra
+ * "River Plate", porque el indice los incluye).
  *
- * Lo que SI se cumple: PS-020 (full-text + filtros combinables), PS-020.b
- * (typos, via trigramas) y PS-022 (conteos por faceta).
- * Lo que queda pendiente: PS-023 sobre catalogo y PS-024 (alias).
+ * ⚠️ QUEDA FUERA: jugador y numero —el formulario no los pide todavia— y el
+ * ranking por popularidad/reputacion de PS-021, que necesita datos que no
+ * existen (no hay reviews ni metricas de visitas).
  */
 
 export interface SearchResult {
@@ -46,6 +45,11 @@ export interface SearchResponse {
   total: number;
   facetas: {
     categoria: Faceta[];
+    club: Faceta[];
+    seleccion: Faceta[];
+    marca: Faceta[];
+    competicion: Faceta[];
+    temporada: Faceta[];
     talle: Faceta[];
     condicion: Faceta[];
     tipoDeCamiseta: Faceta[];
@@ -60,6 +64,11 @@ export interface SearchQuery {
   condition?: string;
   kitType?: string;
   sleeve?: string;
+  clubId?: string;
+  nationalTeamId?: string;
+  brandId?: string;
+  competitionId?: string;
+  seasonId?: string;
   precioMin?: bigint;
   precioMax?: bigint;
   orden?: searchRepo.SearchOrder;
@@ -87,6 +96,11 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
     ...(query.condition === undefined ? {} : { condition: query.condition }),
     ...(query.kitType === undefined ? {} : { kitType: query.kitType }),
     ...(query.sleeve === undefined ? {} : { sleeve: query.sleeve }),
+    ...(query.clubId === undefined ? {} : { clubId: query.clubId }),
+    ...(query.nationalTeamId === undefined ? {} : { nationalTeamId: query.nationalTeamId }),
+    ...(query.brandId === undefined ? {} : { brandId: query.brandId }),
+    ...(query.competitionId === undefined ? {} : { competitionId: query.competitionId }),
+    ...(query.seasonId === undefined ? {} : { seasonId: query.seasonId }),
     ...(query.precioMin === undefined ? {} : { precioMin: query.precioMin }),
     ...(query.precioMax === undefined ? {} : { precioMax: query.precioMax }),
   };
@@ -97,7 +111,20 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
 
   // Resultados, total y las cinco facetas salen juntos: son consultas
   // independientes contra la misma base y no tiene sentido encadenarlas.
-  const [filas, total, categoria, talle, condicion, tipoDeCamiseta, manga] = await Promise.all([
+  const [
+    filas,
+    total,
+    categoria,
+    talle,
+    condicion,
+    tipoDeCamiseta,
+    manga,
+    club,
+    seleccion,
+    marca,
+    competicion,
+    temporada,
+  ] = await Promise.all([
     searchRepo.search({
       ...base,
       orden: query.orden ?? (texto === undefined ? 'recientes' : 'relevancia'),
@@ -111,6 +138,11 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
     searchRepo.facetCounts('condition', base),
     searchRepo.facetCounts('kitType', base),
     searchRepo.facetCounts('sleeve', base),
+    searchRepo.facetCounts('clubId', base),
+    searchRepo.facetCounts('nationalTeamId', base),
+    searchRepo.facetCounts('brandId', base),
+    searchRepo.facetCounts('competitionId', base),
+    searchRepo.facetCounts('seasonId', base),
   ]);
 
   const nombres = await searchRepo.categoryNames(categoria.map((f) => f.valor));
@@ -124,12 +156,41 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
         etiqueta: nombres.get(f.valor) ?? f.valor,
         cantidad: f.cantidad,
       })),
+      club: await conNombres('club', club),
+      seleccion: await conNombres('nationalTeam', seleccion),
+      marca: await conNombres('brand', marca),
+      competicion: await conNombres('competition', competicion),
+      temporada: await conNombres('season', temporada),
       talle: talle.map(comoFaceta),
       condicion: condicion.map(comoFaceta),
       tipoDeCamiseta: tipoDeCamiseta.map(comoFaceta),
       manga: manga.map(comoFaceta),
     },
   };
+}
+
+/**
+ * Traduce los ids de una faceta de catalogo a nombres legibles y la recorta.
+ *
+ * ⚠️ SE RECORTA A PROPOSITO. Un desplegable con 135 temporadas o 38 clubes no
+ * es un filtro, es una lista. Se muestran los mas frecuentes —ya vienen
+ * ordenados por cantidad—, que es lo que la gente busca.
+ */
+async function conNombres(
+  catalogo: catalogRepo.NombreDeCatalogo,
+  facetas: searchRepo.FacetCount[],
+): Promise<Faceta[]> {
+  const recortadas = facetas.slice(0, searchRepo.MAX_VALORES_POR_FACETA);
+  const nombres = await catalogRepo.nombresPorId(
+    catalogo,
+    recortadas.map((f) => f.valor),
+  );
+
+  return recortadas.map((f) => ({
+    valor: f.valor,
+    etiqueta: nombres.get(f.valor) ?? f.valor,
+    cantidad: f.cantidad,
+  }));
 }
 
 function comoFaceta(f: searchRepo.FacetCount): Faceta {
@@ -185,7 +246,25 @@ async function conPortadas(filas: searchRepo.SearchRow[]): Promise<SearchResult[
  */
 export async function reindex(listingId: string, db?: Database): Promise<void> {
   try {
-    await searchRepo.reindexListing(listingId, db);
+    const fila = await listingRepoRuntime.findById(listingId, db);
+
+    // Los nombres y ALIAS del catalogo entran al indice (PS-024): sin esto,
+    // "CARP" no encontraria "River Plate" salvo que el vendedor lo escribiera.
+    const texto =
+      fila === undefined
+        ? ''
+        : await catalogRepo.textoDeCatalogos(
+            {
+              clubId: fila.clubId,
+              nationalTeamId: fila.nationalTeamId,
+              brandId: fila.brandId,
+              competitionId: fila.competitionId,
+              seasonId: fila.seasonId,
+            },
+            db,
+          );
+
+    await searchRepo.reindexListing(listingId, texto, db);
   } catch (error) {
     console.error(
       `[search] no se pudo reindexar la publicacion ${listingId}:`,

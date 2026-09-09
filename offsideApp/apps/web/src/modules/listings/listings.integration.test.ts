@@ -1258,3 +1258,116 @@ describe('busqueda (PS-020 / PS-020.b / PS-022, DEC-042)', () => {
     expect(nuevo.resultados.map((r) => r.id)).toContain(listing.id);
   });
 });
+
+describe('catalogos y alias (PS-023 / PS-024, DEC-041)', () => {
+  let searchService: typeof SearchService;
+
+  beforeAll(async () => {
+    searchService = await import('./services/search.service');
+  });
+
+  async function idDe(tabla: 'clubs' | 'brands' | 'seasons', slug: string): Promise<string> {
+    const nombre = { clubs: schema.clubs, brands: schema.brands, seasons: schema.seasons }[tabla];
+    const [fila] = await getDatabase()
+      .select({ id: nombre.id })
+      .from(nombre)
+      .where(eq(nombre.slug, slug))
+      .limit(1);
+
+    if (!fila)
+      throw new Error(
+        `Falta "${slug}" en ${tabla}. Corre las migraciones: la 0007 siembra los catalogos.`,
+      );
+
+    return fila.id;
+  }
+
+  it('la migracion sembro los seis catalogos', async () => {
+    const db = getDatabase();
+
+    expect((await db.select().from(schema.clubs)).length).toBeGreaterThan(20);
+    expect((await db.select().from(schema.brands)).length).toBeGreaterThan(10);
+    expect((await db.select().from(schema.seasons)).length).toBeGreaterThan(100);
+  });
+
+  it('⚠️ "CARP" encuentra River Plate aunque el titulo no lo diga (PS-024)', async () => {
+    // ES EL EJEMPLO DE LA DOCUMENTACION: "River = River Plate = CARP, resueltos
+    // al construir el indice". El titulo dice "Camiseta retro 1996" y nada mas:
+    // lo unico que conecta la busqueda con la publicacion es el ALIAS del club,
+    // que el Service mete en `search_vector`.
+    const seller = await vendedor('alias-carp');
+    const listing = await listingService.publishListing(seller, {
+      ...(await camiseta()),
+      title: 'Camiseta retro 1996',
+      clubId: await idDe('clubs', 'river-plate'),
+    });
+
+    await getDatabase()
+      .insert(schema.listingImages)
+      .values({
+        listingId: listing.id,
+        storageKey: `listings/${listing.id}/x.webp`,
+        url: null,
+        variants: { large: `listings/${listing.id}/x.webp` },
+        position: 0,
+        hash: 'h',
+      });
+    await getDatabase()
+      .update(schema.listings)
+      .set({ status: 'active' })
+      .where(eq(schema.listings.id, listing.id));
+    await searchService.reindex(listing.id);
+
+    for (const consulta of ['CARP', 'River', 'Millonario']) {
+      const { resultados } = await searchService.searchListings({ texto: consulta });
+      expect(
+        resultados.map((r) => r.id),
+        `busqueda: ${consulta}`,
+      ).toContain(listing.id);
+    }
+  });
+
+  it('las facetas de catalogo cuentan y filtran (PS-023)', async () => {
+    const seller = await vendedor('facetas-catalogo');
+    const boca = await idDe('clubs', 'boca-juniors');
+    const adidas = await idDe('brands', 'adidas');
+
+    for (const [titulo, clubId] of [
+      ['Faceta catalogo A', boca],
+      ['Faceta catalogo B', boca],
+    ] as const) {
+      const l = await listingService.publishListing(seller, {
+        ...(await camiseta()),
+        title: titulo,
+        clubId,
+        brandId: adidas,
+      });
+
+      await getDatabase()
+        .insert(schema.listingImages)
+        .values({
+          listingId: l.id,
+          storageKey: `listings/${l.id}/x.webp`,
+          url: null,
+          variants: { large: `listings/${l.id}/x.webp` },
+          position: 0,
+          hash: 'h',
+        });
+      await getDatabase()
+        .update(schema.listings)
+        .set({ status: 'active' })
+        .where(eq(schema.listings.id, l.id));
+      await searchService.reindex(l.id);
+    }
+
+    const { facetas } = await searchService.searchListings({ texto: 'Faceta catalogo' });
+    const clubes = new Map(facetas.club.map((f) => [f.valor, f]));
+
+    expect(clubes.get(boca)?.cantidad).toBe(2);
+    // La etiqueta es el NOMBRE, no el uuid: es lo que ve la persona.
+    expect(clubes.get(boca)?.etiqueta).toBe('Boca Juniors');
+
+    const filtrado = await searchService.searchListings({ clubId: boca });
+    expect(filtrado.total).toBeGreaterThanOrEqual(2);
+  });
+});

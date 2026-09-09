@@ -222,6 +222,14 @@ const publicarSchema = z.object({
   // categoria (ERD §9.1).
   kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
   sleeve: z.enum(['short', 'long']).optional(),
+  // Referencias de catalogo. OPCIONALES: exigirlas dejaria afuera cualquier
+  // camiseta cuyo club o marca no este sembrado, y el flujo de propuestas de
+  // catalogo (DEC-041) todavia no existe.
+  clubId: z.string().uuid().optional(),
+  nationalTeamId: z.string().uuid().optional(),
+  brandId: z.string().uuid().optional(),
+  competitionId: z.string().uuid().optional(),
+  seasonId: z.string().uuid().optional(),
 });
 
 /**
@@ -248,6 +256,11 @@ export async function publicar(
       condition: texto(formData, 'condition'),
       kitType: texto(formData, 'kitType'),
       sleeve: texto(formData, 'sleeve'),
+      clubId: texto(formData, 'clubId'),
+      nationalTeamId: texto(formData, 'nationalTeamId'),
+      brandId: texto(formData, 'brandId'),
+      competitionId: texto(formData, 'competitionId'),
+      seasonId: texto(formData, 'seasonId'),
     });
 
     const listing = await publishListing(user, {
@@ -260,6 +273,11 @@ export async function publicar(
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
+      clubId: input.clubId ?? null,
+      nationalTeamId: input.nationalTeamId ?? null,
+      brandId: input.brandId ?? null,
+      competitionId: input.competitionId ?? null,
+      seasonId: input.seasonId ?? null,
     });
 
     /**
@@ -432,6 +450,14 @@ const editarSchema = z.object({
   condition: z.enum(['NUEVO', 'COMO_NUEVO', 'EXCELENTE', 'MUY_BUENO', 'BUENO', 'ACEPTABLE']),
   kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
   sleeve: z.enum(['short', 'long']).optional(),
+  // Referencias de catalogo. OPCIONALES: exigirlas dejaria afuera cualquier
+  // camiseta cuyo club o marca no este sembrado, y el flujo de propuestas de
+  // catalogo (DEC-041) todavia no existe.
+  clubId: z.string().uuid().optional(),
+  nationalTeamId: z.string().uuid().optional(),
+  brandId: z.string().uuid().optional(),
+  competitionId: z.string().uuid().optional(),
+  seasonId: z.string().uuid().optional(),
 });
 
 export async function editar(_estado: EstadoVendedor, formData: FormData): Promise<EstadoVendedor> {
@@ -448,6 +474,11 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       condition: texto(formData, 'condition'),
       kitType: texto(formData, 'kitType'),
       sleeve: texto(formData, 'sleeve'),
+      clubId: texto(formData, 'clubId'),
+      nationalTeamId: texto(formData, 'nationalTeamId'),
+      brandId: texto(formData, 'brandId'),
+      competitionId: texto(formData, 'competitionId'),
+      seasonId: texto(formData, 'seasonId'),
     });
 
     await editListing(user, input.listingId, {
@@ -459,6 +490,11 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
+      clubId: input.clubId ?? null,
+      nationalTeamId: input.nationalTeamId ?? null,
+      brandId: input.brandId ?? null,
+      competitionId: input.competitionId ?? null,
+      seasonId: input.seasonId ?? null,
     });
   } catch (error) {
     return { error: mensajeDeError(error) };

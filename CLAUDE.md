@@ -532,7 +532,7 @@ Qué existe en `offsideApp/`:
 | ---------------------------------- | ------------------------------------------------------------------------------- |
 | `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                   |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 7 migraciones aplicadas**  |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 8 migraciones aplicadas**  |
 | `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
 | `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                         |
 
@@ -548,7 +548,7 @@ Módulos de dominio implementados (`apps/web/src/modules/`):
 | `orders`   | compra directa, snapshot económico, comisión del 6% (DEC-043) y bandeja de ventas del vendedor                                  |
 | `payments` | Checkout Pro con **Split 1:1**, webhooks firmados, conciliación del reparto y refunds                                           |
 
-**De las 51 tablas migradas se usan 17.** El resto está creada y vacía.
+**De las 51 tablas migradas se usan 24.** El resto está creada y vacía.
 `categories` dejó de estar vacía: la migración `0004` carga sus seis filas.
 
 **Mercado Pago — conexión Y pagos, verificados contra la API real.**
@@ -765,16 +765,38 @@ Plate 1996 Adidas"`— y `"indepediente"` → `"Independiente"` están cubiertos
 - Una faceta **no se filtra a sí misma**: si ya elegiste talle M, la lista sigue
   ofreciendo los demás para poder cambiar de idea.
 
-⚠️ **Las facetas de catálogo —club, marca, temporada, competición, jugador— NO
-existen, y no es una limitación del motor**: las seis tablas de catálogo están
-vacías y el formulario de publicar no pide esos campos, así que cada publicación
-tiene NULL ahí. Quedan pendientes **PS-023 sobre catálogo** y **PS-024 (alias:
-River = River Plate = CARP)**. La pantalla lo dice en vez de mostrar filtros que
-no filtran.
+**Catálogos controlados — PS-023/PS-024 (2026-09-08)**: las seis tablas de
+`product-specification.md` §4.3 estaban **vacías**, así que `club_id`,
+`brand_id`, `season_id`, `competition_id` y `national_team_id` eran siempre NULL
+y la búsqueda facetada —el diferencial— no podía construirse.
 
-**NO implementado:** webhook `mp-connect`, catálogos de club/marca/temporada,
-carrito, envíos, disputas, reviews, reputación, reordenar fotos y editar la
-autenticidad declarada. Del back-office existen
+La migración `0007` siembra **38 clubes, 25 selecciones, 18 marcas, 16
+competiciones, 40 países y 135 temporadas**, todos con alias. ⚠️ §4.3 marca la
+siembra como 🟡 HIPÓTESIS; la lista concreta **la aprobó el owner el
+2026-09-08**, no se decidió desde el código.
+
+- **PS-024 cumplido**: los alias entran al `search_vector` con peso `A`, así que
+  **"CARP" y "Millonario" encuentran una camiseta cuyo título sólo dice
+  "Camiseta retro 1996"**. Es el motivo por el que DEC-042 exigió que el vector
+  lo poblara el Service: una columna generada no puede leer otra tabla.
+- **PS-023 cumplido**: facetas por club, selección, marca, temporada y
+  competición, con conteos y nombres legibles.
+- Los campos son **opcionales al publicar**: exigirlos dejaría afuera cualquier
+  camiseta cuyo club no esté sembrado, y el flujo de propuestas no existe.
+- Una faceta **vacía no se muestra**: ofrecer un filtro que no filtra es peor
+  que no ofrecerlo. Las de catálogo se recortan a 12 valores por cantidad — un
+  desplegable con 135 temporadas no es un filtro, es una lista.
+
+⚠️ **`catalog_change_requests` (DEC-041) NO está implementada.** La estructura
+existe en el ERD y la decisión está cerrada, pero **quién aprueba sigue 🟡**:
+depende de una capacidad nueva en el mapa de DEC-023, y `MODERATOR` hoy no tiene
+ninguna. Mientras tanto el catálogo sólo crece por migración. No bloquea a nadie
+porque los campos son opcionales.
+
+**NO implementado:** webhook `mp-connect`, `catalog_change_requests`, jugador y
+número en el formulario, ranking por popularidad/reputación (PS-021: no hay
+reviews ni métricas), carrito, envíos, disputas, reviews, reputación, reordenar
+fotos y editar la autenticidad declarada. Del back-office existen
 **dos** de las nueve capacidades que lista `AR-006`: el resto pertenece a módulos
 que todavía no existen. De los nueve emails que lista la documentación sólo están
 los dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
