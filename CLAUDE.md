@@ -532,7 +532,7 @@ Qué existe en `offsideApp/`:
 | ---------------------------------- | ------------------------------------------------------------------------------- |
 | `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                   |
 | `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 6 migraciones aplicadas**  |
+| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 7 migraciones aplicadas**  |
 | `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
 | `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                         |
 
@@ -744,8 +744,37 @@ el vendedor puede corregir lo publicado y sacarlo de la venta.
 - ⚠️ Que la edición se pueda **apagar** es ⚙️ y sigue 🟡
   (`configuration-registry.md` §8): existe el mecanismo, no la perilla.
 
-**NO implementado:** webhook `mp-connect`, búsqueda, carrito, envíos, disputas,
-reviews, reputación, reordenar fotos y editar la autenticidad declarada. Del back-office existen
+**Búsqueda — PS-020/020.b/021/022, DEC-042 (2026-09-08)**: full-text en
+PostgreSQL, sin motor externo. `/buscar` con texto libre, facetas combinables y
+conteos, y el buscador del header —que era decorativo— ya funciona.
+
+- Todo viaja **en la URL por GET**: una búsqueda se comparte, se guarda en
+  favoritos y vuelve con el botón atrás. Y anda sin JavaScript.
+- **Dos mecanismos de coincidencia y hacen falta los dos**: full-text `spanish`
+  con `unaccent` para palabras y variantes, y **trigramas** para lo mal escrito.
+  El ejemplo obligatorio de PS-020.b —`"river 96 adidas"` encuentra `"River
+Plate 1996 Adidas"`— y `"indepediente"` → `"Independiente"` están cubiertos
+  por tests.
+- **`search_vector` lo puebla el Service**, no un trigger ni una columna
+  generada, como DEC-042 exige. Se reindexa al publicar y al editar; que falle
+  no aborta la publicación.
+- **Los pesos del ranking viven en `app_settings`** (migración `0006`), nunca
+  hardcodeados: DEC-042 lo dice con esas palabras.
+- La búsqueda usa **el mismo filtro de visibilidad que la vitrina** (ERD §9.1).
+  Si mostrara una pausada o sin stock, prometería lo que la compra rechaza.
+- Una faceta **no se filtra a sí misma**: si ya elegiste talle M, la lista sigue
+  ofreciendo los demás para poder cambiar de idea.
+
+⚠️ **Las facetas de catálogo —club, marca, temporada, competición, jugador— NO
+existen, y no es una limitación del motor**: las seis tablas de catálogo están
+vacías y el formulario de publicar no pide esos campos, así que cada publicación
+tiene NULL ahí. Quedan pendientes **PS-023 sobre catálogo** y **PS-024 (alias:
+River = River Plate = CARP)**. La pantalla lo dice en vez de mostrar filtros que
+no filtran.
+
+**NO implementado:** webhook `mp-connect`, catálogos de club/marca/temporada,
+carrito, envíos, disputas, reviews, reputación, reordenar fotos y editar la
+autenticidad declarada. Del back-office existen
 **dos** de las nueve capacidades que lista `AR-006`: el resto pertenece a módulos
 que todavía no existen. De los nueve emails que lista la documentación sólo están
 los dos de `auth`. Los refunds tienen código y tests, pero **no se probaron

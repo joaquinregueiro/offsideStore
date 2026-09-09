@@ -7,6 +7,7 @@ import * as errors from '../listings.errors';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
 import { toPublicListing, type PublicListing } from './listing.service';
+import { reindex } from './search.service';
 
 /**
  * Edicion y ciclo de vida de una publicacion (SS-040/041, SS-050/051).
@@ -135,6 +136,10 @@ export async function editListing(
 
     return fila;
   });
+
+  // El titulo y la descripcion alimentan el indice: si cambian y no se
+  // reindexa, la busqueda sigue encontrando la version vieja.
+  await reindex(actualizada.id);
 
   return toPublicListing(actualizada);
 }

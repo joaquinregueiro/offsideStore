@@ -7,6 +7,7 @@ import * as errors from '../listings.errors';
 import { createStorage } from '../infrastructure/storage/index';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
+import { reindex } from './search.service';
 
 /**
  * Publicaciones — **alcance minimo**: publicar y listar las propias.
@@ -180,6 +181,9 @@ export async function publishListing(
      */
     moderationStatus: 'APPROVED',
   });
+
+  // El indice de busqueda lo mantiene el Service, no un trigger (DEC-042).
+  await reindex(creada.id);
 
   return toPublicListing(creada);
 }

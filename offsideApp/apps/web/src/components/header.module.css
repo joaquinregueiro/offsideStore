@@ -25,15 +25,9 @@
   color: var(--color-cambio);
 }
 
-/**
- * El buscador es DECORATIVO. Esta en el mockup de la identidad §06, pero la
- * busqueda (DEC-042, full-text sobre `search_vector`) no esta implementada. Se
- * muestra deshabilitado en vez de fingir: un campo que no responde es peor que
- * uno que avisa.
- */
+/** Buscador. Vive dentro de `.buscadorForm`, que es quien ocupa el espacio. */
 .buscador {
-  flex: 1;
-  max-width: 420px;
+  width: 100%;
   padding: var(--espacio-2) var(--espacio-3);
   border: none;
   border-radius: var(--radio);
@@ -41,11 +35,6 @@
   color: var(--color-tinta);
   font-family: var(--fuente-texto);
   font-size: var(--texto-sm);
-}
-
-.buscador:disabled {
-  cursor: not-allowed;
-  opacity: 0.75;
 }
 
 .acciones {
@@ -84,4 +73,11 @@
 
 .enlaceBoton:hover {
   color: var(--color-cambio);
+}
+
+/** El buscador es un formulario: ocupa el mismo lugar que ocupaba el input. */
+.buscadorForm {
+  flex: 1;
+  max-width: 420px;
+  margin: 0;
 }

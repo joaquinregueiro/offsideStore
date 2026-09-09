@@ -109,3 +109,36 @@ export async function getImageSettings(db?: Database): Promise<ImageSettings> {
     allowedTypes: assertAllowedTypes(allowedTypes.value),
   };
 }
+
+/* ------------------------------------------ busqueda (PS-021 / DEC-042) -- */
+
+export const SEARCH_RANK_WEIGHTS_KEY = 'search_rank_weights';
+
+/**
+ * Pesos del ranking de busqueda, en el orden que espera `ts_rank`: {D, C, B, A}.
+ *
+ * ⚠️ NO SE HARDCODEAN. DEC-042 lo dice con estas palabras: "los pesos de
+ * ranking permanecen configurables desde la aplicacion (`app_settings`), nunca
+ * hardcodeados", y PS-021 los marca como configuracion administrativa.
+ *
+ * Son cuatro numeros entre 0 y 1. Fuera de ese rango PostgreSQL no falla: da
+ * resultados sin sentido, que es peor.
+ */
+export async function getSearchRankWeights(db?: Database): Promise<number[]> {
+  const fila = await settingRepo.findCurrent(SEARCH_RANK_WEIGHTS_KEY, db);
+  if (fila === undefined) throw errors.settingNotConfigured(SEARCH_RANK_WEIGHTS_KEY);
+
+  const valor = fila.value;
+
+  if (!Array.isArray(valor) || valor.length !== 4) {
+    throw errors.settingInvalid(SEARCH_RANK_WEIGHTS_KEY, 'deben ser cuatro pesos {D, C, B, A}');
+  }
+
+  return valor.map((peso) => {
+    if (typeof peso !== 'number' || !Number.isFinite(peso) || peso < 0 || peso > 1) {
+      throw errors.settingInvalid(SEARCH_RANK_WEIGHTS_KEY, 'cada peso debe estar entre 0 y 1');
+    }
+
+    return peso;
+  });
+}

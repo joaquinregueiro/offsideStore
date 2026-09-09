@@ -21,13 +21,20 @@ export async function Header() {
           Offside
         </a>
 
-        <input
-          className={estilos.buscador}
-          type="search"
-          placeholder="Buscar camiseta, club, temporada…"
-          disabled
-          aria-label="Buscar (todavía no disponible)"
-        />
+        {/*
+          ⚠️ ES UN <form> CON GET, no un campo con JavaScript. Asi la busqueda
+          viaja en la URL: se puede compartir, guardar en favoritos y volver con
+          el boton atras. Y funciona sin JS, como el resto del sitio.
+        */}
+        <form action="/buscar" method="get" className={estilos.buscadorForm} role="search">
+          <input
+            className={estilos.buscador}
+            type="search"
+            name="q"
+            placeholder="Buscar camiseta, club, temporada…"
+            aria-label="Buscar publicaciones"
+          />
+        </form>
 
         <nav className={estilos.acciones}>
           {user === null ? (

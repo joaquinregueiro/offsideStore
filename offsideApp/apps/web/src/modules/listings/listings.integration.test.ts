@@ -11,6 +11,7 @@ import type * as SellerService from '../sellers/services/seller.service';
 import type Sharp from 'sharp';
 
 import type * as ListingEditingService from './services/listing-editing.service';
+import type * as SearchService from './services/search.service';
 import type * as ListingImageService from './services/listing-image.service';
 import type * as ListingService from './services/listing.service';
 import type * as OrderService from '../orders/services/order.service';
@@ -1140,5 +1141,120 @@ describe('editar y ciclo de vida (SS-040 / SS-050 / SS-051)', () => {
     const fila = await listingService.findById(listing.id);
     expect(fila!.stock).toBe(0);
     expect(fila!.status).toBe('sold_out');
+  });
+});
+
+describe('busqueda (PS-020 / PS-020.b / PS-022, DEC-042)', () => {
+  let searchService: typeof SearchService;
+
+  beforeAll(async () => {
+    searchService = await import('./services/search.service');
+  });
+
+  /** Publicacion activa, con foto e indexada, con el titulo que se pida. */
+  async function publicada(seller: PublicUser, title: string, overrides = {}) {
+    const listing = await publicacionActiva(seller, { title, ...overrides });
+    // `publicacionActiva` activa por SQL, asi que el indice se refresca aparte.
+    await searchService.reindex(listing.id);
+
+    return listing;
+  }
+
+  it('⚠️ "river 96 adidas" encuentra "River Plate 1996 Adidas" (PS-020.b)', async () => {
+    // ES EL EJEMPLO OBLIGATORIO de la documentacion. Sin catalogos cargados, lo
+    // resuelve el full-text sobre el TITULO, que es texto libre que escribe el
+    // vendedor.
+    const seller = await vendedor('busca-river');
+    const buscada = await publicada(seller, 'River Plate 1996 Adidas');
+    await publicada(seller, 'Boca Juniors 2001 Nike');
+
+    const { resultados } = await searchService.searchListings({ texto: 'river 96 adidas' });
+    const ids = resultados.map((r) => r.id);
+
+    expect(ids).toContain(buscada.id);
+  });
+
+  it('⚠️ ignora acentos en los dos sentidos (DEC-042: unaccent)', async () => {
+    const seller = await vendedor('busca-acentos');
+    const buscada = await publicada(seller, 'Camiseta de Peñarol 1982');
+
+    const sinAcento = await searchService.searchListings({ texto: 'penarol' });
+    expect(sinAcento.resultados.map((r) => r.id)).toContain(buscada.id);
+
+    const conAcento = await searchService.searchListings({ texto: 'peñarol' });
+    expect(conAcento.resultados.map((r) => r.id)).toContain(buscada.id);
+  });
+
+  it('⚠️ tolera un error de tipeo (PS-020.b: pg_trgm)', async () => {
+    // El full-text solo no alcanza: "indepediente" no comparte lexema con
+    // "Independiente". Lo encuentra el indice de trigramas.
+    const seller = await vendedor('busca-typo');
+    const buscada = await publicada(seller, 'Independiente 1984');
+
+    const { resultados } = await searchService.searchListings({ texto: 'indepediente' });
+
+    expect(resultados.map((r) => r.id)).toContain(buscada.id);
+  });
+
+  it('⚠️ NO devuelve lo que no se puede comprar', async () => {
+    // La busqueda usa el MISMO filtro que la vitrina (ERD §9.1). Si mostrara una
+    // pausada o sin stock, prometeria lo que la compra rechaza.
+    const seller = await vendedor('busca-invisible');
+    const activa = await publicada(seller, 'Talleres 1977 visible');
+    const pausada = await publicada(seller, 'Talleres 1977 pausada');
+
+    const edit = await import('./services/listing-editing.service');
+    await edit.pauseListing(seller, pausada.id);
+
+    const { resultados } = await searchService.searchListings({ texto: 'Talleres 1977' });
+    const ids = resultados.map((r) => r.id);
+
+    expect(ids).toContain(activa.id);
+    expect(ids).not.toContain(pausada.id);
+  });
+
+  it('las facetas traen conteos y filtran combinadas (PS-022 / PS-020)', async () => {
+    const seller = await vendedor('busca-facetas');
+    await publicada(seller, 'Facetas uno', { sizeValue: 'M' });
+    await publicada(seller, 'Facetas dos', { sizeValue: 'M' });
+    await publicada(seller, 'Facetas tres', { sizeValue: 'XL' });
+
+    const todo = await searchService.searchListings({ texto: 'Facetas' });
+    const talles = new Map(todo.facetas.talle.map((f) => [f.valor, f.cantidad]));
+
+    expect(talles.get('M')).toBe(2);
+    expect(talles.get('XL')).toBe(1);
+
+    const soloM = await searchService.searchListings({ texto: 'Facetas', sizeValue: 'M' });
+    expect(soloM.total).toBe(2);
+  });
+
+  it('⚠️ la faceta activa NO se filtra a si misma', async () => {
+    // Si al elegir "talle M" contaramos los talles CON ese filtro puesto, la
+    // unica opcion visible seria M y no se podria cambiar de idea.
+    const seller = await vendedor('busca-faceta-propia');
+    await publicada(seller, 'Autofiltro uno', { sizeValue: 'M' });
+    await publicada(seller, 'Autofiltro dos', { sizeValue: 'XL' });
+
+    const conFiltro = await searchService.searchListings({ texto: 'Autofiltro', sizeValue: 'M' });
+
+    // Los resultados son solo los M...
+    expect(conFiltro.total).toBe(1);
+    // ...pero la faceta sigue ofreciendo XL para poder cambiar.
+    expect(conFiltro.facetas.talle.map((f) => f.valor).sort()).toEqual(['M', 'XL']);
+  });
+
+  it('editar el titulo actualiza el indice', async () => {
+    const seller = await vendedor('busca-reindex');
+    const listing = await publicada(seller, 'Titulo viejo Gimnasia');
+
+    const edit = await import('./services/listing-editing.service');
+    await edit.editListing(seller, listing.id, { title: 'Titulo nuevo Estudiantes' });
+
+    const viejo = await searchService.searchListings({ texto: 'Gimnasia' });
+    expect(viejo.resultados.map((r) => r.id)).not.toContain(listing.id);
+
+    const nuevo = await searchService.searchListings({ texto: 'Estudiantes' });
+    expect(nuevo.resultados.map((r) => r.id)).toContain(listing.id);
   });
 });

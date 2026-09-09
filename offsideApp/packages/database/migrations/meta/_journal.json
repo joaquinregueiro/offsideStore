@@ -43,6 +43,13 @@
       "when": 1787928403263,
       "tag": "0005_seed_image_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788014803263,
+      "tag": "0006_seed_search_settings",
+      "breakpoints": true
     }
   ]
 }
