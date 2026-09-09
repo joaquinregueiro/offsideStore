@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import { AuthError } from '@/modules/auth/auth.errors';
 import { createOrder } from '@/modules/orders/services/order.service';
@@ -14,6 +15,11 @@ import { startCheckout } from '@/modules/payments/services/payment.service';
  * ⚠️ CADA ACCION EXIGE SESION VERIFICADA POR SU CUENTA. Son alcanzables por POST
  * directo sin pasar por la pantalla: que la pagina haya hecho el guard no
  * protege a la accion.
+ *
+ * ⚠️ Y CADA UNA CONSUME SU LIMITE POR USUARIO, el MISMO contador que consume el
+ * endpoint equivalente de la API. Crear ordenes escribe filas y arrancar el
+ * checkout llama a Mercado Pago: repetirlo sin techo ensucia la base con
+ * ordenes fantasma y castiga la reputacion de la cuenta ante el proveedor.
  */
 
 export interface EstadoCompra {
@@ -77,6 +83,7 @@ export async function comprar(_estado: EstadoCompra, formData: FormData): Promis
 
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('order-create', user.id);
 
     const input = comprarSchema.parse({
       listingId: texto(formData, 'listingId'),
@@ -117,6 +124,8 @@ export async function pagar(_estado: EstadoCompra, formData: FormData): Promise<
 
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('checkout', user.id);
+
     const orderId = z.string().uuid().parse(texto(formData, 'orderId'));
 
     // `startCheckout` verifica que la orden sea del comprador, que este

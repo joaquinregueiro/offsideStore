@@ -4,8 +4,27 @@ import { z } from 'zod';
 import { requireCapability } from '@/lib/auth-guard';
 import { handleError, ok, readJson } from '@/lib/http';
 import { CAPABILITIES } from '@/lib/permissions';
+import { consumeUserLimit, type RateLimitScope } from '@/lib/rate-limit';
+import { rateLimited } from '@/modules/auth/auth.errors';
 
 import * as settingsService from '../services/settings.service';
+
+/**
+ * Consume una unidad del limite POR USUARIO o lanza `RATE_LIMITED`.
+ *
+ * ⚠️ ES EL MISMO CONTADOR QUE CONSUME LA SERVER ACTION equivalente. Si contaran
+ * aparte, bloquear un camino no serviria de nada: el otro seguiria abierto. Es
+ * exactamente el agujero que tenia el login antes de `rate-limit-actions.ts`.
+ *
+ * ⚠️ TENER LA CAPACIDAD NO VUELVE INOFENSIVA LA REPETICION: cada cambio inserta
+ * una fila NUEVA de configuracion —`app_settings` es versionada—, asi que un
+ * bucle escribe historial sin fin. Es ademas el techo que queda si una sesion
+ * de admin se filtra.
+ */
+async function enforceUserLimit(scope: RateLimitScope, userId: string): Promise<void> {
+  const decision = await consumeUserLimit(scope, userId);
+  if (!decision.allowed) throw rateLimited(decision.retryAfterSeconds);
+}
 
 /**
  * Controller del Config Store. Sin reglas de negocio.
@@ -101,6 +120,8 @@ export async function getCommission(request: Request): Promise<NextResponse> {
 export async function updateCommission(request: Request): Promise<NextResponse> {
   try {
     const admin = await requireCapability(request, CAPABILITIES.SYSTEM_CONFIG_MANAGE);
+    await enforceUserLimit('system-config', admin.id);
+
     const input = updateCommissionSchema.parse(await readJson(request));
 
     const basisPoints = await settingsService.setCommissionRateBasisPoints(

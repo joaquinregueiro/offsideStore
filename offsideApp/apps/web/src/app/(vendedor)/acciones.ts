@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import type { PublicUser } from '@/modules/auth/services/auth.service';
 import { AuthError } from '@/modules/auth/auth.errors';
@@ -38,6 +39,19 @@ import { submitTaxIdentity } from '@/modules/sellers/services/seller-tax-profile
  * vendedor vive en los Services —`requireOwnSellerProfile` resuelve el perfil
  * POR `user.id`, y `canSellerOperate` decide si puede publicar—. Repetir la
  * regla aca seria arriesgarse a que las dos copias se separen.
+ *
+ * ⚠️ CADA UNA CONSUME SU LIMITE POR USUARIO, y aca es donde mas importa:
+ * `publicar` y `agregarFotos` son **las operaciones mas caras del sistema**.
+ * Cada foto se decodifica y se reescribe en tres tamaños con sharp, hasta ocho
+ * por envio; sin techo, un bucle desde una sola cuenta agota la memoria del VPS
+ * sin necesidad de explotar nada. El resto se limita por una razon mas modesta
+ * pero real: `editar` escribe en `audit_log` y en `listing_price_history`, y un
+ * bucle las llenaria de ruido hasta volver inutil el historial que BR-015 pide
+ * conservar.
+ *
+ * Cada familia cuenta APARTE. Si publicar, editar y subir fotos compartieran
+ * contador, ordenar el catalogo un domingo a la tarde dejaria al vendedor sin
+ * poder publicar.
  */
 
 export interface EstadoVendedor {
@@ -92,6 +106,7 @@ export async function habilitarVendedor(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('seller-create', user.id);
 
     const input = createSellerProfileSchema.parse({
       displayName: texto(formData, 'displayName'),
@@ -124,6 +139,7 @@ export async function declararIdentidadFiscal(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('tax-identity', user.id);
 
     const input = submitTaxIdentitySchema.parse({
       taxIdType: texto(formData, 'taxIdType'),
@@ -159,6 +175,8 @@ export async function conectarMercadoPago(
 
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('mp-connect', user.id);
+
     const { authorizationUrl } = await startConnection(user);
     destino = authorizationUrl;
   } catch (error) {
@@ -181,6 +199,8 @@ export async function desconectarMercadoPago(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('mp-disconnect', user.id);
+
     await disconnect(user);
   } catch (error) {
     return { error: mensajeDeError(error) };
@@ -245,6 +265,7 @@ export async function publicar(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-create', user.id);
 
     const input = publicarSchema.parse({
       categoryId: texto(formData, 'categoryId'),
@@ -364,6 +385,8 @@ export async function agregarFotos(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-image', user.id);
+
     const { listingId } = fotosSchema.parse({ listingId: texto(formData, 'listingId') });
 
     const archivos = formData
@@ -409,6 +432,7 @@ export async function borrarFoto(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-update', user.id);
 
     const input = borrarFotoSchema.parse({
       listingId: texto(formData, 'listingId'),
@@ -463,6 +487,7 @@ const editarSchema = z.object({
 export async function editar(_estado: EstadoVendedor, formData: FormData): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-update', user.id);
 
     const input = editarSchema.parse({
       listingId: texto(formData, 'listingId'),
@@ -510,6 +535,8 @@ const publicacionSchema = z.object({ listingId: z.string().uuid() });
 export async function pausar(_estado: EstadoVendedor, formData: FormData): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-update', user.id);
+
     const { listingId } = publicacionSchema.parse({ listingId: texto(formData, 'listingId') });
 
     await pauseListing(user, listingId);
@@ -528,6 +555,8 @@ export async function reactivar(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-update', user.id);
+
     const { listingId } = publicacionSchema.parse({ listingId: texto(formData, 'listingId') });
 
     await resumeListing(user, listingId);
@@ -553,6 +582,8 @@ export async function eliminar(
 ): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-update', user.id);
+
     const { listingId } = publicacionSchema.parse({ listingId: texto(formData, 'listingId') });
 
     await deleteListing(user, listingId);

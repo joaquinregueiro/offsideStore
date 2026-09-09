@@ -137,6 +137,28 @@ export const envSchema = z.object({
   AUTH_RATE_LIMIT_MAX_PER_IP: z.coerce.number().int().positive().default(20),
   /** Intentos FALLIDOS por cuenta y ventana. Ver `lib/rate-limit.ts`. */
   AUTH_RATE_LIMIT_MAX_PER_ACCOUNT: z.coerce.number().int().positive().default(5),
+
+  /**
+   * Rate limiting de las operaciones AUTENTICADAS (publicar, comprar, pagar,
+   * back-office).
+   *
+   * ⚠️ PRESUPUESTO APARTE DEL DE AUTH, A PROPOSITO. Los valores de arriba estan
+   * calibrados para adivinar una password: son deliberadamente bajos porque
+   * nadie escribe mal su clave veinte veces. Aplicar ese mismo techo a publicar
+   * o a subir fotos bloquearia a un vendedor que trabaja normal. Son dos
+   * amenazas distintas y por eso son dos numeros distintos.
+   *
+   * ⚠️ ESTO NO ES UN CUPO DE NEGOCIO. "Cuantas publicaciones puede tener un
+   * vendedor" es ⚙️ CONFIGURABLE y vive en el Config Store (§12), y el
+   * throttling por estado de riesgo es TS-042. Esto es un techo de seguridad
+   * contra el abuso automatizado: alto para una persona, bajo para un script.
+   *
+   * Valores provisorios, 🟡 pendientes de confirmacion
+   * (`configuration-registry.md` §3).
+   */
+  ACTIONS_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+  /** Operaciones por USUARIO y ventana, para cada scope por separado. */
+  ACTIONS_RATE_LIMIT_MAX_PER_USER: z.coerce.number().int().positive().default(60),
 });
 
 export type Env = z.infer<typeof envSchema>;

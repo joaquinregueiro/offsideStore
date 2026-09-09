@@ -127,6 +127,22 @@ function limits(): Limits {
 }
 
 /**
+ * Presupuesto de las operaciones AUTENTICADAS. Es OTRO, no el de auth.
+ *
+ * Los de arriba estan calibrados contra adivinar una password —deliberadamente
+ * bajos, porque nadie escribe mal su clave veinte veces—. Reusarlos para
+ * publicar o subir fotos frenaria a un vendedor que trabaja normal. Dos
+ * amenazas distintas, dos numeros distintos.
+ */
+function actionLimits(): { windowSeconds: number; maxPerUser: number } {
+  const env = getEnv();
+  return {
+    windowSeconds: env.ACTIONS_RATE_LIMIT_WINDOW_MINUTES * 60,
+    maxPerUser: env.ACTIONS_RATE_LIMIT_MAX_PER_USER,
+  };
+}
+
+/**
  * Alcance del limite: separa los contadores por endpoint.
  *
  * `mp-connect` y `mp-callback` son endpoints de vendedor, no de auth, pero
@@ -134,6 +150,11 @@ function limits(): Limits {
  * escribe en Redis y el callback dispara una llamada a un tercero, asi que
  * ninguno de los dos puede quedar abierto a repeticion ilimitada
  * (mercadopago-oauth-spec.md §13).
+ *
+ * Del resto —publicar, editar, subir fotos, comprar, pagar, reembolsar— NO hay
+ * uno solo: cada familia de operaciones cuenta aparte. Si compartieran
+ * contador, editar veinte publicaciones dejaria sin poder comprar, que no tiene
+ * nada que ver con lo otro.
  */
 export type RateLimitScope =
   | 'login'
@@ -143,10 +164,16 @@ export type RateLimitScope =
   | 'verify-resend'
   | 'mp-connect'
   | 'mp-callback'
+  | 'mp-disconnect'
   | 'checkout'
   | 'refund'
   | 'order-create'
-  | 'listing-create';
+  | 'listing-create'
+  | 'listing-image'
+  | 'listing-update'
+  | 'seller-create'
+  | 'tax-identity'
+  | 'system-config';
 
 /**
  * Consume una unidad del limite POR IP para este scope.
@@ -181,6 +208,47 @@ export async function consumeIpLimitFor(
 ): Promise<RateLimitDecision> {
   const { windowSeconds, maxPerIp } = limits();
   return consume(store, `rl:${scope}:ip:${ip}`, maxPerIp, windowSeconds);
+}
+
+/**
+ * Consume una unidad del limite POR USUARIO para este scope.
+ *
+ * =============================================================================
+ * POR QUE LAS OPERACIONES AUTENTICADAS SE CUENTAN POR USUARIO Y NO POR IP
+ * =============================================================================
+ *
+ * En auth la IP es lo UNICO que hay: quien intenta entrar todavia no es nadie.
+ * Aca ya hay sesion verificada, y entonces la IP es la peor de las dos claves
+ * disponibles:
+ *
+ *  1. **Castiga a quien no hizo nada.** Detras de un NAT —una oficina, un
+ *     locutorio, la red movil de una operadora— muchisima gente comparte una
+ *     sola IP. Contar por IP hace que la actividad de un desconocido consuma el
+ *     cupo del resto, y el bloqueo cae sobre gente que no hizo nada.
+ *  2. **No frena a quien si.** Una IP se rota gratis. El `user_id` no: para
+ *     tener otro hay que registrar una cuenta y verificar un email real, y ese
+ *     camino ya tiene su propio limite.
+ *
+ * ⚠️ ES EL MISMO CONTADOR PARA LA PANTALLA Y PARA LA API. La leccion del
+ * limitador de auth fue justamente esa: si cada camino contara aparte, bloquear
+ * uno no serviria de nada porque el otro seguiria abierto.
+ *
+ * ⚠️ NO ES UN CUPO DE NEGOCIO. "Cuantas publicaciones puede tener un vendedor"
+ * es ⚙️ CONFIGURABLE y vive en el Config Store (CLAUDE.md §12); el throttling
+ * por estado de riesgo es TS-042 y sus umbrales siguen 🟡. Esto es un techo de
+ * seguridad: alto para una persona, bajo para un script.
+ *
+ * ⚠️ EL `userId` VA EN CLARO, a diferencia del email. No es lo mismo: el email
+ * es un dato personal y por eso se guarda como HMAC; el `user_id` es un uuid
+ * interno opaco que no identifica a nadie fuera del sistema.
+ */
+export async function consumeUserLimit(
+  scope: RateLimitScope,
+  userId: string,
+  store: RateLimitStore = getRedisClient(),
+): Promise<RateLimitDecision> {
+  const { windowSeconds, maxPerUser } = actionLimits();
+  return consume(store, `rl:${scope}:user:${userId}`, maxPerUser, windowSeconds);
 }
 
 /**

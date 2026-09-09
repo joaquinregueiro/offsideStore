@@ -6,6 +6,7 @@ import {
   checkAccountLimit,
   consumeAccountLimit,
   consumeIpLimitFor,
+  consumeUserLimit,
   registerFailedAttempt,
   type RateLimitScope,
 } from './rate-limit';
@@ -102,5 +103,24 @@ export async function registrarLoginFallido(email: string): Promise<void> {
  */
 export async function exigirLimiteDeEnvio(scope: RateLimitScope, email: string): Promise<void> {
   const decision = await consumeAccountLimit(scope, email);
+  if (!decision.allowed) throw rateLimited(decision.retryAfterSeconds);
+}
+
+/**
+ * Exige el limite POR USUARIO. Es el que usan las acciones ya autenticadas.
+ *
+ * ⚠️ VA DESPUES DE RESOLVER LA SESION, no antes, y esa es la unica excepcion a
+ * la regla de "el limite primero": no se puede contar por usuario sin saber
+ * quien es. El orden correcto es igual el mas barato posible — resolver la
+ * sesion es una lectura indexada, y todo lo caro (parsear el formulario,
+ * decodificar imagenes, llamar a Mercado Pago) queda detras del limite.
+ *
+ * ⚠️ NO SE LIMITA POR IP. En auth la IP es lo unico que hay; aca hay identidad
+ * verificada, que es una clave estrictamente mejor: no la comparte media
+ * oficina detras de un NAT y no se rota gratis. El detalle esta en
+ * `consumeUserLimit`.
+ */
+export async function exigirLimitePorUsuario(scope: RateLimitScope, userId: string): Promise<void> {
+  const decision = await consumeUserLimit(scope, userId);
   if (!decision.allowed) throw rateLimited(decision.retryAfterSeconds);
 }

@@ -645,9 +645,42 @@ así que **un atacante puede dejar a alguien afuera**. Es inherente a cualquier
 límite por cuenta y ya estaba en la API. La salida cuando moleste no es subir el
 número: es pedir prueba de humanidad tras los primeros fallos.
 
-⚠️ **Las demás Server Actions siguen sin límite** —publicar, comprar, checkout,
-back-office—. Es menos grave porque todas exigen sesión verificada, pero es el
-mismo patrón y conviene cerrarlo.
+**Rate limiting — cerrado también en las operaciones AUTENTICADAS
+(2026-09-08)**: publicar, editar, subir fotos, comprar, pagar, conectar Mercado
+Pago y el back-office consumen su cupo. Con esto cae el pendiente que la entrada
+anterior dejaba anotado.
+
+⚠️ **Acá se cuenta por USUARIO, no por IP, y no es una preferencia de estilo.**
+En auth la IP es lo único que hay: quien intenta entrar todavía no es nadie.
+Acá hay sesión verificada, y entonces la IP es la peor de las dos claves —detrás
+de un NAT (una oficina, la red móvil de una operadora) muchísima gente comparte
+una sola, así que el abuso de un desconocido consumiría el cupo del resto; y una
+IP se rota gratis, mientras que para tener otro `user_id` hay que verificar un
+email real—. Los límites por IP que ya tenía la API **no se tocaron**; el
+contador por usuario corre además en los dos caminos, la pantalla y el endpoint.
+
+⚠️ **Presupuesto aparte del de auth.** `ACTIONS_RATE_LIMIT_MAX_PER_USER` (60) y
+`ACTIONS_RATE_LIMIT_WINDOW_MINUTES` (15) son variables nuevas: los números de
+auth están calibrados contra adivinar una password —5 por cuenta— y heredarlos
+bloquearía a un vendedor que sube su catálogo un domingo a la tarde.
+
+Lo que más lo justifica: `publicar` y `agregarFotos` son **las operaciones más
+caras del sistema** —cada foto se decodifica y se reescribe en tres tamaños,
+hasta ocho por envío—, así que un bucle desde una sola cuenta agota la memoria
+del VPS sin explotar nada. Cada familia de operaciones cuenta aparte: si
+publicar y editar compartieran contador, ordenar el catálogo dejaría sin poder
+publicar. Los administrativos también se limitan: tener la capacidad no vuelve
+inofensiva la repetición —cada cambio de comisión inserta una fila versionada y
+cada reembolso mueve plata real—.
+
+⚠️ **NO es un cupo de negocio.** Cuántas publicaciones puede tener un vendedor
+es ⚙️ CONFIGURABLE (Config Store, §12) y el throttling por estado de riesgo es
+TS-042, con umbrales 🟡. Esto es un techo de seguridad: alto para una persona,
+bajo para un script. Valores 🟡 pendientes de confirmación.
+
+⚠️ Costo aceptado: sin límite por IP, alguien con varias cuentas verificadas
+suma el cupo de todas desde una sola máquina. Cada cuenta cuesta un email real y
+pasa por `register`/`verify-resend`, que sí se limitan por IP.
 
 **Refresh de tokens de MP**: barrido diario (BullMQ, 04:00) que renueva las
 conexiones que vencen dentro de 30 días. ⚠️ Mercado Pago **rota** el
@@ -802,7 +835,7 @@ que todavía no existen. De los nueve emails que lista la documentación sólo e
 los dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **433** (222 unitarios + 211 de integración contra PostgreSQL y Redis
+Tests: **495** (253 unitarios + 242 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 ⚠️ Los fixtures **leen** las categorías que carga la migración `0004`; no crean

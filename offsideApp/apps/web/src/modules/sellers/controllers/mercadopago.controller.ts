@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser, requireUser, requireVerifiedUser } from '@/lib/auth-guard';
 import { mercadoPagoCallbackUrl } from '@/lib/frontend-routes';
 import { handleError, ok } from '@/lib/http';
-import { consumeIpLimit } from '@/lib/rate-limit';
+import { consumeIpLimit, consumeUserLimit, type RateLimitScope } from '@/lib/rate-limit';
 import { AuthError, rateLimited } from '@/modules/auth/auth.errors';
 
 import * as connectionService from '../services/mercadopago-connection.service';
@@ -28,6 +28,21 @@ async function enforceIpLimit(
 }
 
 /**
+ * Consume una unidad del limite POR USUARIO o lanza `RATE_LIMITED`.
+ *
+ * ⚠️ ES EL MISMO CONTADOR QUE CONSUME LA SERVER ACTION equivalente. Si contaran
+ * aparte, bloquear un camino no serviria de nada: el otro seguiria abierto. Es
+ * exactamente el agujero que tenia el login antes de `rate-limit-actions.ts`.
+ *
+ * Va DESPUES de resolver al usuario —no se puede contar por usuario sin saber
+ * quien es— y ANTES de parsear el cuerpo y de tocar la base.
+ */
+async function enforceUserLimit(scope: RateLimitScope, userId: string): Promise<void> {
+  const decision = await consumeUserLimit(scope, userId);
+  if (!decision.allowed) throw rateLimited(decision.retryAfterSeconds);
+}
+
+/**
  * `POST /api/sellers/mercadopago/connect`
  *
  * ⚠️ Devuelve la URL; NO redirige (MP-OAUTH-014). El frontend tiene que navegar
@@ -40,6 +55,7 @@ export async function connect(request: Request): Promise<NextResponse> {
 
     // Email verificado (BR-001): conectar Mercado Pago es "operar".
     const user = await requireVerifiedUser(request);
+    await enforceUserLimit('mp-connect', user.id);
 
     return ok(await connectionService.startConnection(user));
   } catch (error) {
@@ -153,6 +169,8 @@ export async function status(request: Request): Promise<NextResponse> {
 export async function disconnect(request: Request): Promise<NextResponse> {
   try {
     const user = await requireUser(request);
+    await enforceUserLimit('mp-disconnect', user.id);
+
     return ok(await connectionService.disconnect(user));
   } catch (error) {
     return handleError(error);

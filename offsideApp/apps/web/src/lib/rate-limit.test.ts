@@ -7,6 +7,7 @@ import {
   consumeAccountLimit,
   consumeIpLimit,
   consumeIpLimitFor,
+  consumeUserLimit,
   registerFailedAttempt,
   type RateLimitStore,
 } from './rate-limit';
@@ -246,6 +247,97 @@ describe('el limite por IP es el MISMO para la API y para las Server Actions', (
     }
 
     expect((await consumeIpLimitFor(IP, 'register', store)).allowed).toBe(true);
+  });
+});
+
+describe('limite por USUARIO de las operaciones autenticadas', () => {
+  const USUARIO = '11111111-1111-4111-8111-111111111111';
+  const OTRO = '22222222-2222-4222-8222-222222222222';
+
+  beforeEach(() => {
+    process.env.DATABASE_URL ??= 'postgresql://unit:unit@localhost:5432/unit';
+    process.env.REDIS_URL ??= 'redis://localhost:6379';
+    process.env.AUTH_SESSION_SECRET ??= 'pepper-solo-para-tests';
+  });
+
+  it('⚠️ NO usa el presupuesto de auth', async () => {
+    // ES LA RAZON DE QUE EXISTA UN SEGUNDO JUEGO DE VARIABLES. Los numeros de
+    // auth estan calibrados contra adivinar una password (5 por cuenta, 20 por
+    // IP): son bajos a proposito. Si publicar los heredara, un vendedor que
+    // sube su catalogo un domingo a la tarde quedaria bloqueado a la sexta
+    // prenda. Esto verifica que la sexta pasa.
+    const store = fakeStore();
+
+    for (let i = 0; i < 25; i += 1) {
+      expect((await consumeUserLimit('listing-create', USUARIO, store)).allowed).toBe(true);
+    }
+  });
+
+  it('bloquea al pasarse del techo', async () => {
+    const store = fakeStore();
+    const techo = 60;
+
+    for (let i = 0; i < techo; i += 1) {
+      expect((await consumeUserLimit('listing-image', USUARIO, store)).allowed).toBe(true);
+    }
+
+    // Subir fotos es la operacion mas cara del sistema —cada una se decodifica
+    // y se reescribe en tres tamaños—, asi que el techo tiene que existir de
+    // verdad, no solo ser alto.
+    expect((await consumeUserLimit('listing-image', USUARIO, store)).allowed).toBe(false);
+  });
+
+  it('no mezcla usuarios: bloquear a uno no toca al otro', async () => {
+    // Es la ventaja concreta sobre contar por IP. Detras de un NAT —una
+    // oficina, la red movil de una operadora— muchisima gente comparte una
+    // sola IP, y contando por IP el abuso de un desconocido dejaria sin
+    // publicar al resto.
+    const store = fakeStore();
+
+    for (let i = 0; i < 61; i += 1) {
+      await consumeUserLimit('listing-create', USUARIO, store);
+    }
+
+    expect((await consumeUserLimit('listing-create', USUARIO, store)).allowed).toBe(false);
+    expect((await consumeUserLimit('listing-create', OTRO, store)).allowed).toBe(true);
+  });
+
+  it('cada familia de operaciones cuenta aparte', async () => {
+    // Si compartieran contador, ordenar el catalogo dejaria sin poder comprar,
+    // que no tiene nada que ver con lo otro.
+    const store = fakeStore();
+
+    for (let i = 0; i < 61; i += 1) {
+      await consumeUserLimit('listing-update', USUARIO, store);
+    }
+
+    expect((await consumeUserLimit('listing-update', USUARIO, store)).allowed).toBe(false);
+    expect((await consumeUserLimit('listing-create', USUARIO, store)).allowed).toBe(true);
+    expect((await consumeUserLimit('order-create', USUARIO, store)).allowed).toBe(true);
+  });
+
+  it('⚠️ la pantalla y la API caen en la MISMA clave', async () => {
+    // Mismo invariante que el limite por IP, y por el mismo motivo: la Server
+    // Action y el Route Handler llaman los dos a `consumeUserLimit`, asi que un
+    // atacante bloqueado por un camino no puede seguir por el otro.
+    const store = fakeStore();
+    const incr = vi.spyOn(store, 'incr');
+
+    await consumeUserLimit('checkout', USUARIO, store);
+    await consumeUserLimit('checkout', USUARIO, store);
+
+    const claves = new Set(incr.mock.calls.map(([clave]) => clave));
+
+    expect(claves.size).toBe(1);
+    expect([...claves][0]).toBe(`rl:checkout:user:${USUARIO}`);
+  });
+
+  it('falla ABIERTO si Redis no responde', async () => {
+    // Mismo criterio que el resto del limitador: con Redis caido, fallar
+    // cerrado dejaria a TODOS sin poder operar, que es un incidente peor.
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect((await consumeUserLimit('refund', USUARIO, brokenStore)).allowed).toBe(true);
   });
 });
 

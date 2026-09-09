@@ -76,6 +76,94 @@ formulario sumaron 20, y el intento 21 se bloqueó.
 La clave lleva el scope adentro, así que los contadores **no se comparten entre
 acciones**: pedir reenvíos no puede dejar a nadie sin poder iniciar sesión.
 
+## Operaciones autenticadas (2026-09-08)
+
+El pendiente que este mismo documento listaba —"el resto de las Server Actions
+no tiene límite"— quedó cerrado. Publicar, editar, subir fotos, comprar, pagar,
+conectar Mercado Pago y el back-office consumen ahora su propio cupo.
+
+| Acción del vendedor / comprador / admin                   | Scope                          |
+| --------------------------------------------------------- | ------------------------------ |
+| `habilitarVendedor`                                       | `seller-create`                |
+| `declararIdentidadFiscal`                                 | `tax-identity`                 |
+| `conectarMercadoPago` / `desconectarMercadoPago`          | `mp-connect` / `mp-disconnect` |
+| `publicar`                                                | `listing-create`               |
+| `agregarFotos`                                            | `listing-image`                |
+| `editar`, `pausar`, `reactivar`, `eliminar`, `borrarFoto` | `listing-update`               |
+| `comprar`                                                 | `order-create`                 |
+| `pagar`                                                   | `checkout`                     |
+| `reembolsar`                                              | `refund`                       |
+| `cambiarComision`                                         | `system-config`                |
+
+### ⚠️ Acá se cuenta por USUARIO, no por IP
+
+Es la diferencia de fondo con auth, y no es una preferencia de estilo: en auth
+la IP es lo **único** que hay, porque quien intenta entrar todavía no es nadie.
+Acá ya hay sesión verificada, y entonces la IP es la peor de las dos claves
+disponibles.
+
+1. **Castiga a quien no hizo nada.** Detrás de un NAT —una oficina, un
+   locutorio, la red móvil de una operadora— muchísima gente comparte una sola
+   IP. Contar por IP hace que la actividad de un desconocido consuma el cupo del
+   resto. Con el techo de auth (20 por ventana), un solo vendedor subiendo dos
+   tandas de ocho fotos ya dejaría a los demás afuera.
+2. **No frena a quien sí.** Una IP se rota gratis. El `user_id` no: para tener
+   otro hay que registrar una cuenta y verificar un email real, y ese camino ya
+   tiene su propio límite por IP.
+
+Los límites por IP que ya existían en la API **no se tocaron**: siguen ahí, y
+ahora el límite por usuario corre además en los dos caminos.
+
+### ⚠️ Presupuesto aparte del de auth
+
+`ACTIONS_RATE_LIMIT_MAX_PER_USER` (60) y `ACTIONS_RATE_LIMIT_WINDOW_MINUTES`
+(15) son variables **nuevas**, no las de auth. Aquellas están calibradas contra
+adivinar una password —5 por cuenta, 20 por IP— y son bajas a propósito, porque
+nadie escribe mal su clave veinte veces. Heredarlas para publicar bloquearía a
+un vendedor que sube su catálogo un domingo a la tarde. Son dos amenazas
+distintas, y por eso son dos números distintos. Valores 🟡 pendientes de
+confirmación (`configuration-registry.md` §3).
+
+### ⚠️ Esto NO es un cupo de negocio
+
+"Cuántas publicaciones puede tener un vendedor" es ⚙️ CONFIGURABLE y vive en el
+Config Store (CLAUDE.md §12); el throttling gradual por estado de riesgo es
+TS-042 y sus umbrales siguen 🟡. Lo de acá es un techo de seguridad: alto para
+una persona, bajo para un script. No se inventó ninguna regla de negocio.
+
+### Por qué cada familia cuenta aparte
+
+Si `publicar`, `editar` y `agregarFotos` compartieran contador, ordenar el
+catálogo un domingo dejaría al vendedor sin poder publicar, que no tiene nada
+que ver con lo otro. La clave lleva el scope adentro, igual que en auth.
+
+### Dónde va la llamada
+
+Después de resolver la sesión —no se puede contar por usuario sin saber quién
+es— y **antes** de parsear el formulario, decodificar imágenes o llamar a
+Mercado Pago. Es la única excepción a "el límite primero", y el orden sigue
+siendo el más barato posible: resolver la sesión es una lectura indexada.
+
+### Lo que más justifica el trabajo
+
+`publicar` y `agregarFotos` son **las operaciones más caras del sistema**: cada
+foto se decodifica y se reescribe en tres tamaños con sharp, hasta ocho por
+envío. Sin techo, un bucle desde una sola cuenta agota la memoria del VPS sin
+necesidad de explotar nada — el mismo razonamiento que argon2id en el login,
+pero con un costo por intento bastante mayor.
+
+Los administrativos se limitan aunque exijan capacidad: tener la capacidad no
+vuelve inofensiva la repetición. Cada cambio de comisión inserta una fila nueva
+en `app_settings`, que es versionada, y cada reembolso llama a Mercado Pago con
+plata real. Es además el techo que queda si una sesión de admin se filtra.
+
+### Verificado en ejecución
+
+Con `ACTIONS_RATE_LIMIT_MAX_PER_USER=2` en local: la clave real
+`rl:tax-identity:user:<uuid>` apareció en Redis y llegó a 2, y el tercer envío
+del formulario se rechazó en pantalla con "Demasiados intentos", sin salir de la
+página. Los datos de prueba se borraron y el `.env` quedó como estaba.
+
 ## ⚠️ Lo que este diseño acepta como costo
 
 **Un atacante puede bloquear la cuenta de otro.** Cinco intentos fallidos con el
@@ -102,8 +190,13 @@ humanidad tras los primeros fallos, no bloquear.
   entrar, que es un incidente peor.
 - **No hay alerta ante un pico de bloqueos.** Hoy nadie se entera de que están
   atacando el login. Es parte del hueco de observabilidad general.
-- **El resto de las Server Actions no tiene límite**: publicar, comprar,
-  iniciar checkout. La API sí lo tiene (`listing-create`, `order-create`,
-  `checkout`), así que el mismo desbalance existe ahí. Es menos grave —todas
-  exigen sesión verificada, así que no son anónimas— pero es el mismo patrón y
-  conviene cerrarlo.
+- **No hay límite por IP en las operaciones autenticadas.** Es deliberado (ver
+  arriba), pero tiene un costo: alguien con varias cuentas verificadas suma el
+  cupo de todas desde una sola máquina. Crear cada cuenta cuesta un email real
+  y pasa por `register` y `verify-resend`, que sí se limitan por IP, así que el
+  camino existe pero no es barato.
+- **El límite es un techo, no una política.** Que alguien publique 59 camisetas
+  por hora sin que nadie se entere sigue siendo posible: cuántas _debe_ poder
+  publicar un vendedor es ⚙️ CONFIGURABLE (Config Store) y el throttling por
+  estado de riesgo es TS-042, con umbrales 🟡. Esto no reemplaza ni a uno ni al
+  otro.

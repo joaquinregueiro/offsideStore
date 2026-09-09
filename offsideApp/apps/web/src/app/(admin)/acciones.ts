@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { CAPABILITIES } from '@/lib/permissions';
+import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
 import { requireCapabilitySessionUser } from '@/lib/session';
 import { AuthError } from '@/modules/auth/auth.errors';
 import { setCommissionRateBasisPoints } from '@/modules/config/services/settings.service';
@@ -19,6 +20,11 @@ import { refundPayment } from '@/modules/payments/services/refund.service';
  *
  * ⚠️ EL AUTOR DEL CAMBIO SALE DE LA SESION, NUNCA DEL FORMULARIO. Un campo
  * `updatedBy` en el body permitiria firmar un cambio a nombre de otro.
+ *
+ * ⚠️ TAMBIEN SE LIMITAN, aunque exijan capacidad administrativa. Tener la
+ * capacidad no vuelve inofensiva la repeticion: cada cambio de comision inserta
+ * una fila nueva de configuracion, y cada reembolso llama a Mercado Pago con
+ * plata real. Es ademas el techo que queda si una sesion de admin se filtra.
  */
 
 export interface EstadoAdmin {
@@ -71,6 +77,7 @@ export async function cambiarComision(
 ): Promise<EstadoAdmin> {
   try {
     const admin = await requireCapabilitySessionUser(CAPABILITIES.SYSTEM_CONFIG_MANAGE);
+    await exigirLimitePorUsuario('system-config', admin.id);
 
     const { porcentaje } = comisionSchema.parse({ porcentaje: texto(formData, 'porcentaje') });
     const basisPoints = Math.round(porcentaje * 100);
@@ -111,6 +118,7 @@ export async function reembolsar(_estado: EstadoAdmin, formData: FormData): Prom
 
   try {
     const admin = await requireCapabilitySessionUser(CAPABILITIES.PAYMENTS_REFUND);
+    await exigirLimitePorUsuario('refund', admin.id);
 
     const input = reembolsoSchema.parse({
       paymentId: texto(formData, 'paymentId'),

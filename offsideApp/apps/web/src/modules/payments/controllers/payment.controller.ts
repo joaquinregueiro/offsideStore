@@ -5,7 +5,7 @@ import { requireCapability, requireVerifiedUser } from '@/lib/auth-guard';
 import { CAPABILITIES } from '@/lib/permissions';
 import { handleError, ok, readJson } from '@/lib/http';
 import { isValidWebhookSignature, readSignatureHeaders } from '@/lib/mercadopago-webhook-signature';
-import { consumeIpLimit } from '@/lib/rate-limit';
+import { consumeIpLimit, consumeUserLimit, type RateLimitScope } from '@/lib/rate-limit';
 import { rateLimited } from '@/modules/auth/auth.errors';
 
 import * as paymentService from '../services/payment.service';
@@ -27,6 +27,21 @@ async function enforceIpLimit(request: Request, scope: 'checkout' | 'refund'): P
 }
 
 /**
+ * Consume una unidad del limite POR USUARIO o lanza `RATE_LIMITED`.
+ *
+ * ⚠️ ES EL MISMO CONTADOR QUE CONSUME LA SERVER ACTION equivalente. Si contaran
+ * aparte, bloquear un camino no serviria de nada: el otro seguiria abierto. Es
+ * exactamente el agujero que tenia el login antes de `rate-limit-actions.ts`.
+ *
+ * Va DESPUES de resolver al usuario —no se puede contar por usuario sin saber
+ * quien es— y ANTES de parsear el cuerpo y de tocar la base.
+ */
+async function enforceUserLimit(scope: RateLimitScope, userId: string): Promise<void> {
+  const decision = await consumeUserLimit(scope, userId);
+  if (!decision.allowed) throw rateLimited(decision.retryAfterSeconds);
+}
+
+/**
  * `POST /api/checkout/{orderId}`
  *
  * Devuelve `init_point`; **no redirige**. El frontend navega (mismo criterio
@@ -38,6 +53,7 @@ export async function startCheckout(request: Request, orderId: string): Promise<
 
     // Email verificado (BR-001): pagar es "operar".
     const user = await requireVerifiedUser(request);
+    await enforceUserLimit('checkout', user.id);
 
     return ok(await paymentService.startCheckout(user, orderId));
   } catch (error) {
@@ -69,6 +85,8 @@ export async function refund(request: Request, paymentId: string): Promise<NextR
 
     // Declara la CAPACIDAD; quien la tiene lo decide `lib/permissions.ts`.
     const admin = await requireCapability(request, CAPABILITIES.PAYMENTS_REFUND);
+    await enforceUserLimit('refund', admin.id);
+
     const input = refundSchema.parse(await readJson(request));
 
     return ok(
