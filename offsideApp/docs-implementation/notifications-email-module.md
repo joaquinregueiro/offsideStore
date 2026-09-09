@@ -320,9 +320,10 @@ faltaba, y es la que se construyó.
 proveedor. El ERD **sí** modela los webhooks del otro proveedor
 (`payment_webhook_events`); el equivalente de email nunca se modeló.
 
-`email_suppressions` **la autorizó el owner** el 2026-09-08 tras plantearle el
-bloqueo (CLAUDE.md §4/§5). ⚠️ **Falta reflejarla en `docs/`**, que es sólo lectura:
-hasta entonces el ERD dice 51 tablas y el schema tiene 52.
+`email_suppressions` **la autorizó el owner** tras plantearle el bloqueo
+(CLAUDE.md §4/§5), y con esa misma autorización el ERD pasó a **v1.3**: §18.1 la
+define y §2/§3/§24 quedaron sincronizados. Verificado contra la base real: 52
+tablas y 38 enums en el documento y en PostgreSQL.
 
 ### Las dos puertas del webhook
 

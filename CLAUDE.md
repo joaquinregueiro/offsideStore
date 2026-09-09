@@ -528,13 +528,13 @@ Desplegado en producción.
 
 Qué existe en `offsideApp/`:
 
-|                                    |                                                                                                     |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                                       |
-| `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)                           |
-| `packages/database`                | ERD v1.2 en Drizzle **+ una tabla fuera del ERD**: **52 tablas, 38 enums, 9 migraciones aplicadas** |
-| `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send`                     |
-| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                                             |
+|                                    |                                                                                    |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                      |
+| `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)          |
+| `packages/database`                | **ERD v1.3** completo en Drizzle: **52 tablas, 38 enums, 9 migraciones aplicadas** |
+| `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send`    |
+| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                            |
 
 Módulos de dominio implementados (`apps/web/src/modules/`):
 
@@ -699,12 +699,14 @@ reenvío → el reenvío "sale bien" y no llega—, que es el mismo agujero que 
 el reenvío de verificación, un escalón más abajo. Esa es la mitad que se
 construyó.
 
-⚠️ **`email_suppressions` NO ESTÁ EN EL ERD.** `database-design.md` §24 lista 51
-tablas y ninguna cubría esto: `notifications` (§18) es la campanita in-app, sin
-dirección ni estado de entrega. El ERD sí modela los webhooks del otro proveedor
-(`payment_webhook_events`). La tabla **la autorizó el owner** el 2026-09-08 tras
-plantearle el bloqueo (§4/§5); **falta reflejarla en `docs/`**, que es sólo
-lectura, así que por ahora el ERD dice 51 y el schema tiene 52.
+**`email_suppressions` no estaba en el ERD.** Ninguna de las 51 tablas cubría
+esto: `notifications` (§18) es la campanita in-app, sin dirección ni estado de
+entrega. El ERD sí modelaba los webhooks del otro proveedor
+(`payment_webhook_events`); el de email, no. La tabla **la autorizó el owner**
+(§4/§5) y el ERD se actualizó a **v1.3** con su misma autorización: §18.1 la
+define, §2/§3/§24 quedaron sincronizados y la invariante
+`ERD = Drizzle = Migration = PostgreSQL` se verificó contra la base real —52
+tablas y 38 enums en los dos lados—.
 
 ⚠️ **El endpoint es público y sin sesión**, así que se autentica por firma igual
 que el de Mercado Pago: sin eso, cualquiera que descubra la URL podría postear un

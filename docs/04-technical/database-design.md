@@ -43,6 +43,20 @@
 > tablas de ARCA — eso sigue 🔴 bajo DEC-011 (`legal.md` §2). El resto de v1.1
 > permanece **sin cambios**.
 
+> ## ⚠️ ERD v1.3 — actualizado 2026-09-09 (por autorización explícita del owner)
+>
+> Documenta la **supresión de direcciones de email**, que ya estaba implementada
+> y dejaba el ERD desincronizado. Cambios (detalle en §30):
+>
+> 1. **`email_suppressions`** — nueva tabla (§18.1). Tablas: 51 → **52**.
+> 2. **Enums: 37 → 38** (`email_suppression_reason`).
+> 3. **`citext`** pasa a usarse también en `email_suppressions.email` (§1.b).
+>
+> **Alcance estricto: sólo qué direcciones dejaron de recibir email y por qué.**
+> No se modela un registro de envíos ni el estado de entrega de cada mensaje:
+> `notifications` (§18) sigue siendo la bandeja in-app y no cambia. El resto de
+> v1.2 permanece **sin cambios**.
+
 Convención de marcas: ✅ estable · 🟦 estructura lista pero **semántica/valores
 PENDING** · 🌐 dependencia externa (MP/Correo, no inventar).
 
@@ -71,14 +85,14 @@ El modelo depende de tres extensiones. **La primera migración debe crearlas ant
 de las tablas que las usan**; ninguna herramienta las genera automáticamente.
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS citext;    -- users.email (§5.1)
+CREATE EXTENSION IF NOT EXISTS citext;    -- users.email (§5.1), email_suppressions.email (§18.1)
 CREATE EXTENSION IF NOT EXISTS unaccent;  -- búsqueda: acentos (§19.2)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;   -- búsqueda: tolerancia a typos (§19.2)
 ```
 
 | Extensión | Para qué | Si falta |
 |-----------|----------|----------|
-| `citext` | `users.email` case-insensitive | falla la creación de `users` |
+| `citext` | `users.email` y `email_suppressions.email` case-insensitive | falla la creación de `users` |
 | `unaccent` | normalizar acentos en la búsqueda en español | la búsqueda distingue "camiseta"/"camisetá" |
 | `pg_trgm` | índices trigram → tolerancia a errores de escritura (PS-020.b) | no se pueden crear los índices GIN trigram de §9.1 |
 
@@ -105,7 +119,7 @@ creen previamente.
 | **reviews** | `reviews` |
 | **trust & safety** | `risk_events`, `sanctions` |
 | **config** | `app_settings` ⭐ |
-| **notifications** | `notifications` |
+| **notifications** | `notifications`, `email_suppressions` ⭐ (v1.3) |
 | **audit** | `audit_log` |
 
 ⭐ = nueva o renombrada en v1.0. POST-MVP (no creadas aún): `saved_searches`,
@@ -153,6 +167,7 @@ catalog_request_status  : PENDING | APPROVED | REJECTED                         
 catalog_target_type     : club | national_team | brand | competition | country | season | size_chart   (DEC-041, v1.1)
 tax_id_type             : CUIT | CUIL | CDI                                           (v1.2, §7.5)
 tax_verification_status : PENDING | VERIFIED | REJECTED                               (v1.2, §7.5)
+email_suppression_reason: BOUNCE | COMPLAINT                                          (v1.3, §18.1)
 ```
 
 > **`tax_id_type`** — no se asume que todo vendedor tenga CUIT: una persona física
@@ -907,6 +922,54 @@ consulta para recalcular lo histórico.
 payload jsonb, read_at, created_at`. `INDEX(user_id)`, `INDEX(read_at)`. Envío por
 BullMQ; push fuera del MVP.
 
+⚠️ `notifications` es la **bandeja in-app**: no tiene dirección de email, ni
+estado de entrega, ni proveedor. No sirve —ni se pretende que sirva— como
+registro de lo que se mandó por email.
+
+### 18.1 `email_suppressions` ⭐ (v1.3) — direcciones que dejaron de recibir email
+
+Qué direcciones **no** deben recibir más correo, y por qué. Una fila por
+dirección.
+
+| Columna | Tipo | Null | Default | Notas |
+|---------|------|------|---------|-------|
+| id | uuid | no | gen_random_uuid() | PK |
+| email | citext | no | — | **UNIQUE**. `citext` como `users.email`: el proveedor devuelve la dirección con la capitalización del mensaje original. |
+| reason | email_suppression_reason | no | — | `BOUNCE` \| `COMPLAINT`. |
+| provider | text | no | 'ses' | Quién lo reportó. `text`, no enum: es un proveedor externo (§1). |
+| provider_subtype | text | sí | — | Subtipo **crudo** del proveedor (`Permanent/General`, `abuse`, …). |
+| provider_message_id | text | sí | — | ID del mensaje que lo causó, para rastrearlo. |
+| raw | jsonb | sí | — | Payload crudo del tercero (mismo criterio que DEC-035 con MP). |
+| suppressed_at | timestamptz | no | now() | Última vez que se suprimió. Distinto de `created_at` si hubo recaída. |
+| released_at | timestamptz | sí | — | Null = supresión **vigente**. |
+| released_by | uuid | sí | — | FK→`users` RESTRICT. Quién la liberó. |
+| created_at | timestamptz | no | now() | Primera vez que se vio. |
+| updated_at | timestamptz | sí | — | |
+
+Índices: `UNIQUE(email)`, `INDEX(suppressed_at)`.
+
+**Por qué existe si el proveedor ya tiene su propia lista de supresión.** Porque
+resuelven cosas distintas. La lista del proveedor protege la **reputación de
+envío**: deja de entregar y no cuenta esos envíos para la tasa de rebote. Pero
+**acepta** el mensaje, así que del lado de Offside el envío figura como exitoso y
+nadie se entera de que no llegó nunca — y una cuenta cuyo email de verificación
+no llega queda **muerta en silencio** (no puede operar por BR-001 y el reenvío
+"sale bien"). Esta tabla es lo que permite verlo y diagnosticarlo.
+
+**Una fila por dirección, con upsert.** Los webhooks del proveedor se reintentan
+y llegan desordenados —igual que los de MP (§12.3)—, así que un `INSERT` a secas
+rompería contra el UNIQUE y provocaría reintentos indefinidos. Un reporte nuevo
+sobre una dirección liberada vuelve a suprimirla.
+
+**No se borra la fila al liberar** (§1, soft delete): que una dirección haya
+rebotado es un hecho, y perderlo impide explicar después por qué estuvo muda.
+
+🟦 **Qué se le muestra a la persona afectada queda PENDIENTE.** Decirle "esa
+dirección rebota" sólo cuando está suprimida convertiría la pantalla de reenvío
+en un oráculo para descubrir qué direcciones están registradas. Tampoco está
+decidido **qué capacidad** (DEC-023) gobierna el liberar una dirección: hoy se
+hace por SQL, como la asignación de roles.
+
 ---
 
 ## 19. Módulo AUDIT + Búsqueda
@@ -1062,7 +1125,7 @@ muchos hechos); `users.risk_level` = **estado actual**. Ninguna tabla se elimina
 
 ---
 
-## 24. Lista de tablas (51 en v1.2) y de enums (37 en v1.2)
+## 24. Lista de tablas (52 en v1.3) y de enums (38 en v1.3)
 
 **Tablas:** users, sessions, oauth_accounts, email_verification_tokens,
 password_reset_tokens, user_addresses, identity_verifications, user_history_events,
@@ -1073,8 +1136,9 @@ listing_images, listing_price_history, carts, cart_items, favorites, orders,
 order_items, order_status_history, payments, payment_splits, payment_webhook_events,
 refunds, chargebacks, seller_liabilities, reconciliation_records, shipments,
 shipment_tracking_events, disputes, dispute_evidences, dispute_actions, reviews,
-risk_events, sanctions, app_settings, notifications, audit_log.
-*(51 con seller_tax_profiles de v1.2; 50 en v1.1; "40" del banner original queda superado.)*
+risk_events, sanctions, app_settings, notifications, email_suppressions, audit_log.
+*(52 con email_suppressions de v1.3; 51 con seller_tax_profiles de v1.2; 50 en v1.1;
+"40" del banner original queda superado.)*
 
 **Enums (35 en v1.1 — los 33 de v1.0 + `catalog_request_status` y
 `catalog_target_type`, DEC-041):** user_status, user_level, risk_level, admin_role, identity_status,
@@ -1084,7 +1148,8 @@ order_status, payment_status, refund_type, refund_status, seller_liability_statu
 shipment_status, dispute_reason, dispute_status, dispute_resolution, sanction_type,
 actor_type, evidence_uploader, history_event_type, **risk_type**, **risk_severity**,
 **risk_source**, notification_type, config_scope, **catalog_request_status**,
-**catalog_target_type**, **tax_id_type**, **tax_verification_status**.
+**catalog_target_type**, **tax_id_type**, **tax_verification_status**,
+**email_suppression_reason**.
 
 ---
 
@@ -1204,3 +1269,40 @@ Sigue **sin modelar**, bajo DEC-011 🔴 (`legal.md` §2):
 
 `seller_tiers` permanece **sin uso** en el MVP y `seller_profiles.seller_tier_id`
 sigue en `NULL`: DEC-037 no tiene valores definidos.
+
+---
+
+## 30. Cambios de v1.2 → v1.3 (2026-09-09)
+
+Actualización autorizada por el owner para **volver a sincronizar el ERD con la
+implementación**: el procesamiento de rebotes y quejas de email ya estaba
+construido y el ERD no lo reflejaba, rompiendo la invariante
+`ERD = Drizzle = Migration = PostgreSQL`.
+
+**No introduce ninguna decisión de negocio nueva.** Documenta lo que ya existe.
+
+| # | Sección | Cambio |
+|---|---------|--------|
+| 1 | §1.b | `citext` pasa a usarse también en `email_suppressions.email`. La extensión ya era requerida; no hay una nueva. |
+| 2 | §2 | `email_suppressions` se suma al módulo **notifications**. Tablas: 51 → **52**. |
+| 3 | §3 | +1 enum: `email_suppression_reason`. Total 37 → **38**. |
+| 4 | §18 | Se aclara que `notifications` es la bandeja **in-app** y no un registro de envíos. |
+| 5 | §18.1 **(nueva)** | Definición completa de `email_suppressions`: columnas, índices, idempotencia y por qué no alcanza con la lista del proveedor. |
+| 6 | §24 | Conteos y listas actualizados. |
+
+**Sin cambios:** las 51 tablas de v1.2, todos sus enums, las convenciones (§1),
+las extensiones (§1.b), los snapshots económicos y las decisiones
+DEC-027…DEC-042.
+
+### Qué NO entra en v1.3
+
+- **Registro de envíos de email.** Saber que *se mandó* un mensaje y con qué
+  resultado es otra cosa que saber que una dirección dejó de recibir. Hoy un
+  fallo definitivo de la cola no deja rastro; modelarlo requiere una decisión
+  sobre `notifications` (§18) que no se tomó.
+- **Preferencias de notificación** (opt-in/opt-out por tipo). Siguen 🟡 en
+  `notifications-and-engagement.md` §2, y una baja voluntaria **no es lo mismo**
+  que una supresión técnica: mezclarlas en esta tabla borraría la diferencia
+  entre "no quiere recibir" y "no puede recibir".
+- **Qué se le muestra a la persona afectada** y **qué capacidad libera una
+  dirección**: 🟡, ver §18.1.
