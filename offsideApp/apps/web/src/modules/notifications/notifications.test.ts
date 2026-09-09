@@ -2,6 +2,7 @@ import { resetEnvCache } from '@offside/config';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createEmailSender } from './infrastructure/email/index';
+import { leerFeedback } from './infrastructure/email/ses-feedback';
 import { resetSesClient } from './infrastructure/email/ses-email.sender';
 import * as templates from './templates/auth.templates';
 
@@ -165,5 +166,145 @@ describe('el adaptador de log', () => {
     const salida = warn.mock.calls.flat().join('\n');
     expect(salida).toContain('alguien@ejemplo.com');
     expect(salida).toContain('tok-999');
+  });
+});
+
+/**
+ * Lectura de los rebotes y quejas de SES.
+ *
+ * ⚠️ LO QUE SE TESTEA ES A QUIEN **NO** SE SUPRIME. Suprimir de mas es dejar a
+ * una persona real sin poder usar su cuenta, y ese error no lo ve nadie hasta
+ * que alguien se queja: no hay pantalla que lo muestre.
+ */
+describe('rebotes y quejas de SES', () => {
+  const mail = { messageId: 'mensaje-123' };
+
+  function rebote(bounceType: string, bounceSubType = 'General') {
+    return {
+      notificationType: 'Bounce',
+      mail,
+      bounce: {
+        bounceType,
+        bounceSubType,
+        bouncedRecipients: [{ emailAddress: 'rebota@offside.test' }],
+      },
+    };
+  }
+
+  it('suprime un rebote PERMANENTE', () => {
+    expect(leerFeedback(rebote('Permanent'))).toEqual([
+      {
+        email: 'rebota@offside.test',
+        reason: 'BOUNCE',
+        subtype: 'General',
+        messageId: 'mensaje-123',
+      },
+    ]);
+  });
+
+  it('⚠️ NO suprime un rebote TRANSITORIO', () => {
+    // Casilla llena o servidor caido. AWS dice que se puede reintentar cuando
+    // se resuelva, y SES ya reintenta solo. Suprimir aca dejaria a alguien sin
+    // su cuenta porque tuvo el buzon lleno un martes.
+    expect(leerFeedback(rebote('Transient', 'MailboxFull'))).toEqual([]);
+  });
+
+  it('⚠️ NO suprime un rebote INDETERMINADO', () => {
+    // "Rebotó y no se entiende por que". Adivinar es peor que no hacer nada: el
+    // costo de equivocarse es una persona real afuera; el de no actuar, un
+    // rebote mas.
+    expect(leerFeedback(rebote('Undetermined', 'Undetermined'))).toEqual([]);
+  });
+
+  it('suprime una queja por spam', () => {
+    const feedback = leerFeedback({
+      notificationType: 'Complaint',
+      mail,
+      complaint: {
+        complaintFeedbackType: 'abuse',
+        complainedRecipients: [{ emailAddress: 'se-quejo@offside.test' }],
+      },
+    });
+
+    expect(feedback).toEqual([
+      {
+        email: 'se-quejo@offside.test',
+        reason: 'COMPLAINT',
+        subtype: 'abuse',
+        messageId: 'mensaje-123',
+      },
+    ]);
+  });
+
+  it('⚠️ NO suprime una queja `not-spam`', () => {
+    // Es el unico valor del registro de IANA que significa lo contrario que los
+    // demas: quien reporta dice que el mensaje NO era spam. Tratarlo como queja
+    // seria dar de baja a alguien por haber sido defendido.
+    const feedback = leerFeedback({
+      notificationType: 'Complaint',
+      mail,
+      complaint: {
+        complaintFeedbackType: 'not-spam',
+        complainedRecipients: [{ emailAddress: 'defendido@offside.test' }],
+      },
+    });
+
+    expect(feedback).toEqual([]);
+  });
+
+  it('procesa TODOS los destinatarios, no solo el primero', () => {
+    // AWS avisa que una notificacion puede referirse a varios y que no garantiza
+    // ni orden ni agrupamiento. Quedarse con el primero perderia supresiones en
+    // silencio.
+    const feedback = leerFeedback({
+      notificationType: 'Bounce',
+      mail,
+      bounce: {
+        bounceType: 'Permanent',
+        bounceSubType: 'General',
+        bouncedRecipients: [
+          { emailAddress: 'uno@offside.test' },
+          { emailAddress: 'dos@offside.test' },
+        ],
+      },
+    });
+
+    expect(feedback?.map((f) => f.email)).toEqual(['uno@offside.test', 'dos@offside.test']);
+  });
+
+  it('entiende `eventType`, que es como se llama con event publishing', () => {
+    const feedback = leerFeedback({
+      eventType: 'Bounce',
+      mail,
+      bounce: {
+        bounceType: 'Permanent',
+        bouncedRecipients: [{ emailAddress: 'rebota@offside.test' }],
+      },
+    });
+
+    expect(feedback).toHaveLength(1);
+  });
+
+  it('no suprime nada ante una entrega exitosa', () => {
+    expect(leerFeedback({ notificationType: 'Delivery', mail, delivery: {} })).toEqual([]);
+  });
+
+  it('tolera campos desconocidos: AWS se reserva agregarlos', () => {
+    const feedback = leerFeedback({
+      notificationType: 'Bounce',
+      mail,
+      inventado: { algo: 1 },
+      bounce: {
+        bounceType: 'Permanent',
+        campoNuevo: true,
+        bouncedRecipients: [{ emailAddress: 'rebota@offside.test', campoNuevo: 'x' }],
+      },
+    });
+
+    expect(feedback).toHaveLength(1);
+  });
+
+  it('devuelve null si el cuerpo no tiene la forma esperada', () => {
+    expect(leerFeedback('no soy un objeto')).toBeNull();
   });
 });

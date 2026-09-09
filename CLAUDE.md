@@ -528,13 +528,13 @@ Desplegado en producción.
 
 Qué existe en `offsideApp/`:
 
-|                                    |                                                                                 |
-| ---------------------------------- | ------------------------------------------------------------------------------- |
-| `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                   |
-| `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)       |
-| `packages/database`                | ERD v1.2 completo en Drizzle: **51 tablas, 37 enums, 8 migraciones aplicadas**  |
-| `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send` |
-| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                         |
+|                                    |                                                                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `apps/web`                         | Next.js 16 + React 19. **21 pantallas** y **22 rutas de API**                                       |
+| `packages/config`                  | validación de entorno con Zod. **No es el Config Store de negocio** (§12)                           |
+| `packages/database`                | ERD v1.2 en Drizzle **+ una tabla fuera del ERD**: **52 tablas, 38 enums, 9 migraciones aplicadas** |
+| `packages/jobs`                    | Redis, colas y workers de BullMQ. Primera cola de negocio: `notifications-send`                     |
+| `packages/types`, `packages/utils` | tipos y utilidades transversales, sin lógica de negocio                                             |
 
 Módulos de dominio implementados (`apps/web/src/modules/`):
 
@@ -548,7 +548,7 @@ Módulos de dominio implementados (`apps/web/src/modules/`):
 | `orders`   | compra directa, snapshot económico, comisión del 6% (DEC-043) y bandeja de ventas del vendedor                                  |
 | `payments` | Checkout Pro con **Split 1:1**, webhooks firmados, conciliación del reparto y refunds                                           |
 
-**De las 51 tablas migradas se usan 24.** El resto está creada y vacía.
+**De las 52 tablas migradas se usan 25.** El resto está creada y vacía.
 `categories` dejó de estar vacía: la migración `0004` carga sus seis filas.
 
 **Mercado Pago — conexión Y pagos, verificados contra la API real.**
@@ -681,6 +681,56 @@ bajo para un script. Valores 🟡 pendientes de confirmación.
 ⚠️ Costo aceptado: sin límite por IP, alguien con varias cuentas verificadas
 suma el cupo de todas desde una sola máquina. Cada cuenta cuesta un email real y
 pasa por `register`/`verify-resend`, que sí se limitan por IP.
+
+**Rebotes y quejas de email — ✅ EN PRODUCCIÓN (2026-09-08)**:
+`POST /api/webhooks/ses/notifications` recibe por SNS lo que publica SES y las
+direcciones afectadas dejan de recibir email.
+
+⚠️ **La mitad protectora ya existía sin que lo supiéramos.** La cuenta se creó en
+2026, y AWS documenta que toda cuenta posterior al 25/11/2019 usa la lista de
+supresión a nivel cuenta **por defecto**: SES no entrega a lo que rebotó duro y
+esos envíos no cuentan para la tasa de rebote. El miedo original —que AWS
+suspenda la cuenta— estaba mayormente cubierto de fábrica.
+
+Lo que SES **no** hace es avisarnos: acepta el mensaje, el job termina bien, el
+log dice "enviado" y nadie se entera de que no llegó nunca. Eso deja una **cuenta
+muerta en silencio** —typo al registrarse → no puede ingresar por BR-001 → pide
+reenvío → el reenvío "sale bien" y no llega—, que es el mismo agujero que cerró
+el reenvío de verificación, un escalón más abajo. Esa es la mitad que se
+construyó.
+
+⚠️ **`email_suppressions` NO ESTÁ EN EL ERD.** `database-design.md` §24 lista 51
+tablas y ninguna cubría esto: `notifications` (§18) es la campanita in-app, sin
+dirección ni estado de entrega. El ERD sí modela los webhooks del otro proveedor
+(`payment_webhook_events`). La tabla **la autorizó el owner** el 2026-09-08 tras
+plantearle el bloqueo (§4/§5); **falta reflejarla en `docs/`**, que es sólo
+lectura, así que por ahora el ERD dice 51 y el schema tiene 52.
+
+⚠️ **El endpoint es público y sin sesión**, así que se autentica por firma igual
+que el de Mercado Pago: sin eso, cualquiera que descubra la URL podría postear un
+rebote falso con la dirección de otra persona y dejar esa cuenta muda. Hay **dos
+puertas** y el orden importa: primero el `TopicArn` esperado —porque verificar la
+firma puede obligar a descargar un certificado, y esa descarga la dispara un
+desconocido— y después la firma RSA. La URL del certificado se valida **antes**
+del fetch (HTTPS, `.pem`, host de SNS): evita a la vez que el atacante sirva su
+propio certificado y que el endpoint sirva de SSRF. Falla **cerrado**, al revés
+que el rate limiter y por la razón opuesta.
+
+⚠️ **Lo más cuidado es a quién NO se suprime**: los rebotes `Transient` y
+`Undetermined` no suprimen —es temporal, y adivinar cuesta dejar afuera a una
+persona real— y la queja `not-spam` tampoco, porque es el único valor de IANA que
+significa lo contrario que los demás. Suprimir de más no lo ve nadie hasta que
+alguien se queja.
+
+Verificado contra el endpoint corriendo: topic ajeno, firma inventada y
+certificado en un host del atacante → **403**; cuerpo basura → **400**; cero
+filas suprimidas. Detalle en `notifications-email-module.md`.
+
+⚠️ **Falta la mitad visible**: no hay pantalla para liberar una dirección (se
+hace por SQL, como los roles) ni aviso a la persona afectada. Decir "esa
+dirección rebota" sólo cuando está suprimida convertiría la pantalla de reenvío
+en un oráculo de qué direcciones están en el sistema, así que **qué mostrarle es
+decisión de producto y sigue 🟡**.
 
 **Refresh de tokens de MP**: barrido diario (BullMQ, 04:00) que renueva las
 conexiones que vencen dentro de 30 días. ⚠️ Mercado Pago **rota** el
@@ -832,10 +882,10 @@ reviews ni métricas), carrito, envíos, disputas, reviews, reputación, reorden
 fotos y editar la autenticidad declarada. Del back-office existen
 **dos** de las nueve capacidades que lista `AR-006`: el resto pertenece a módulos
 que todavía no existen. De los nueve emails que lista la documentación sólo están
-los dos de `auth`. Los refunds tienen código y tests, pero **no se probaron
+los dos de `auth`; sus rebotes y quejas sí se procesan. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **495** (253 unitarios + 242 de integración contra PostgreSQL y Redis
+Tests: **531** (281 unitarios + 250 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 ⚠️ Los fixtures **leen** las categorías que carga la migración `0004`; no crean

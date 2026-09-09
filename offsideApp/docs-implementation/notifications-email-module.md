@@ -281,17 +281,141 @@ ruidosamente.
 
 ### ⚠️ Lo que TODAVÍA no está, y con SES importa
 
-**No se procesan rebotes ni quejas.** SES publica ambos por SNS y espera que el
-remitente los atienda. Si no se hace, las direcciones que rebotan se siguen
-reintentando, la tasa de rebote sube y **AWS termina suspendiendo la cuenta**.
-No es urgente el primer día; sí antes de tener volumen. Requiere un endpoint de
-webhook para SNS y decidir qué hacer con una dirección que rebota —que es una
-decisión de producto, no sólo técnica—.
+**Los rebotes y las quejas SÍ se procesan** desde el 2026-09-08, y con ellos cayó
+la parte que este documento daba por pendiente. Ver la sección siguiente.
 
 **Un fallo definitivo no deja rastro.** Agotados los cinco intentos, el job
 desaparece de Redis y nadie se entera. La tabla `notifications` del ERD existe y
 está vacía: registrar ahí cada envío y su resultado es el camino natural, y
 además es lo que pide `notifications-and-engagement.md` §2.2.
+
+## Rebotes y quejas (2026-09-08)
+
+`POST /api/webhooks/ses/notifications` recibe por SNS los rebotes y las quejas que
+publica SES, y las direcciones afectadas dejan de recibir email.
+
+### ⚠️ Por qué hace falta si SES ya tiene su propia lista de supresión
+
+Porque resuelven cosas distintas, y descubrirlo cambió el alcance del trabajo.
+
+**La lista de SES ya nos protegía sin que lo supiéramos.** La cuenta se creó en
+2026, y AWS documenta que toda cuenta posterior al 25/11/2019 usa la
+_account-level suppression list_ **por defecto, para rebotes y quejas**: SES deja
+de entregar a las direcciones que rebotaron duro y esos envíos **no cuentan** para
+`Reputation.BounceRate`. O sea que el miedo original —que AWS suspenda la cuenta—
+estaba mayormente cubierto de fábrica. Se verifica con
+`aws sesv2 get-account --query SuppressionAttributes`.
+
+**Lo que SES no hace es avisarnos.** Acepta el mensaje: nuestro job termina bien,
+el log dice `enviado`, y nadie se entera de que no llegó nunca. El resultado es una
+**cuenta muerta en silencio** —quien se registró con un typo no puede ingresar
+(BR-001), pide reenvío, el reenvío "sale bien" y no llega—. Es el mismo agujero que
+cerró el reenvío de verificación, un escalón más abajo. Esa es la mitad que
+faltaba, y es la que se construyó.
+
+### ⚠️ La tabla no estaba en el ERD
+
+`database-design.md` §24 lista 51 tablas y ninguna cubría esto: `notifications`
+(§18) es la campanita in-app y no tiene dirección, ni estado de entrega, ni
+proveedor. El ERD **sí** modela los webhooks del otro proveedor
+(`payment_webhook_events`); el equivalente de email nunca se modeló.
+
+`email_suppressions` **la autorizó el owner** el 2026-09-08 tras plantearle el
+bloqueo (CLAUDE.md §4/§5). ⚠️ **Falta reflejarla en `docs/`**, que es sólo lectura:
+hasta entonces el ERD dice 51 tablas y el schema tiene 52.
+
+### Las dos puertas del webhook
+
+El endpoint es **público y no tiene sesión** —SNS no manda credenciales—, así que se
+autentica por firma, igual que el webhook de Mercado Pago. Sin eso, **cualquiera
+que descubra la URL puede postear un rebote falso con la dirección de otra
+persona** y dejar esa cuenta sin recibir email nunca más: no hace falta robar nada,
+sólo saber un email ajeno.
+
+1. **`TopicArn` esperado** (`SES_SNS_TOPIC_ARN`). Va **primero a propósito**:
+   verificar la firma puede obligar a descargar el certificado, y esa descarga la
+   dispara un desconocido. Sin este filtro, repetir el POST con URLs de
+   certificado distintas convierte al endpoint en un generador de tráfico saliente.
+2. **Firma criptográfica** (`lib/sns-signature.ts`), con el mecanismo que AWS
+   documenta: texto canónico de pares clave/valor separados por saltos de línea en
+   orden alfabético, RSA contra el certificado de `SigningCertURL`, SHA1 para
+   `SignatureVersion` 1 y SHA256 para la 2.
+
+⚠️ **La URL del certificado se valida ANTES del fetch** —HTTPS, path `.pem` y host
+`sns.<region>.amazonaws.com`—. Ese orden evita dos cosas a la vez: que se descargue
+un certificado desde el servidor del atacante (que entonces podría firmar sus
+propios mensajes) y que el endpoint sirva de SSRF.
+
+⚠️ **Falla cerrado**, al revés que el rate limiter, y las dos cosas son correctas:
+allá fallar cerrado dejaba a todos afuera del sitio; acá dejar pasar un mensaje sin
+verificar **es** el ataque.
+
+⚠️ Se aceptan las dos versiones de firma. SHA1 está roto para colisiones, pero SNS
+firma con la versión 1 salvo que se pida la 2 en el topic, y rechazarla dejaría de
+procesar rebotes sin avisar. **La mitigación es de configuración: conviene
+habilitar SignatureVersion 2 en el topic.**
+
+### A quién NO se suprime
+
+Es lo que más se cuidó, porque suprimir de más deja a una persona real sin su
+cuenta y **eso no lo ve nadie** hasta que se queja.
+
+| Caso                                        | ¿Suprime? | Por qué                                                                                  |
+| ------------------------------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| `Permanent` (rebote duro)                   | **sí**    | AWS: es improbable que puedas volver a enviarle                                          |
+| `Transient` (casilla llena, servidor caído) | **no**    | es temporal y SES ya reintenta solo                                                      |
+| `Undetermined`                              | **no**    | adivinar cuesta una persona afuera; no actuar, un rebote                                 |
+| Queja por spam                              | **sí**    |                                                                                          |
+| Queja `not-spam`                            | **no**    | el único valor de IANA que significa lo contrario: quien reporta **defiende** el mensaje |
+| `Delivery`, `Send`, `Open`…                 | **no**    | no son fallos                                                                            |
+
+Una notificación puede traer **varios destinatarios** —AWS lo dice y no garantiza
+orden ni agrupamiento—, así que se recorren todos.
+
+### Idempotencia
+
+SNS reintenta y entrega desordenado. `email_suppressions` tiene `UNIQUE(email)` y
+la escritura es un **upsert**: con un `INSERT` a secas la segunda entrega
+reventaría contra el índice, el endpoint devolvería un error y SNS reintentaría
+durante días. Un rebote nuevo sobre una dirección liberada **vuelve a suprimirla**;
+si no, liberar una casilla que sigue rota la dejaría recibiendo rebotes
+indefinidamente.
+
+`email` es `citext` como `users.email`: SES devuelve la dirección tal como venía en
+el mensaje original, y comparando sensible al caso la supresión no encontraría
+nunca al usuario.
+
+### Dónde se consulta
+
+En `processEmailJob`, el último punto antes del proveedor. Podría mirarse al
+encolar y ahorrarse el job, pero entonces habría **dos** lugares donde se decide si
+una dirección recibe, y alcanzaría con que un disparador futuro se olvidara de uno.
+No lanza: descarta el job, porque reintentar cinco veces algo que por definición no
+se puede mandar no ayuda a nadie.
+
+Falla **abierto** si la consulta a la base falla —mismo criterio que el rate
+limiter—, y acá además el costo es barato: SES no lo va a entregar igual.
+
+### Verificado
+
+Los cuatro ataques, contra el endpoint corriendo, con un rebote real adentro: topic
+ajeno → **403**; firma inventada → **403**; certificado en un host del atacante →
+**403**; cuerpo basura → **400**. `email_suppressions` quedó en **0 filas**: ninguno
+logró suprimir nada. El camino feliz se cubre con tests que firman de verdad con un
+par de claves RSA generado en el test.
+
+### ⚠️ Lo que falta
+
+- **No hay pantalla para liberar una dirección.** El Service tiene `release()` y la
+  columna `released_by` existe, pero hoy se hace por SQL, igual que los roles de
+  admin. Darle pantalla exige decidir **qué capacidad** la gobierna, y el mapa de
+  DEC-023 no tiene ninguna que aplique: es 🟡.
+- **La persona afectada no se entera.** Se registra y se loguea, pero la pantalla de
+  reenvío sigue diciendo lo mismo de siempre. Mostrar "esa dirección rebota" sólo
+  cuando está suprimida convertiría la pantalla en un oráculo para saber qué
+  direcciones están en el sistema. Qué decirle, y si conviene dejar cambiar el
+  email, es **decisión de producto** y sigue 🟡.
+- **No hay alerta por volumen de rebotes.** Parte del hueco de observabilidad.
 
 ## Plantillas
 

@@ -2,6 +2,7 @@ import { QUEUE_NAMES, defaultJobOptions, getQueue } from '@offside/jobs';
 
 import { createEmailSender, type EmailMessage } from '../infrastructure/email/index';
 import * as templates from '../templates/auth.templates';
+import { isSuppressed } from './email-suppression.service';
 
 /**
  * Envio de emails.
@@ -45,6 +46,26 @@ function build(data: EmailJobData): EmailMessage {
  * alta. El token que lleva adentro sigue siendo de un solo uso.
  */
 export async function processEmailJob(data: EmailJobData): Promise<void> {
+  /**
+   * ⚠️ LA SUPRESION SE CONSULTA ACA, en el ultimo punto antes del proveedor.
+   *
+   * Podria mirarse al encolar y ahorrarse el job, pero entonces habria DOS
+   * lugares donde se decide si una direccion recibe o no, y alcanzaria con que
+   * un disparador futuro se olvidara de uno para que la lista deje de valer.
+   * Aca pasa TODO el email que sale del sistema.
+   *
+   * ⚠️ NO LANZA: se descarta el job y listo. Tirar un error haria que BullMQ
+   * reintentara cinco veces algo que por definicion nunca va a poder mandarse.
+   */
+  if (await isSuppressed(data.to)) {
+    console.warn(
+      `[notifications] email "${data.kind}" NO enviado: ${data.to} esta suprimida ` +
+        '(rebote duro o queja). La cuenta no va a recibir nada hasta que se libere.',
+    );
+
+    return;
+  }
+
   const sender = createEmailSender();
   await sender.send(build(data));
 

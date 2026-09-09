@@ -96,6 +96,16 @@ export const envSchema = z.object({
   /** Remitente. El dominio debe estar verificado en SES o SES rechaza el envio. */
   EMAIL_FROM_ADDRESS: z.string().email().optional(),
   EMAIL_FROM_NAME: z.string().optional(),
+  /**
+   * ARN del topic de SNS por el que SES publica rebotes y quejas.
+   *
+   * ⚠️ SIN ESTE VALOR EL WEBHOOK RECHAZA TODO. Es la primera de las dos puertas
+   * —la otra es la firma— y no tiene default posible: aceptar cualquier topic
+   * seria aceptar mensajes de un topic ajeno. Que sea opcional en el esquema no
+   * lo vuelve opcional para la funcionalidad; hace que el resto del sistema
+   * pueda arrancar sin el, igual que las credenciales de SES.
+   */
+  SES_SNS_TOPIC_ARN: z.string().optional(),
 
   // --- Correo Argentino (modulo shipments: no implementado) ---
   CORREO_ARGENTINO_API_KEY: z.string().optional(),

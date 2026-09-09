@@ -239,6 +239,20 @@ export const notificationType = pgEnum('notification_type', [
   'system',
 ]);
 
+/**
+ * Motivo por el que una direccion deja de recibir emails.
+ *
+ * ⚠️ SOLO DOS VALORES, Y ES A PROPOSITO: son los dos que reporta Amazon SES
+ * como definitivos. Un rebote TRANSITORIO —casilla llena, servidor caido— no
+ * entra: es temporal, SES ya reintenta, y suprimir por eso dejaria a alguien
+ * sin su cuenta porque tuvo el buzon lleno un martes.
+ *
+ * ⚠️ NO ESTA EN EL ERD v1.2. Lo autorizo el owner el 2026-09-08 junto con la
+ * tabla `email_suppressions`; falta reflejarlo en `database-design.md` §24,
+ * que es solo lectura para el codigo (CLAUDE.md §3).
+ */
+export const emailSuppressionReason = pgEnum('email_suppression_reason', ['BOUNCE', 'COMPLAINT']);
+
 /** DEC-038. Alcance de un parametro del Config Store. */
 export const configScope = pgEnum('config_scope', ['global', 'seller_tier', 'category']);
 

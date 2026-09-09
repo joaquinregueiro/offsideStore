@@ -57,6 +57,13 @@
       "when": 1788101203263,
       "tag": "0007_seed_catalogs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788920128578,
+      "tag": "0008_email_suppressions",
+      "breakpoints": true
     }
   ]
 }
