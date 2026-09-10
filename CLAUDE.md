@@ -848,8 +848,11 @@ recién cuando tiene una imagen. Sin fotos queda en borrador, fuera de la
 vitrina, y el vendedor la completa desde sus publicaciones. Borrar la última
 foto de una activa se **rechaza**: bajarla en silencio sería dejar de vender sin
 enterarse.
-⚠️ Las publicaciones creadas ANTES de esto siguen `active` sin fotos: no se
-tocaron retroactivamente.
+Las publicaciones creadas ANTES de esto quedaban `active` sin fotos, porque no
+se tocaron retroactivamente. **El owner las eliminó el 2026-09-09** (reportado
+por él; no se verificó desde el código, que no tiene acceso a la base de
+producción). No pueden volver a aparecer: PS-010 se exige al publicar y también
+al reactivar, así que la regla no tiene puerta de atrás.
 
 **Editar, pausar y eliminar publicaciones — SS-040/041/050/051 (2026-09-08)**:
 el vendedor puede corregir lo publicado y sacarlo de la venta.

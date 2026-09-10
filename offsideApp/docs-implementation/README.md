@@ -21,9 +21,19 @@ Documentación **del código**, no del producto.
 | [mercadopago-oauth-module.md](mercadopago-oauth-module.md)       | Conexión con Mercado Pago, **tal como quedó implementada**             |
 | [mercadopago-payments-spec.md](mercadopago-payments-spec.md)     | **Especificación** de Payments / Split 1:1                             |
 | [mercadopago-payments-module.md](mercadopago-payments-module.md) | Checkout, webhooks y refunds, **tal como quedaron implementados**      |
+| [authorization-module.md](authorization-module.md)               | Autorización por capacidad (DEC-023)                                   |
+| [seller-approval-module.md](seller-approval-module.md)           | Aprobación automática del vendedor (TS-001/TS-010)                     |
+| [notifications-email-module.md](notifications-email-module.md)   | Emails por Amazon SES, rebotes y quejas                                |
+| [rate-limiting.md](rate-limiting.md)                             | Rate limiting en la API y en las Server Actions                        |
+| [correo-argentino-spec.md](correo-argentino-spec.md)             | **Relevamiento** de las dos APIs de Correo Argentino (sin implementar) |
 | [adr/](adr/)                                                     | Decisiones técnicas de implementación                                  |
 
 ## Estado actual
+
+> ⚠️ **Esta sección quedó vieja** (habla de 312 tests, del frontend como
+> placeholder y de TS-001 pendiente). El estado real y actualizado vive en
+> **CLAUDE.md §19**. No se reescribió acá para no tener dos versiones del mismo
+> relato compitiendo entre sí.
 
 **Foundation + modelo de datos.** El ERD v1.2 está traducido a Drizzle, las
 migrations están aplicadas y PostgreSQL real fue validado contra el ERD
