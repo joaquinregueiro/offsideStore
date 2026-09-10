@@ -3,9 +3,10 @@
 Relevamiento de lo que Correo Argentino **realmente ofrece**, leído de sus dos
 manuales oficiales. **Fecha: 2026-09-09.**
 
-> **Estado: NO IMPLEMENTADO.** Este documento no describe código: describe el
-> contrato del proveedor, para que el puerto `ShippingPort` se diseñe contra lo
-> que existe y no contra lo que suponemos.
+> **Estado: el PUERTO existe; la integración real, no.** Este documento
+> describe el contrato del proveedor. Contra él se diseñó `ShippingPort`
+> (`modules/shipments/infrastructure/shipping/`), que hoy sólo tiene un
+> adaptador **simulado**. Ver CLAUDE.md §19.
 >
 > ⚠️ **Nada de acá fue probado contra la API real.** No hay credenciales: los
 > dos manuales dicen que se solicitan a Correo Argentino, y PAQ.AR además exige
