@@ -5,16 +5,10 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
-<<<<<<< HEAD
 import { respuestaDeError } from '@/lib/errores';
 import type { EstadoFormulario } from '@/lib/formulario';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import type { PublicUser } from '@/modules/auth/services/auth.service';
-=======
-import { requireVerifiedSessionUser } from '@/lib/session';
-import type { PublicUser } from '@/modules/auth/services/auth.service';
-import { AuthError } from '@/modules/auth/auth.errors';
->>>>>>> origin/main
 import { createSellerProfileSchema, submitTaxIdentitySchema } from '@/modules/auth/auth.schemas';
 import {
   deleteListing,
@@ -61,19 +55,12 @@ import { submitTaxIdentity } from '@/modules/sellers/services/seller-tax-profile
  * poder publicar.
  */
 
-<<<<<<< HEAD
 /**
  * ⚠️ ES UN ALIAS DEL CONTRATO COMPARTIDO. Era un tipo propio con solo `error`,
  * asi que este grupo no podia devolver errores por campo ni conservar lo
  * tipeado aunque el formulario ya supiera mostrarlos.
  */
 export type EstadoVendedor = EstadoFormulario;
-=======
-export interface EstadoVendedor {
-  error?: string;
-  ok?: string;
-}
->>>>>>> origin/main
 
 /**
  * Lee un campo del formulario.
@@ -89,21 +76,6 @@ function texto(formData: FormData, nombre: string): string | undefined {
   return typeof valor === 'string' && valor !== '' ? valor : undefined;
 }
 
-<<<<<<< HEAD
-=======
-function mensajeDeError(error: unknown): string {
-  if (error instanceof z.ZodError) {
-    return error.issues[0]?.message ?? 'Revisá los datos ingresados.';
-  }
-
-  if (error instanceof AuthError) return error.message;
-
-  console.error('[vendedor] error inesperado en una accion:', error);
-
-  return 'Tuvimos un problema. Probá de nuevo en un momento.';
-}
-
->>>>>>> origin/main
 /* ------------------------------------------------------------------ alta -- */
 
 /**
@@ -131,7 +103,6 @@ export async function habilitarVendedor(
       displayName: texto(formData, 'displayName'),
       bio: texto(formData, 'bio'),
       shippingPolicy: texto(formData, 'shippingPolicy'),
-<<<<<<< HEAD
       /*
        * La casilla llega como `'on'` o no llega. El schema exige `true`.
        *
@@ -141,15 +112,10 @@ export async function habilitarVendedor(
        * encontraba ninguno: el alta sin tildar quedaba sin marca en el control.
        */
       acceptedSellerTerms: texto(formData, 'acceptedSellerTerms') !== undefined,
-=======
-      // La casilla llega como `'on'` o no llega. El schema exige `true`.
-      acceptedSellerTerms: texto(formData, 'terminos') !== undefined,
->>>>>>> origin/main
     });
 
     await createSellerProfile(user, input);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -165,9 +131,6 @@ export async function habilitarVendedor(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor');
@@ -197,7 +160,6 @@ export async function declararIdentidadFiscal(
 
     await submitTaxIdentity(user, input);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -213,9 +175,6 @@ export async function declararIdentidadFiscal(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor');
@@ -247,12 +206,8 @@ export async function conectarMercadoPago(
     const { authorizationUrl } = await startConnection(user);
     destino = authorizationUrl;
   } catch (error) {
-<<<<<<< HEAD
     // Esta accion no recibe campos: no hay nada que preservar.
     return respuestaDeError(error, { ambito: 'vendedor' });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect(destino);
@@ -275,11 +230,7 @@ export async function desconectarMercadoPago(
 
     await disconnect(user);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, { ambito: 'vendedor' });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor/mercadopago?status=disconnected');
@@ -360,12 +311,9 @@ export async function publicar(
       seasonId: texto(formData, 'seasonId'),
     });
 
-<<<<<<< HEAD
     // Al publicar los cinco selectores de catalogo SI estan en el formulario,
     // asi que se mandan derecho: aca `null` significa "el vendedor no eligio
     // ninguno", que es un valor legitimo y no una perdida de dato.
-=======
->>>>>>> origin/main
     const listing = await publishListing(user, {
       categoryId: input.categoryId,
       title: input.title,
@@ -410,7 +358,6 @@ export async function publicar(
       };
     }
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -426,9 +373,6 @@ export async function publicar(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor/publicaciones');
@@ -512,7 +456,6 @@ export async function agregarFotos(
       return { ok: 'Listo, subimos las fotos. Tu publicación ya está a la venta.' };
     }
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -528,9 +471,6 @@ export async function agregarFotos(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -559,7 +499,6 @@ export async function borrarFoto(
 
     await deleteImage(user, input.listingId, input.imageId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -575,9 +514,6 @@ export async function borrarFoto(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -620,7 +556,6 @@ const editarSchema = z.object({
   seasonId: z.string().uuid().optional(),
 });
 
-<<<<<<< HEAD
 /** Las cinco referencias de catalogo que puede llevar una publicacion. */
 const CLAVES_DE_CATALOGO = [
   'clubId',
@@ -671,8 +606,6 @@ function catalogoAEscribir(
   return salida;
 }
 
-=======
->>>>>>> origin/main
 export async function editar(_estado: EstadoVendedor, formData: FormData): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
@@ -704,7 +637,6 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
-<<<<<<< HEAD
       ...catalogoAEscribir(formData, input),
     });
   } catch (error) {
@@ -723,16 +655,6 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
         'taxId',
       ],
     });
-=======
-      clubId: input.clubId ?? null,
-      nationalTeamId: input.nationalTeamId ?? null,
-      brandId: input.brandId ?? null,
-      competitionId: input.competitionId ?? null,
-      seasonId: input.seasonId ?? null,
-    });
-  } catch (error) {
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -751,7 +673,6 @@ export async function pausar(_estado: EstadoVendedor, formData: FormData): Promi
 
     await pauseListing(user, listingId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -767,9 +688,6 @@ export async function pausar(_estado: EstadoVendedor, formData: FormData): Promi
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -789,7 +707,6 @@ export async function reactivar(
 
     await resumeListing(user, listingId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -805,9 +722,6 @@ export async function reactivar(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -834,7 +748,6 @@ export async function eliminar(
 
     await deleteListing(user, listingId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -850,9 +763,6 @@ export async function eliminar(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');

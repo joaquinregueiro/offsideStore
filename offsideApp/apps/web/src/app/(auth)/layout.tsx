@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 
-<<<<<<< HEAD
 import { Footer } from '@/components/footer';
 import { Header } from '@/components/header';
 import { IconoAutenticado, IconoEtiqueta, IconoIntercambio } from '@/components/iconos';
@@ -77,16 +76,10 @@ function GrupoDeCinta() {
   );
 }
 
-=======
-import { Header } from '@/components/header';
-
-/** Todas las pantallas de autenticacion comparten la barra superior. */
->>>>>>> origin/main
 export default function LayoutDeAutenticacion({ children }: { children: ReactNode }) {
   return (
     <>
       <Header />
-<<<<<<< HEAD
 
       <main id="contenido" className={estilos.marco}>
         <aside className={`${estilos.panel} sup-cancha con-grano`}>
@@ -182,9 +175,6 @@ export default function LayoutDeAutenticacion({ children }: { children: ReactNod
       </main>
 
       <Footer />
-=======
-      {children}
->>>>>>> origin/main
     </>
   );
 }

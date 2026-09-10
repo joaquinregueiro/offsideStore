@@ -30,6 +30,7 @@ Documentación **del código**, no del producto.
 | [frontend-movimiento.md](frontend-movimiento.md)                     | **Sistema de movimiento: entradas, scroll, View Transitions**          |
 | [frontend-2026-09-10.md](frontend-2026-09-10.md)                     | **Frontend completo: primitivas, pantallas y datos (2026-09-10)**      |
 | [frontend-rediseno-2026-09-10.md](frontend-rediseno-2026-09-10.md)   | **Rediseño visual: el eje de 112°, cuatro planos y el movimiento**     |
+| [correo-argentino-spec.md](correo-argentino-spec.md)                 | **Relevamiento** de las dos APIs de Correo Argentino (sin implementar) |
 | [adr/](adr/)                                                         | Decisiones técnicas de implementación                                  |
 
 ## Estado actual

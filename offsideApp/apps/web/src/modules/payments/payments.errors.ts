@@ -8,34 +8,21 @@ import { AuthError } from '../auth/auth.errors';
  */
 
 export const orderNotFound = (): AuthError =>
-<<<<<<< HEAD
   new AuthError('ORDER_NOT_FOUND', 'Esa orden no existe');
 
 /** La orden existe pero su estado no admite iniciar un pago. */
 export const orderNotPayable = (): AuthError =>
   new AuthError('ORDER_NOT_PAYABLE', 'Esta orden ya no está pendiente de pago');
-=======
-  new AuthError('ORDER_NOT_FOUND', 'La orden no existe');
-
-/** La orden existe pero su estado no admite iniciar un pago. */
-export const orderNotPayable = (): AuthError =>
-  new AuthError('ORDER_NOT_PAYABLE', 'Esta orden no esta pendiente de pago');
->>>>>>> origin/main
 
 export const paymentDeadlineExpired = (): AuthError =>
   new AuthError('PAYMENT_DEADLINE_EXPIRED', 'La ventana de pago de esta orden venció');
 
 /**
-<<<<<<< HEAD
  * La publicación se quedó sin stock entre la orden y el pago (UC-MF-3).
-=======
- * La publicacion se quedo sin stock entre la orden y el pago (UC-MF-3).
->>>>>>> origin/main
  *
  * Se revisa en el checkout para **no cobrar** algo que no se puede entregar.
  */
 export const orderOutOfStock = (): AuthError =>
-<<<<<<< HEAD
   new AuthError('LISTING_OUT_OF_STOCK', 'La publicación se quedó sin stock');
 
 export const paymentNotFound = (): AuthError =>
@@ -43,15 +30,6 @@ export const paymentNotFound = (): AuthError =>
 
 export const paymentNotRefundable = (): AuthError =>
   new AuthError('PAYMENT_NOT_REFUNDABLE', 'Este pago no se puede reembolsar');
-=======
-  new AuthError('LISTING_OUT_OF_STOCK', 'La publicacion se quedo sin stock');
-
-export const paymentNotFound = (): AuthError =>
-  new AuthError('PAYMENT_NOT_FOUND', 'El pago no existe');
-
-export const paymentNotRefundable = (): AuthError =>
-  new AuthError('PAYMENT_NOT_REFUNDABLE', 'Este pago no puede reembolsarse');
->>>>>>> origin/main
 
 /**
  * Mercado Pago rechazo la operacion o no respondio.
@@ -60,11 +38,7 @@ export const paymentNotRefundable = (): AuthError =>
  * la respuesta HTTP.
  */
 export const paymentProviderError = (): AuthError =>
-<<<<<<< HEAD
   new AuthError('PAYMENT_PROVIDER_ERROR', 'No se pudo completar la operación con Mercado Pago');
-=======
-  new AuthError('PAYMENT_PROVIDER_ERROR', 'No se pudo completar la operacion con Mercado Pago');
->>>>>>> origin/main
 
 export const refundAmountInvalid = (message: string): AuthError =>
   new AuthError('REFUND_AMOUNT_INVALID', message);
@@ -77,8 +51,4 @@ export const refundAmountInvalid = (message: string): AuthError =>
  * con configuracion actual es exactamente lo que DEC-030 prohibe.
  */
 export const orderWithoutCommissionSnapshot = (): AuthError =>
-<<<<<<< HEAD
   new AuthError('ORDER_NOT_PAYABLE', 'La orden no tiene comisión calculada');
-=======
-  new AuthError('ORDER_NOT_PAYABLE', 'La orden no tiene comision calculada');
->>>>>>> origin/main

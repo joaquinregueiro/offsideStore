@@ -5,11 +5,7 @@
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
 > Estado: marketplace operable de punta a punta —registro, publicación, compra y
 > cobro con Mercado Pago— con frontend propio, incluido el back-office (ver §19).
-<<<<<<< HEAD
 > Última actualización: 2026-09-10.
-=======
-> Última actualización: 2026-09-08.
->>>>>>> origin/main
 
 ---
 
@@ -731,8 +727,6 @@ búsqueda y ficha; desconectando queda vitrina en 0, búsqueda en "0
 publicaciones" y ficha en **404**; reconectando vuelven las tres, y la
 publicación siguió en `active` todo el tiempo.
 
-<<<<<<< HEAD
-=======
 **Envíos — puerto y adaptador simulado (2026-09-09)**: existe
 `ShippingPort` (`modules/shipments/infrastructure/shipping/`) y un adaptador
 **falso**. No hay Service, ni repositorios, ni pantallas: **una orden sigue sin
@@ -778,7 +772,6 @@ y explota al integrar—. Su número de seguimiento **lleva adentro el momento d
 creación**, así que el seguimiento es una función pura de (número, ahora): un
 test fabrica un envío viejo y lo ve entregado, sin esperar ni simular relojes.
 
->>>>>>> origin/main
 **Rebotes y quejas de email — ✅ EN PRODUCCIÓN (2026-09-08)**:
 `POST /api/webhooks/ses/notifications` recibe por SNS lo que publica SES y las
 direcciones afectadas dejan de recibir email.
@@ -900,16 +893,11 @@ recién cuando tiene una imagen. Sin fotos queda en borrador, fuera de la
 vitrina, y el vendedor la completa desde sus publicaciones. Borrar la última
 foto de una activa se **rechaza**: bajarla en silencio sería dejar de vender sin
 enterarse.
-<<<<<<< HEAD
-⚠️ Las publicaciones creadas ANTES de esto siguen `active` sin fotos: no se
-tocaron retroactivamente.
-=======
 Las publicaciones creadas ANTES de esto quedaban `active` sin fotos, porque no
 se tocaron retroactivamente. **El owner las eliminó el 2026-09-09** (reportado
 por él; no se verificó desde el código, que no tiene acceso a la base de
 producción). No pueden volver a aparecer: PS-010 se exige al publicar y también
 al reactivar, así que la regla no tiene puerta de atrás.
->>>>>>> origin/main
 
 **Editar, pausar y eliminar publicaciones — SS-040/041/050/051 (2026-09-08)**:
 el vendedor puede corregir lo publicado y sacarlo de la venta.
@@ -983,7 +971,6 @@ depende de una capacidad nueva en el mapa de DEC-023, y `MODERATOR` hoy no tiene
 ninguna. Mientras tanto el catálogo sólo crece por migración. No bloquea a nadie
 porque los campos son opcionales.
 
-<<<<<<< HEAD
 **Sistema visual, navegación y pantallas públicas — ✅ (2026-09-09)**: se
 auditó el frontend entero por doce dimensiones con verificación adversarial
 —**251 hallazgos confirmados, 39 descartados**— y se ejecutaron las fases 1 a 3
@@ -1249,8 +1236,6 @@ de la foto de la grilla a la ficha, y **19 de las 22 pantallas** (se renderizaro
 home, primitivas y 404). Eso se verificó leyendo el código y con los chequeos
 automáticos, no con los ojos. **Los 257 tests de integración siguen sin correr.**
 
-=======
->>>>>>> origin/main
 **NO implementado:** webhook `mp-connect`, `catalog_change_requests`, jugador y
 número en el formulario, ranking por popularidad/reputación (PS-021: no hay
 reviews ni métricas), carrito, envíos, disputas, reviews, reputación, reordenar
@@ -1260,11 +1245,7 @@ que todavía no existen. De los nueve emails que lista la documentación sólo e
 los dos de `auth`; sus rebotes y quejas sí se procesan. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-<<<<<<< HEAD
-Tests: **538** (281 unitarios + 257 de integración contra PostgreSQL y Redis
-=======
 Tests: **556** (299 unitarios + 257 de integración contra PostgreSQL y Redis
->>>>>>> origin/main
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 ⚠️ Los fixtures **leen** las categorías que carga la migración `0004`; no crean

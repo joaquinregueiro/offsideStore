@@ -1,30 +1,20 @@
-<<<<<<< HEAD
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-=======
->>>>>>> origin/main
 import { salir } from '@/app/(auth)/acciones';
 import { capabilitiesFor } from '@/lib/permissions';
 import { getSessionUser } from '@/lib/session';
 
 import estilos from './header.module.css';
-<<<<<<< HEAD
 import { IconoBuscar, IconoCerrar, IconoMenu } from './iconos';
 import { Logo } from './marca';
 
 /**
  * Barra superior, en todas las pantallas.
-=======
-
-/**
- * Barra superior, en todas las pantallas publicas.
->>>>>>> origin/main
  *
  * Server Component: lee la sesion en el servidor y decide que enlaces mostrar.
  * No hay parpadeo de "cargando sesion" ni un estado intermedio en el que la
  * barra dice "Ingresar" a alguien que ya inicio sesion.
-<<<<<<< HEAD
  *
  * ⚠️ EL MENU DE TELEFONO NO USA JAVASCRIPT. Es un `<details>`: el navegador ya
  * sabe abrirlo y cerrarlo, responde a Enter y a Espacio, y expone el estado
@@ -192,18 +182,6 @@ export async function Header({
         >
           <Logo invertido />
         </Link>
-=======
- */
-export async function Header() {
-  const user = await getSessionUser();
-
-  return (
-    <header className={estilos.barra}>
-      <div className={estilos.contenido}>
-        <a href="/" className={estilos.marca}>
-          Offside
-        </a>
->>>>>>> origin/main
 
         {/*
           ⚠️ ES UN <form> CON GET, no un campo con JavaScript. Asi la busqueda
@@ -211,20 +189,15 @@ export async function Header() {
           el boton atras. Y funciona sin JS, como el resto del sitio.
         */}
         <form action="/buscar" method="get" className={estilos.buscadorForm} role="search">
-<<<<<<< HEAD
           <label htmlFor="busqueda-global" className="solo-lectores">
             Buscar publicaciones
           </label>
           <input
             id="busqueda-global"
-=======
-          <input
->>>>>>> origin/main
             className={estilos.buscador}
             type="search"
             name="q"
             placeholder="Buscar camiseta, club, temporada…"
-<<<<<<< HEAD
             /*
               ⚠️ EL CAMPO CONSERVA LO QUE SE BUSCO. Antes se vaciaba: en
               `/buscar?q=river` el titulo decia "Resultados para river" y el
@@ -293,56 +266,6 @@ export async function Header() {
         los 320px porque no compite con nada.
       */}
       <div className={`${estilos.cinta} patron-vivo`} aria-hidden="true" />
-=======
-            aria-label="Buscar publicaciones"
-          />
-        </form>
-
-        <nav className={estilos.acciones}>
-          {user === null ? (
-            <>
-              <a href="/ingresar" className={estilos.enlace}>
-                Ingresar
-              </a>
-              <a href="/crear-cuenta" className={estilos.enlace}>
-                Crear cuenta
-              </a>
-            </>
-          ) : (
-            <>
-              <a href="/mis-compras" className={estilos.enlace}>
-                Mis compras
-              </a>
-              <a href="/vendedor" className={estilos.enlace}>
-                Vender
-              </a>
-              {/*
-                El acceso al back-office aparece SOLO para quien tiene alguna
-                capacidad. No es una medida de seguridad —cada pantalla y cada
-                Server Action exigen la suya—, sino la unica forma de llegar sin
-                escribir la URL a mano.
-              */}
-              {capabilitiesFor(user.adminRole).length > 0 && (
-                <a href="/admin" className={estilos.enlace}>
-                  Admin
-                </a>
-              )}
-              {/*
-                Salir es una MUTACION —invalida la sesion en la base—, asi que
-                va en un `<form>` con POST, no en un enlace. Un GET que cambia
-                estado se dispara con un prefetch del navegador o con una imagen
-                incrustada en otro sitio.
-              */}
-              <form action={salir}>
-                <button type="submit" className={estilos.enlaceBoton}>
-                  Salir
-                </button>
-              </form>
-            </>
-          )}
-        </nav>
-      </div>
->>>>>>> origin/main
     </header>
   );
 }

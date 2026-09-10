@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 
-<<<<<<< HEAD
 import { CampoOculto, CampoPassword, Formulario } from '@/components/form';
 import estilos from '@/components/form.module.css';
 import { IconoLlave } from '@/components/iconos';
@@ -12,15 +11,6 @@ import { restablecerPassword } from '../acciones';
 import propios from '../auth.module.css';
 
 export const metadata: Metadata = { title: 'Nueva contraseña' };
-=======
-import { Campo, CampoOculto, Formulario } from '@/components/form';
-import estilos from '@/components/form.module.css';
-import { EstadoVacio, BotonEnlace } from '@/components/ui';
-
-import { restablecerPassword } from '../acciones';
-
-export const metadata: Metadata = { title: 'Nueva contraseña — Offside Store' };
->>>>>>> origin/main
 
 /**
  * Destino del enlace del email de recuperación.
@@ -28,13 +18,10 @@ export const metadata: Metadata = { title: 'Nueva contraseña — Offside Store'
  * ⚠️ El token NO se valida acá. Validarlo al mostrar la pantalla lo consumiría
  * antes de que la persona escriba nada, y además convertiría esta página en un
  * oráculo para saber si un token es válido. Lo valida el Service al enviar.
-<<<<<<< HEAD
  *
  * ⚠️ ESTA PANTALLA SIEMPRE LLEGA POR UN ENLACE DE EMAIL, o sea que es SIEMPRE
  * una carga dura: no hay ninguna View Transition que anime la llegada. Por eso
  * la tarjeta y la hoja sí llevan entrada propia, al revés que `/ingresar`.
-=======
->>>>>>> origin/main
  */
 export default async function RestablecerPassword({
   searchParams,
@@ -45,7 +32,6 @@ export default async function RestablecerPassword({
 
   if (token === undefined || token === '') {
     return (
-<<<<<<< HEAD
       <Pantalla>
         {/*
           ⚠️ NO USA `Panel` DE `ui.tsx`. No es desconfianza de ese componente: es
@@ -71,21 +57,10 @@ export default async function RestablecerPassword({
           </div>
         </div>
       </Pantalla>
-=======
-      <main className={estilos.pagina}>
-        <EstadoVacio titulo="Enlace incompleto">
-          <p style={{ marginBottom: 24 }}>
-            Este enlace no trae el código de recuperación. Pedí uno nuevo.
-          </p>
-          <BotonEnlace href="/olvide-password">Pedir otro enlace</BotonEnlace>
-        </EstadoVacio>
-      </main>
->>>>>>> origin/main
     );
   }
 
   return (
-<<<<<<< HEAD
     <Pantalla>
       <div className={`${propios.hoja} entra-acerca`}>
         <div className={`${propios.encabezado} escalona`}>
@@ -123,24 +98,5 @@ export default async function RestablecerPassword({
         </p>
       </div>
     </Pantalla>
-=======
-    <main className={estilos.pagina}>
-      <h1 className={estilos.titulo}>Nueva contraseña</h1>
-      <p className={estilos.bajada}>
-        Al cambiarla se cierran todas tus sesiones abiertas, incluida ésta.
-      </p>
-
-      <Formulario accion={restablecerPassword} enviar="Cambiar contraseña">
-        <CampoOculto nombre="token" valor={token} />
-        <Campo
-          nombre="password"
-          etiqueta="Nueva contraseña"
-          tipo="password"
-          autoComplete="new-password"
-          ayuda="Al menos 12 caracteres."
-        />
-      </Formulario>
-    </main>
->>>>>>> origin/main
   );
 }

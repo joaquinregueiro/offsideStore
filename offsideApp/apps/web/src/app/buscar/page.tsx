@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-<<<<<<< HEAD
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -20,18 +19,6 @@ import {
 import estilos from './page.module.css';
 
 export const metadata: Metadata = { title: 'Buscar' };
-=======
-
-import { Header } from '@/components/header';
-import { ListingCard } from '@/components/listing-card';
-import { EstadoVacio } from '@/components/ui';
-import { condicion } from '@/lib/formato';
-import { searchListings, type Faceta } from '@/modules/listings/services/search.service';
-
-import estilos from './page.module.css';
-
-export const metadata: Metadata = { title: 'Buscar — Offside Store' };
->>>>>>> origin/main
 
 /**
  * ⚠️ SIN CACHE, igual que la vitrina. Los resultados dependen del stock y del
@@ -40,7 +27,6 @@ export const metadata: Metadata = { title: 'Buscar — Offside Store' };
  */
 export const dynamic = 'force-dynamic';
 
-<<<<<<< HEAD
 /** Las claves de faceta que devuelve el Service, para que un typo no compile. */
 type ClaveDeFaceta = keyof SearchResponse['facetas'];
 
@@ -116,20 +102,6 @@ const ORDENES: { valor: Orden | undefined; texto: string; soloConTexto?: boolean
 
 /**
  * Búsqueda (PS-020 … PS-024).
-=======
-/** Etiquetas legibles de las facetas técnicas. */
-const MANGA: Record<string, string> = { short: 'Cortas', long: 'Largas' };
-const KIT: Record<string, string> = {
-  home: 'Titular',
-  away: 'Suplente',
-  third: 'Tercera',
-  goalkeeper: 'Arquero',
-  special: 'Especial',
-};
-
-/**
- * Búsqueda (PS-020 … PS-022).
->>>>>>> origin/main
  *
  * ⚠️ TODO VIAJA EN LA URL, por GET. Una búsqueda tiene que poder compartirse,
  * guardarse en favoritos y volver con el botón atrás. Guardar el estado en el
@@ -155,7 +127,6 @@ export default async function Buscar({
 
   const q = uno('q');
 
-<<<<<<< HEAD
   /**
    * ⚠️ EL PRECIO VIAJA EN PESOS Y SE GUARDA EN CENTAVOS. En la URL van pesos
    * enteros porque es lo que la persona escribe y lo que va a leer si comparte
@@ -195,9 +166,6 @@ export default async function Buscar({
 
   const resultado = await searchListings({
     pagina,
-=======
-  const resultado = await searchListings({
->>>>>>> origin/main
     ...(q === undefined ? {} : { texto: q }),
     ...(uno('categoria') === undefined ? {} : { categoryId: uno('categoria')! }),
     ...(uno('talle') === undefined ? {} : { sizeValue: uno('talle')! }),
@@ -209,15 +177,9 @@ export default async function Buscar({
     ...(uno('marca') === undefined ? {} : { brandId: uno('marca')! }),
     ...(uno('competicion') === undefined ? {} : { competitionId: uno('competicion')! }),
     ...(uno('temporada') === undefined ? {} : { seasonId: uno('temporada')! }),
-<<<<<<< HEAD
     ...(precioMin === undefined ? {} : { precioMin }),
     ...(precioMax === undefined ? {} : { precioMax }),
     ...(orden === undefined ? {} : { orden }),
-=======
-    ...(uno('orden') === undefined
-      ? {}
-      : { orden: uno('orden') as 'relevancia' | 'precio_asc' | 'precio_desc' | 'recientes' }),
->>>>>>> origin/main
   });
 
   /** Conserva los demás filtros al tocar uno: las facetas se combinan (PS-020). */
@@ -226,7 +188,6 @@ export default async function Buscar({
 
     for (const [k, v] of Object.entries(params)) {
       const texto = Array.isArray(v) ? v[0] : v;
-<<<<<<< HEAD
       /*
         ⚠️ CAMBIAR UN FILTRO VUELVE A LA PAGINA 1. Sin esto, alguien parado en
         la pagina 3 que agrega "Talle M" cae en la pagina 3 de un resultado que
@@ -240,8 +201,6 @@ export default async function Buscar({
         `orden=cualquiera` mientras la pantalla ordena por relevancia.
       */
       if (k === 'orden' && orden === undefined && clave !== 'orden') continue;
-=======
->>>>>>> origin/main
       if (texto !== undefined && texto !== '' && k !== clave) siguientes.set(k, texto);
     }
 
@@ -252,7 +211,6 @@ export default async function Buscar({
     return query === '' ? '/buscar' : `/buscar?${query}`;
   };
 
-<<<<<<< HEAD
   /**
    * Campos ocultos de un `<form method="get">`: todo lo que hay en la URL menos
    * lo que ese formulario controla.
@@ -343,8 +301,6 @@ export default async function Buscar({
     </Link>
   );
 
-=======
->>>>>>> origin/main
   const grupo = (
     titulo: string,
     clave: string,
@@ -355,7 +311,6 @@ export default async function Buscar({
 
     const activo = uno(clave);
 
-<<<<<<< HEAD
     /*
       ⚠️ EL TECHO ES DEL GRUPO, NO DEL TOTAL. Contra el total, "Talle M (40)"
       aplastaria a los 38 clubes y todas las barras darian el piso.
@@ -374,15 +329,10 @@ export default async function Buscar({
 
     return (
       <section key={clave} className={estilos.grupo}>
-=======
-    return (
-      <section className={estilos.grupo}>
->>>>>>> origin/main
         <h2 className={estilos.grupoTitulo}>{titulo}</h2>
         <ul className={estilos.opciones}>
           {facetas.map((faceta) => (
             <li key={faceta.valor}>
-<<<<<<< HEAD
               <Link
                 href={conFiltro(clave, faceta.valor === activo ? undefined : faceta.valor)}
                 className={faceta.valor === activo ? estilos.opcionActiva : estilos.opcion}
@@ -410,25 +360,11 @@ export default async function Buscar({
             Se muestran los {TOPE_DE_FACETA} más elegidos. Buscá por nombre para llegar al resto.
           </p>
         )}
-=======
-              <a
-                href={conFiltro(clave, faceta.valor === activo ? undefined : faceta.valor)}
-                className={faceta.valor === activo ? estilos.opcionActiva : estilos.opcion}
-              >
-                {etiquetar?.(faceta.valor) ?? faceta.etiqueta}
-                {/* PS-022: las facetas muestran conteos por valor. */}
-                <span className={estilos.cuenta}>{faceta.cantidad}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
->>>>>>> origin/main
       </section>
     );
   };
 
   return (
-<<<<<<< HEAD
     <>
       {/*
         ⚠️ `seccion` MARCA "Explorar" EN LA BARRA, y esta pantalla es su destino.
@@ -909,89 +845,5 @@ export default async function Buscar({
 
       <Footer />
     </>
-=======
-    <div className={estilos.pagina}>
-      <Header />
-
-      <main className={estilos.contenido}>
-        <div className={estilos.encabezado}>
-          <h1 className={estilos.titulo}>
-            {q === undefined ? 'Todas las camisetas' : `Resultados para “${q}”`}
-          </h1>
-          <p className={estilos.total}>
-            {resultado.total === 1 ? '1 publicación' : `${resultado.total} publicaciones`}
-          </p>
-        </div>
-
-        <div className={estilos.columnas}>
-          <aside className={estilos.filtros}>
-            {/*
-              El catalogo va PRIMERO: club y marca son lo que la gente busca de
-              verdad en una camiseta. Categoria y talle son secundarios.
-            */}
-            {grupo('Club', 'club', resultado.facetas.club)}
-            {grupo('Selección', 'seleccion', resultado.facetas.seleccion)}
-            {grupo('Marca', 'marca', resultado.facetas.marca)}
-            {grupo('Temporada', 'temporada', resultado.facetas.temporada)}
-            {grupo('Competencia', 'competicion', resultado.facetas.competicion)}
-            {grupo('Categoría', 'categoria', resultado.facetas.categoria)}
-            {grupo('Talle', 'talle', resultado.facetas.talle)}
-            {grupo('Estado', 'condicion', resultado.facetas.condicion, condicion)}
-            {grupo('Tipo', 'kit', resultado.facetas.tipoDeCamiseta, (valor) => KIT[valor] ?? valor)}
-            {grupo('Mangas', 'manga', resultado.facetas.manga, (valor) => MANGA[valor] ?? valor)}
-
-            {/*
-              ⚠️ Una faceta VACIA no se muestra: los campos de catalogo son
-              opcionales al publicar. Ofrecer un filtro que no filtra nada es
-              peor que no ofrecerlo.
-            */}
-            <p className={estilos.nota}>
-              Los filtros muestran sólo lo que hay publicado. Si un club o una marca no aparecen, es
-              porque todavía nadie publicó una camiseta así.
-            </p>
-          </aside>
-
-          <div>
-            <form method="get" className={estilos.orden}>
-              {q !== undefined && <input type="hidden" name="q" value={q} />}
-              <label htmlFor="orden">Ordenar por</label>
-              <select id="orden" name="orden" defaultValue={uno('orden') ?? ''}>
-                <option value="">{q === undefined ? 'Más recientes' : 'Relevancia'}</option>
-                <option value="precio_asc">Precio: menor primero</option>
-                <option value="precio_desc">Precio: mayor primero</option>
-                <option value="recientes">Más recientes</option>
-              </select>
-              <button type="submit">Aplicar</button>
-            </form>
-
-            {resultado.resultados.length === 0 ? (
-              <EstadoVacio titulo="No encontramos nada">
-                Probá con menos palabras, o sacá algún filtro.
-              </EstadoVacio>
-            ) : (
-              <ul className={estilos.grilla}>
-                {resultado.resultados.map((item) => (
-                  <li key={item.id}>
-                    <ListingCard
-                      listing={{
-                        id: item.id,
-                        title: item.title,
-                        priceAmount: item.priceAmount,
-                        currency: item.currency,
-                        sizeValue: item.sizeValue,
-                        condition: item.condition,
-                        sellerDisplayName: item.sellerDisplayName,
-                        coverUrl: item.coverUrl,
-                      }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
->>>>>>> origin/main
   );
 }

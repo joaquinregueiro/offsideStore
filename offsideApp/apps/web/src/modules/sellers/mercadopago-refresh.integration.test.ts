@@ -1,11 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 import { getDatabase, schema } from '@offside/database';
-<<<<<<< HEAD
 import { desc, eq, inArray, like } from 'drizzle-orm';
-=======
-import { eq, inArray, like } from 'drizzle-orm';
->>>>>>> origin/main
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type * as AuthService from '../auth/services/auth.service';
@@ -254,7 +250,6 @@ describe('renovacion de un vendedor', () => {
     const [evento] = await getDatabase()
       .select()
       .from(schema.auditLog)
-<<<<<<< HEAD
       .where(eq(schema.auditLog.entityId, sellerId))
       // ⚠️ SIN `ORDER BY` NO HAY ORDEN. Crear el vendedor ya deja un
       // SELLER_TERMS_ACCEPTED con el mismo entity_id, y sin esto la fila que
@@ -263,9 +258,6 @@ describe('renovacion de un vendedor', () => {
       // se arreglo en tres repositorios el 2026-09-10.
       .orderBy(desc(schema.auditLog.createdAt))
       .limit(1);
-=======
-      .where(eq(schema.auditLog.entityId, sellerId));
->>>>>>> origin/main
 
     expect(evento?.action).toBe('MP_TOKEN_REFRESHED');
     expect(JSON.stringify(evento?.metadata)).not.toContain('refresh-nuevo');
@@ -330,7 +322,6 @@ describe('fallos', () => {
     const [evento] = await getDatabase()
       .select()
       .from(schema.auditLog)
-<<<<<<< HEAD
       .where(eq(schema.auditLog.entityId, sellerId))
       // ⚠️ SIN `ORDER BY` NO HAY ORDEN. Crear el vendedor ya deja un
       // SELLER_TERMS_ACCEPTED con el mismo entity_id, y sin esto la fila que
@@ -339,9 +330,6 @@ describe('fallos', () => {
       // se arreglo en tres repositorios el 2026-09-10.
       .orderBy(desc(schema.auditLog.createdAt))
       .limit(1);
-=======
-      .where(eq(schema.auditLog.entityId, sellerId));
->>>>>>> origin/main
 
     expect(evento?.action).toBe('MP_TOKEN_REFRESH_FAILED');
     expect(evento?.metadata).toMatchObject({ failure: 'refresh_rejected', expired: true });

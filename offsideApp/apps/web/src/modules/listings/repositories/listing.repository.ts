@@ -1,9 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-<<<<<<< HEAD
 import { and, count, desc, eq, gte, ne, sql } from 'drizzle-orm';
-=======
-import { and, desc, eq, gte, ne, sql } from 'drizzle-orm';
->>>>>>> origin/main
 
 /**
  * Acceso a `listings` y a `categories` (ERD §9.1 y §8). Sin reglas de negocio.
@@ -121,19 +117,15 @@ export async function findActiveCategories(db?: Database): Promise<CategoryRow[]
 }
 
 /** Publicaciones de un vendedor, sin las borradas. */
-<<<<<<< HEAD
 /**
  * ⚠️ EL `ORDER BY` NO ES COSMETICO. Sin el, PostgreSQL reordena las filas
  * despues de un UPDATE: pausar una publicacion la movia de lugar en el
  * inventario del vendedor, y la lista parecia barajarse sola.
  */
-=======
->>>>>>> origin/main
 export async function findBySellerId(sellerId: string, db?: Database): Promise<ListingRow[]> {
   return conn(db)
     .select()
     .from(schema.listings)
-<<<<<<< HEAD
     .where(and(eq(schema.listings.sellerId, sellerId), ne(schema.listings.status, 'deleted')))
     .orderBy(desc(schema.listings.createdAt));
 }
@@ -156,9 +148,6 @@ export async function countBySellerId(
     .groupBy(schema.listings.status);
 
   return filas.map((fila) => ({ status: fila.status, cantidad: Number(fila.cantidad) }));
-=======
-    .where(and(eq(schema.listings.sellerId, sellerId), ne(schema.listings.status, 'deleted')));
->>>>>>> origin/main
 }
 
 export interface InsertListingValues {

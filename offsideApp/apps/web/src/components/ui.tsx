@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import Link from 'next/link';
-=======
->>>>>>> origin/main
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import estilos from './ui.module.css';
@@ -9,7 +6,6 @@ import estilos from './ui.module.css';
 /**
  * Primitivas de interfaz.
  *
-<<<<<<< HEAD
  * ⚠️ Se escribieron CON la pantalla que las usa, no antes. Cada variante de
  * esta lista existe porque algo la pidio; inventar variantes por adelantado es
  * adivinar cuales hacen falta.
@@ -190,42 +186,10 @@ export function Boton({
       {cargando ? <span className={estilos.girador} aria-hidden="true" /> : icono}
       {children}
       {flecha && !cargando ? FLECHA : null}
-=======
- * Todas son SERVER COMPONENTS: no tienen estado ni manejadores de eventos. Un
- * boton dentro de un `<form>` que apunta a una Server Action funciona sin
- * JavaScript en el cliente, y por eso no necesita `'use client'`.
- */
-
-type VarianteBoton = 'primario' | 'secundario';
-
-export function Boton({
-  variante = 'primario',
-  bloque = false,
-  className,
-  children,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variante?: VarianteBoton;
-  bloque?: boolean;
-}) {
-  const clases = [
-    estilos.boton,
-    variante === 'primario' ? estilos.botonPrimario : estilos.botonSecundario,
-    bloque ? estilos.botonBloque : '',
-    className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <button className={clases} {...props}>
-      {children}
->>>>>>> origin/main
     </button>
   );
 }
 
-<<<<<<< HEAD
 /**
  * Enlace con aspecto de boton. Es un enlace, no un boton: NAVEGA.
  *
@@ -356,57 +320,21 @@ export function Etiqueta({
         .filter(Boolean)
         .join(' ')}
     >
-=======
-/** Enlace con aspecto de boton. Es un `<a>`, no un `<button>`: navega. */
-export function BotonEnlace({
-  href,
-  variante = 'primario',
-  bloque = false,
-  children,
-}: {
-  href: string;
-  variante?: VarianteBoton;
-  bloque?: boolean;
-  children: ReactNode;
-}) {
-  const clases = [
-    estilos.boton,
-    variante === 'primario' ? estilos.botonPrimario : estilos.botonSecundario,
-    bloque ? estilos.botonBloque : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <a href={href} className={clases}>
-      {children}
-    </a>
-  );
-}
-
-export function Etiqueta({ aviso = false, children }: { aviso?: boolean; children: ReactNode }) {
-  return (
-    <span className={`${estilos.etiqueta} ${aviso ? estilos.etiquetaAviso : ''}`.trim()}>
->>>>>>> origin/main
       {children}
     </span>
   );
 }
 
-<<<<<<< HEAD
 /* ---------------------------------------------------------------- avisos */
 
 export type TonoAviso = 'neutro' | 'error' | 'exito';
 
-=======
->>>>>>> origin/main
 /**
  * Aviso al usuario.
  *
  * ⚠️ `role="alert"` cuando es un error: hace que los lectores de pantalla lo
  * anuncien al aparecer. Sin eso, alguien que no ve la pantalla no se entera de
  * que su formulario fallo.
-<<<<<<< HEAD
  *
  * ⚠️ EL EXITO NO USA `role="alert"`, USA `role="status"`. "alert" interrumpe lo
  * que el lector este diciendo: para un error es exactamente lo que hace falta,
@@ -431,21 +359,12 @@ export function Aviso({ tono = 'neutro', children }: { tono?: TonoAviso; childre
     <p
       className={[estilos.aviso, clase, entrada].filter(Boolean).join(' ')}
       role={tono === 'error' ? 'alert' : tono === 'exito' ? 'status' : undefined}
-=======
- */
-export function Aviso({ error = false, children }: { error?: boolean; children: ReactNode }) {
-  return (
-    <p
-      className={`${estilos.aviso} ${error ? estilos.avisoError : ''}`.trim()}
-      role={error ? 'alert' : undefined}
->>>>>>> origin/main
     >
       {children}
     </p>
   );
 }
 
-<<<<<<< HEAD
 /* ------------------------------------------------------------ estructura */
 
 export type AnchoContenedor = 'contenido' | 'medio' | 'angosto' | 'formulario';
@@ -486,17 +405,10 @@ export function Contenedor({
         .filter(Boolean)
         .join(' ')}
     >
-=======
-export function EstadoVacio({ titulo, children }: { titulo: string; children?: ReactNode }) {
-  return (
-    <div className={estilos.vacio}>
-      <p className={estilos.vacioTitulo}>{titulo}</p>
->>>>>>> origin/main
       {children}
     </div>
   );
 }
-<<<<<<< HEAD
 
 /**
  * Fila de acciones.
@@ -1414,5 +1326,3 @@ export function Pliego({
     </section>
   );
 }
-=======
->>>>>>> origin/main

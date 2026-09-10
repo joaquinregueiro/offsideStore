@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-<<<<<<< HEAD
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { CSSProperties, ReactNode } from 'react';
@@ -10,13 +9,6 @@ import { IconoAutenticado, IconoEtiqueta, IconoLlave, IconoTilde } from '@/compo
 import { FotoCompartida, Pantalla } from '@/components/movimiento';
 import { BotonEnlace, Etiqueta, Migas, Pliego, Precio } from '@/components/ui';
 import { condicion, manga, precio, tipoDeCamiseta } from '@/lib/formato';
-=======
-import { notFound } from 'next/navigation';
-
-import { Header } from '@/components/header';
-import { BotonEnlace, Etiqueta } from '@/components/ui';
-import { condicion, precio } from '@/lib/formato';
->>>>>>> origin/main
 import { getSessionUser } from '@/lib/session';
 import { findPublicListing } from '@/modules/listings/services/listing.service';
 
@@ -38,7 +30,6 @@ export const dynamic = 'force-dynamic';
 /** Pocas unidades: a partir de aca se avisa. */
 const UMBRAL_POCO_STOCK = 3;
 
-<<<<<<< HEAD
 /**
  * ⚠️ SE LEE `process.env` DIRECTO Y NO `getEnv()`, POR LA MISMA RAZON QUE
  * `app/layout.tsx`: `getEnv()` valida el entorno ENTERO y tira si falta
@@ -48,8 +39,6 @@ const UMBRAL_POCO_STOCK = 3;
  */
 const URL_BASE = (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
-=======
->>>>>>> origin/main
 export async function generateMetadata({
   params,
 }: {
@@ -58,7 +47,6 @@ export async function generateMetadata({
   const { id } = await params;
   const listing = await findPublicListing(id);
 
-<<<<<<< HEAD
   if (listing === null) return { title: 'Publicación no encontrada' };
 
   /*
@@ -106,16 +94,6 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode })
   );
 }
 
-=======
-  if (listing === null) return { title: 'Publicación no encontrada — Offside Store' };
-
-  return {
-    title: `${listing.title} — Offside Store`,
-    description: listing.description ?? 'Camiseta de fútbol en Offside Store.',
-  };
-}
-
->>>>>>> origin/main
 export default async function DetalleDePublicacion({
   params,
 }: {
@@ -133,7 +111,6 @@ export default async function DetalleDePublicacion({
   if (listing === null) notFound();
 
   const quedaPoco = listing.stock <= UMBRAL_POCO_STOCK;
-<<<<<<< HEAD
   const cantidadDeFotos = listing.images.length;
   const importe = precio(listing.priceAmount, listing.currency);
   const rutaDeCompra =
@@ -155,14 +132,11 @@ export default async function DetalleDePublicacion({
   const rutaDeCompartir = `https://wa.me/?text=${encodeURIComponent(
     `${listing.title} — ${importe}\n${URL_BASE}/p/${listing.id}`,
   )}`;
-=======
->>>>>>> origin/main
 
   return (
     <>
       <Header />
 
-<<<<<<< HEAD
       <Pantalla>
         <main id="contenido" className={estilos.pagina}>
           <div className={estilos.contenedor}>
@@ -586,91 +560,6 @@ export default async function DetalleDePublicacion({
       </Pantalla>
 
       <Footer />
-=======
-      <main className={estilos.contenedor}>
-        <a href="/" className={estilos.volver}>
-          ← Volver al catálogo
-        </a>
-
-        <div className={estilos.grilla}>
-          {/*
-            Galeria. Sin fotos, el patron de la identidad §05 reserva el mismo
-            espacio para que la ficha no cambie de forma segun tenga o no.
-
-            ⚠️ SIN JAVASCRIPT: las fotos se apilan y se desplazan con scroll,
-            no hay carrusel. Un carrusel exige JS y esconde detras de flechas
-            justamente lo que un comprador de camisetas usadas necesita ver
-            —etiqueta, defectos, dorso—.
-
-            ⚠️ La PRIMERA carga con `eager` y las demas con `lazy`: la portada
-            es lo primero que se ve y esperar a que el navegador decida
-            retrasaria lo unico que importa al abrir la pagina.
-          */}
-          {listing.images.length === 0 ? (
-            <div className={estilos.marco} aria-hidden="true" />
-          ) : (
-            <div className={estilos.galeria}>
-              {listing.images.map((imagen, indice) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={imagen.url}
-                  className={estilos.foto}
-                  src={imagen.url}
-                  alt={imagen.alt ?? `${listing.title} — foto ${indice + 1}`}
-                  loading={indice === 0 ? 'eager' : 'lazy'}
-                  decoding="async"
-                />
-              ))}
-            </div>
-          )}
-
-          <div>
-            <h1 className={estilos.titulo}>{listing.title}</h1>
-            <p className={estilos.vendedor}>Vendida por {listing.sellerDisplayName}</p>
-
-            <p className={estilos.precio}>{precio(listing.priceAmount, listing.currency)}</p>
-
-            <div className={estilos.atributos}>
-              <Etiqueta>Talle {listing.sizeValue}</Etiqueta>
-              <Etiqueta>{condicion(listing.condition)}</Etiqueta>
-              {listing.kitType !== null && <Etiqueta>{condicion(listing.kitType)}</Etiqueta>}
-              {quedaPoco && (
-                <Etiqueta aviso>
-                  {listing.stock === 1 ? 'Última unidad' : `Quedan ${listing.stock}`}
-                </Etiqueta>
-              )}
-            </div>
-
-            {listing.description !== null && listing.description !== '' && (
-              <p className={estilos.descripcion}>{listing.description}</p>
-            )}
-
-            <div className={estilos.compra}>
-              {user === null ? (
-                <>
-                  {/*
-                    Se conserva a donde queria ir: al iniciar sesion vuelve a
-                    esta ficha, no a la home. `rutaInternaSegura` valida ese
-                    parametro del otro lado.
-                  */}
-                  <BotonEnlace
-                    href={`/ingresar?next=${encodeURIComponent(`/p/${listing.id}`)}`}
-                    bloque
-                  >
-                    Ingresar para comprar
-                  </BotonEnlace>
-                  <p className={estilos.vendedor}>Necesitás una cuenta para completar la compra.</p>
-                </>
-              ) : (
-                <BotonEnlace href={`/comprar/${listing.id}`} bloque>
-                  Comprar
-                </BotonEnlace>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
->>>>>>> origin/main
     </>
   );
 }

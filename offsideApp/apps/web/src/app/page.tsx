@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import Link from 'next/link';
 
 import { Footer } from '@/components/footer';
@@ -9,12 +8,6 @@ import { Pantalla } from '@/components/movimiento';
 import { BotonEnlace } from '@/components/ui';
 import { listPublicCatalog } from '@/modules/listings/services/listing.service';
 import { searchListings, type Faceta } from '@/modules/listings/services/search.service';
-=======
-import { Header } from '@/components/header';
-import { ListingCard } from '@/components/listing-card';
-import { EstadoVacio } from '@/components/ui';
-import { listPublicCatalog } from '@/modules/listings/services/listing.service';
->>>>>>> origin/main
 
 import estilos from './page.module.css';
 
@@ -26,12 +19,6 @@ import estilos from './page.module.css';
  * Next, asi que una peticion de la pagina a su propia API seria un rodeo: mismo
  * proceso, misma base, una serializacion de mas.
  *
-<<<<<<< HEAD
-=======
- * La API sigue existiendo y sirve para lo que fue pensada: clientes externos y
- * una app movil futura.
- *
->>>>>>> origin/main
  * ⚠️ NO EXIGE SESION. Es la vitrina: cualquiera tiene que poder ver el catalogo
  * sin registrarse, y por eso `listPublicCatalog` no recibe usuario.
  */
@@ -43,7 +30,6 @@ import estilos from './page.module.css';
  */
 export const dynamic = 'force-dynamic';
 
-<<<<<<< HEAD
 /** Tope que aplica el repositorio (`findPublicCatalog`) cuando no se le pasa uno. */
 const TOPE_DE_LA_VITRINA = 60;
 
@@ -714,41 +700,5 @@ export default async function Home() {
 
       <Footer />
     </>
-=======
-export default async function Home() {
-  const listings = await listPublicCatalog();
-
-  return (
-    <div className={estilos.pagina}>
-      <Header />
-
-      <section className={estilos.portada}>
-        <div className={estilos.portadaContenido}>
-          <h1 className={estilos.titulo}>Camisetas con historia</h1>
-          <p className={estilos.bajada}>
-            Compra y venta de camisetas de fútbol para coleccionistas.
-          </p>
-        </div>
-      </section>
-
-      <main className={estilos.catalogo}>
-        <h2 className={estilos.tituloSeccion}>En venta</h2>
-
-        {listings.length === 0 ? (
-          <EstadoVacio titulo="Todavía no hay publicaciones">
-            Cuando un vendedor publique su primera camiseta, va a aparecer acá.
-          </EstadoVacio>
-        ) : (
-          <ul className={estilos.grilla}>
-            {listings.map((listing) => (
-              <li key={listing.id}>
-                <ListingCard listing={listing} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </main>
-    </div>
->>>>>>> origin/main
   );
 }

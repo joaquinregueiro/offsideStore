@@ -1,23 +1,16 @@
-<<<<<<< HEAD
 import Link from 'next/link';
 
-=======
->>>>>>> origin/main
 import { condicion, precio } from '@/lib/formato';
 import type { CatalogListing } from '@/modules/listings/services/listing.service';
 
 import estilos from './listing-card.module.css';
-<<<<<<< HEAD
 import { FotoCompartida } from './movimiento';
 import { Etiqueta } from './ui';
-=======
->>>>>>> origin/main
 
 /**
  * Ficha de producto del catalogo.
  *
  * Server Component: no tiene interactividad y no necesita JavaScript en el
-<<<<<<< HEAD
  * cliente. Todo el movimiento de esta ficha es CSS —entrada escalonada,
  * elevacion con glow, tilt, zoom de la foto, anillo de luz que gira, chispa de
  * "Última unidad"—, asi que el rediseño no suma un solo byte al bundle: lo
@@ -38,15 +31,10 @@ import { Etiqueta } from './ui';
  * (`:nth-child(k) > .ficha` en el CSS): no hay `style` inline ni contador. Las
  * dos grillas que la usan la ponen como unico hijo de un `<li>`, y ese contrato
  * es lo que hace que la primera fila entre en cascada.
-=======
- * cliente. Agregarle `'use client'` solo para renderizar texto mandaria el
- * componente al bundle sin ganar nada.
->>>>>>> origin/main
  */
 
 export function ListingCard({ listing }: { listing: CatalogListing }) {
   return (
-<<<<<<< HEAD
     /*
       ⚠️ `transitionTypes` MARCA LA DIRECCION. Entrar a una ficha es avanzar; el
       enlace lo declara y la pantalla de destino traduce ese tipo a la
@@ -60,9 +48,6 @@ export function ListingCard({ listing }: { listing: CatalogListing }) {
       encabezado del CSS.
     */
     <Link href={`/p/${listing.id}`} className={estilos.ficha} transitionTypes={['avanza']}>
-=======
-    <a href={`/p/${listing.id}`} className={estilos.ficha}>
->>>>>>> origin/main
       {/*
         La portada, o el patron de la identidad §05 si la publicacion no tiene
         fotos. El marco reserva la proporcion en los dos casos, asi que la
@@ -72,7 +57,6 @@ export function ListingCard({ listing }: { listing: CatalogListing }) {
         CDN del bucket —el procesador genera tres variantes—. Pasarla otra vez
         por el optimizador de Next la procesaria dos veces y meteria al servidor
         en el camino de cada imagen de cada visita, que es lo que un CDN evita.
-<<<<<<< HEAD
 
         ⚠️ LA FOTO COMPARTE IDENTIDAD CON LA DE LA FICHA DE PRODUCTO. Al tocar la
         camiseta, esta misma imagen se agranda hasta ocupar el detalle en vez de
@@ -182,34 +166,5 @@ export function ListingCard({ listing }: { listing: CatalogListing }) {
         <p className={estilos.vendedor}>{listing.sellerDisplayName}</p>
       </div>
     </Link>
-=======
-      */}
-      {listing.coverUrl === null ? (
-        <div className={estilos.marco} aria-hidden="true" />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className={estilos.marco}
-          src={listing.coverUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-      )}
-
-      <div className={estilos.cuerpo}>
-        <h3 className={estilos.titulo}>{listing.title}</h3>
-
-        <p className={estilos.precio}>{precio(listing.priceAmount, listing.currency)}</p>
-
-        <div className={estilos.metadatos}>
-          <span className={estilos.etiqueta}>Talle {listing.sizeValue}</span>
-          <span className={estilos.etiqueta}>{condicion(listing.condition)}</span>
-        </div>
-
-        <p className={estilos.vendedor}>{listing.sellerDisplayName}</p>
-      </div>
-    </a>
->>>>>>> origin/main
   );
 }

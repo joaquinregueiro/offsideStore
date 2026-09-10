@@ -1,21 +1,15 @@
-<<<<<<< HEAD
 import type { TonoEtiqueta } from '@/components/ui';
 
-=======
->>>>>>> origin/main
 /**
  * Formateo para la interfaz. Funciones PURAS, sin dependencias de React ni de
  * Next: se pueden testear sin montar nada.
  *
-<<<<<<< HEAD
  * ⚠️ LA UNICA IMPORTACION ES UN TIPO. `TonoEtiqueta` viene de `components/ui`
  * con `import type`, asi que se borra al compilar y no crea dependencia en
  * tiempo de ejecucion: estas funciones se siguen pudiendo llamar desde un test
  * sin React. Se importa el tipo y no se redeclara para que agregar un tono
  * rompa acá si alguien se olvida de mapearlo.
  *
-=======
->>>>>>> origin/main
  * ⚠️ ESTO ES PRESENTACION, NO DOMINIO. Los enums vienen del ERD y no se tocan;
  * aca solo se los vuelve legibles.
  */
@@ -47,7 +41,6 @@ export function condicion(valor: string): string {
 }
 
 /**
-<<<<<<< HEAD
  * Tipo de camiseta (`kit_type`).
  *
  * ⚠️ ESTO ARREGLA UN TEXTO EN INGLES EN LA VITRINA. La ficha de producto
@@ -83,8 +76,6 @@ export function manga(valor: string): string {
 }
 
 /**
-=======
->>>>>>> origin/main
  * Estado de una orden, en palabras que le sirvan a una persona.
  *
  * ⚠️ Los nombres del enum son tecnicos (`PENDING_PAYMENT`) y estan bien asi en
@@ -146,7 +137,6 @@ export function fecha(iso: string): string {
 }
 
 /**
-<<<<<<< HEAD
  * Rol administrativo, en palabras.
  *
  * ⚠️ EL BACK-OFFICE IMPRIMIA `ADMIN` Y `FINANCE` CRUDOS, rompiendo la regla que
@@ -269,8 +259,6 @@ export function tonoDeVendedor(valor: string): TonoEtiqueta {
 }
 
 /**
-=======
->>>>>>> origin/main
  * Valida un destino de redireccion que vino de la URL.
  *
  * ⚠️ ESTO ES SEGURIDAD, NO PROLIJIDAD. El login acepta `?next=` para volver a

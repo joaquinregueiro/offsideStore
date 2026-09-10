@@ -1,28 +1,18 @@
-<<<<<<< HEAD
 import type { CSSProperties } from 'react';
-=======
->>>>>>> origin/main
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { CampoOculto, Formulario } from '@/components/form';
-<<<<<<< HEAD
 import { IconoAutenticado, IconoIntercambio } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
 import { Aviso, BotonEnlace, Etiqueta, FilaDeAcciones, Migas } from '@/components/ui';
 import { estadoDeOrden, fecha, precio, tonoDeOrden } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import { coverUrls } from '@/modules/listings/services/listing.service';
-=======
-import { Aviso, BotonEnlace, Etiqueta } from '@/components/ui';
-import { estadoDeOrden, precio } from '@/lib/formato';
-import { requireVerifiedSessionUser } from '@/lib/session';
->>>>>>> origin/main
 import { getMyOrder } from '@/modules/orders/services/order.service';
 
 import { pagar } from '../../acciones';
 import estilos from '../../resumen.module.css';
-<<<<<<< HEAD
 import { RutaDeCompra } from '../../ruta';
 
 export const dynamic = 'force-dynamic';
@@ -78,13 +68,6 @@ function fechaHora(iso: string): string {
 }
 
 /**
-=======
-
-export const metadata: Metadata = { title: 'Pago — Offside Store' };
-export const dynamic = 'force-dynamic';
-
-/**
->>>>>>> origin/main
  * Pago de una orden. Esta pantalla cumple DOS papeles:
  *
  *  1. ANTES de pagar: resumen y boton que lleva a Mercado Pago.
@@ -99,15 +82,9 @@ export default async function Checkout({
   searchParams,
 }: {
   params: Promise<{ orderId: string }>;
-<<<<<<< HEAD
   searchParams: Promise<{ status?: string; intento?: string }>;
 }) {
   const [{ orderId }, { status, intento }] = await Promise.all([params, searchParams]);
-=======
-  searchParams: Promise<{ status?: string }>;
-}) {
-  const [{ orderId }, { status }] = await Promise.all([params, searchParams]);
->>>>>>> origin/main
 
   const user = await requireVerifiedSessionUser(`/checkout/${orderId}`);
   const order = await getMyOrder(user, orderId);
@@ -115,16 +92,12 @@ export default async function Checkout({
   // Una orden ajena devuelve `null` igual que una inexistente: no se distinguen.
   if (order === null) notFound();
 
-<<<<<<< HEAD
   const portadas = await coverUrls(order.items.map((item) => item.listingId));
 
-=======
->>>>>>> origin/main
   const pendiente = order.status === 'PENDING_PAYMENT';
   const vencida =
     order.paymentDeadline !== null && new Date(order.paymentDeadline).getTime() <= Date.now();
 
-<<<<<<< HEAD
   /**
    * ⚠️ VOLVER DE MERCADO PAGO NO ES HABER PAGADO (BS-072 / DEC-028). MP
    * devuelve al comprador apenas termina, pero la fuente de verdad es el
@@ -504,88 +477,5 @@ export default async function Checkout({
         )}
       </main>
     </Pantalla>
-=======
-  return (
-    <main className={estilos.pagina}>
-      <h1 className={estilos.titulo}>Orden {order.orderNumber}</h1>
-
-      {/*
-        ⚠️ EL RETORNO DE MERCADO PAGO NO CONFIRMA NADA (BS-072 / DEC-028). MP
-        devuelve al comprador apenas termina, pero la fuente de verdad es el
-        WEBHOOK, que puede tardar segundos. Decir "pagado" porque la URL trae
-        `status=success` seria afirmar algo que todavia no sabemos.
-      */}
-      {status === 'success' && pendiente && (
-        <div style={{ marginBottom: 24 }}>
-          <Aviso>
-            Estamos confirmando tu pago con Mercado Pago. Puede tardar unos segundos; actualizá esta
-            página en un momento.
-          </Aviso>
-        </div>
-      )}
-
-      {status === 'failure' && pendiente && (
-        <div style={{ marginBottom: 24 }}>
-          {/*
-            ⚠️ Un pago rechazado NO cancela la orden (DEC-033 / UC-MF-2): sigue
-            en PENDING_PAYMENT y se puede reintentar dentro de la ventana.
-          */}
-          <Aviso error>El pago no se pudo completar. Podés intentar de nuevo.</Aviso>
-        </div>
-      )}
-
-      <div className={estilos.resumen}>
-        {order.items.map((item) => (
-          <div key={item.id} className={estilos.linea}>
-            <span>
-              {item.title}
-              {item.quantity > 1 && ` × ${item.quantity}`}
-            </span>
-            <span>{precio(item.unitPriceAmount, order.currency)}</span>
-          </div>
-        ))}
-
-        <div className={`${estilos.linea} ${estilos.lineaTotal}`}>
-          <span className={estilos.concepto}>Total</span>
-          <span className={estilos.total}>{precio(order.totalAmount, order.currency)}</span>
-        </div>
-
-        <div className={estilos.linea}>
-          <span className={estilos.concepto}>Estado</span>
-          <Etiqueta aviso={order.status === 'CANCELLED'}>{estadoDeOrden(order.status)}</Etiqueta>
-        </div>
-      </div>
-
-      {pendiente && !vencida && (
-        <Formulario accion={pagar} enviar="Pagar con Mercado Pago">
-          <CampoOculto nombre="orderId" valor={order.id} />
-        </Formulario>
-      )}
-
-      {pendiente && vencida && (
-        <>
-          <Aviso error>La ventana de pago de esta orden venció.</Aviso>
-          <p className={estilos.nota}>
-            <BotonEnlace href="/" variante="secundario">
-              Volver al catálogo
-            </BotonEnlace>
-          </p>
-        </>
-      )}
-
-      {!pendiente && (
-        <>
-          {order.status === 'PAID' && (
-            <Aviso>Recibimos tu pago. El vendedor ya puede preparar el envío.</Aviso>
-          )}
-          <p className={estilos.nota}>
-            <BotonEnlace href="/mis-compras" variante="secundario">
-              Ver mis compras
-            </BotonEnlace>
-          </p>
-        </>
-      )}
-    </main>
->>>>>>> origin/main
   );
 }
