@@ -42,8 +42,11 @@ export interface SearchRow {
   currency: string;
   sizeValue: string;
   condition: string;
+<<<<<<< HEAD
   /** Unidades restantes. La grilla marca "Última unidad" con esto. */
   stock: number;
+=======
+>>>>>>> origin/main
   sellerDisplayName: string;
   rank: number;
 }
@@ -192,7 +195,11 @@ export async function search(input: SearchInput, db?: Database): Promise<SearchR
             sql`rank DESC, l.created_at DESC`;
 
   const filas = await conn(db).execute(sql`
+<<<<<<< HEAD
     SELECT l.id, l.title, l.price_amount, l.currency, l.size_value, l.condition, l.stock,
+=======
+    SELECT l.id, l.title, l.price_amount, l.currency, l.size_value, l.condition,
+>>>>>>> origin/main
            s.display_name AS seller_display_name,
            ${rank} AS rank
       FROM listings l
@@ -209,7 +216,10 @@ export async function search(input: SearchInput, db?: Database): Promise<SearchR
     currency: String(row.currency),
     sizeValue: String(row.size_value),
     condition: String(row.condition),
+<<<<<<< HEAD
     stock: Number(row.stock),
+=======
+>>>>>>> origin/main
     sellerDisplayName: String(row.seller_display_name),
     rank: Number(row.rank),
   }));

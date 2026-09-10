@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* =============================================================================
  * BACK-OFFICE — HOJA DE OPERACIONES
  * =============================================================================
@@ -345,11 +346,50 @@
 }
 
 /** Encabezado de bloque dentro de la hoja. La regla maciza es del sistema. */
+=======
+.pagina {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
+}
+
+.titulo {
+  font-size: var(--texto-3xl);
+  text-transform: uppercase;
+  margin-bottom: var(--espacio-2);
+}
+
+/**
+ * Marca de back-office. El panel se parece al resto del sitio, y sin una señal
+ * clara es facil creerse en la tienda y ejecutar algo administrativo sin
+ * registrarlo.
+ */
+.contexto {
+  display: inline-block;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-sm);
+  letter-spacing: var(--tracking-etiqueta);
+  text-transform: uppercase;
+  color: var(--color-blanco);
+  background: var(--color-tinta);
+  padding: 2px var(--espacio-3);
+  border-radius: var(--radio);
+  margin-bottom: var(--espacio-4);
+}
+
+.bajada {
+  color: var(--color-neutro-texto);
+  margin-bottom: var(--espacio-7);
+  max-width: 62ch;
+}
+
+>>>>>>> origin/main
 .subtitulo {
   font-size: var(--texto-xl);
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
   margin: var(--espacio-7) 0 var(--espacio-4);
+<<<<<<< HEAD
   padding-bottom: var(--espacio-2);
   border-bottom: 2px solid var(--color-tinta);
 }
@@ -734,12 +774,41 @@
 
 /* ------------------------------------------------------ accesos del indice */
 
+=======
+}
+
+.tarjeta {
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  padding: var(--espacio-5);
+  margin-bottom: var(--espacio-4);
+}
+
+.linea {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacio-4);
+  padding: var(--espacio-2) 0;
+}
+
+.concepto {
+  color: var(--color-neutro-texto);
+}
+
+.dato {
+  font-variant-numeric: tabular-nums;
+}
+
+>>>>>>> origin/main
 .accesos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--espacio-4);
 }
 
+<<<<<<< HEAD
 /**
  * ⚠️⚠️ EL ENVOLTORIO NO ES DECORATIVO: SIN EL, EL HOVER DE LA TARJETA NO
  * FUNCIONA. `.escalona > *` (fundacion) declara `animation: acercarse-corto …
@@ -786,6 +855,20 @@
   color: var(--color-cancha);
   line-height: 0;
   margin-bottom: var(--espacio-3);
+=======
+.acceso {
+  display: block;
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  padding: var(--espacio-5);
+  color: inherit;
+  text-decoration: none;
+}
+
+.acceso:hover {
+  border-color: var(--color-cancha);
+>>>>>>> origin/main
 }
 
 .accesoTitulo {
@@ -795,7 +878,10 @@
   font-family: var(--fuente-titulo);
   font-size: var(--texto-xl);
   text-transform: uppercase;
+<<<<<<< HEAD
   letter-spacing: var(--tracking-etiqueta);
+=======
+>>>>>>> origin/main
   margin-bottom: var(--espacio-1);
 }
 
@@ -805,6 +891,7 @@
   font-size: var(--texto-sm);
 }
 
+<<<<<<< HEAD
 /**
  * FICHA FANTASMA: una capacidad de `AR-006` que todavia no existe.
  *
@@ -867,10 +954,26 @@
   align-items: flex-end;
   flex-wrap: wrap;
   margin-top: var(--espacio-6);
+=======
+.nota {
+  margin-top: var(--espacio-5);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+/** Buscador de la consola de pagos. */
+.buscador {
+  display: flex;
+  gap: var(--espacio-4);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: var(--espacio-6);
+>>>>>>> origin/main
 }
 
 .buscadorCampo {
   flex: 1;
+<<<<<<< HEAD
   /* A 320px (288px utiles) el boton baja solo a su propia fila. */
   min-width: 200px;
 }
@@ -1271,4 +1374,24 @@ p.marcadorCifra {
   display: block;
   block-size: 96px;
   border-radius: var(--radio);
+=======
+  min-width: 220px;
+}
+
+.etiqueta {
+  display: block;
+  font-size: var(--texto-sm);
+  font-weight: 600;
+  margin-bottom: var(--espacio-2);
+}
+
+.control {
+  width: 100%;
+  padding: var(--espacio-3);
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+  font: inherit;
+  color: inherit;
+>>>>>>> origin/main
 }

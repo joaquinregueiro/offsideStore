@@ -37,6 +37,7 @@ export async function findCurrent(key: string, db?: Database): Promise<AppSettin
   return row;
 }
 
+<<<<<<< HEAD
 /**
  * Todas las versiones de una clave, de la mas nueva a la mas vieja.
  *
@@ -65,6 +66,8 @@ export async function findHistory(
     .limit(limite);
 }
 
+=======
+>>>>>>> origin/main
 export interface InsertSettingValues {
   key: string;
   value: unknown;

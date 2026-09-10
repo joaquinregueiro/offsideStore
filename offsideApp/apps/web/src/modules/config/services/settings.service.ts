@@ -145,6 +145,7 @@ export function basisPointsToRateSnapshot(basisPoints: number): string {
 
   return `${entero}.${resto.toString().padStart(4, '0')}`;
 }
+<<<<<<< HEAD
 
 /**
  * Historial de la comision, de la mas nueva a la mas vieja.
@@ -155,3 +156,5 @@ export function basisPointsToRateSnapshot(basisPoints: number): string {
 export async function findCommissionHistory(limite = 10): Promise<settingRepo.AppSettingRow[]> {
   return settingRepo.findHistory(COMMISSION_RATE_KEY, limite);
 }
+=======
+>>>>>>> origin/main

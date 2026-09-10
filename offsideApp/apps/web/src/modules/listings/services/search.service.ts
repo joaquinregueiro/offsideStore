@@ -29,12 +29,15 @@ export interface SearchResult {
   sizeValue: string;
   /** Tipado como el enum del ERD: la vitrina y la busqueda pintan lo mismo. */
   condition: listingRepo.ListingRow['condition'];
+<<<<<<< HEAD
   /**
    * ⚠️ HACE FALTA PARA QUE LA GRILLA DIGA LO MISMO EN LOS DOS LADOS. La vitrina
    * marca "Última unidad" leyendo `stock`; sin este campo, la MISMA camiseta
    * aparecia con el aviso en la home y sin el en los resultados de busqueda.
    */
   stock: number;
+=======
+>>>>>>> origin/main
   sellerDisplayName: string;
   coverUrl: string | null;
 }
@@ -81,6 +84,7 @@ export interface SearchQuery {
   pagina?: number;
 }
 
+<<<<<<< HEAD
 /**
  * Tamaño de pagina. No es configuracion de negocio: es una constante de UI.
  *
@@ -90,6 +94,10 @@ export interface SearchQuery {
  * existe.
  */
 export const POR_PAGINA = 24;
+=======
+/** Tamaño de pagina. No es configuracion de negocio: es una constante de UI. */
+const POR_PAGINA = 24;
+>>>>>>> origin/main
 
 /**
  * Busca publicaciones.
@@ -245,7 +253,10 @@ async function conPortadas(filas: searchRepo.SearchRow[]): Promise<SearchResult[
     currency: fila.currency,
     sizeValue: fila.sizeValue,
     condition: fila.condition as listingRepo.ListingRow['condition'],
+<<<<<<< HEAD
     stock: fila.stock,
+=======
+>>>>>>> origin/main
     sellerDisplayName: fila.sellerDisplayName,
     coverUrl: portadas.get(fila.id) ?? null,
   }));

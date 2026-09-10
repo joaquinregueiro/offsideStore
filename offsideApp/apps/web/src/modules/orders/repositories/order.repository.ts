@@ -1,5 +1,9 @@
 import { getDatabase, schema, type Database } from '@offside/database';
+<<<<<<< HEAD
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
+=======
+import { and, eq } from 'drizzle-orm';
+>>>>>>> origin/main
 
 /**
  * Acceso a `orders` y `order_items` (ERD §11). Sin reglas de negocio.
@@ -39,6 +43,7 @@ export async function findSellerUserId(
   return row?.userId;
 }
 
+<<<<<<< HEAD
 /**
  * ⚠️ EL `ORDER BY` NO ES COSMETICO. Sin `ORDER BY`, PostgreSQL puede devolver
  * las filas en cualquier orden, y en la practica las reordena al hacer un
@@ -52,6 +57,10 @@ export async function findByBuyerId(buyerId: string, db?: Database): Promise<Ord
     .from(schema.orders)
     .where(eq(schema.orders.buyerId, buyerId))
     .orderBy(desc(schema.orders.createdAt));
+=======
+export async function findByBuyerId(buyerId: string, db?: Database): Promise<OrderRow[]> {
+  return conn(db).select().from(schema.orders).where(eq(schema.orders.buyerId, buyerId));
+>>>>>>> origin/main
 }
 
 /** Orden por su numero visible (`OFF-XXXXXXXXXX`). Para el back-office. */
@@ -68,6 +77,7 @@ export async function findByOrderNumber(
   return row;
 }
 
+<<<<<<< HEAD
 /**
  * Cuantas ordenes recibio un vendedor, por estado.
  *
@@ -95,6 +105,11 @@ export async function findBySellerId(sellerId: string, db?: Database): Promise<O
     .from(schema.orders)
     .where(eq(schema.orders.sellerId, sellerId))
     .orderBy(desc(schema.orders.createdAt));
+=======
+/** Ordenes recibidas por un vendedor (SS-070). */
+export async function findBySellerId(sellerId: string, db?: Database): Promise<OrderRow[]> {
+  return conn(db).select().from(schema.orders).where(eq(schema.orders.sellerId, sellerId));
+>>>>>>> origin/main
 }
 
 export async function findItems(orderId: string, db?: Database): Promise<OrderItemRow[]> {
@@ -102,6 +117,7 @@ export async function findItems(orderId: string, db?: Database): Promise<OrderIt
 }
 
 /**
+<<<<<<< HEAD
  * Items de VARIAS ordenes en una sola consulta.
  *
  * ⚠️ EXISTE PARA NO HACER N+1. "Mis compras" necesita decir QUE se compro en
@@ -121,6 +137,8 @@ export async function findItemsByOrderIds(
 }
 
 /**
+=======
+>>>>>>> origin/main
  * Marca la orden como pagada.
  *
  * ⚠️ CONDICIONAL: solo transiciona desde `PENDING_PAYMENT`. Si la orden ya esta

@@ -3,10 +3,16 @@
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+<<<<<<< HEAD
 import { respuestaDeError } from '@/lib/errores';
 import type { EstadoFormulario } from '@/lib/formulario';
 import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
 import { requireVerifiedSessionUser } from '@/lib/session';
+=======
+import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
+import { requireVerifiedSessionUser } from '@/lib/session';
+import { AuthError } from '@/modules/auth/auth.errors';
+>>>>>>> origin/main
 import { createOrder } from '@/modules/orders/services/order.service';
 import { startCheckout } from '@/modules/payments/services/payment.service';
 
@@ -23,12 +29,18 @@ import { startCheckout } from '@/modules/payments/services/payment.service';
  * ordenes fantasma y castiga la reputacion de la cuenta ante el proveedor.
  */
 
+<<<<<<< HEAD
 /**
  * ⚠️ ES UN ALIAS DEL CONTRATO COMPARTIDO. Era un tipo propio con solo `error`,
  * asi que este grupo no podia devolver errores por campo ni conservar lo
  * tipeado aunque el formulario ya supiera mostrarlos.
  */
 export type EstadoCompra = EstadoFormulario;
+=======
+export interface EstadoCompra {
+  error?: string;
+}
+>>>>>>> origin/main
 
 /**
  * Direccion de envio.
@@ -62,6 +74,21 @@ function texto(formData: FormData, nombre: string): string | undefined {
   return typeof valor === 'string' ? valor : undefined;
 }
 
+<<<<<<< HEAD
+=======
+function mensajeDeError(error: unknown): string {
+  if (error instanceof z.ZodError) {
+    return error.issues[0]?.message ?? 'Revisá los datos ingresados.';
+  }
+
+  if (error instanceof AuthError) return error.message;
+
+  console.error('[compra] error inesperado en una accion:', error);
+
+  return 'Tuvimos un problema. Probá de nuevo en un momento.';
+}
+
+>>>>>>> origin/main
 /**
  * Crea la orden y lleva al pago.
  *
@@ -99,6 +126,7 @@ export async function comprar(_estado: EstadoCompra, formData: FormData): Promis
 
     orderId = order.id;
   } catch (error) {
+<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'compra',
       formData,
@@ -109,6 +137,9 @@ export async function comprar(_estado: EstadoCompra, formData: FormData): Promis
       */
       preservar: ['nombre', 'calle', 'ciudad', 'provincia', 'codigoPostal', 'telefono'],
     });
+=======
+    return { error: mensajeDeError(error) };
+>>>>>>> origin/main
   }
 
   redirect(`/checkout/${orderId}`);
@@ -135,6 +166,7 @@ export async function pagar(_estado: EstadoCompra, formData: FormData): Promise<
     const { initPoint } = await startCheckout(user, orderId);
     destino = initPoint;
   } catch (error) {
+<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'compra',
       formData,
@@ -145,6 +177,9 @@ export async function pagar(_estado: EstadoCompra, formData: FormData): Promise<
       */
       preservar: ['nombre', 'calle', 'ciudad', 'provincia', 'codigoPostal', 'telefono'],
     });
+=======
+    return { error: mensajeDeError(error) };
+>>>>>>> origin/main
   }
 
   redirect(destino);

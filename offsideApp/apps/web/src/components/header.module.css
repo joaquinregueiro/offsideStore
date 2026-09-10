@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * BARRA SUPERIOR
  * =============================================================================
@@ -425,11 +426,20 @@ header.barra::before {
 
 /* ------------------------------------------------------------------ layout */
 
+=======
+.barra {
+  background: var(--color-cancha);
+  color: var(--color-papel);
+  padding: var(--espacio-4) var(--espacio-6);
+}
+
+>>>>>>> origin/main
 .contenido {
   max-width: var(--ancho-contenido);
   margin: 0 auto;
   display: flex;
   align-items: center;
+<<<<<<< HEAD
   column-gap: var(--espacio-6);
   /*
    * ⚠️ EL `row-gap` ES LA SEPARACION REAL ENTRE LAS DOS FILAS DE TELEFONO y se
@@ -742,6 +752,36 @@ header.barra::before {
 
 /* --------------------------------------------------------------- enlaces */
 
+=======
+  gap: var(--espacio-6);
+}
+
+.marca {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-3xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-titulo);
+  color: var(--color-papel);
+  text-transform: uppercase;
+}
+
+.marca:hover {
+  color: var(--color-cambio);
+}
+
+/** Buscador. Vive dentro de `.buscadorForm`, que es quien ocupa el espacio. */
+.buscador {
+  width: 100%;
+  padding: var(--espacio-2) var(--espacio-3);
+  border: none;
+  border-radius: var(--radio);
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+}
+
+>>>>>>> origin/main
 .acciones {
   margin-left: auto;
   display: flex;
@@ -749,6 +789,7 @@ header.barra::before {
   gap: var(--espacio-5);
 }
 
+<<<<<<< HEAD
 .enlace,
 .enlaceBoton,
 .enlaceDestacado {
@@ -763,11 +804,16 @@ header.barra::before {
   min-height: var(--alto-control);
   color: var(--color-papel);
   font-family: var(--fuente-texto);
+=======
+.enlace {
+  color: var(--color-papel);
+>>>>>>> origin/main
   font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
   white-space: nowrap;
+<<<<<<< HEAD
   transition:
     color var(--dur-hover) var(--curva),
     text-shadow var(--dur-hover) var(--curva);
@@ -827,6 +873,11 @@ header.barra::before {
 }
 
 .enlace[aria-current] {
+=======
+}
+
+.enlace:hover {
+>>>>>>> origin/main
   color: var(--color-cambio);
 }
 
@@ -835,6 +886,7 @@ header.barra::before {
   padding: 0;
   border: none;
   background: none;
+<<<<<<< HEAD
   cursor: pointer;
 }
 
@@ -1243,4 +1295,24 @@ header.barra::before {
   .barra .cinta {
     border-bottom: 1px solid CanvasText;
   }
+=======
+  color: var(--color-papel);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  cursor: pointer;
+}
+
+.enlaceBoton:hover {
+  color: var(--color-cambio);
+}
+
+/** El buscador es un formulario: ocupa el mismo lugar que ocupaba el input. */
+.buscadorForm {
+  flex: 1;
+  max-width: 420px;
+  margin: 0;
+>>>>>>> origin/main
 }

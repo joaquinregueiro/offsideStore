@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+<<<<<<< HEAD
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -7,14 +8,25 @@ import { IconoAutenticado, IconoIntercambio } from '@/components/iconos';
 import { FotoCompartida, Pantalla } from '@/components/movimiento';
 import { Etiqueta, Migas } from '@/components/ui';
 import { condicion, precio } from '@/lib/formato';
+=======
+import { notFound } from 'next/navigation';
+
+import { Campo, CampoOculto, Formulario } from '@/components/form';
+import { precio } from '@/lib/formato';
+>>>>>>> origin/main
 import { requireVerifiedSessionUser } from '@/lib/session';
 import { findPublicListing } from '@/modules/listings/services/listing.service';
 
 import { comprar } from '../../acciones';
 import estilos from '../../resumen.module.css';
+<<<<<<< HEAD
 import { RutaDeCompra } from '../../ruta';
 
 export const metadata: Metadata = { title: 'Confirmar compra' };
+=======
+
+export const metadata: Metadata = { title: 'Comprar — Offside Store' };
+>>>>>>> origin/main
 export const dynamic = 'force-dynamic';
 
 /**
@@ -36,6 +48,7 @@ export default async function Comprar({ params }: { params: Promise<{ id: string
   const listing = await findPublicListing(id);
   if (listing === null) notFound();
 
+<<<<<<< HEAD
   const portada = listing.images[0];
   /*
    * ⚠️ EL IMPORTE SE FORMATEA UNA SOLA VEZ Y SE MUESTRA TRES: ticket, barra
@@ -291,5 +304,55 @@ export default async function Comprar({ params }: { params: Promise<{ id: string
         <p className={estilos.nota}>La dirección se guarda sólo en esta orden.</p>
       </main>
     </Pantalla>
+=======
+  return (
+    <main className={estilos.pagina}>
+      <h1 className={estilos.titulo}>Confirmar compra</h1>
+
+      <div className={estilos.resumen}>
+        <div className={estilos.linea}>
+          <span>{listing.title}</span>
+          <span>{precio(listing.priceAmount, listing.currency)}</span>
+        </div>
+        <div className={estilos.linea}>
+          <span className={estilos.concepto}>
+            Talle {listing.sizeValue} · {listing.sellerDisplayName}
+          </span>
+        </div>
+        <div className={`${estilos.linea} ${estilos.lineaTotal}`}>
+          <span className={estilos.concepto}>Total</span>
+          <span className={estilos.total}>{precio(listing.priceAmount, listing.currency)}</span>
+        </div>
+      </div>
+
+      <h2 className={estilos.subtitulo}>¿A dónde lo enviamos?</h2>
+
+      <Formulario accion={comprar} enviar="Confirmar y pagar">
+        <CampoOculto nombre="listingId" valor={listing.id} />
+
+        <Campo nombre="nombre" etiqueta="Nombre y apellido" autoComplete="name" />
+        <Campo nombre="calle" etiqueta="Calle y número" autoComplete="street-address" />
+
+        <div className={estilos.par}>
+          <Campo nombre="ciudad" etiqueta="Localidad" autoComplete="address-level2" />
+          <Campo nombre="provincia" etiqueta="Provincia" autoComplete="address-level1" />
+        </div>
+
+        <div className={estilos.par}>
+          <Campo nombre="codigoPostal" etiqueta="Código postal" autoComplete="postal-code" />
+          <Campo nombre="telefono" etiqueta="Teléfono" tipo="tel" autoComplete="tel" />
+        </div>
+      </Formulario>
+
+      {/*
+        ⚠️ La direccion NO se guarda para la proxima compra: `user_addresses`
+        existe en el ERD pero esta vacia y sin modulo. Se avisa en vez de
+        simular una libreta que no existe.
+      */}
+      <p className={estilos.nota}>
+        Vas a pagar con Mercado Pago. La dirección se guarda sólo en esta orden.
+      </p>
+    </main>
+>>>>>>> origin/main
   );
 }

@@ -54,7 +54,11 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   REFUND_AMOUNT_INVALID: 422,
 
   // --- Imagenes de publicaciones (PS-010 / PS-012) ---
+<<<<<<< HEAD
   /** Esa publicación no existe o no es del vendedor. No se distinguen. */
+=======
+  /** La publicacion no existe o no es del vendedor. No se distinguen. */
+>>>>>>> origin/main
   LISTING_NOT_FOUND: 404,
   LISTING_IMAGE_NOT_FOUND: 404,
   /** El archivo no es una imagen procesable o su formato no esta permitido. */
@@ -73,7 +77,11 @@ const STATUS_BY_CODE: Record<AuthErrorCode, number> = {
   IMAGE_REQUIRED: 409,
 
   // --- Orders ---
+<<<<<<< HEAD
   /** Esa publicación no existe o no admite compra. */
+=======
+  /** La publicacion no existe o no admite compra. */
+>>>>>>> origin/main
   LISTING_NOT_AVAILABLE: 409,
   LISTING_OUT_OF_STOCK: 409,
   // Configuracion faltante o corrupta: es un problema del servidor, no del

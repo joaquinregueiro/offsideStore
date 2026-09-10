@@ -4,12 +4,16 @@
     {
       "name": "offside-web",
       "runtimeExecutable": "npm",
+<<<<<<< HEAD
       "runtimeArgs": [
         "run",
         "dev",
         "--prefix",
         "offsideApp"
       ],
+=======
+      "runtimeArgs": ["run", "dev", "--prefix", "offsideApp"],
+>>>>>>> origin/main
       "port": 3000
     }
   ]

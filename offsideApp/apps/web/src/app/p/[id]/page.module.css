@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * FICHA DE PRODUCTO — la pantalla donde se decide una compra.
  *
@@ -116,10 +117,43 @@
       'fotos'
       'detalle';
     grid-template-rows: auto;
+=======
+.contenedor {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-7) var(--espacio-6) var(--espacio-9);
+}
+
+.volver {
+  display: inline-block;
+  margin-bottom: var(--espacio-6);
+  font-size: var(--texto-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+}
+
+/**
+ * Dos columnas en escritorio, una sola apilada en pantallas chicas.
+ *
+ * La imagen manda en el ancho: en una ficha de producto es lo primero que la
+ * persona mira, aunque hoy sea un marcador.
+ */
+.grilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--espacio-8);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .grilla {
+    grid-template-columns: 1fr;
+>>>>>>> origin/main
     gap: var(--espacio-6);
   }
 }
 
+<<<<<<< HEAD
 /* ------------------------------------------------------------- encabezado */
 
 /**
@@ -181,12 +215,58 @@
 .encabezado .precio {
   margin: var(--espacio-4) 0;
   font-size: var(--display-2);
+=======
+/* ---------------------------------------------------------------- imagen */
+
+/**
+ * ⚠️ TODAVIA NO HAY IMAGENES: S3 no esta implementado y `listing_images` esta
+ * vacia. Se reserva la proporcion para que el dia que existan no se reacomode
+ * la pagina, y se usa el rombo de la identidad §05 en su escala de textura.
+ */
+.marco {
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background-color: var(--color-neutro-suave);
+  background-image:
+    linear-gradient(45deg, var(--color-neutro-borde) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-neutro-borde) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-neutro-borde) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-neutro-borde) 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+}
+
+/* ----------------------------------------------------------------- datos */
+
+.titulo {
+  font-size: clamp(32px, 5vw, 48px);
+  text-transform: uppercase;
+}
+
+.vendedor {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.precio {
+  font-family: var(--fuente-titulo);
+  font-size: clamp(40px, 6vw, 56px);
+  line-height: 1;
+  margin: var(--espacio-6) 0 var(--espacio-4);
+>>>>>>> origin/main
 }
 
 .atributos {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espacio-2);
+<<<<<<< HEAD
   margin: 0;
 }
 
@@ -1199,4 +1279,42 @@
   .fantasmaFoto {
     aspect-ratio: 4 / 5;
   }
+=======
+  margin-bottom: var(--espacio-6);
+}
+
+.descripcion {
+  margin: 0 0 var(--espacio-7);
+  color: var(--color-neutro-texto);
+  white-space: pre-line;
+}
+
+.compra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding-top: var(--espacio-6);
+  border-top: 1px solid var(--color-neutro-borde);
+}
+
+/**
+ * Galeria del detalle: las fotos apiladas, sin carrusel.
+ *
+ * ⚠️ Un carrusel necesitaria JavaScript y esconderia detras de flechas
+ * justamente lo que hay que mirar al comprar una camiseta usada: la etiqueta,
+ * el dorso y los defectos. Apilarlas las muestra todas.
+ */
+.galeria {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.foto {
+  width: 100%;
+  display: block;
+  border: 1px solid var(--color-neutro-borde);
+  border-radius: var(--radio);
+  background: var(--color-neutro-suave);
+>>>>>>> origin/main
 }

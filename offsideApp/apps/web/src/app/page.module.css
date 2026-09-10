@@ -1,6 +1,7 @@
 /**
  * Home — la vitrina.
  *
+<<<<<<< HEAD
  * Sigue el mockup de la identidad §06 y le agrega la capa de profundidad: la
  * portada es una superficie de marca con malla, grano, patron vivo y fotos
  * reales en diagonal; abajo, el ritmo alterna densidades en vez de apilar cajas
@@ -57,10 +58,19 @@
 }
 .retraso4 {
   --retraso: 320ms;
+=======
+ * Sigue el mockup de la identidad §06: barra superior verde con el wordmark y
+ * el buscador, y una grilla de fichas de producto sobre papel.
+ */
+
+.pagina {
+  min-height: 100vh;
+>>>>>>> origin/main
 }
 
 /* ---------------------------------------------------------------- portada */
 
+<<<<<<< HEAD
 /**
  * ⚠️ `svh` Y NO `vh`. En el telefono, `vh` cuenta la barra del navegador como si
  * no existiera: la portada quedaba mas alta que la pantalla.
@@ -701,6 +711,32 @@
   font-size: var(--texto-sm);
   line-height: var(--interlineado-lectura);
   color: var(--color-neutro-texto);
+=======
+.portada {
+  background: var(--color-cancha);
+  color: var(--color-papel);
+  /* Sin separacion con la barra: es un solo bloque verde, como en la identidad. */
+  padding: var(--espacio-6) var(--espacio-6) var(--espacio-8);
+}
+
+.portadaContenido {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+}
+
+.titulo {
+  font-size: clamp(40px, 8vw, 76px);
+  text-transform: uppercase;
+  max-width: 16ch;
+}
+
+.bajada {
+  margin: var(--espacio-4) 0 0;
+  font-size: var(--texto-lg);
+  max-width: 48ch;
+  /* Sobre el verde, el papel puro compite con el titulo: se baja un punto. */
+  color: var(--color-neutro-borde);
+>>>>>>> origin/main
 }
 
 /* --------------------------------------------------------------- catalogo */
@@ -708,6 +744,7 @@
 .catalogo {
   max-width: var(--ancho-contenido);
   margin: 0 auto;
+<<<<<<< HEAD
   padding: var(--espacio-seccion) var(--canal);
 }
 
@@ -806,10 +843,21 @@
   font-size: var(--texto-sm);
   color: var(--color-neutro-texto);
   font-variant-numeric: tabular-nums;
+=======
+  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
+}
+
+.tituloSeccion {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  margin-bottom: var(--espacio-6);
+>>>>>>> origin/main
 }
 
 .grilla {
   display: grid;
+<<<<<<< HEAD
   /*
    * Se acomoda sola: sin breakpoints que mantener.
    *
@@ -818,11 +866,16 @@
    * vertical de fotos gigantes y ver diez camisetas eran diez pantallazos.
    */
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+=======
+  /* Se acomoda sola: sin breakpoints que mantener. */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+>>>>>>> origin/main
   gap: var(--espacio-6);
   list-style: none;
   padding: 0;
   margin: 0;
 }
+<<<<<<< HEAD
 
 @media (max-width: 600px) {
   .grilla {
@@ -1150,3 +1203,5 @@
     white-space: normal;
   }
 }
+=======
+>>>>>>> origin/main

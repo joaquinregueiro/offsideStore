@@ -5,9 +5,14 @@ import { z } from 'zod';
 
 import { CAPABILITIES } from '@/lib/permissions';
 import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
+<<<<<<< HEAD
 import { respuestaDeError } from '@/lib/errores';
 import type { EstadoFormulario } from '@/lib/formulario';
 import { requireCapabilitySessionUser } from '@/lib/session';
+=======
+import { requireCapabilitySessionUser } from '@/lib/session';
+import { AuthError } from '@/modules/auth/auth.errors';
+>>>>>>> origin/main
 import { setCommissionRateBasisPoints } from '@/modules/config/services/settings.service';
 import { refundPayment } from '@/modules/payments/services/refund.service';
 
@@ -28,12 +33,19 @@ import { refundPayment } from '@/modules/payments/services/refund.service';
  * plata real. Es ademas el techo que queda si una sesion de admin se filtra.
  */
 
+<<<<<<< HEAD
 /**
  * ⚠️ ES UN ALIAS DEL CONTRATO COMPARTIDO. Era un tipo propio con solo `error`,
  * asi que este grupo no podia devolver errores por campo ni conservar lo
  * tipeado aunque el formulario ya supiera mostrarlos.
  */
 export type EstadoAdmin = EstadoFormulario;
+=======
+export interface EstadoAdmin {
+  error?: string;
+  ok?: string;
+}
+>>>>>>> origin/main
 
 function texto(formData: FormData, nombre: string): string | undefined {
   const valor = formData.get(nombre);
@@ -41,6 +53,21 @@ function texto(formData: FormData, nombre: string): string | undefined {
   return typeof valor === 'string' && valor !== '' ? valor : undefined;
 }
 
+<<<<<<< HEAD
+=======
+function mensajeDeError(error: unknown): string {
+  if (error instanceof z.ZodError) {
+    return error.issues[0]?.message ?? 'Revisá los datos ingresados.';
+  }
+
+  if (error instanceof AuthError) return error.message;
+
+  console.error('[admin] error inesperado en una accion:', error);
+
+  return 'Tuvimos un problema. Probá de nuevo en un momento.';
+}
+
+>>>>>>> origin/main
 /* --------------------------------------------------------------- comision -- */
 
 /**
@@ -75,11 +102,15 @@ export async function cambiarComision(
 
     await setCommissionRateBasisPoints(basisPoints, admin.id);
   } catch (error) {
+<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'admin',
       formData,
       preservar: ['porcentaje', 'montoPesos', 'motivo'],
     });
+=======
+    return { error: mensajeDeError(error) };
+>>>>>>> origin/main
   }
 
   // La pantalla lee el valor vigente; sin esto seguiria mostrando el anterior.
@@ -130,11 +161,15 @@ export async function reembolsar(_estado: EstadoAdmin, formData: FormData): Prom
 
     resultado = `Reembolso ${refund.type === 'FULL' ? 'total' : 'parcial'} en estado ${refund.status}.`;
   } catch (error) {
+<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'admin',
       formData,
       preservar: ['porcentaje', 'montoPesos', 'motivo'],
     });
+=======
+    return { error: mensajeDeError(error) };
+>>>>>>> origin/main
   }
 
   revalidatePath('/admin/pagos');

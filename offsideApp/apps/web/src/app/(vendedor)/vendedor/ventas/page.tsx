@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+<<<<<<< HEAD
 import type { CSSProperties } from 'react';
 
 import { IconoIntercambio } from '@/components/iconos';
@@ -22,6 +23,17 @@ import { NavDelVendedor } from '../../nav';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mis ventas' };
+=======
+
+import { EstadoVacio, Etiqueta } from '@/components/ui';
+import { estadoDeOrden, fecha, precio } from '@/lib/formato';
+import { requireSellerSessionUser } from '@/lib/session';
+import { listMySales } from '@/modules/orders/services/order.service';
+
+import estilos from '../../vendedor.module.css';
+
+export const metadata: Metadata = { title: 'Mis ventas — Offside Store' };
+>>>>>>> origin/main
 export const dynamic = 'force-dynamic';
 
 /**
@@ -34,17 +46,21 @@ export const dynamic = 'force-dynamic';
  * ⚠️ NO HAY DETALLE NI ACCIONES (SS-071, SS-080). Despachar exige el módulo de
  * envíos con Correo Argentino, que no existe, y mostrar los datos del comprador
  * sin una pantalla que los use sería exponer datos personales sin motivo.
+<<<<<<< HEAD
  *
  * ⚠️ ES UNA TABLA, NO UNA LISTA DE TARJETAS. Eran cuatro filas de
  * concepto/valor por venta: para comparar cuánto dejó cada una había que leer
  * cuatro tarjetas enteras. Una columna de importes alineados a la derecha, con
  * cifras tabulares, se compara de un vistazo — y eso es exactamente lo que
  * alguien viene a hacer a esta pantalla.
+=======
+>>>>>>> origin/main
  */
 export default async function MisVentas() {
   const user = await requireSellerSessionUser('/vendedor/ventas');
   const ventas = await listMySales(user);
 
+<<<<<<< HEAD
   const portadas = await coverUrls(ventas.flatMap((v) => v.items.map((i) => i.listingId)));
 
   /*
@@ -229,5 +245,50 @@ export default async function MisVentas() {
         </div>
       </main>
     </Pantalla>
+=======
+  return (
+    <main className={estilos.pagina}>
+      <h1 className={estilos.titulo}>Mis ventas</h1>
+
+      {ventas.length === 0 ? (
+        <EstadoVacio titulo="Todavía no vendiste nada">
+          Cuando alguien te compre, la orden va a aparecer acá con su estado y lo que te queda.
+        </EstadoVacio>
+      ) : (
+        ventas.map((venta) => (
+          <article key={venta.id} className={estilos.tarjeta}>
+            <div className={estilos.linea}>
+              <span>Orden {venta.orderNumber}</span>
+              <Etiqueta aviso={venta.status === 'CANCELLED'}>
+                {estadoDeOrden(venta.status)}
+              </Etiqueta>
+            </div>
+            <div className={estilos.linea}>
+              <span className={estilos.concepto}>{fecha(venta.createdAt)}</span>
+              <span>{precio(venta.totalAmount, venta.currency)}</span>
+            </div>
+            <div className={estilos.linea}>
+              <span className={estilos.concepto}>Comisión de Offside</span>
+              <span>−{precio(venta.commissionAmount, venta.currency)}</span>
+            </div>
+            <div className={estilos.linea}>
+              <span className={estilos.concepto}>Te queda</span>
+              <span>{precio(venta.sellerAmount, venta.currency)}</span>
+            </div>
+          </article>
+        ))
+      )}
+
+      {/*
+        ⚠️ "Te queda" ES ANTES DEL COSTO DE MERCADO PAGO. DEC-043: el costo de MP
+        se descuenta del lado del vendedor, y Offside no lo conoce al crear la
+        orden. Prometer un neto exacto sería mentir.
+      */}
+      <p className={estilos.nota}>
+        Mercado Pago cobra además su propio costo de procesamiento, que se descuenta de tu parte al
+        acreditarse el pago.
+      </p>
+    </main>
+>>>>>>> origin/main
   );
 }

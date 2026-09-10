@@ -294,6 +294,7 @@ export async function createOrder(user: PublicUser, input: CreateOrderInput): Pr
 }
 
 /** Ordenes del comprador. */
+<<<<<<< HEAD
 export async function listMyOrders(user: PublicUser): Promise<PublicOrderConItems[]> {
   const rows = await orderRepo.findByBuyerId(user.id);
 
@@ -330,6 +331,11 @@ async function conItems(rows: orderRepo.OrderRow[]): Promise<PublicOrderConItems
   }
 
   return rows.map((row) => ({ ...toPublicOrder(row), items: porOrden.get(row.id) ?? [] }));
+=======
+export async function listMyOrders(user: PublicUser): Promise<PublicOrder[]> {
+  const rows = await orderRepo.findByBuyerId(user.id);
+  return rows.map(toPublicOrder);
+>>>>>>> origin/main
 }
 
 /**
@@ -345,11 +351,19 @@ async function conItems(rows: orderRepo.OrderRow[]): Promise<PublicOrderConItems
  * el envio no existe todavia y exponer nombre y direccion sin una pantalla que
  * los use seria filtrar datos personales sin motivo.
  */
+<<<<<<< HEAD
 export async function listMySales(user: PublicUser): Promise<PublicOrderConItems[]> {
   const seller = await requireOwnSellerProfile(user);
   const rows = await orderRepo.findBySellerId(seller.id);
 
   return conItems(rows);
+=======
+export async function listMySales(user: PublicUser): Promise<PublicOrder[]> {
+  const seller = await requireOwnSellerProfile(user);
+  const rows = await orderRepo.findBySellerId(seller.id);
+
+  return rows.map(toPublicOrder);
+>>>>>>> origin/main
 }
 
 /**
@@ -368,6 +382,7 @@ export async function findByOrderNumber(orderNumber: string): Promise<PublicOrde
 /** Un item de la orden, tal como lo ve el comprador. */
 export interface PublicOrderItem {
   id: string;
+<<<<<<< HEAD
   /**
    * Publicacion comprada.
    *
@@ -376,17 +391,22 @@ export interface PublicOrderItem {
    * publicacion actual puede haber cambiado los dos, o estar eliminada.
    */
   listingId: string;
+=======
+>>>>>>> origin/main
   /** Snapshot del titulo al momento de comprar (DEC-030). */
   title: string;
   quantity: number;
   unitPriceAmount: string;
 }
 
+<<<<<<< HEAD
 /** Una orden de lista, con lo suficiente para decir QUE se compro. */
 export interface PublicOrderConItems extends PublicOrder {
   items: PublicOrderItem[];
 }
 
+=======
+>>>>>>> origin/main
 export interface PublicOrderWithItems extends PublicOrder {
   items: PublicOrderItem[];
   /** Vencimiento de la ventana de pago, si la orden tiene una. */
@@ -415,13 +435,17 @@ export async function getMyOrder(
     paymentDeadline: order.paymentDeadline?.toISOString() ?? null,
     items: items.map((item) => ({
       id: item.id,
+<<<<<<< HEAD
       listingId: item.listingId,
+=======
+>>>>>>> origin/main
       title: item.titleSnapshot,
       quantity: item.quantity,
       unitPriceAmount: item.unitPriceAmount.toString(),
     })),
   };
 }
+<<<<<<< HEAD
 
 /** Cuantas ventas recibio el vendedor autenticado, por estado. */
 export interface ResumenDeVentas {
@@ -458,3 +482,5 @@ export async function countMySales(user: PublicUser): Promise<ResumenDeVentas> {
     total: filas.reduce((suma, fila) => suma + fila.cantidad, 0),
   };
 }
+=======
+>>>>>>> origin/main

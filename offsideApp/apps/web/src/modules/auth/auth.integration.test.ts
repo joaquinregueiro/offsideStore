@@ -610,6 +610,7 @@ describe('constraints e integridad', () => {
       .delete(schema.emailVerificationTokens)
       .where(eq(schema.emailVerificationTokens.userId, user.id));
 
+<<<<<<< HEAD
     /*
      * ⚠️ DOS CODIGOS Y LOS DOS SON LA FK FRENANDO EL BORRADO. PostgreSQL 17
      * reporta una violacion de `ON DELETE RESTRICT` como `23503`
@@ -620,6 +621,10 @@ describe('constraints e integridad', () => {
      */
     await expect(db.delete(schema.users).where(eq(schema.users.id, user.id))).rejects.toMatchObject(
       { cause: { code: expect.stringMatching(/^(23503|23001)$/) } },
+=======
+    await expect(db.delete(schema.users).where(eq(schema.users.id, user.id))).rejects.toMatchObject(
+      { cause: { code: '23503' } },
+>>>>>>> origin/main
     );
   });
 });

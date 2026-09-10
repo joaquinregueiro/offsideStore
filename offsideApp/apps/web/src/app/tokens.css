@@ -11,6 +11,7 @@
  * terracota `#C4562E` como acento. **No es la vigente.**
  *
  * El isotipo de la marca es la BANDERA DEL JUEZ DE LINEA —asta y pano a
+<<<<<<< HEAD
  * cuadros—, la senial literal de fuera de juego. Los seis colores, las dos
  * tipografias y el rombo salen de ahi y no se tocan.
  *
@@ -27,6 +28,10 @@
  *
  * La regla que NO cambia: el contraste AA se mide contra el punto MAS CLARO de
  * cualquier fondo, y el glow va FUERA del texto, nunca debajo.
+=======
+ * cuadros—, la senial literal de fuera de juego. Todo el sistema sale de ahi:
+ * anguloso, editorial, con el verde de la cancha como base.
+>>>>>>> origin/main
  */
 
 :root {
@@ -59,6 +64,7 @@
    */
   --color-naranja: #ff902d;
 
+<<<<<<< HEAD
   /**
    * Naranja LEGIBLE, para cuando el acento es TEXTO y no un relleno.
    *
@@ -86,10 +92,13 @@
    */
   --color-sobre-cancha: #e4f0e6;
 
+=======
+>>>>>>> origin/main
   /* Neutros derivados, para bordes y texto secundario. */
   --color-neutro-borde: #e4e6de;
   --color-neutro-suave: #f2f3ea;
   --color-neutro-texto: #5b6459;
+<<<<<<< HEAD
   /**
    * ⚠️ ERA `#8a9186`, que sobre papel da **3.10:1**. Todos sus usos son TEXTO
    * —ayudas de formulario, notas, nombre del vendedor en la ficha, conteos de
@@ -106,6 +115,9 @@
    * El gris claro anterior, ahora con el unico rol que puede cumplir: FORMA,
    * nunca texto. Separadores, trazos decorativos, placeholders de imagen.
    */
+=======
+  --color-neutro-tenue: #8a9186;
+>>>>>>> origin/main
   --color-neutro-apagado: #9aa396;
   --color-blanco: #ffffff;
 
@@ -165,6 +177,7 @@
 
   /* --------------------------------------------------------------- forma */
   /**
+<<<<<<< HEAD
    * ⚠️ EL 4px SE FUE. La identidad de `design/` es angulosa (18 veces 4px
    * contra 2 de 8px) y esta version se aparta de eso por decision del dueño del
    * 2026-09-10 —"muy cuadrado todo"—, asentada en el encabezado del archivo. La
@@ -196,11 +209,22 @@
   --radio-ficha: 20px;
   --radio-grande: 24px;
   --radio-panel: 28px;
+=======
+   * ⚠️ EL SISTEMA ES ANGULOSO, NO REDONDEADO. En la identidad el radio de 4px
+   * aparece 18 veces contra 2 de 8px. Redondear de mas lo convierte en otra
+   * marca.
+   */
+  --radio: 4px;
+  --radio-chico: 1px;
+  --radio-grande: 8px;
+  /** Solo para pastillas y avatares, donde la forma ES el elemento. */
+>>>>>>> origin/main
   --radio-pastilla: 999px;
 
   /** Iconos: trazo de 1.5px, sin relleno, coherente con la linea del logo. */
   --trazo-icono: 1.5px;
 
+<<<<<<< HEAD
   /* -------------------------------------------------------------- patron */
   /**
    * El rombo de la bandera (identidad §05).
@@ -279,6 +303,8 @@
   --alto-control: 44px;
   --alto-control-chico: 36px;
 
+=======
+>>>>>>> origin/main
   /* ------------------------------------------------------------- espacio */
   --espacio-1: 4px;
   --espacio-2: 6px;
@@ -291,6 +317,7 @@
   --espacio-9: 80px;
   --espacio-10: 100px;
 
+<<<<<<< HEAD
   /**
    * Anchos de contenido.
    *
@@ -380,6 +407,10 @@
     var(--patron-color) 0 10px,
     transparent 10px 30px
   );
+=======
+  /** Ancho maximo del contenido. */
+  --ancho-contenido: 1200px;
+>>>>>>> origin/main
 }
 
 /* ------------------------------------------------------------------ base */
@@ -390,16 +421,21 @@
 
 body {
   margin: 0;
+<<<<<<< HEAD
   /*
    * ⚠️ EL FONDO YA NO VIVE ACA, VIVE EN `html` (ver la capa de profundidad al
    * final del archivo). El body tiene que dejar pasar la malla y el grano, que
    * se pintan en sus pseudo-elementos por DEBAJO del contenido.
    */
+=======
+  background: var(--color-papel);
+>>>>>>> origin/main
   color: var(--color-tinta);
   font-family: var(--fuente-texto);
   font-size: var(--texto-md);
   line-height: var(--interlineado-texto);
   -webkit-font-smoothing: antialiased;
+<<<<<<< HEAD
   /*
    * ⚠️ PIE PEGADO ABAJO. Sin esto, en una pantalla corta —un formulario de
    * login, un estado vacio— el pie queda flotando a media pagina con papel
@@ -431,6 +467,8 @@ body {
 body > main {
   flex: 1 0 auto;
   width: 100%;
+=======
+>>>>>>> origin/main
 }
 
 /* Los titulares usan la familia de titulos y su interlineado apretado. */
@@ -444,6 +482,7 @@ h4 {
   font-weight: var(--peso-normal);
   line-height: var(--interlineado-titulo);
   letter-spacing: var(--tracking-titulo);
+<<<<<<< HEAD
   /*
    * Reparte las palabras entre lineas en vez de dejar una sola colgando al
    * final. Con interlineado 0.95 y mayusculas, una viuda se nota muchisimo.
@@ -473,10 +512,17 @@ video {
  */
 a {
   color: var(--enlace);
+=======
+}
+
+a {
+  color: var(--color-cancha);
+>>>>>>> origin/main
   text-decoration: none;
 }
 
 a:hover {
+<<<<<<< HEAD
   color: var(--enlace-activo);
 }
 
@@ -531,6 +577,23 @@ a:hover {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+=======
+  color: var(--color-tiempo-extra);
+}
+
+/** Tomado literal de la identidad. */
+::selection {
+  background: var(--color-cambio);
+}
+
+/**
+ * Foco visible SIEMPRE. No viene de la identidad: es accesibilidad. Usa el
+ * verde de marca, que contrasta contra el papel y contra las tarjetas claras.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-cancha);
+  outline-offset: 2px;
+>>>>>>> origin/main
 }
 
 /**
@@ -544,6 +607,7 @@ a:hover {
     transition-duration: 0.01ms !important;
   }
 }
+<<<<<<< HEAD
 
 /* =============================================================================
  * TOKENS — CAPA DE PROFUNDIDAD Y DIRECCION
@@ -2522,3 +2586,5 @@ dd {
 .borde-luz {
   box-shadow: 0 0 0 1px var(--borde-luz);
 }
+=======
+>>>>>>> origin/main

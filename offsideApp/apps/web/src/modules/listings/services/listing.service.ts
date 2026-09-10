@@ -11,6 +11,7 @@ import * as listingRepo from '../repositories/listing.repository';
 import { reindex } from './search.service';
 
 /**
+<<<<<<< HEAD
  * Publicaciones — alta, vitrina publica y ficha.
  *
  * ⚠️ ESTE COMENTARIO DECIA QUE FALTABAN EDITAR, PAUSAR, ELIMINAR, IMAGENES,
@@ -20,6 +21,13 @@ import { reindex } from './search.service';
  * equivocado a quien llegara nuevo. Lo que de verdad falta hoy es la
  * MODERACION: `moderation_status` se lee en el filtro del ERD §9.1 y no hay
  * ningun flujo que lo cambie.
+=======
+ * Publicaciones — **alcance minimo**: publicar y listar las propias.
+ *
+ * ⚠️ TODAVIA NO ES EL MODULO COMPLETO. Faltan: editar, pausar, eliminar,
+ * imagenes, moderacion, busqueda e indexado (`search_vector`). Lo que hay
+ * alcanza para que un vendedor ponga algo a la venta y un comprador lo compre.
+>>>>>>> origin/main
  */
 
 export type { ListingRow } from '../repositories/listing.repository';
@@ -105,6 +113,7 @@ export interface PublicListing {
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
   categoryId: string;
+<<<<<<< HEAD
   /**
    * Referencias de catalogo (ERD §8).
    *
@@ -119,6 +128,8 @@ export interface PublicListing {
   brandId: string | null;
   competitionId: string | null;
   seasonId: string | null;
+=======
+>>>>>>> origin/main
   createdAt: string;
 }
 
@@ -131,11 +142,14 @@ export function toPublicListing(row: listingRepo.ListingRow): PublicListing {
     moderationStatus: row.moderationStatus,
     priceAmount: row.priceAmount.toString(),
     currency: row.currency,
+<<<<<<< HEAD
     clubId: row.clubId,
     nationalTeamId: row.nationalTeamId,
     brandId: row.brandId,
     competitionId: row.competitionId,
     seasonId: row.seasonId,
+=======
+>>>>>>> origin/main
     stock: row.stock,
     sizeValue: row.sizeValue,
     condition: row.condition,
@@ -301,6 +315,7 @@ export interface CatalogListing {
   currency: string;
   sizeValue: string;
   condition: listingRepo.ListingRow['condition'];
+<<<<<<< HEAD
   /**
    * Cuantas unidades quedan.
    *
@@ -311,6 +326,8 @@ export interface CatalogListing {
    * unicas, y estaba a un campo de distancia.
    */
   stock: number;
+=======
+>>>>>>> origin/main
   sellerDisplayName: string;
   /**
    * Foto de portada, o `null` si la publicacion no tiene ninguna.
@@ -344,7 +361,10 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
     currency: row.currency,
     sizeValue: row.sizeValue,
     condition: row.condition,
+<<<<<<< HEAD
     stock: row.stock,
+=======
+>>>>>>> origin/main
     sellerDisplayName: row.sellerDisplayName,
     coverUrl: portadas.get(row.id) ?? null,
   }));
@@ -357,6 +377,7 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
  * ven a ~400px de ancho pero en pantallas de alta densidad eso son 800 fisicos,
  * y la miniatura se veria borrosa.
  */
+<<<<<<< HEAD
 /**
  * Portadas de varias publicaciones, en una sola consulta.
  *
@@ -370,6 +391,9 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
  * buscar por id; devolver una lista lo obligaria a recorrerla por cada fila.
  */
 export async function coverUrls(listingIds: string[]): Promise<Map<string, string>> {
+=======
+async function coverUrls(listingIds: string[]): Promise<Map<string, string>> {
+>>>>>>> origin/main
   const imagenes = await imageRepo.findByListingIds(listingIds);
   const portadas = new Map<string, string>();
 
@@ -449,6 +473,7 @@ export async function findPublicListing(id: string): Promise<PublicListingDetail
     }),
   };
 }
+<<<<<<< HEAD
 
 /** Cuantas publicaciones tiene el vendedor autenticado, por estado. */
 export interface ResumenDePublicaciones {
@@ -481,3 +506,5 @@ export async function countMyListings(user: PublicUser): Promise<ResumenDePublic
     total: filas.reduce((suma, fila) => suma + fila.cantidad, 0),
   };
 }
+=======
+>>>>>>> origin/main

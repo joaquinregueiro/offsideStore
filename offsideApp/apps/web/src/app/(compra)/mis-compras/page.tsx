@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+<<<<<<< HEAD
 import Link from 'next/link';
 
 import { IconoCamiseta } from '@/components/iconos';
@@ -7,11 +8,21 @@ import { BotonEnlace, Etiqueta, EstadoVacio, Seccion } from '@/components/ui';
 import { estadoDeOrden, fecha, precio, tonoDeOrden } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import { coverUrls } from '@/modules/listings/services/listing.service';
+=======
+
+import { BotonEnlace, Etiqueta, EstadoVacio } from '@/components/ui';
+import { estadoDeOrden, fecha, precio } from '@/lib/formato';
+import { requireVerifiedSessionUser } from '@/lib/session';
+>>>>>>> origin/main
 import { listMyOrders } from '@/modules/orders/services/order.service';
 
 import estilos from '../resumen.module.css';
 
+<<<<<<< HEAD
 export const metadata: Metadata = { title: 'Mis compras' };
+=======
+export const metadata: Metadata = { title: 'Mis compras — Offside Store' };
+>>>>>>> origin/main
 export const dynamic = 'force-dynamic';
 
 /** Historial de compras (BS-080). */
@@ -19,6 +30,7 @@ export default async function MisCompras() {
   const user = await requireVerifiedSessionUser('/mis-compras');
   const ordenes = await listMyOrders(user);
 
+<<<<<<< HEAD
   /*
    * Las portadas de TODAS las ordenes en una sola consulta. La composicion la
    * hace la pantalla: `orders` no importa el repositorio de `listings`.
@@ -158,5 +170,33 @@ export default async function MisCompras() {
         )}
       </main>
     </Pantalla>
+=======
+  return (
+    <main className={estilos.pagina}>
+      <h1 className={estilos.titulo}>Mis compras</h1>
+
+      {ordenes.length === 0 ? (
+        <EstadoVacio titulo="Todavía no compraste nada">
+          <p style={{ marginBottom: 24 }}>Cuando compres una camiseta, la vas a ver acá.</p>
+          <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
+        </EstadoVacio>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {ordenes.map((orden) => (
+            <li key={orden.id} className={estilos.resumen}>
+              <div className={estilos.linea}>
+                <a href={`/checkout/${orden.id}`}>Orden {orden.orderNumber}</a>
+                <Etiqueta>{estadoDeOrden(orden.status)}</Etiqueta>
+              </div>
+              <div className={estilos.linea}>
+                <span className={estilos.concepto}>{fecha(orden.createdAt)}</span>
+                <span>{precio(orden.totalAmount, orden.currency)}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+>>>>>>> origin/main
   );
 }
