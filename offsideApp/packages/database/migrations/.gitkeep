@@ -1,0 +1,2 @@
+# Las migraciones generadas por `drizzle-kit generate` se versionan en esta carpeta.
+# Todavia no hay ninguna: el schema de Drizzle no fue implementado (ver src/schema/index.ts).

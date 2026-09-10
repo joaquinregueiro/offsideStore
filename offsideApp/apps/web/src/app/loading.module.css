@@ -1,0 +1,55 @@
+/**
+ * Fantasma de la portada de la vitrina.
+ *
+ * ⚠️ VIVE ACA Y NO EN `components/esqueletos.module.css` PORQUE ES DE ESTA
+ * PANTALLA. El esqueleto de la barra y el de la grilla los comparten las tres
+ * rutas publicas; la portada la tiene una sola.
+ *
+ * ⚠️ LAS MEDIDAS SON LAS DE LA PORTADA REAL, no unas inventadas: mismo
+ * `min-height`, mismo canal y misma media query de 640px que `page.module.css`.
+ * Un esqueleto con proporciones distintas produce exactamente el salto que
+ * existe para evitar —y aca son ~700px, en cada visita, porque la vitrina es
+ * `force-dynamic`—.
+ *
+ * 🟡 El fantasma cubre la vitrina, que es de donde entra casi todo el mundo.
+ * `/buscar` y `/p/[id]` comparten este `loading.tsx` y NO tienen portada: ahi
+ * sobra. La salida de fondo es mover las tres pantallas publicas a un grupo de
+ * rutas con layout propio, no un `loading.tsx` por pantalla.
+ */
+.portadaFantasma {
+  display: grid;
+  align-content: center;
+  min-height: min(86svh, 780px);
+  padding: var(--espacio-seccion) var(--canal);
+}
+
+.portadaFantasmaInterior {
+  width: 100%;
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+/**
+ * ⚠️ SE GANA POR DESCENDENCIA. `ui.module.css` y la utilidad global `.esqueleto`
+ * declaran el fondo con la misma especificidad (0,1,0) y en otros archivos: un
+ * empate deja barras GRISES sobre el verde, que se leen como manchas y no como
+ * carga.
+ *
+ * Papel al 14% compuesto sobre Verde Cancha da `#26855a`: se ve como un hueco en
+ * la superficie, que es lo que un esqueleto tiene que parecer. No lleva texto
+ * encima, asi que no tiene requisito de contraste.
+ */
+.portadaFantasma .lineaClara {
+  background-color: rgb(250 250 247 / 0.14);
+  border-radius: var(--radio);
+}
+
+@media (max-width: 640px) {
+  .portadaFantasma {
+    min-height: auto;
+    padding-block: var(--espacio-8);
+  }
+}

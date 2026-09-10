@@ -1,0 +1,1035 @@
+/**
+ * REGISTRO, INGRESO Y RECUPERACION — el marco de las seis pantallas de `(auth)`.
+ *
+ * ⚠️ ES EL PRIMER CONTACTO REAL CON LA MARCA. Una columna es la marca y la otra
+ * el formulario. En telefono la de marca se pliega a una franja con corte
+ * diagonal y la hoja del formulario se MONTA encima: deja de ser "un formulario
+ * debajo de un banner" y pasa a ser una composicion de dos planos.
+ *
+ * ⚠️ NINGUN KEYFRAME GLOBAL SE REFERENCIA DESDE ACA. En un CSS Module los
+ * nombres de `@keyframes` —y las referencias de `animation-name`— se hashean con
+ * el modulo: escribir `animation: alzar` en este archivo apuntaria a una
+ * animacion que no existe y NO daria ningun error. Todo el movimiento del
+ * sistema entra por CLASES globales puestas en el TSX (`escalona`,
+ * `entra-acerca`, `entra-suave`, `entra-lineas`, `patron-vivo`, `marquesina`,
+ * `desplegable`, `subraya`, `display`, `titular-degradado`, `esqueleto`); los
+ * tres keyframes de este archivo son propios y con nombres que nadie mas usa.
+ *
+ * ⚠️ LA SUPERFICIE NO SE ESCRIBE A MANO. `background: var(--color-cancha)` a
+ * secas era lo que garantizaba que el panel quedara afuera de cualquier mejora
+ * del sistema. Ahora la trae `sup-cancha con-grano` desde el TSX, y con ella
+ * vienen la malla, el grano, el filo de luz, `--color-foco` en Amarillo Cambio
+ * —el anillo verde sobre verde no existe— y `--patron-color`.
+ */
+
+/* ==================================================================== marco */
+
+.marco {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: stretch;
+  /**
+   * ⚠️ ERA `60vh` Y POR ESO EL VERDE NUNCA LLEGABA AL PLIEGUE: quedaba una
+   * franja de marca flotando con papel debajo. El piso de 520px protege una
+   * notebook chica; el techo de 880px evita que en un monitor de 27" el
+   * formulario quede perdido en el medio de un campo de futbol.
+   *
+   * ⚠️ EL `60vh` QUEDA COMO FALLBACK PRIMERO. Si `svh` no esta soportado el
+   * `clamp()` entero es invalido y la declaracion se descarta: sin esta linea de
+   * respaldo la pantalla perderia su altura minima en silencio.
+   */
+  min-height: 60vh;
+  min-height: clamp(520px, 74svh, 880px);
+}
+
+@media (max-width: 900px) {
+  .marco {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+}
+
+/**
+ * RED LOCAL DE `prefers-reduced-motion`.
+ *
+ * ⚠️ HOY NO ATRAPA NADA, Y ESTA IGUAL A PROPOSITO — pero la razon que se
+ * escribia aca antes era falsa y hay que decirlo. El peligro real existe: la
+ * regla global de `tokens.css` aplasta la DURACION y no el DELAY, y una
+ * animacion con `both` que todavia no arranco se queda en su keyframe `from`,
+ * que en `acercarse`, `aparecer` y `alzar` es `opacity: 0`. O sea que un
+ * escalonado mal declarado deja la hoja VACIA justo para quien pidio menos
+ * movimiento.
+ *
+ * Verificado en `movimiento.css`: las seis clases que este grupo usa —`entra`,
+ * `entra-suave`, `entra-acerca`, `entra-seco`, `escalona`, `entra-lineas`— ya
+ * viven adentro de `@media (prefers-reduced-motion: no-preference)`, asi que
+ * bajo `reduce` ni siquiera se declaran. Esto queda como red por si mañana
+ * alguien saca una de la media query: cuesta cuatro lineas y el dia que haga
+ * falta ya esta puesta.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .marco,
+  .marco :global(*),
+  .marco :global(*)::before,
+  .marco :global(*)::after {
+    animation-delay: 0ms !important;
+    --retraso: 0ms;
+  }
+}
+
+/* ==================================================================== panel */
+
+/**
+ * ⚠️ LOS DOS PSEUDO-ELEMENTOS DEL PANEL YA ESTAN OCUPADOS: `sup-cancha::before`
+ * es el filo de luz y `con-grano::after` es la textura. Todo lo demas que quiera
+ * pintarse necesita su propio elemento. No es un capricho de maquetado: es la
+ * razon por la que `.panelPatron` y `.costura` existen como `<div>`.
+ *
+ * ⚠️ `--pad-x` / `--pad-y` EXISTEN PARA QUE LA CINTA PUEDA SANGRAR. Sin ellas
+ * habria que repetir el margen negativo en cada media query, y la primera vez
+ * que alguien cambie el padding la cinta deja de llegar al borde.
+ */
+.panel {
+  --pad-x: var(--espacio-7);
+  --pad-y: var(--espacio-9);
+
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: var(--pad-y) var(--pad-x);
+
+  /* Dos filas: el contenido se centra arriba, la cinta ancla abajo. */
+  display: grid;
+  grid-template-rows: 1fr auto;
+
+  /**
+   * ⚠️ ANCLA ESPACIAL ENTRE PANTALLAS DE AUTH. Con nombre propio, el panel queda
+   * FUERA del snapshot de `root`, asi que al pasar de /ingresar a /crear-cuenta
+   * la marca no parpadea: se mueve el formulario y nada mas. Es el mismo
+   * criterio —y el mismo par de reglas— que `barra` y `pie` en `movimiento.css`.
+   */
+  view-transition-name: panel-marca;
+}
+
+/**
+ * ⚠️ LAS REGLAS DE VIEW TRANSITION SON PSEUDO-ELEMENTOS DEL DOCUMENTO, no del
+ * modulo: van en `:global()` o no aplican nunca. El nombre `panel-marca` no lo
+ * hashea el bundler —no es una clase ni un keyframe—, asi que coincide.
+ */
+:global(::view-transition-group(panel-marca)) {
+  animation: none;
+}
+
+/**
+ * ⚠️⚠️ EL `new` SE CONGELA Y EL `old` **NO**, Y ESA ASIMETRIA ES EL ARREGLO. Con
+ * `animation: none` en LOS DOS —como lo copie de `barra`/`pie`— el panel dejaba
+ * de irse: al salir de auth hacia cualquier otra pantalla (el logo de la barra,
+ * "Ir al catálogo", "Ver camisetas") no hay `new`, asi que la foto del panel
+ * quedaba a opacidad plena TAPANDO la pantalla nueva durante toda la transicion
+ * y despues desaparecia de golpe. `barra` y `pie` pueden congelar los dos porque
+ * existen en las 22 pantallas y su par NUNCA falta; `panel-marca` existe en
+ * seis, o sea que la mitad de sus transiciones son sin par.
+ *
+ * Dejando que el `old` corra el desvanecido del navegador se cubren los tres
+ * casos y NO se paga ningun fantasma:
+ *   auth → auth   el `new` es opaco, `mix-blend-mode: normal` y se pinta ARRIBA:
+ *                 el `old` se desvanece por debajo y no se ve nada moverse —que
+ *                 es justamente lo que este bloque existe para conseguir—.
+ *   auth → otra   sin `new`, el panel se va desvaneciendo en vez de estallar.
+ *   otra → auth   sin `old`, el `new` congelado aparece entero de una, igual que
+ *                 la barra: es el ancla, no entra animandose.
+ */
+:global(::view-transition-old(panel-marca)) {
+  mix-blend-mode: normal;
+}
+
+:global(::view-transition-new(panel-marca)) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    --pad-x: var(--espacio-5);
+    --pad-y: var(--espacio-6);
+    /**
+     * ⚠️ EL CORTE DIAGONAL ES LA BANDERA APLICADA A LA ESTRUCTURA, y es lo unico
+     * que hace que un telefono deje de verse como dos rectangulos apilados.
+     *
+     * ⚠️ VIENE EN PAR CON SU COMPENSACION PORQUE EL CORTE COME ALTURA REAL: sin
+     * el `padding-bottom` extra la cinta quedaria tijereteada en diagonal.
+     * ⚠️ `clip-path` RECORTA TAMBIEN LA SOMBRA, EL ANILLO DE FOCO Y CUALQUIER
+     * HIJO DESBORDADO — por eso el panel no contiene ningun `<details>`, ningun
+     * control ni nada pegado, y por eso el corte NO se usa en escritorio, donde
+     * la costura llega al borde.
+     */
+    padding-bottom: calc(var(--pad-y) + var(--corte-compensacion));
+    clip-path: var(--corte-abajo);
+  }
+}
+
+/**
+ * El rombo de la identidad §05, en escala de bloque y en deriva lenta.
+ *
+ * ⚠️ EL SELECTOR VA DUPLICADO Y NO ES ESTILO: `patron-vivo` declara
+ * `position: relative` con especificidad (0,1,0), igual que este bloque. El
+ * empate lo decidiria el orden de concatenacion entre el CSS global y este
+ * modulo, y si pierde, el patron deja de ser absoluto, se convierte en item de
+ * la grilla del panel y ROMPE EL PANEL ENTERO. Duplicar lo lleva a (0,2,0) y
+ * saca al orden de la ecuacion.
+ *
+ * ⚠️ AHORA TAMBIEN SE VE EN TELEFONO. Estaba en `display: none` a ≤900px, o sea
+ * que la marca desaparecia justo donde llega la mayoria. Se achica la escala en
+ * vez de apagarla.
+ */
+.panelPatron.panelPatron {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to left, transparent 34%, rgb(0 0 0 / 0.8) 100%);
+  mask-image: linear-gradient(to left, transparent 34%, rgb(0 0 0 / 0.8) 100%);
+}
+
+/**
+ * ⚠️⚠️ EL ROMBO SE ESCRIBE LITERAL ACA, Y NO POR GUSTO: `var(--patron-rombos)`
+ * NO ACEPTA QUE SE LE CAMBIE EL COLOR. El valor computado de una custom property
+ * ya lleva sus `var()` SUSTITUIDOS, y `--patron-rombos` se declara en `:root`:
+ * el `var(--patron-color)` que lleva adentro se resuelve ALLA y despues se
+ * hereda ya resuelto. Redefinir `--patron-color` en un descendiente —o en el
+ * MISMO elemento— no cambia una sola pieza.
+ *
+ * ⚠️ LO VI EN EL NAVEGADOR Y NO ERA COSMETICO: el panel salia con un damero
+ * `#e4e6de` —el gris por defecto de `:root`— SOBRE Verde Cancha. O sea una capa
+ * que ACLARA una superficie de marca con texto encima, que es exactamente lo que
+ * la fundacion prohibe: papel sobre `#e4e6de` da **1.13:1**. `form.module.css`
+ * documenta la misma trampa y la resuelve igual.
+ *
+ * Con el rombo oscuro el peor punto solo MEJORA: papel sobre `--verde-950` al
+ * 45% compuesto sobre cancha da **7.0:1**, contra los 5.16:1 del verde plano.
+ */
+.panelPatron.panelPatron::before {
+  --rombo: color-mix(in srgb, var(--verde-950) 45%, transparent);
+  background-image:
+    linear-gradient(45deg, var(--rombo) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--rombo) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--rombo) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--rombo) 75%);
+}
+
+@media (max-width: 900px) {
+  .panelPatron.panelPatron {
+    /* En una franja corta, un mosaico de 88px se lee como cajas, no como patron. */
+    --patron-paso: var(--patron-paso-cinta);
+    -webkit-mask-image: linear-gradient(to top, transparent 8%, rgb(0 0 0 / 0.65) 100%);
+    mask-image: linear-gradient(to top, transparent 8%, rgb(0 0 0 / 0.65) 100%);
+  }
+
+  .panelPatron.panelPatron::before {
+    background-size: var(--patron-tamanio-cinta);
+    background-position: var(--patron-posicion-cinta);
+  }
+}
+
+/**
+ * COSTURA: el filete de acento que separa la marca del formulario en escritorio.
+ *
+ * ⚠️ SU ESTADO BASE ES `scaleY(1)`, NO `scaleY(0)`. El keyframe solo declara
+ * `from`: sin soporte de animacion, sin JS o con `prefers-reduced-motion` —donde
+ * la duracion queda aplastada— la costura queda ENTERA. Al reves, un elemento
+ * decorativo puede quedar en cero para siempre.
+ */
+.costura {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 6px;
+  z-index: var(--z-contenido);
+  pointer-events: none;
+  background-image: var(--degradado-acento);
+  transform-origin: top center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .costura {
+    animation: filoDeCostura var(--dur-escena) var(--curva-corte) 160ms both;
+  }
+}
+
+@media (max-width: 900px) {
+  /* En telefono la separacion la hace el corte diagonal, no una linea. */
+  .costura {
+    display: none;
+  }
+}
+
+@keyframes filoDeCostura {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.panelContenido {
+  position: relative;
+  z-index: var(--z-contenido);
+  align-self: center;
+  max-width: 34ch;
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+}
+
+@media (max-width: 900px) {
+  .panelContenido {
+    max-width: none;
+    margin-left: 0;
+    gap: var(--espacio-3);
+  }
+}
+
+/**
+ * ⚠️ ESTE BLOQUE ES LA MASCARA DEL REVELADO POR LINEAS Y NO ES OPCIONAL. La
+ * clase global `entra-lineas` solo anima `> span > *`; a diferencia de
+ * `.revela-lineas`, NO trae el `overflow: clip` del span. Sin el, el
+ * `translateY(100%)` del keyframe no revela nada: muestra el texto pasando por
+ * encima de la linea de abajo. El padding/margin compensados evitan que el clip
+ * corte los acentos y las descendentes.
+ */
+/**
+ * ⚠️ EL MARGEN SE DECLARA ACA PORQUE EL TITULAR DEL PANEL ES UN `<p>`, NO UN
+ * `<h2>`: vive en el layout, o sea antes del `<h1>` de la pantalla, y como
+ * encabezado se colaba primero en la navegacion por titulos de las seis
+ * pantallas. La regla de `tokens.css` que pone `margin: 0` alcanza a `h1..h4`,
+ * asi que un parrafo se traeria los margenes del navegador y romperia el `gap`
+ * del panel.
+ */
+.panelTitulo {
+  margin: 0;
+}
+
+.panelTitulo > span {
+  display: block;
+  overflow: clip;
+  /**
+   * ⚠️ LA COMPENSACION ES DE 0.14em Y ESTA MEDIDA, NO ELEGIDA. Con
+   * `--interlineado-display` en 0.86 la caja de linea es MAS BAJA que la caja de
+   * fuente, asi que el glifo asoma por arriba y por abajo y el `overflow: clip`
+   * se lo come. Medido sobre Big Noodle con la Canvas API: ascendente 0.89em,
+   * descendente 0.18em, o sea 1.07em de caja contra 0.86 de linea → 0.105em de
+   * asomo por lado. Los 0.06em que traen `.revela-lineas` y este bloque cubrian
+   * 0.06 de esos 0.105: con MAYUSCULAS SIN ACENTO no se nota porque la tinta no
+   * llega al borde de la caja, pero una `Á` sube 0.098em y quedaba rapada. Y con
+   * la tipografia de respaldo ('Arial Narrow') el asomo es todavia mayor.
+   * 0.14em cubre la caja entera de las dos, y lo unico que cuesta es que la
+   * linea empiece a asomar 4px antes durante el revelado.
+   */
+  padding-block: 0.14em;
+  margin-block: -0.14em;
+}
+
+.panelTitulo > span > span {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  /**
+   * ⚠️ TECHO EN LA BANDA PLEGADA. Sin el, a 899px `--display-3` da ~45px en dos
+   * lineas de mayusculas y empuja el formulario fuera de pantalla en tablet
+   * vertical. El minimo sigue siendo 28px, que es lo que ya daba el override
+   * anterior: nada se achica respecto de hoy.
+   * ⚠️ Y `--tracking-display` (-0.025em) es correccion optica para 84px+: a 30px
+   * sobre Big Noodle, que ya es condensada, aprieta.
+   */
+  .panelTitulo.panelTitulo {
+    font-size: clamp(28px, 1.3rem + 2.2vw, 38px);
+    letter-spacing: var(--tracking-titulo);
+  }
+}
+
+/**
+ * ⚠️ EL RETRASO SE DECLARA ACA Y NO EN UN `style` INLINE. Un
+ * `style={{'--retraso': '260ms'} as CSSProperties}` esparce el ritmo del sistema
+ * por el marcado y obliga a castear en cada uso.
+ */
+.panelBajada {
+  margin: 0;
+  color: var(--color-sobre-cancha);
+  font-size: var(--texto-base);
+  --retraso: 260ms;
+}
+
+/**
+ * Las señales de confianza.
+ *
+ * ⚠️ SON HECHOS DEL SISTEMA, NO PROMESAS. Cada una se puede comprobar leyendo el
+ * codigo. No hay ningun "vendedor verificado" ni sello: BR-003 y SS-012 dicen
+ * que conectar Mercado Pago NO otorga confianza.
+ */
+.panelLista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  --retraso: 340ms;
+}
+
+.panelLista li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  font-size: var(--texto-sm);
+  color: var(--color-sobre-cancha);
+}
+
+.panelLista svg {
+  flex: none;
+  color: var(--color-cambio);
+  margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+  /**
+   * ⚠️ EN TELEFONO QUEDA UNA SOLA SEÑAL, NO CERO. Antes se escondian las tres y
+   * la bajada: la franja quedaba en un logo sobre verde plano. Tres items en
+   * 288px utiles ocupan seis lineas y empujan el campo de email fuera de
+   * pantalla; uno entra en dos. Se conserva el de Mercado Pago porque es el
+   * unico que responde la pregunta que se hace quien esta por dar su email.
+   */
+  .panelBajada {
+    display: none;
+  }
+
+  .panelLista li:nth-child(n + 2) {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------- cinta viva */
+
+/**
+ * CINTA CINETICA al pie del panel: los clubes que el catalogo realmente tiene.
+ *
+ * ⚠️ SANGRA HASTA EL BORDE, Y HAY QUE PELEARLE A LA CLASE GLOBAL PARA LOGRARLO.
+ * `.marquesina` trae `max-width: 100%`, que en un grid item resuelve contra el
+ * area de la celda: con el ancho fijado, el item deja de tener tamaño auto,
+ * `stretch` degrada a `start` y la cinta queda corrida a la izquierda con un
+ * hueco de verde a la derecha. `max-width: none` + `justify-self: stretch` lo
+ * devuelve al comportamiento correcto. El selector va DUPLICADO por la misma
+ * razon que `.panelPatron`.
+ *
+ * ⚠️ NO DESBORDA A 320px aunque la pista mida 4000px: `.marquesina` corta con
+ * `overflow: hidden` y el panel tambien.
+ */
+.panelCinta.panelCinta {
+  grid-row: 2;
+  position: relative;
+  z-index: var(--z-contenido);
+  justify-self: stretch;
+  max-width: none;
+  width: auto;
+  margin-top: var(--espacio-7);
+  margin-inline: calc(-1 * var(--pad-x));
+  margin-bottom: calc(-1 * var(--pad-y));
+  padding-block: var(--espacio-4);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+@media (max-width: 900px) {
+  .panelCinta.panelCinta {
+    /* El corte diagonal pasa por debajo: la cinta no lo toca. */
+    margin-bottom: 0;
+    margin-top: var(--espacio-5);
+  }
+}
+
+/**
+ * ⚠️ DURACION PROPIA, NO `--dur-marquesina-corta`. Ese token esta calibrado para
+ * una cinta a ancho completo; con doce nombres en un panel de ~600px, 26s dan
+ * ~25px/s y no se lee como cinta: se lee como que algo se colgo.
+ *
+ * ⚠️ VA ADENTRO DE LA MEDIA QUERY porque la animacion que modifica es infinita y
+ * vive adentro de la suya: afuera seria una declaracion que apunta a nada.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .panelCinta :global(.marquesina-pista) {
+    animation-duration: 20s;
+  }
+}
+
+.panelCinta :global(.marquesina-grupo) {
+  gap: var(--espacio-6);
+  padding-inline: var(--espacio-3);
+}
+
+.panelCinta li {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-6);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* Amarillo Cambio sobre el punto MAS CLARO de --malla-cancha: 4.59:1, AA. */
+  color: var(--color-cambio);
+}
+
+/** El rombo de la bandera como separador. Decorativo puro. */
+.rombo {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  background: var(--color-cambio);
+  transform: rotate(45deg);
+}
+
+@media (max-width: 900px) {
+  .panelCinta li {
+    font-size: var(--texto-lg);
+    gap: var(--espacio-5);
+  }
+}
+
+/* ================================================================== columna */
+
+/**
+ * ⚠️ EL FONDO PASA A `transparent` Y ESO ARREGLA ALGO CONCRETO: pintar
+ * `--color-papel` opaco TAPA la malla de papel y el grano que la fundacion pone
+ * en `body::before/::after`. La columna del formulario iba a quedar MAS plana
+ * despues de la fundacion que antes.
+ *
+ * ⚠️ EL PADDING NO ES DECORATIVO. Sin el, la hoja —que es `width: 100%`— toca
+ * los dos bordes del telefono y el radio, la sombra y el filete quedan pegados
+ * al bisel: exactamente el objeto que se estaba tratando de construir,
+ * destruido en el dispositivo donde llega la mayoria. `--canal` da 16px de cada
+ * lado a 320px.
+ */
+.columna {
+  position: relative;
+  z-index: var(--z-contenido);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espacio-8) var(--canal);
+  background: transparent;
+}
+
+@media (max-width: 900px) {
+  /**
+   * ⚠️ LA HOJA SE MONTA SOBRE EL VERDE. Es la otra mitad del corte diagonal: sin
+   * el solape el corte es un adorno; con el, la pantalla pasa de "banner +
+   * formulario" a una composicion de dos planos. El `z-index` de `.columna` es
+   * lo que la pone por encima del panel.
+   */
+  .columna {
+    margin-top: calc(-1 * var(--corte-compensacion));
+    padding-top: var(--espacio-5);
+    padding-bottom: var(--espacio-7);
+  }
+}
+
+/**
+ * LIMITE DE ERROR DEL GRUPO.
+ *
+ * ⚠️ EL CANAL SE COBRABA DOS VECES. `ErrorDePantalla` devuelve su propio
+ * `Contenedor`, que pone `padding-inline: var(--canal)`, y cae adentro de
+ * `.columna`, que ya lo puso: a 320px eran 32px de cada lado y el panel del
+ * error —la unica pantalla del grupo que no elige su ancho— quedaba en 256.
+ * Apagar la variable desde afuera lo resuelve sin tocar `ui.module.css`, que no
+ * es mio: `--canal` es la unica superficie que ese componente expone.
+ *
+ * ⚠️ `0px` Y NO `0`: `padding-inline` no acepta un cero sin unidad cuando llega
+ * por `var()`, y una declaracion invalida ahi no avisa, simplemente no aplica.
+ */
+.limiteDeError {
+  --canal: 0px;
+  width: 100%;
+}
+
+/* ===================================================================== hoja */
+
+/**
+ * LA HOJA: el formulario deja de ser texto suelto sobre papel y pasa a ser un
+ * objeto apoyado.
+ *
+ * ⚠️ NO SE COMBINA CON `form.module.css .pagina`, Y ESO ES DELIBERADO. Esa clase
+ * dibuja el asta de la bandera en el margen izquierdo y trae su propia entrada
+ * al primer pintado; combinarlas daria tres marcas de acento en la misma caja y
+ * dos animaciones de entrada para un solo evento. Usando solo esta clase, el
+ * ancho y el padding tienen UN dueño.
+ *
+ * ⚠️ `width: 100%` NO ES REDUNDANTE Y ARREGLA UN BUG REAL. `.columna` es un flex
+ * container en FILA: en el eje principal un item no se estira nunca —no hay
+ * `flex-grow`—, asi que sin esto la caja toma su `max-content` y el ancho
+ * cambiaria entre /ingresar (2 campos) y /crear-cuenta (3 campos + casilla).
+ *
+ * ⚠️ SIN `--luz-superior`. Ese filo es `inset 0 1px 0 rgb(255 255 255 / .8)`:
+ * blanco al 80% sobre blanco puro no se ve. Es una capa de sombra de mas en el
+ * elemento que mas se repinta de la pantalla. El canto lo da el filete.
+ */
+.hoja {
+  position: relative;
+  width: 100%;
+  max-width: min(460px, 100%);
+  padding: var(--espacio-8) var(--espacio-7) var(--espacio-7);
+  background-color: var(--superficie-1);
+  background-image: var(--malla-papel);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-0), var(--sombra-2);
+}
+
+@media (max-width: 480px) {
+  .hoja {
+    padding: var(--espacio-7) var(--espacio-5) var(--espacio-6);
+  }
+}
+
+/**
+ * FILETE DE ACENTO que se dibuja al cargar: el canto superior de la hoja.
+ *
+ * ⚠️ ESTADO BASE `scaleX(1)`, NO `scaleX(0)`: mismo criterio que la costura. Sin
+ * animacion, el filete queda entero.
+ * ⚠️ `scaleX`, NUNCA `width`: el ancho rehace layout, el transform corre en el
+ * compositor.
+ */
+.hoja::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  border-radius: var(--radio) var(--radio) 0 0;
+  background-image: var(--degradado-acento);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hoja::before {
+    animation: filoDeHoja var(--dur-escena) var(--curva-corte) 120ms both;
+  }
+}
+
+@keyframes filoDeHoja {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* --------------------------------------------------- encabezado de la hoja */
+
+/**
+ * ⚠️ EL ESCALONADO VIVE EN UN ENVOLTORIO Y NO EN LA HOJA ENTERA, Y ES LA
+ * DIFERENCIA ENTRE QUE FUNCIONE Y QUE ROMPA UNA REGLA DEL SISTEMA. Con
+ * `escalona` en la hoja, el aviso de error —que `ui.tsx` hace entrar con
+ * `entra-seco`, 140ms y sin desplazamiento— quedaba adentro y recibia
+ * `acercarse-corto` de 420ms con escala, porque `.escalona > *` y `.entra-seco`
+ * tienen la MISMA especificidad (0,1,0) y gana la que se declara ultima. Aca el
+ * escalonado alcanza a tres elementos de texto y a nada mas.
+ */
+.encabezado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: var(--espacio-6);
+}
+
+/**
+ * ⚠️ EL ANTETITULO ES LO QUE SACA A ESTAS PANTALLAS DEL REGISTRO ADMINISTRATIVO:
+ * hace que "Ingresar" se lea como una seccion del sitio y no como el encabezado
+ * de un tramite. Verde Cancha sobre la hoja: **5.23:1**, AA.
+ *
+ * ⚠️ EL ROMBO VA EN UN PSEUDO Y NO EN EL TEXTO: si fuera un caracter, un lector
+ * de pantalla lo leeria antes de "Tu cuenta".
+ */
+.antetitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-cancha);
+}
+
+.antetitulo::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  background: var(--color-cancha);
+  transform: rotate(45deg);
+}
+
+/**
+ * EL TITULAR REAL DE LA PANTALLA.
+ *
+ * ⚠️ EL SELECTOR VA DUPLICADO PORQUE ESTA CLASE CONVIVE CON DOS (0,1,0) QUE
+ * DECLARAN `font-size`: `form.module.css .titulo` y la global `.display`. Cual
+ * gana dependeria del orden de concatenacion, y `.display` entrega
+ * `--display-1` —hasta 132px— sobre una hoja de 460px.
+ *
+ * ⚠️ EL RANGO ARRANCA EN 36px Y NO EN `--display-3`. `--display-3` entrega
+ * ~32.6px a 320px, o sea que ACHICARIA el titulo de "Ingresar" justo en el
+ * telefono; el minimo de `--texto-3xl` —el valor de hoy— es 36. Nada se achica
+ * en ningun viewport y el techo sube a 52 para emparejar con el titular del
+ * panel, que antes le ganaba en peso visual al `<h1>` de la pantalla.
+ */
+.titulo.titulo {
+  margin: var(--espacio-3) 0 0;
+  font-size: clamp(36px, 1.9rem + 1.6vw, 52px);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  /* A ~52px entran ~12 caracteres en 288px utiles: una palabra larga empuja la pagina. */
+  overflow-wrap: anywhere;
+}
+
+.bajada.bajada {
+  margin: var(--espacio-4) 0 0;
+  max-width: 46ch;
+}
+
+/* ------------------------------------------------- cuerpo, avisos y pie */
+
+.cuerpo {
+  --retraso: 220ms;
+}
+
+.avisoPrevio {
+  margin-bottom: var(--espacio-6);
+}
+
+.pieEnlaces {
+  --retraso: 320ms;
+}
+
+/* =============================================== tarjetas de confirmacion */
+
+/**
+ * ⚠️ LAS TRES PANTALLAS DE CONFIRMACION NO USAN `Panel` DE `ui.tsx`, Y NO ES POR
+ * DESCONFIANZA DE ESE COMPONENTE: es que necesitan DOS PLANOS. `Panel` es una
+ * caja de un solo tono; aca la cabecera es superficie —de marca o calida— y el
+ * cuerpo es claro. Eso es profundidad, no una sombra mas grande.
+ *
+ * Componerlas aca no edita un solo byte de `ui.module.css`, y de paso elimina de
+ * raiz el bug del sello: `.panelAlerta .panelIcono` pinta el WRAPPER, asi que un
+ * `color` en un hijo mas interno gana por proximidad y el sobre de "ese enlace
+ * ya no sirve" salia VERDE, borrando la unica señal de tono del panel.
+ */
+.tarjeta {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  overflow: hidden;
+  border-radius: var(--radio);
+  background-color: var(--superficie-1);
+  background-image: var(--malla-papel);
+  box-shadow: var(--sombra-0), var(--sombra-2);
+}
+
+/**
+ * ⚠️ LA CABECERA NO ESCRIBE SU COLOR: se lo pone `sup-cancha con-grano` desde el
+ * TSX, con su malla, su grano, su filo de luz y su `--color-foco` en Amarillo
+ * Cambio. Papel sobre el punto MAS CLARO de la malla: **5.16:1**.
+ */
+.tarjetaCabecera {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-5);
+  padding: var(--espacio-8) var(--espacio-6);
+  text-align: center;
+}
+
+/**
+ * ⚠️ LA VARIANTE DE ALERTA NO ES ROJA NI NARANJA MACIZA. Un bloque relleno para
+ * "ese enlace ya no sirve" trata un enlace vencido como una catastrofe. Es la
+ * superficie calida del sistema (`sup-calida` desde el TSX, #f7f4cf) con Tinta
+ * encima: **14.71:1**. El unico naranja es el filo superior, que es FORMA.
+ */
+.tarjetaCabeceraAlerta {
+  color: var(--color-tinta);
+  border-top: 4px solid var(--color-naranja);
+}
+
+.tarjetaTitulo {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tarjetaCuerpo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-5);
+  padding: var(--espacio-7) var(--espacio-6);
+  text-align: center;
+  color: var(--color-neutro-texto);
+  max-width: 46ch;
+  margin: 0 auto;
+}
+
+.tarjetaCuerpo p {
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .tarjetaCabecera {
+    padding: var(--espacio-7) var(--espacio-5);
+  }
+
+  .tarjetaCuerpo {
+    padding: var(--espacio-6) var(--espacio-5);
+  }
+}
+
+/* -------------------------------------------------------------- sello */
+
+/**
+ * SELLO: el icono deja de ser un glifo suelto y pasa a ser un objeto.
+ *
+ * ⚠️ LOS COLORES SON VARIABLES Y NO VALORES, Y ESE ES EL PUNTO. Clavar
+ * `color: var(--color-cancha)` es lo que da vuelta el color del icono en las
+ * pantallas de alerta. Aca cada variante declara los suyos y no hay forma de que
+ * una tarjeta de error termine con el sello verde.
+ *
+ * Contrastes verificados (icono = grafico, minimo 3:1 por WCAG 1.4.11):
+ *   claro   Amarillo Cambio sobre el vidrio del verde ……… 3.54:1
+ *   alerta  #a94c00 sobre #ffefdf ………………………………………………… 5.01:1
+ *   marca   Verde Cancha sobre #eef5f0 …………………………………… 4.87:1
+ */
+.sello {
+  --sello-fondo: var(--superficie-marca);
+  --sello-color: var(--color-cancha);
+  --sello-anillo: var(--color-cancha);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  flex: none;
+  border-radius: var(--radio-pastilla);
+  /**
+   * ⚠️ EL ARO VA SOLIDO Y NO AL 40%, Y ES LO UNICO QUE HACE QUE EL SELLO SEA UN
+   * OBJETO. Medido sobre la cabecera de alerta, que es el peor caso: el relleno
+   * del sello (#ffefdf) contra `--superficie-calida` (#f7f4cf) da **1.01:1** —o
+   * sea que el disco no existe— y el aro al 40% de naranja da **1.35:1**. Con el
+   * aro solido en `--color-alerta-hondo` el borde salta a **5.05:1** y el disco
+   * se lee como una pieza apoyada, que es todo el punto de esta variante.
+   * En la cabecera de marca el mismo aro solido en Amarillo Cambio da 4.58:1
+   * contra el verde, contra 2.22:1 al 40%.
+   *
+   * El pulso es aparte y vive en `::after`: este aro esta SIEMPRE.
+   */
+  border: 1px solid var(--sello-anillo);
+  background: var(--sello-fondo);
+  color: var(--sello-color);
+}
+
+/**
+ * ⚠️ EL ARO NO ES `--color-naranja`. El naranja de marca es RELLENO: como linea
+ * sobre la superficie calida da **2.03:1**, debajo del 3:1 que WCAG 1.4.11 pide
+ * para el contorno de un grafico. El hondo es el mismo matiz, legible, y ademas
+ * empareja con el color del icono.
+ */
+.selloAlerta {
+  --sello-fondo: #ffefdf;
+  --sello-color: var(--color-alerta-hondo);
+  --sello-anillo: var(--color-alerta-hondo);
+}
+
+/** Sobre la cabecera de marca: el sello se hace con luz, no con tinte. */
+.selloClaro {
+  --sello-fondo: rgb(250 250 247 / 0.14);
+  --sello-color: var(--color-cambio);
+  --sello-anillo: var(--color-cambio);
+  box-shadow: var(--luz-superior-oscura);
+}
+
+.sello::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--sello-anillo);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/**
+ * ⚠️ EL PULSO SOLO VA EN LA PANTALLA DE EXITO, DOS VUELTAS, Y PARA (3.9s). No es
+ * `infinite` y no puede serlo: WCAG 2.2.2 exige poder detener cualquier
+ * movimiento de mas de cinco segundos, y algo que late para siempre al lado de
+ * una confirmacion se lee como una alarma.
+ *
+ * ⚠️ `scale(1.34)` SOBRE 72px CRECE 12px POR LADO y el `gap` de la cabecera es
+ * `--espacio-5` (20px): el anillo NO llega al titulo en ningun cuadro.
+ *
+ * ⚠️ ANIMA `transform` + `opacity` EN UN PSEUDO, no un `box-shadow` sobre el
+ * sello: la sombra es pintura y repinta en cada cuadro. Y el anillo no toca el
+ * texto, asi que el contraste no cambia nunca.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .selloPulsa::after {
+    animation: anilloDeSello 1.8s var(--curva-salida) 320ms 2;
+  }
+}
+
+@keyframes anilloDeSello {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.34);
+  }
+}
+
+/* ------------------------------------------------------ notas y detalles */
+
+.duracion {
+  font-size: var(--texto-sm);
+  /* #6b736a sobre la hoja: 4.68:1, AA. */
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * Aviso de consecuencia, debajo del boton que la provoca.
+ *
+ * ⚠️ ABAJO, NO ARRIBA. Un aviso puesto como bajada se lee antes de completar el
+ * formulario y se olvida antes de apretar.
+ *
+ * ⚠️ ES UNA SUPERFICIE CALIDA (`sup-calida` desde el TSX), Y ESA CLASE REMAPEA
+ * DOS TOKENS QUE SOBRE #f7f4cf NO LLEGAN A AA: `--color-neutro-tenue` (4.39:1) y
+ * `--color-alerta` (4.36:1). Con el remapeo el texto queda en
+ * `--color-neutro-texto` (**5.49:1**) y el icono en `--color-alerta-hondo`
+ * (**5.05:1**). Pintar el fondo a mano sin ese remapeo es un fallo de contraste
+ * que no avisa.
+ */
+.nota {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  margin: var(--espacio-6) 0 0;
+  padding: var(--espacio-4);
+  border-left: 3px solid var(--color-naranja);
+  border-radius: 0 var(--radio) var(--radio) 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.nota svg {
+  flex: none;
+  color: var(--color-alerta);
+  margin-top: 3px;
+}
+
+/* --------------------------------------------------------- reenvio plegado */
+
+.desplegable {
+  width: 100%;
+  border-top: 1px solid var(--linea-tenue);
+  padding-top: var(--espacio-3);
+  text-align: left;
+}
+
+/**
+ * ⚠️ ERA `--alto-control-chico` (36px) Y ES UN FALLO DE WCAG 2.5.5. Este summary
+ * es la salida del caso "no me llego el email": se aprieta con el dedo, en un
+ * telefono, por alguien que ya esta frustrado. El minimo es 44px.
+ */
+.desplegableTitulo {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  color: var(--color-cancha);
+  cursor: pointer;
+  list-style: none;
+}
+
+.desplegableTitulo::-webkit-details-marker {
+  display: none;
+}
+
+/** El triangulito lo dibujamos nosotros para que gire al abrir. */
+.desplegableTitulo::before {
+  content: '\203A';
+  display: inline-block;
+  margin-right: var(--espacio-2);
+  font-size: var(--texto-lg);
+  line-height: 1;
+  transition: transform var(--transicion) var(--curva);
+}
+
+.desplegable[open] .desplegableTitulo::before {
+  transform: rotate(90deg);
+}
+
+.desplegablePanel {
+  margin-top: var(--espacio-4);
+}
+
+.desplegableTexto {
+  margin: 0 0 var(--espacio-4);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ SE BORRA EL `aparecerPanel` LOCAL QUE HABIA ACA. Movia 4px de opacidad
+ * mientras la ALTURA saltaba de golpe, que es lo unico que se nota al abrir un
+ * `<details>`. Ahora la altura la anima la clase global `desplegable`
+ * (`::details-content` + `interpolate-size`), que degrada sola: sin soporte abre
+ * instantaneo, o sea exactamente como abria antes.
+ */
+
+/* ================================================ esqueleto de la carga */
+
+/**
+ * ⚠️ LA SEPTIMA PANTALLA. `loading.tsx` se ve en CADA una de las seis, porque
+ * todas resuelven `getSessionUser()` en el servidor, y hasta hoy era texto gris
+ * flotando sobre papel: mientras cargaba no habia ficha y despues aparecia de
+ * golpe una hoja con filete y sombra. El hueco tiene que tener la forma de lo
+ * que llega.
+ *
+ * ⚠️ EL BRILLO LO PONE LA CLASE GLOBAL `esqueleto`, que la fundacion trae con
+ * shimmer. Los bloques de `components/esqueletos.module.css` estan QUIETOS, y un
+ * esqueleto quieto no se lee como "cargando": se lee como "roto".
+ */
+.esqueletoLinea,
+.esqueletoTitulo,
+.esqueletoCampo,
+.esqueletoBoton {
+  display: block;
+  border-radius: var(--radio);
+}
+
+.esqueletoTitulo {
+  height: 40px;
+  width: 60%;
+  margin-bottom: var(--espacio-4);
+}
+
+.esqueletoLinea {
+  height: 14px;
+  width: 90%;
+  margin-bottom: var(--espacio-6);
+}
+
+.esqueletoCampo {
+  height: var(--alto-control);
+  width: 100%;
+  margin-bottom: var(--espacio-5);
+}
+
+.esqueletoBoton {
+  height: 52px;
+  width: 100%;
+  margin-top: var(--espacio-6);
+}

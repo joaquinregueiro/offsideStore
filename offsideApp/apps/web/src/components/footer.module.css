@@ -1,0 +1,361 @@
+/**
+ * PIE DEL SITIO
+ * =============================================================================
+ *
+ * ⚠️ VERSION LUMINOSA (2026-09-10), POR DECISION DEL DUEÑO. El pie era un
+ * rectangulo de Tinta con una cinta arriba: correcto, editorial y exactamente
+ * lo que el dueño rechazo —"muy cuadrado todo, sin glow"—. Ahora es un PANEL
+ * que sube desde abajo con las esquinas superiores redondeadas a 28px, blobs de
+ * luz verde y amarilla flotando detras de las columnas, una cinta de rombos que
+ * brilla y por la que corre una banda de luz, filetes con halo, el claim con
+ * gradiente vivo y enlaces que se corren al tocarlos. Los cuatro bloques
+ * (`.contenido`) se revelan al llegar con scroll, no al cargar: el pie esta
+ * siempre debajo del pliegue.
+ *
+ * ⚠️ EL FONDO Y LOS NEUTROS NO SE ESCRIBEN ACA. `.sup-noche` (en `footer.tsx`)
+ * trae la malla, el filo de luz, `--color-foco` en Amarillo Cambio y el remapeo
+ * de los neutros para oscuro; `.escena-luz` habilita los blobs que se VEN
+ * (verde-500 al 10%, Cambio al 6%) y remapea lo que un blob tumba. Los numeros
+ * son de `tokens.css`, medidos con dos blobs superpuestos sobre el punto mas
+ * claro de la malla: sobre-oscuro-2 6.81 · verde-400 5.10 · naranja 5.41 ·
+ * borde de control 3.43. Recalculado aca sobre `--sup-noche-alta` + los dos
+ * blobs (#234b37): papel 9.41 · Cambio 8.36 · sobre-oscuro-2 5.48 · verde-400
+ * 4.11 (texto GRANDE: el claim). Todo AA.
+ *
+ * ⚠️ `overflow: clip` EN `.pie` ES LO QUE HACE QUE LAS ESQUINAS REDONDEADAS
+ * SEAN REALES: sin el, la cinta (primer hijo, cuadrada), el grano y los blobs
+ * asomarian por fuera de la curva. `clip` y no `hidden`: `hidden` crea un
+ * contenedor de scroll. Nada del pie sale de su caja a proposito —no hay
+ * desplegables ni popovers—, y los enlaces quedan a 24px del borde, asi que
+ * ningun anillo de foco se recorta.
+ */
+
+.pie {
+  /*
+   * ⚠️ FLUIDO Y NO 80px FIJOS. Con una separacion fija, un monitor de 27"
+   * amontona el pie contra el contenido y un telefono desperdicia media
+   * pantalla.
+   */
+  margin-top: var(--espacio-seccion);
+  border-radius: var(--radio-panel) var(--radio-panel) 0 0;
+  overflow: clip;
+  /*
+   * Luz ambiente hacia ARRIBA: un panel oscuro apoyado sobre papel proyecta
+   * un halo verde tenue sobre lo que tiene encima. Es lo que lo despega del
+   * papel sin una linea.
+   */
+  box-shadow: 0 -24px 80px -40px rgb(var(--luz-verde) / 0.4);
+}
+
+/**
+ * CINTA DE SECCION (identidad §05), AHORA COMO TIRA DE LUZ.
+ *
+ * ⚠️ ES LA TERCERA ESCALA DEL PATRON, no una decoracion suelta: bloque, textura
+ * fina y cinta. En Amarillo Cambio sobre Verde Tiempo Extra (7.06:1), en su
+ * escala real (28px): a 10px el rombo se lee como ruido gris; a 28 se lee como
+ * la bandera. El rombo se corre un mosaico EXACTO cada 26s (`.patron-vivo` con
+ * `--patron-paso`), asi que el bucle es invisible.
+ *
+ * ⚠️ BRILLA CON `box-shadow` ESTATICO —halo amarillo hacia abajo, sobre el
+ * bloque oscuro— y por encima de los rombos corre una BANDA DE LUZ (`::after`,
+ * `transform` puro, cada 9s). `.patron-vivo` ya trae `overflow: hidden` e
+ * `isolation`, asi que la banda queda recortada a la cinta y el pseudo
+ * `::before` (los rombos, z -1) queda debajo.
+ *
+ * ⚠️ `z-index: 2` NO ES UN CAPRICHO. `.sup-noche::before` —el filo de luz que
+ * separa el bloque oscuro de lo que tiene arriba— se pinta en `z-index: 1`, y
+ * la cinta es el primer hijo en `z-index: auto`: sin esto, la hairline queda
+ * dibujada ENCIMA de los rombos, donde no separa nada. La cinta ES el
+ * separador.
+ */
+.cinta {
+  position: relative;
+  z-index: 2;
+  height: 28px;
+  --patron-color: var(--color-cambio);
+  background-color: var(--color-tiempo-extra);
+  box-shadow:
+    inset 0 -1px 0 rgb(var(--luz-cambio) / 0.35),
+    0 6px 28px -6px rgb(var(--luz-cambio) / 0.5);
+}
+
+.cinta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  pointer-events: none;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.22) 45%,
+    rgb(255 255 255 / 0.4) 50%,
+    rgb(255 255 255 / 0.22) 55%,
+    transparent 100%
+  );
+  transform: translate3d(-120%, 0, 0);
+}
+
+/*
+ * ⚠️ DENTRO DE LA MEDIA QUERY, y no confiando en la regla global: una animacion
+ * infinita con duracion 0.01ms queda clavada en su ULTIMO cuadro, que aca es
+ * fuera de la cinta (320%): invisible, que es lo correcto, pero mejor que no
+ * exista. Keyframe local con nombre propio: en un CSS Module los `@keyframes`
+ * son locales y un nombre repetido con `movimiento.css` mataria al global.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .cinta::after {
+    animation: pieBrillo 9s var(--curva-corte) infinite;
+    animation-delay: 1.2s;
+    will-change: transform;
+  }
+}
+
+@keyframes pieBrillo {
+  0% {
+    transform: translate3d(-120%, 0, 0);
+  }
+  38% {
+    transform: translate3d(320%, 0, 0);
+  }
+  100% {
+    transform: translate3d(320%, 0, 0);
+  }
+}
+
+@media (max-width: 480px) {
+  .cinta {
+    height: 18px;
+  }
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.contenido {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-bloque) var(--espacio-6) var(--espacio-7);
+  display: grid;
+  /*
+   * La marca ocupa el doble que cada columna de enlaces. `auto-fit` no sirve
+   * aca: las columnas no son intercambiables entre si.
+   */
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: var(--espacio-7);
+}
+
+@media (max-width: 820px) {
+  .contenido {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/**
+ * ⚠️ A ≤480 SE MANTIENEN DOS COLUMNAS PARA LOS ENLACES, Y NO ES UN DESCUIDO: es
+ * lo unico que evita que el pie mida mas de mil pixeles en un telefono. Nueve
+ * enlaces de 44px apilados en una sola columna son 396px SOLO de enlaces, y los
+ * 44 no se negocian (WCAG 2.5.5). Con dos columnas el pie baja a ~700px.
+ *
+ * ⚠️ POR QUE NO SE PLIEGAN EN UN `<details>`: el atributo `open` no se puede
+ * poner por viewport desde CSS, y un `<details>` SIN `open` esconde su
+ * contenido en cualquier navegador. La degradacion no seria "el pie no se
+ * pliega" sino "el pie pierde sus nueve enlaces en escritorio".
+ */
+@media (max-width: 480px) {
+  .contenido {
+    padding: var(--espacio-bloque) var(--espacio-4) var(--espacio-5);
+    gap: var(--espacio-6);
+  }
+
+  .marca {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ------------------------------------------------------------ columna marca */
+
+.marca {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-4);
+}
+
+/**
+ * ⚠️ ES `--display-3` Y NO `--texto-3xl`: la escala de display es una serie
+ * APARTE. Un cierre de marca es un CARTEL; un `<h2>` de seccion es estructura.
+ *
+ * ⚠️ A 320px `--display-3` entrega su minimo (30px) y `.display` ya trae
+ * `overflow-wrap: anywhere`, asi que ni una palabra sola mas larga que la caja
+ * empuja la pagina.
+ *
+ * El gradiente lo pone `.titular-vivo` (en el TSX): sobre `.sup-noche` elige
+ * papel → Cambio → verde-400, y verde-400 sobre el peor punto de la escena da
+ * 4.11, que para un display de ≥30px (texto grande, 3:1) sobra. Sin soporte
+ * de `background-clip: text` queda en papel solido.
+ */
+.claim {
+  margin: 0;
+  color: var(--color-papel);
+  max-width: 12ch;
+}
+
+.bajada {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--texto-sm);
+  /* Amarillo Cambio sobre el peor punto de la escena: 8.36:1. */
+  color: var(--color-cambio);
+}
+
+/* -------------------------------------------------------- columnas de links */
+
+.columna {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-1);
+  /*
+   * ⚠️ `--acento-pie` Y NO UN REMAPEO DE `--degradado-acento`. El acento de raiz
+   * arranca en Verde Cancha, que sobre Tinta da 3.34:1 y visualmente se lee como
+   * nada. Este arranca en `--verde-400` (6.86:1 sobre tinta) y termina en
+   * Amarillo Cambio (13.97:1).
+   */
+  --acento-pie: linear-gradient(96deg, var(--verde-400) 0%, var(--color-cambio) 100%);
+}
+
+/**
+ * FILETE QUE SE DIBUJA AL ENTRAR LA SECCION, CON HALO.
+ *
+ * ⚠️ NO SE USA LA GLOBAL `.regla`: pinta `--color-tinta`, que sobre el pie es
+ * tinta sobre tinta. La global que SI se usa es `.revela-linea`, que le da el
+ * `scaleX` dirigido por scroll (y su `transform-origin: left`, que va en la
+ * clase y no en el keyframe para que sin soporte quede dibujado del lado
+ * correcto). El halo es `box-shadow` estatico del color de `--luz-marca`, que
+ * en noche es verde-400: la linea se ve como un tubo de luz.
+ */
+.filete {
+  display: block;
+  width: 44px;
+  height: 4px;
+  margin-bottom: var(--espacio-3);
+  border-radius: var(--radio-pastilla);
+  background-image: var(--acento-pie);
+  box-shadow: 0 0 12px -1px rgb(var(--luz-marca) / 0.6);
+}
+
+.columnaTitulo {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  /*
+   * ⚠️ `--color-neutro-texto` (#b3c6b8 con `.sup-noche`) Y NO EL APAGADO: es el
+   * texto mas dificil del pie (12px, mayusculas, tracking 0.2em) y con los
+   * blobs de `.escena-luz` encima el peor punto de la escena lo deja en
+   * **5.48:1**; el apagado (#8fa79a) quedaria en 3.83 ❌ ahi mismo. El
+   * presupuesto de blobs de noche esta calibrado justamente contra este token.
+   */
+  color: var(--color-neutro-texto);
+  margin-bottom: var(--espacio-2);
+}
+
+/**
+ * ⚠️ 44px Y NO 40: son 16px en total contra el minimo de WCAG 2.5.5, en la
+ * lista donde mas se le erra con el dedo.
+ *
+ * ⚠️ EL SUBRAYADO SE HACE CON `background-size` Y NO CON UN PSEUDO. "Buscar por
+ * club o marca" se parte en dos lineas en una columna angosta: un pseudo
+ * subrayaria el RECTANGULO del enlace y la raya cruzaria el aire a la derecha
+ * de la primera linea. Con un gradiente de fondo el subrayado sigue el texto
+ * linea por linea. Es la tecnica de `.subraya`, escrita aca porque el acento de
+ * raiz no se ve sobre Tinta.
+ *
+ * Y SE CORRE 4px A LA DERECHA en hover con `translate` —propiedad aparte de
+ * `transform`, asi convive con cualquier animacion de entrada del padre—: el
+ * enlace responde antes de que termine de dibujarse la raya.
+ */
+.enlace {
+  display: flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  color: var(--color-papel);
+  font-size: var(--texto-sm);
+  background-image: var(--acento-pie);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  translate: 0 0;
+  transition:
+    color var(--dur-hover) var(--curva),
+    text-shadow var(--dur-hover) var(--curva),
+    translate var(--dur-hover) var(--curva-viva),
+    background-size var(--dur-media) var(--curva-corte);
+}
+
+/*
+ * `:focus-visible` esta incluido a proposito: quien navega con teclado tiene que
+ * ver lo mismo que quien navega con mouse. El glow del texto es `text-shadow`
+ * ALREDEDOR de las letras, no un fondo debajo.
+ */
+.enlace:hover,
+.enlace:focus-visible {
+  color: var(--color-cambio);
+  background-size: 100% 2px;
+  translate: 4px 0;
+  text-shadow: 0 0 14px rgb(var(--luz-cambio) / 0.45);
+}
+
+/* --------------------------------------------------------------- tira legal */
+
+/*
+ * ⚠️ NO HAY CLASE `.legal`. El `<div>` lleva solo `sup-fosa`, que ya aporta el
+ * plano, el filo de luz y el `isolation`. Una regla de modulo vacia la borra
+ * cualquier minificador, y despues se lee como si el bloque hubiera perdido sus
+ * estilos. Los blobs del pie no llegan aca: `.sup-fosa` pinta su fondo opaco
+ * por encima de la capa de blobs.
+ */
+.legalTexto {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-5) var(--espacio-6);
+  font-size: var(--texto-xs);
+  /* Con `.sup-fosa` este token vale #8fa79a: 7.00:1. */
+  color: var(--color-neutro-apagado);
+}
+
+@media (max-width: 480px) {
+  .legalTexto {
+    padding: var(--espacio-4);
+  }
+}
+
+/* ---------------------------------------------------- alto contraste forzado */
+
+/**
+ * ⚠️ EN `forced-colors` LOS FONDOS DE IMAGEN Y LAS SOMBRAS SE SUPRIMEN, y el
+ * subrayado de los enlaces, el filete de cada columna y la banda de luz de la
+ * cinta son eso: se evaporan. El subrayado se devuelve con `text-decoration`,
+ * que el modo si respeta; el filete se devuelve con un borde de sistema para
+ * que la columna no pierda su cabecera; el panel gana un borde arriba para no
+ * fundirse con la pagina.
+ */
+@media (forced-colors: active) {
+  .enlace:hover,
+  .enlace:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .filete {
+    border-top: 4px solid CanvasText;
+    height: 0;
+  }
+
+  .pie {
+    border-top: 1px solid CanvasText;
+  }
+}

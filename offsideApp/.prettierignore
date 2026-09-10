@@ -1,0 +1,14 @@
+# Generado / dependencias
+node_modules/
+.next/
+dist/
+build/
+.turbo/
+coverage/
+package-lock.json
+
+# Migrations generadas por Drizzle Kit
+packages/database/migrations/
+
+# Nota: `docs/` y `design/` (fuente de verdad, solo lectura) viven FUERA de
+# offsideApp/, asi que Prettier nunca las alcanza. Lo mismo CLAUDE.md.

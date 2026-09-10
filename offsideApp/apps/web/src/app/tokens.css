@@ -1,0 +1,2524 @@
+/**
+ * TOKENS DEL SISTEMA VISUAL DE OFFSIDE
+ * =============================================================================
+ *
+ * ⚠️ ESTO ES UNA TRANSCRIPCION, NO UN DISENIO. La fuente de verdad es
+ * `design/Offside Identidad.dc.html`, que es SOLO LECTURA (CLAUDE.md §3). Si
+ * algo de aca contradice ese archivo, gana el archivo y hay que reportarlo.
+ *
+ * ⚠️ HAY UN ARCHIVO ANTERIOR, `Offside Identidad Visual.html`, con una version
+ * VIEJA del sistema: usaba Big Shoulders Display para titulares y una
+ * terracota `#C4562E` como acento. **No es la vigente.**
+ *
+ * El isotipo de la marca es la BANDERA DEL JUEZ DE LINEA —asta y pano a
+ * cuadros—, la senial literal de fuera de juego. Los seis colores, las dos
+ * tipografias y el rombo salen de ahi y no se tocan.
+ *
+ * ⚠️ LA FORMA Y LA LUZ YA NO SON LAS DEL ARCHIVO DE IDENTIDAD, Y ES UNA
+ * DECISION DEL DUEÑO (2026-09-10). La identidad describe un sistema anguloso
+ * —radio de 4px— y editorial, con sombras cortas y "la luz que se resta". El
+ * dueño vio esa version construida y la rechazo con estas palabras: "una ui
+ * que se ve anticuada, sin animaciones, glow, dinamismo, muy cuadrado todo".
+ * Desde esta version el sistema es REDONDEADO (12-28px), LUMINOSO (halos de
+ * verde y amarillo de marca, mallas que si aclaran, vidrio) y VIVO desde el
+ * primer cuadro. Es un apartamiento consciente de `design/` en forma, luz y
+ * movimiento —no en color ni en tipografia— y queda asentado aca para que
+ * nadie lo "corrija" de vuelta leyendo la identidad.
+ *
+ * La regla que NO cambia: el contraste AA se mide contra el punto MAS CLARO de
+ * cualquier fondo, y el glow va FUERA del texto, nunca debajo.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- color */
+  /*
+   * Los nombres son los de la identidad, no descripciones genericas. Se
+   * conservan a proposito: "Verde Cancha" dice algo que "--verde-primario" no.
+   */
+
+  /** Verde Cancha — el color de marca. */
+  --color-cancha: #0f7a45;
+  /** Verde Tiempo Extra — hover y estados presionados. */
+  --color-tiempo-extra: #0b5a34;
+  /** Amarillo Cambio — acento calido y seleccion de texto. */
+  --color-cambio: #f5efae;
+  /** Tinta — texto principal y fondos oscuros. */
+  --color-tinta: #10231a;
+  /** Papel — el fondo base de la aplicacion. */
+  --color-papel: #fafaf7;
+
+  /**
+   * Naranja — "vendido", ofertas y errores.
+   *
+   * ⚠️ La identidad describe este acento como construido con el mismo croma
+   * que el verde de marca en oklch, cambiando solo el matiz. Esa descripcion
+   * venia del acento anterior (una terracota `#C4562E`) y con este naranja, mas
+   * saturado y luminoso, ya no se cumple al pie de la letra. Se usa el hex que
+   * la identidad indica; la coherencia cromatica es cuestion de disenio, no de
+   * codigo, y quedo reportada.
+   */
+  --color-naranja: #ff902d;
+
+  /**
+   * Naranja LEGIBLE, para cuando el acento es TEXTO y no un relleno.
+   *
+   * ⚠️ NO ES UN COLOR NUEVO DE LA MARCA, es el mismo matiz oscurecido hasta que
+   * contrasta. `--color-naranja` sobre papel da **2.16:1** y sobre blanco
+   * **2.26:1**: no llega ni al minimo de texto grande (3:1), asi que una
+   * etiqueta "Ultima unidad" escrita con el se lee mal —o directamente no se
+   * lee— para bastante gente. Este da **4.66:1** sobre papel y **4.88:1** sobre
+   * blanco, que es AA para texto normal.
+   *
+   * Regla: `--color-naranja` para RELLENOS y BORDES (donde el color es forma),
+   * `--color-alerta` para TEXTO e ICONOS (donde el color es informacion).
+   */
+  --color-alerta: #b85400;
+
+  /**
+   * Texto secundario SOBRE el verde de marca.
+   *
+   * ⚠️ NO ES UN COLOR INVENTADO: es el `#E4F0E6` que ya aparece en el archivo
+   * de identidad. La bajada de la portada usaba `--color-neutro-borde` —un
+   * token de BORDES— como color de texto sobre Verde Cancha: **4.29:1**, que
+   * alcanza para texto grande pero no para los 18px de la bajada. Este da
+   * **4.60:1**, que es AA, y sigue estando un punto por debajo del papel puro,
+   * que era el efecto buscado.
+   */
+  --color-sobre-cancha: #e4f0e6;
+
+  /* Neutros derivados, para bordes y texto secundario. */
+  --color-neutro-borde: #e4e6de;
+  --color-neutro-suave: #f2f3ea;
+  --color-neutro-texto: #5b6459;
+  /**
+   * ⚠️ ERA `#8a9186`, que sobre papel da **3.10:1**. Todos sus usos son TEXTO
+   * —ayudas de formulario, notas, nombre del vendedor en la ficha, conteos de
+   * facetas— y todos en 12-13px, o sea texto normal: el minimo AA es 4.5:1.
+   * Este valor da **4.69:1** sobre papel y **4.90:1** sobre blanco,
+   * conservando el gris verdoso de la familia.
+   *
+   * Los neutros NO vienen de la identidad —dice literalmente "neutros
+   * derivados"—, asi que ajustarlos por contraste no contradice el sistema
+   * visual: lo hace usable.
+   */
+  --color-neutro-tenue: #6b736a;
+  /**
+   * El gris claro anterior, ahora con el unico rol que puede cumplir: FORMA,
+   * nunca texto. Separadores, trazos decorativos, placeholders de imagen.
+   */
+  --color-neutro-apagado: #9aa396;
+  --color-blanco: #ffffff;
+
+  /* ----------------------------------------------------------- tipografia */
+  /*
+   * Dos familias con roles ASIGNADOS por la identidad, no intercambiables:
+   *
+   *   Big Noodle Titling  titulares, precios, numeros de camiseta  regular y oblicua
+   *   Inter               cuerpo, fichas de producto, UI            400-600
+   *
+   * Big Noodle es una fuente PROPIA (archivos en `app/fonts/`), no de Google.
+   * Es muy CONDENSADA: los titulares ocupan mucho menos ancho que con una
+   * sans normal, y el sistema cuenta con eso.
+   */
+  --fuente-titulo: var(--font-titulo), 'Arial Narrow', sans-serif;
+  --fuente-texto: var(--font-texto), system-ui, sans-serif;
+
+  /**
+   * Escala tipografica.
+   *
+   * ⚠️ DECISION DE IMPLEMENTACION, no transcripcion. La identidad usa tamanios
+   * sueltos (12, 13, 15, 16, 18, 20, 22, 36 px) sin escala regular, porque es
+   * una pieza de presentacion y no un sistema de producto. Se ordenan en una
+   * escala manteniendo los valores que la identidad usa de verdad —13 y 12 son
+   * los mas frecuentes, 36 el titular— y se completan los huecos.
+   */
+  --texto-xs: 12px;
+  --texto-sm: 13px;
+  --texto-base: 15px;
+  --texto-md: 16px;
+  --texto-lg: 18px;
+  --texto-xl: 22px;
+  --texto-2xl: 28px;
+  --texto-3xl: 36px;
+  --texto-4xl: 48px;
+
+  /**
+   * ⚠️ Los pesos son de INTER. Big Noodle tiene un solo peso y su variacion es
+   * el estilo OBLICUO (`font-style: italic`), no un peso mas alto. Pedirle 700
+   * hace que el navegador lo simule engordando el trazo, que se ve mal.
+   */
+  --peso-normal: 400;
+  --peso-medio: 500;
+  --peso-semi: 600;
+
+  /**
+   * Interlineado APRETADO en titulares (0.9-0.95). Es lo que le da el
+   * caracter de camiseta; con 1.2 el sistema se vuelve genérico.
+   */
+  --interlineado-titulo: 0.95;
+  --interlineado-texto: 1.5;
+
+  /** Mayusculas con tracking, para etiquetas y categorias. */
+  --tracking-etiqueta: 0.08em;
+  --tracking-amplio: 0.2em;
+  --tracking-titulo: -0.01em;
+
+  /* --------------------------------------------------------------- forma */
+  /**
+   * ⚠️ EL 4px SE FUE. La identidad de `design/` es angulosa (18 veces 4px
+   * contra 2 de 8px) y esta version se aparta de eso por decision del dueño del
+   * 2026-09-10 —"muy cuadrado todo"—, asentada en el encabezado del archivo. La
+   * escala nueva tiene rol, y los tres nombres viejos conservan su LUGAR en
+   * ella (chico < radio < grande), asi que todo lo que hoy pide `--radio-grande`
+   * para "mas redondo que un boton" sigue siendo mas redondo que un boton:
+   *
+   *   --radio-chico     8px   etiquetas, chips, miniaturas, la flechita de la ficha
+   *   --radio          12px   botones, campos, avisos, menus — lo que se aprieta
+   *   --radio-medio    16px   fichas chicas, chips grandes
+   *   --radio-ficha    20px   la ficha de producto y las tarjetas del panel
+   *   --radio-grande   24px   paneles, modales, vidrio, bloques de seccion
+   *   --radio-panel    28px   tarjetas grandes de portada, escenas
+   *   --radio-pastilla 999px  pastillas, avatares, contadores
+   *
+   * ⚠️ `--radio-chico` PASA DE 1px A 8px y alcanza a 29 usos: etiquetas como
+   * "Ultima unidad", estados de orden, celdas, miniaturas. Es deliberado: una
+   * etiqueta de 22px de alto con 8px queda casi pastilla, que es la forma que
+   * el sistema quiere.
+   *
+   * ⚠️ REGLA DE ANIDADO: un hijo redondeado adentro de un padre redondeado lleva
+   * `radio del padre - padding`, nunca el mismo radio. Una foto adentro de una
+   * ficha de 20px con 8px de padding → 12px. Con el mismo radio la esquina
+   * interior se ve MAS redonda que la exterior y la tarjeta parece hinchada.
+   */
+  --radio-chico: 8px;
+  --radio: 12px;
+  --radio-medio: 16px;
+  --radio-ficha: 20px;
+  --radio-grande: 24px;
+  --radio-panel: 28px;
+  --radio-pastilla: 999px;
+
+  /** Iconos: trazo de 1.5px, sin relleno, coherente con la linea del logo. */
+  --trazo-icono: 1.5px;
+
+  /* -------------------------------------------------------------- patron */
+  /**
+   * El rombo de la bandera (identidad §05).
+   *
+   * ⚠️ ESTABA COPIADO EN DOS MODULOS —la ficha del catalogo y el detalle— con
+   * los mismos cuatro gradientes y distinto tamaño, asi que el patron de la
+   * marca dependia de que nadie tocara uno de los dos. Ahora es un token: el
+   * DIBUJO es uno solo y cada lugar elige la ESCALA, que es lo unico que la
+   * identidad realmente varia (bloque, textura fina, cinta de seccion).
+   *
+   * `--patron-color` es el color del rombo; lo redefine quien lo usa.
+   *
+   * ⚠️ LA RECETA NO VIVE ACA: vive en el bloque universal de abajo. Ver el
+   * comentario de "recetas de patron" apenas termina este `:root`.
+   */
+  --patron-color: var(--color-neutro-borde);
+
+  /* ---------------------------------------------------------- elevacion */
+  /**
+   * Las sombras viven en la capa de profundidad, mas abajo (`--sombra-0` …
+   * `--sombra-5`, `--sombra-marca` y los `--glow-*`). Aca no queda ninguna: las
+   * dos que habia —`0 1px 2px` al 6%— eran invisibles sobre papel calido, y ese
+   * era literalmente el diagnostico del dueño.
+   */
+
+  /* --------------------------------------------------------- movimiento */
+  /**
+   * Duraciones. Antes estaban escritas como `120ms` a mano en cada modulo, asi
+   * que cambiar el ritmo de la interfaz obligaba a buscar y reemplazar.
+   *
+   * ⚠️ `@media (prefers-reduced-motion: reduce)` (mas abajo) las anula todas.
+   */
+  --transicion-rapida: 120ms;
+  --transicion: 180ms;
+  /**
+   * Recorrido: algo que cruza el espacio —un panel que se abre, una pantalla
+   * que reemplaza a otra, la foto de un producto que se agranda hasta la
+   * ficha—. Debajo de ~350ms el ojo no llega a seguirlo y se lee como un
+   * parpadeo; arriba de ~500ms se siente lento.
+   */
+  --transicion-lenta: 420ms;
+
+  --curva: cubic-bezier(0.2, 0, 0.2, 1);
+  /**
+   * Tres curvas con rol, no tres numeros lindos:
+   *
+   *   entrada    arranca rapido y frena. Lo que APARECE llega y se acomoda.
+   *   salida     arranca lento y acelera. Lo que SE VA se retira sin
+   *              pedir atencion.
+   *   recorrido  frena fuerte al final. Para lo que se DESPLAZA de un lugar a
+   *              otro y tiene que dejar claro dónde termino.
+   *
+   * ⚠️ ESTAS TRES NO PASAN DE 1. Las que rebotan —`--curva-viva`, `--curva-pop`—
+   * viven en la capa de profundidad, mas abajo, con su overshoot medido y con
+   * la lista de lo que NUNCA las usa: un importe, un aviso, un estado de orden.
+   */
+  --curva-entrada: cubic-bezier(0, 0, 0.2, 1);
+  --curva-salida: cubic-bezier(0.4, 0, 1, 1);
+  --curva-recorrido: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ------------------------------------------------------------ capas */
+  /**
+   * Tres capas alcanzan y estan ordenadas a proposito con huecos: si mañana
+   * hace falta meter algo entre dos, hay lugar sin renumerar todo.
+   */
+  --z-barra: 100;
+  --z-menu: 200;
+  --z-superpuesto: 300;
+
+  /* --------------------------------------------------------- controles */
+  /**
+   * ⚠️ ALTO MINIMO DE UN CONTROL TACTIL: 44px. Es el minimo que recomienda
+   * WCAG 2.1 (2.5.5) y el que usa iOS. Debajo de eso, en un telefono, la gente
+   * le erra al boton —y quien tiene menos pulso, siempre—.
+   */
+  --alto-control: 44px;
+  --alto-control-chico: 36px;
+
+  /* ------------------------------------------------------------- espacio */
+  --espacio-1: 4px;
+  --espacio-2: 6px;
+  --espacio-3: 12px;
+  --espacio-4: 16px;
+  --espacio-5: 20px;
+  --espacio-6: 24px;
+  --espacio-7: 32px;
+  --espacio-8: 48px;
+  --espacio-9: 80px;
+  --espacio-10: 100px;
+
+  /**
+   * Anchos de contenido.
+   *
+   * ⚠️ Los tres de abajo YA EXISTIAN, escritos a mano en cada modulo:
+   * `860px` en vendedor y admin, `760px` en compra, `420px` en formularios.
+   * Estaban repetidos siete veces y sin nombre, asi que nadie podia saber si
+   * dos pantallas median lo mismo a proposito o por casualidad.
+   *
+   * El criterio es la longitud de linea, no el gusto: un texto corrido se lee
+   * mal por encima de ~75 caracteres, y un formulario de una columna no gana
+   * nada al ensancharse.
+   */
+  --ancho-contenido: 1200px;
+  --ancho-medio: 860px;
+  --ancho-angosto: 760px;
+  --ancho-formulario: 420px;
+
+  /**
+   * ⚠️ LOS BREAKPOINTS NO PUEDEN SER VARIABLES CSS: `@media (max-width:
+   * var(--x))` no funciona en ningun navegador. Quedan documentados aca para
+   * que al menos haya un solo lugar donde mirar cuales son los cortes del
+   * sistema, y se escriben literales en cada `@media`.
+   *
+   *   480px   telefono chico      una columna, navegacion plegada
+   *   640px   telefono            pares de campos pasan a una columna
+   *   820px   tablet              filtros de busqueda se pliegan
+   *   900px   tablet ancha        la barra superior pasa a menu
+   *   1024px  escritorio chico    la ficha de producto se apila
+   */
+}
+
+/* -------------------------------------------------------- recetas de patron */
+/**
+ * ⚠️⚠️ ESTAS TRES RECETAS **NO PUEDEN VIVIR EN `:root`**, Y ESTABAN AHI.
+ *
+ * El valor computado de una custom property lleva sus `var()` YA SUSTITUIDOS.
+ * Declaradas en `:root`, se resolvian una sola vez contra el `--patron-color`
+ * de `:root` —el gris papel `#e4e6de`— y los descendientes heredaban ESE
+ * resultado. O sea que redefinir `--patron-color` mas abajo no cambiaba una
+ * sola pieza del dibujo.
+ *
+ * No era teorico: `.sup-noche` pide papel al 4% y `.sup-cancha` pide Verde
+ * Tiempo Extra, y las dos dibujaban el mismo damero gris claro —tambien encima
+ * del verde—. Declaradas en el selector universal, cada elemento las vuelve a
+ * resolver con SU `--patron-color`, que es lo unico que hace funcionar el
+ * mecanismo de contexto que el resto del archivo usa para todo.
+ *
+ * ⚠️ POR QUE EL UNIVERSAL Y NO SOLO `.patron-vivo*` + `.sup-*`, QUE ERA LO
+ * BARATO. Porque el patron NO se consume solo desde esas clases: verificado en
+ * el repo, hay **12 declaraciones que pintan `--patron-rombos` y 11 que pintan
+ * alguna `--patron-diagonales*`, repartidas en 11 hojas**, casi todas sobre una
+ * clase propia (`.cinta`, `.pliegoPatron`, `.etiquetaAlerta`, `.capaRombos`…)
+ * que no lleva ninguna de las dos familias. Declararlas solo ahi dejaria esos 23
+ * usos con la variable SIN DEFINIR, o sea sin fondo: cambiar un damero mal
+ * pintado por ningun damero es peor que el defecto.
+ *
+ * ⚠️ Y `*::before` / `*::after` HACEN FALTA APARTE. Un pseudo hereda el
+ * `--patron-color` de su originante, pero hay al menos un caso que lo redefine
+ * EN EL PSEUDO MISMO (`.kicker::after` en `app/buscar/page.module.css`): sin
+ * incluirlos, ese pseudo heredaria la receta ya resuelta del padre y volveria a
+ * ignorar su color.
+ *
+ * ⚠️ EL COSTO ES REAL Y SE ACEPTA A OJOS ABIERTOS: el navegador computa tres
+ * custom properties mas en cada elemento y en sus dos pseudos. Es memoria de
+ * estilo, no trabajo de layout ni de pintura, y no hay forma de acotarlo sin
+ * romper esos 25 usos. La alternativa —registrar `--patron-color` con
+ * `@property` para que sea sustituible— ya esta descartada mas abajo y por otro
+ * motivo: obligaria a un `initial-value` literal.
+ */
+*,
+*::before,
+*::after {
+  --patron-rombos:
+    linear-gradient(45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--patron-color) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--patron-color) 75%);
+
+  /** Rayas diagonales: el otro motivo de la bandera, en el eje del sistema. */
+  --patron-diagonales: repeating-linear-gradient(
+    var(--eje),
+    var(--patron-color) 0 2px,
+    transparent 2px 13px
+  );
+  --patron-diagonales-anchas: repeating-linear-gradient(
+    var(--eje),
+    var(--patron-color) 0 10px,
+    transparent 10px 30px
+  );
+}
+
+/* ------------------------------------------------------------------ base */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  /*
+   * ⚠️ EL FONDO YA NO VIVE ACA, VIVE EN `html` (ver la capa de profundidad al
+   * final del archivo). El body tiene que dejar pasar la malla y el grano, que
+   * se pintan en sus pseudo-elementos por DEBAJO del contenido.
+   */
+  color: var(--color-tinta);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-md);
+  line-height: var(--interlineado-texto);
+  -webkit-font-smoothing: antialiased;
+  /*
+   * ⚠️ PIE PEGADO ABAJO. Sin esto, en una pantalla corta —un formulario de
+   * login, un estado vacio— el pie queda flotando a media pagina con papel
+   * blanco debajo, que es la señal clasica de un sitio a medio hacer.
+   * `100dvh` y no `100vh`: en el telefono, `vh` cuenta la barra del navegador
+   * como si no existiera y sobra siempre una tira.
+   */
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/**
+ * El contenido empuja al pie hasta abajo. `flex: 1 0 auto` y no `flex: 1`: con
+ * `1 1 0` el contenido se ENCOGE cuando no entra, y una vitrina larga quedaria
+ * recortada.
+ *
+ * ⚠️ `width: 100%` NO ES REDUNDANTE, Y SIN EL EL SITIO SE ROMPE EN SILENCIO.
+ * Casi todos los `<main>` del proyecto llevan `max-width: X; margin: 0 auto`
+ * para centrarse. En un contenedor flex, **un margen automatico en el eje
+ * transversal cancela el `stretch`**: en vez de ocupar el ancho y centrar su
+ * contenido, el `<main>` se encoge hasta el ancho de su contenido. Una pantalla
+ * de texto —el checkout, una confirmacion— quedaba en una columna angosta
+ * pegada al centro, mucho mas finita que su `max-width`.
+ *
+ * Verificado en el navegador: con un viewport de 760px, un `<main>` que declara
+ * `max-width: 760px` media **394px**. Con `width: 100%` mide lo que corresponde.
+ */
+body > main {
+  flex: 1 0 auto;
+  width: 100%;
+}
+
+/* Los titulares usan la familia de titulos y su interlineado apretado. */
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  /* Peso normal: Big Noodle no tiene bold real (ver nota arriba). */
+  font-weight: var(--peso-normal);
+  line-height: var(--interlineado-titulo);
+  letter-spacing: var(--tracking-titulo);
+  /*
+   * Reparte las palabras entre lineas en vez de dejar una sola colgando al
+   * final. Con interlineado 0.95 y mayusculas, una viuda se nota muchisimo.
+   * El navegador que no lo soporta simplemente lo ignora.
+   */
+  text-wrap: balance;
+}
+
+/**
+ * Ninguna imagen desborda su contenedor. Sin esto, una foto de producto mas
+ * ancha que su columna estira la pagina y aparece scroll horizontal en el
+ * telefono —el sintoma clasico de un sitio que "anda mal en el celular"—.
+ */
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+/**
+ * ⚠️ EL ENLACE LEE `--enlace`, Y ANTES NO LO HACIA. Las superficies oscuras ya
+ * definian `--enlace` (Verde Cancha sobre fosa da 3.34:1, por eso ahi sube a
+ * `--verde-400`), pero `a` tenia el verde de marca escrito a mano: un enlace
+ * pelado adentro de `.sup-noche` quedaba verde sobre verde. Ahora cada
+ * superficie decide, y el hover tambien. Los dos tokens se definen en la capa
+ * de profundidad, mas abajo.
+ */
+a {
+  color: var(--enlace);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--enlace-activo);
+}
+
+/**
+ * Foco visible SIEMPRE. No viene de la identidad: es accesibilidad.
+ *
+ * ⚠️ EL COLOR DEL ANILLO ES UNA VARIABLE, Y ESO NO ES ADORNO. Antes era el
+ * verde de marca fijo, que contrasta bien sobre papel pero **desaparece sobre
+ * la barra superior**, que es exactamente de ese verde: quien navega con
+ * teclado perdia el foco justo al entrar al sitio. Ahora cada zona oscura
+ * redefine `--color-foco` (la barra usa Amarillo Cambio) y la regla global
+ * sigue siendo una sola.
+ *
+ * ⚠️ AHORA EL FOCO ES ANILLO **MAS** HALO, Y LOS DOS ROLES SON DISTINTOS:
+ *   - el `outline` es la GARANTIA (WCAG 2.4.7 / 1.4.11): ningun `:hover` con
+ *     sombra propia lo pisa, ningun `overflow: hidden` lo recorta, y contrasta
+ *     5.16:1 sobre papel. Pasa de 2px a 3px porque sobre esquinas de 12-24px
+ *     un anillo de 2px se lee como un borde y no como un foco.
+ *   - el `box-shadow` es el GLOW (`--glow-foco`: verde luminoso sobre claro,
+ *     Amarillo Cambio sobre oscuro; se define en el bloque universal, mas
+ *     abajo). Es adorno: lo pisa cualquier regla de modulo que declare
+ *     `box-shadow`, y esta bien que asi sea. Las clases que manejan sombra
+ *     propia (`.eleva`, `.brilla`, `.glow-foco`) lo vuelven a poner en su
+ *     propia regla de `:focus-visible`, declarada DESPUES del hover para que
+ *     ningun hover lo tape.
+ */
+:root {
+  --color-foco: var(--color-cancha);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 3px;
+  box-shadow: var(--glow-foco);
+}
+
+/**
+ * Oculto a la vista, presente para lectores de pantalla.
+ *
+ * ⚠️ NO SE USA `display: none` NI `visibility: hidden`: las dos lo sacan
+ * tambien del arbol de accesibilidad, que es justo lo contrario de lo que se
+ * busca. Es la tecnica estandar de "clip" y es la que usa el enlace de saltar
+ * al contenido.
+ */
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/**
+ * Respeta a quien pidió menos movimiento en su sistema operativo.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =============================================================================
+ * TOKENS — CAPA DE PROFUNDIDAD Y DIRECCION
+ * =============================================================================
+ *
+ * Este bloque se AGREGA a `app/tokens.css`. Los seis colores de marca, las dos
+ * familias tipograficas y `--patron-rombos` NO se tocan: salen de `design/`,
+ * que es SOLO LECTURA (CLAUDE.md §3). El radio de 4px de la identidad SI se
+ * dejo atras, por decision del dueño del 2026-09-10 (ver el encabezado del
+ * archivo). Lo demas que se agrega son DERIVADOS —la misma categoria que la
+ * identidad ya llama "neutros derivados"—.
+ *
+ * ⚠️ LO QUE CAMBIA DE VALOR, Y ES TODO. Nada mas de este archivo pisa algo que
+ * ya exista:
+ *
+ *   1. `--sombra-1` y `--sombra-2` CAMBIAN DE VALOR (no de nombre). Verificado
+ *      en el repo: hay 10 usos de `--sombra-*` en 7 modulos. Las dos actuales
+ *      —`0 1px 2px rgba(16,35,26,.06)` y su par— sobre papel calido no se ven,
+ *      y ESE es literalmente el diagnostico del dueño. Cambiar el valor mejora
+ *      las 10 superficies sin editar un modulo.
+ *   2. `--texto-xl` … `--texto-4xl` PASAN A `clamp()`. ⚠️ EL MINIMO DE CADA UNO
+ *      ES SU VALOR DE HOY, asi que **ningun texto del sitio se achica en ningun
+ *      viewport**: solo crecen. Es la trampa en la que caen las escalas fluidas
+ *      hechas de apuro (un `clamp(20px,…)` sobre un token que hoy vale 22px
+ *      encoge la interfaz en telefono y nadie lo nota hasta produccion).
+ *
+ * ⚠️ NO SE RENOMBRA NI SE BORRA UN SOLO TOKEN. Verificado: 65 usos de
+ * `--sombra-*`/`--curva*` repartidos en 12 archivos CSS. Una variable CSS que
+ * no existe no tira error: simplemente no pinta.
+ *
+ * -----------------------------------------------------------------------------
+ * LAS DOS IDEAS RECTORAS
+ *
+ *   UN EJE — 112 grados. El brazo del juez de linea con la bandera levantada.
+ *   Todo gradiente lineal, raya, destello y barrido del sistema usa ese angulo.
+ *   Es lo unico que ninguna otra marca puede copiar sin quedar en evidencia, y
+ *   es lo que convierte una pila de efectos en un sistema.
+ *
+ *   CUATRO PLANOS — fosa, papel, ficha, flotante. Hasta hoy habia DOS
+ *   superficies (papel y blanco) y por eso nada estaba delante ni detras de
+ *   nada.
+ *
+ * Son mecanismos distintos y por eso no se pelean: el EJE es lineal (lo que se
+ * mueve y lo que se raya); la LUZ es radial y viene de arriba a la derecha (lo
+ * que tiene volumen).
+ * ========================================================================== */
+
+/* --------------------------------------------------- propiedades animables */
+/**
+ * ⚠️ UNA VARIABLE CSS COMUN NO SE PUEDE ANIMAR: sin tipo declarado el navegador
+ * la trata como texto y salta de un valor al otro. `@property` le da tipo y
+ * recien ahi se interpola.
+ *
+ * ⚠️ VAN EN EL NIVEL SUPERIOR, NO ADENTRO DE `:root`. Adentro no hacen nada y
+ * tampoco avisan.
+ *
+ * ⚠️ NO SE REGISTRA `--patron-color`. Registrarlo obliga a darle un
+ * `initial-value` con un hex literal, y ese hex se convierte en una copia
+ * silenciosa de `--color-neutro-borde` que nadie va a actualizar el dia que
+ * cambie. El patron no necesita animar su color: necesita moverse.
+ */
+@property --velo-barra {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --elev {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --giro {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 112deg;
+}
+
+@property --cuenta {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
+}
+
+:root {
+  /* ------------------------------------------------------- rampa de verde */
+  /**
+   * ⚠️ NO SON COLORES DE MARCA NUEVOS: son el MISMO verde a otras
+   * profundidades. Con un solo tono, todo degradado verde termina siendo
+   * "cancha con opacidad", que sobre papel calido se ve lavado.
+   *
+   * Contrastes VERIFICADOS (calculados con la formula WCAG, no estimados):
+   *
+   *   --verde-400 #3fbd77   papel 2.29:1   fosa 7.51:1
+   *   --verde-500 #16a35c   papel 3.12:1   fosa 5.51:1
+   *   --verde-700 (cancha)  papel 5.16:1
+   *   --verde-750 #0f673c   papel 6.64:1
+   *   --verde-800 (t.extra) papel 7.95:1
+   *   --verde-900 #073b22   papel 12.11:1
+   *   --verde-950 #052a18   papel 14.87:1
+   *
+   * ⚠️ LOS DOS CLAROS TIENEN ROL OPUESTO Y NO SON INTERCAMBIABLES:
+   *   `--verde-500` es FORMA sobre claro (3.12:1 cumple WCAG 1.4.11 para el
+   *   borde de un control y para un resplandor) y NUNCA es texto sobre claro.
+   *   `--verde-400` es TEXTO sobre oscuro (7.51:1) y esta PROHIBIDO sobre papel
+   *   (2.29:1). Existe porque Verde Cancha sobre fosa da 3.34:1 y no sirve para
+   *   un enlace.
+   */
+  --verde-400: #3fbd77;
+  --verde-500: #16a35c;
+  /**
+   * ⚠️ EL ESCALON QUE FALTABA ENTRE LA MARCA Y LA LUZ: #10824a es el verde MAS
+   * CLARO que todavia lleva texto papel normal (papel 4.66:1; Cambio 4.14 ❌ y
+   * sobre-cancha 4.15 ❌, o sea SOLO papel encima). Medido con la formula WCAG
+   * sobre la recta cancha→verde-500: el tope exacto esta en #11854b (4.50) y
+   * este queda un pelo abajo, con aire. Es el stop mas claro de
+   * `--degradado-boton` y el color que compone el barrido de luz de un boton.
+   */
+  --verde-600: #10824a;
+  --verde-700: var(--color-cancha);
+  --verde-750: #0f673c;
+  --verde-800: var(--color-tiempo-extra);
+  --verde-900: #073b22;
+  --verde-950: #052a18;
+
+  /* --------------------------------------------------- lineas y superficies */
+  /**
+   * ⚠️ ACA HAY UN DEFECTO REAL QUE ENCONTRE AUDITANDO Y QUE NO ES MIO NI DE
+   * NINGUNA PROPUESTA: `--color-neutro-apagado` (#9aa396) da **2.49:1** sobre
+   * papel. El comentario que ya tiene en el repo dice bien que es forma y no
+   * texto — pero tampoco alcanza para ser el borde de un CONTROL, que WCAG
+   * 1.4.11 exige en 3:1. Para eso hace falta este token nuevo, que es
+   * exactamente el gris que `--color-neutro-tenue` tenia antes de que lo
+   * subieran por contraste de TEXTO: como borde es perfecto.
+   *
+   *   --linea-control  #8a9186   papel 3.10:1 · blanco 3.24:1   ✅ 1.4.11
+   *   --linea-tenue    #e4e6de   decorativa, no es control
+   *
+   * ⚠️ `--linea-control` ALCANZA SOBRE PAPEL Y NO ALCANZA SOBRE LAS TENIDAS, Y
+   * ESO ES LA MISMA TRAMPA QUE YA TIENEN LOS DOS TOKENS DE TEXTO DE ABAJO.
+   * Recalculado con la formula WCAG: #8a9186 sobre `--superficie-2` (#f2f3ea) da
+   * **2.90:1**, debajo del 3:1 que WCAG 1.4.11 exige para el contorno de algo que
+   * se aprieta. Sobre las otras dos tenidas queda igual de justo.
+   *
+   * Por eso existe el "hondo", con el mismo criterio que `--color-alerta-hondo`:
+   * mismo gris verdoso, oscurecido hasta que aguanta las tres.
+   *
+   *   --linea-control-honda  #7d847a
+   *       superficie-2 #f2f3ea  3.44:1 ✅   superficie-marca #eef5f0  3.48:1 ✅
+   *       superficie-calida #f7f4cf  3.45:1 ✅   papel  3.68:1 ✅
+   *
+   * Las clases `.sup-2` / `.sup-marca` / `.sup-calida` lo cablean solas; una
+   * superficie tenida escrita a mano tiene que hacerlo tambien.
+   */
+  --linea-tenue: var(--color-neutro-borde);
+  --linea-control: #8a9186;
+  --linea-control-honda: #7d847a;
+  --linea-marca: var(--color-cancha);
+
+  /**
+   * SUPERFICIE ≠ COLOR. Un color es un valor; una superficie es color MAS
+   * borde, sombra y textura.
+   *
+   * ⚠️ ESTA ES LA CAUSA EXACTA DE QUE TODAS LAS FICHAS SE VEAN IGUAL DE PLANAS:
+   * verificado en el repo, hay **35 declaraciones de `background:
+   * var(--color-blanco)` en 11 archivos** (16 de ellas en `ui.module.css`
+   * solo). Nadie podia subir el nivel en un lugar sin subirlo a mano en los
+   * otros diez. Con superficies nombradas, se sube una vez.
+   */
+  --superficie-0: var(--color-papel);
+  --superficie-1: var(--color-blanco);
+  /** Un escalon por debajo del papel: agrupa sin encerrar. Tinta 14.71:1. */
+  --superficie-2: var(--color-neutro-suave);
+  /** Lavado de marca, para bloques claros que no son ni papel ni blanco. */
+  --superficie-marca: #eef5f0;
+  /** Lavado calido. Tinta encima 14.71:1. */
+  --superficie-calida: #f7f4cf;
+
+  /**
+   * ⚠️ TRAMPA VERIFICADA EN LAS TRES SUPERFICIES TENIDAS. Sobre `#f2f3ea`,
+   * `#eef5f0` y `#f7f4cf`, dos tokens de texto del sistema CAEN DEBAJO DE AA:
+   *
+   *   --color-neutro-tenue  4.38 / 4.42 / 4.39   ❌ (necesita 4.5)
+   *   --color-alerta        4.36 / 4.40 / 4.36   ❌
+   *
+   * Y no es hipotetico: hay **27 fondos con `--color-neutro-suave`** y 38 usos
+   * de esos dos colores como texto. Por eso existen los dos "hondos": mismo
+   * matiz, oscurecido hasta que aguanta cualquiera de las tres.
+   *
+   *   --color-neutro-tenue-hondo  #5b6459 = --color-neutro-texto  → 5.51:1
+   *   --color-alerta-hondo        #a94c00                          → 5.05:1
+   *
+   * Las clases `.sup-*` de mas abajo los cablean solas; una superficie tenida
+   * escrita a mano tiene que hacerlo tambien.
+   */
+  --color-alerta-hondo: #a94c00;
+
+  /* ------------------------------------------------- los tres planos oscuros */
+  /**
+   * ⚠️ NO ES UN "MODO OSCURO". Es contraste de densidades: una revista alterna
+   * pliegos claros de catalogo con pliegos oscuros de editorial, y eso es lo
+   * que le da ritmo vertical al scroll. Offside tenia UNA superficie oscura —la
+   * barra— y todo lo demas blanco sobre papel.
+   *
+   * ⚠️ `--sup-noche` ES `--color-tinta`, NO UN HEX NUEVO, Y ESO ES DELIBERADO:
+   * verificado, ya hay 3 bloques con `background: var(--color-tinta)` (el pie y
+   * dos del back-office). Si el plano oscuro estandar fuera otro verde, esos
+   * tres quedarian desalineados con todo lo nuevo.
+   *
+   * Contrastes VERIFICADOS, texto sobre cada plano:
+   *
+   *                        fosa    noche    alta
+   *     papel             17.23    15.72   12.59
+   *     Amarillo Cambio   15.31    13.97   11.18
+   *     --color-naranja    7.96     7.26    5.82
+   *     secundario         10.03     9.15    7.33
+   *     tenue               7.00     6.39    5.12
+   *     borde de control    5.05     4.60    3.69   ✅ todos ≥ 3:1
+   *     --verde-400         7.51     6.86    5.49
+   *
+   * ⚠️ SOBRE OSCURO, EL NARANJA DE MARCA SI ES TEXTO. Es la unica excepcion
+   * documentada a la regla "naranja para forma": sobre claro da 2.16:1, sobre
+   * fosa da 7.96:1. El color no cambia de rol por gusto sino por fondo.
+   */
+  --sup-fosa: #071a12;
+  --sup-noche: var(--color-tinta);
+  --sup-noche-alta: #16362a;
+
+  --color-sobre-oscuro: var(--color-papel);
+  --color-sobre-oscuro-2: #b3c6b8;
+  --color-sobre-oscuro-tenue: #8fa79a;
+  --linea-control-oscura: #6f8f79;
+  /** Decorativa sobre oscuro. NO es borde de control (1.4x:1). */
+  --linea-tenue-oscura: rgb(250 250 247 / 0.14);
+
+  /* --------------------------------------------------------- gradientes */
+  /**
+   * ⚠️⚠️ LA REGLA VIEJA —"una malla de marca solo puede oscurecer"— NO SE TIRA:
+   * SE ACOTA A DONDE HAY TEXTO APOYADO DIRECTO. Y sigue demostrada:
+   *
+   * Papel sobre Verde Cancha da 5.16:1 contra un minimo AA de 4.5:1: hay 0.66
+   * de aire y nada mas. Medido con la formula WCAG, ese verde se puede aclarar
+   * un 7.0% con blanco, un 8.0% con Amarillo Cambio o un 16.5% con
+   * `--verde-400` antes de romper AA para texto normal. Y `--color-sobre-cancha`
+   * —la bajada de la portada— esta en 4.60:1, con 0.10 de aire: CUALQUIER
+   * aclarado lo tumba. Por eso `.sup-cancha` (la barra, y toda superficie que
+   * apoya texto directo) y `.sup-noche` conservan mallas cuyo punto mas claro es
+   * el color plano: sus contrastes valen por construccion, en cualquier punto y
+   * en cualquier viewport, sin volver a medir nada.
+   *
+   * ⚠️ LAS MALLAS QUE SI ACLARAN SON OPT-IN Y TRAEN CONTRATO. `.sup-cancha-viva`
+   * llega hasta `--verde-500` con un toque de Cambio, y `.escena-luz` pone blobs
+   * de luz sobre papel; en las dos, el texto va en `.velo-texto` o en un
+   * `.sup-vidrio-*`, o la superficie remapea sus tokens de texto a los que
+   * aguantan el punto MAS CLARO —medido, no estimado; los numeros estan en cada
+   * clase—. Una malla viva sin velo se ve espectacular en un mockup sin texto y
+   * a 375px cae justo debajo de la bajada, porque ahi la columna de texto es
+   * TODO el ancho. Ese defecto no aparece revisando: aparece en el telefono de
+   * otra persona.
+   */
+
+  /** El eje del sistema. Se escribe como variable para que sea imposible errarle. */
+  --eje: 112deg;
+
+  /** Superficies de marca: barra, botones, cintas. Peor punto = cancha, 5.16:1. */
+  --degradado-cancha: linear-gradient(
+    var(--eje),
+    var(--verde-700) 0%,
+    var(--verde-750) 58%,
+    var(--verde-800) 100%
+  );
+  --degradado-cancha-activo: linear-gradient(
+    var(--eje),
+    var(--verde-750) 0%,
+    var(--verde-900) 100%
+  );
+
+  /** Superficies oscuras. Papel encima: minimo 12.59:1. */
+  --degradado-noche: linear-gradient(
+    158deg,
+    var(--sup-noche-alta) 0%,
+    var(--sup-noche) 52%,
+    var(--sup-fosa) 100%
+  );
+
+  /**
+   * MALLA DE PORTADA. Tres capas y **ninguna aclara**: el maximo es Verde
+   * Cancha plano arriba a la derecha —que es exactamente donde vive el patron
+   * de rombos y donde NO hay texto— y cae hacia abajo a la izquierda, que es
+   * donde vive el titular. La composicion resuelve el contraste en vez de
+   * corregirlo con un color.
+   *
+   * Piso garantizado en el punto MAS CLARO posible:
+   *   papel 5.16:1 · Amarillo Cambio 4.59:1 · --color-sobre-cancha 4.60:1
+   * En cualquier otro punto es mejor (verde-900 al 40% ya da papel 7.22:1).
+   */
+  --malla-cancha:
+    radial-gradient(125% 130% at 2% 106%, var(--verde-950) 0%, transparent 60%),
+    radial-gradient(
+      90% 80% at 100% 0%,
+      transparent 0%,
+      transparent 48%,
+      color-mix(in oklab, var(--color-tinta) 20%, transparent) 100%
+    ),
+    linear-gradient(var(--eje), var(--color-cancha) 0%, var(--verde-750) 46%, var(--verde-900) 100%);
+
+  /**
+   * MALLA DE BLOQUE OSCURO.
+   *
+   * ⚠️ ESTA MALLA ACLARABA, CONTRA LA REGLA DE ARRIBA, Y ERA EL UNICO LUGAR DEL
+   * ARCHIVO QUE LA ROMPIA. La primera capa era una "brasa verde" —`--verde-800`
+   * al 55%— justo en el angulo superior derecho: compuesta sobre el arranque del
+   * linear daba **#104a30**, mas claro que cualquiera de los tres planos, y ahi
+   * la tabla de contrastes de mas arriba dejaba de valer:
+   *
+   *     --color-sobre-oscuro-tenue   6.39:1 declarado  →  3.99:1 real   ❌
+   *     --linea-control-oscura       4.60:1 declarado  →  2.88:1 real   ❌
+   *
+   * La tabla estaba calculada contra `--sup-noche` PLANO, que no es donde vive
+   * el texto: el texto vive sobre la malla.
+   *
+   * Ahora las dos capas radiales solo RESTAN luz —transparentes en el angulo
+   * superior derecho, oscureciendo hacia el resto— y el punto mas claro posible
+   * pasa a ser `--sup-noche-alta` plano, que es la tercera columna de la tabla y
+   * ya esta verificada. Recalculado con la formula WCAG sobre #16362a:
+   *
+   *     --color-sobre-oscuro-2       7.33:1   ✅
+   *     --color-sobre-oscuro-tenue   5.12:1   ✅
+   *     --linea-control-oscura       3.69:1   ✅ (WCAG 1.4.11)
+   *
+   * O sea: los contrastes de `.sup-noche` vuelven a valer POR CONSTRUCCION, en
+   * cualquier punto del bloque, sin volver a medir nada.
+   */
+  --malla-noche:
+    radial-gradient(125% 130% at 2% 106%, var(--sup-fosa) 0%, transparent 62%),
+    radial-gradient(
+      90% 80% at 92% 0%,
+      transparent 0%,
+      transparent 50%,
+      color-mix(in oklab, var(--sup-fosa) 55%, transparent) 100%
+    ),
+    linear-gradient(160deg, var(--sup-noche-alta) 0%, var(--sup-noche) 100%);
+
+  /**
+   * MALLA DE PAPEL: el fondo de las 21 pantallas. Un lavado verde luminoso
+   * arriba a la derecha y uno calido abajo a la izquierda; `body::before` la
+   * pinta y ademas la hace derivar (ver `deriva-malla` en movimiento.css).
+   *
+   * ⚠️ TENIA UN DEFECTO MEDIBLE Y ESTA CORREGIDO. El comentario anterior decia
+   * "el texto que va encima es Tinta (15.72:1) con muchisimo aire", y no es
+   * cierto: encima tambien van las ayudas de formulario y las notas, en
+   * `--color-neutro-tenue` (#6b736a, 4.69:1 sobre papel, o sea 0.19 de aire).
+   * Cancha al 6% componia #ecf2ec en la esquina, y ahi el tenue daba **4.32:1**
+   * y `--color-alerta` **4.30:1**: los dos debajo de AA, en todas las pantallas.
+   *
+   * Ahora el verde es `--verde-400` —MAS luminoso y, por ser mas claro, oscurece
+   * MENOS el papel— al 4%, y el Cambio sube al 24%. Medido en el centro de cada
+   * lavado, contra el peor token de texto y contra el borde de control:
+   *
+   *     verde-400 4%  → #f3f8f2   tenue 4.54 ✅ · alerta 4.52 ✅ · linea-control 3.00 ✅
+   *     cambio   24%  → #f9f7e5   tenue 4.55 ✅ · alerta 4.53 ✅ · linea-control 3.01 ✅
+   *
+   * Es un techo, no un gusto: al 6% de verde-400 el tenue ya cae a 4.47 ❌. La
+   * luz VISIBLE sobre papel no vive aca sino en `.escena-luz`, que remapea los
+   * tokens que un blob de verdad tumba.
+   */
+  --malla-papel:
+    radial-gradient(75% 55% at 100% 0%, rgb(var(--luz-verde-clara) / 0.04) 0%, transparent 60%),
+    radial-gradient(65% 50% at 0% 100%, rgb(var(--luz-cambio) / 0.24) 0%, transparent 58%);
+
+  /**
+   * TITULARES CON GRADIENTE (`background-clip: text`).
+   * ⚠️ EL STOP MAS CLARO DEFINE EL CONTRASTE, no el promedio. Cuatro recetas,
+   * cada una con su peor stop medido y con donde puede ir:
+   *
+   *   --degradado-titular             tinta → verde-750 → cancha    papel 5.16 ✅ cualquier tamaño
+   *   --degradado-titular-vivo        … → cancha → verde-500        papel 3.12 → SOLO ≥24px (`.display*`)
+   *   --degradado-titular-claro       papel → cambio                cancha 4.59 ✅ · fosa 15.31 ✅
+   *   --degradado-titular-claro-vivo  papel → cambio → verde-400    fosa 7.51 ✅ · noche-alta 5.49 ✅
+   *                                   ⚠️ cancha 2.25 ❌: PROHIBIDA sobre `.sup-cancha`
+   *
+   * La ultima es la trampa: verde-400 es luz sobre noche y es invisible sobre
+   * Verde Cancha. `.titular-vivo` (mas abajo) elige sola segun la superficie.
+   */
+  --degradado-titular: linear-gradient(
+    104deg,
+    var(--color-tinta) 0%,
+    var(--verde-750) 62%,
+    var(--color-cancha) 100%
+  );
+  --degradado-titular-vivo: linear-gradient(
+    104deg,
+    var(--color-tinta) 0%,
+    var(--color-cancha) 55%,
+    var(--verde-500) 100%
+  );
+  --degradado-titular-claro: linear-gradient(
+    104deg,
+    var(--color-papel) 0%,
+    var(--color-cambio) 100%
+  );
+  --degradado-titular-claro-vivo: linear-gradient(
+    104deg,
+    var(--color-papel) 0%,
+    var(--color-cambio) 58%,
+    var(--verde-400) 100%
+  );
+
+  /**
+   * Subrayados vivos, barras de progreso, filetes. Es FORMA: no lleva texto
+   * encima (verificado: ninguno de sus 35 usos pone `color` sobre el). Ahora
+   * pasa por `--verde-400`, la luz pura, antes de llegar al Cambio: mas
+   * luminoso en la mitad del recorrido, sin mover ningun contraste.
+   */
+  --degradado-acento: linear-gradient(
+    96deg,
+    var(--verde-700) 0%,
+    var(--verde-500) 42%,
+    var(--verde-400) 70%,
+    var(--color-cambio) 100%
+  );
+
+  /**
+   * DESTELLO que cruza en hover, en el eje del sistema.
+   * ⚠️ DOS VERSIONES PORQUE UN BRILLO BLANCO SOBRE UNA FICHA BLANCA NO EXISTE.
+   * Cada superficie redefine `--destello`, igual que ya hace con `--color-foco`.
+   */
+  /*
+   * El claro ahora lleva un corazon de Amarillo Cambio entre dos hombros
+   * blancos: sobre una ficha blanca el blanco no se ve, el amarillo si.
+   * ⚠️ 22% Y NO MAS, MEDIDO: Cambio al 22% sobre papel deja el texto tenue en
+   * 4.56 ✅ y `--color-alerta` en 4.54 ✅ mientras la banda pasa por debajo; al
+   * 30% el alerta ya queda en 4.4996 ❌. Sobre blanco sobra aire (4.66). El
+   * oscuro sube: sobre verde hondo el amarillo pleno es un foco de estadio.
+   */
+  --destello-claro: linear-gradient(
+    var(--eje),
+    transparent 34%,
+    rgb(255 255 255 / 0.45) 44%,
+    rgb(var(--luz-cambio) / 0.22) 50%,
+    rgb(255 255 255 / 0.45) 56%,
+    transparent 66%
+  );
+  --destello-oscuro: linear-gradient(
+    var(--eje),
+    transparent 34%,
+    rgb(var(--luz-cambio) / 0.4) 46%,
+    rgb(var(--luz-cambio) / 0.7) 50%,
+    rgb(var(--luz-cambio) / 0.4) 54%,
+    transparent 66%
+  );
+  --destello: var(--destello-claro);
+
+  /** Desvanece los bordes de una marquesina sin pintar el fondo encima. */
+  --velo-lateral: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+
+  /* ------------------------------------------------------------- vidrio */
+  /**
+   * ⚠️ EL TINTE ES `--verde-750`, MAS OSCURO QUE EL VERDE DE MARCA, Y ESTO NO
+   * ES CAPRICHO: ES EL HALLAZGO MAS CARO DE LA AUDITORIA. Un vidrio con alfa se
+   * COMPONE con lo que tiene detras. Verificado con la formula WCAG:
+   *
+   *   tenido con --color-cancha al 94%, sobre una zona blanca de la pagina:
+   *       compuesto #1d8250 → Amarillo Cambio 4.09:1   ❌ DEBAJO DE AA
+   *   y el Amarillo Cambio de la barra no es decoracion: es el enlace
+   *   "Crear cuenta" Y el anillo de foco de toda la barra.
+   *
+   *   tenido con --verde-750 al 92%, peor caso (blanco puro detras):
+   *       compuesto #22734c → papel 5.54:1 · Cambio 4.92:1 · sobre-cancha 4.94:1
+   *
+   * O sea que el vidrio bien tenido MEJORA el contraste de la barra en vez de
+   * degradarlo, y el mal tenido lo rompe sin que nadie se entere.
+   *
+   * ⚠️ `--vidrio-solido` ES OBLIGATORIO Y NO ES DECORATIVO: sin
+   * `backdrop-filter` un fondo con alfa deja LEER EL CATALOGO A TRAVES DE LA
+   * BARRA. Va afuera del `@supports`, siempre.
+   */
+  --vidrio-tinte: var(--verde-750);
+  --vidrio-solido: var(--color-cancha);
+  --vidrio-fondo: color-mix(in srgb, var(--vidrio-tinte) 92%, transparent);
+  --vidrio-fondo-denso: color-mix(in srgb, var(--vidrio-tinte) 97%, transparent);
+  /** ⚠️ VALOR CAMBIADO: 14 → 18px y mas saturacion. El vidrio tiene que verse vidrio. */
+  --vidrio-desenfoque: saturate(170%) blur(18px);
+  --vidrio-desenfoque-fuerte: saturate(180%) blur(28px);
+
+  /**
+   * DOS VIDRIOS MAS, para tarjetas y paneles (el de la barra queda como esta).
+   * Un vidrio con alfa se COMPONE con lo que tiene detras, asi que cada uno se
+   * mide contra el PEOR fondo posible del sistema, no contra el habitual:
+   *
+   *   claro   blanco al 82% + blur. ⚠️ EL PEOR CASO NO ES `--verde-500`: la
+   *           clase se ofrece ADENTRO de `.sup-noche/.sup-fosa/.sup-cancha`, y
+   *           el fondo mas oscuro del sistema es fosa. Blanco al 82% sobre fosa
+   *           compone #d2d6d4, y ahi los tokens de papel NO alcanzan: neutro-texto
+   *           4.19 ❌ · alerta-hondo 3.85 ❌ · linea-control-honda 2.62 ❌ (sobre
+   *           Verde Cancha, 2.99 ❌). Por eso `.sup-vidrio-claro` NO reusa los
+   *           tokens de papel: lleva tres mas hondos, medidos sobre fosa:
+   *           texto #4d554b 5.27 · alerta #964300 4.62 · linea #6f766c 3.19 ·
+   *           verde-750 4.73 · Verde Cancha como borde 3.29 · tinta 11.9, ✅.
+   *           Sobre blanco quedan en 7.73 / 6.77 / 4.68: mas aire, no menos.
+   *   oscuro  fosa al 86% + blur. Peor caso, blanco puro detras: compone
+   *           #2a3a33 → papel 11.46 · sobre-oscuro-2 6.67 · sobre-oscuro-tenue
+   *           4.66 · naranja 5.30 · verde-400 5.00 · linea-control-oscura 3.36,
+   *           todos ✅ SIN remapear nada. ⚠️ Al 80% —que es lo que uno escribe
+   *           de memoria— el naranja da 4.27 y el verde-400 4.03: no alcanza.
+   *
+   * ⚠️ LOS SOLIDOS SON OBLIGATORIOS Y VAN AFUERA DEL `@supports`: sin
+   * `backdrop-filter` un fondo con alfa deja leer lo de atras.
+   */
+  --vidrio-claro-fondo: rgb(255 255 255 / 0.82);
+  --vidrio-claro-borde: rgb(255 255 255 / 0.85);
+  --vidrio-claro-solido: var(--color-blanco);
+  --vidrio-oscuro-fondo: rgb(7 26 18 / 0.86);
+  --vidrio-oscuro-borde: rgb(250 250 247 / 0.16);
+  --vidrio-oscuro-solido: var(--sup-noche-alta);
+
+  /* ------------------------------------------------------------ texturas */
+  /**
+   * GRANO DE PAPEL. Es el token que mas cambia la percepcion por menos
+   * esfuerzo: una superficie de color puro se lee como CSS; con grano se lee
+   * como papel impreso, que es lo que dice la identidad ("editorial").
+   *
+   * ⚠️ SVG INLINE, NO UNA IMAGEN: cero pedidos de red, cero archivo que
+   * versionar, ~300 bytes dentro del CSS que ya se descarga.
+   *
+   * ⚠️ LA OPACIDAD SE APLICA SOBRE UN PSEUDO-ELEMENTO, NUNCA COMO CAPA DE
+   * `background-image` DEL BLOQUE. Una capa de background NO tiene `opacity`:
+   * puesta directo, el ruido entra a full y la superficie queda con estatica en
+   * vez de textura. Es el error mas facil de cometer con este recurso.
+   *
+   * ⚠️ 5% Y NO SE SUBE. Arriba de ~8% el ruido compite con el texto de 12px,
+   * que es el tamaño de la mitad de las etiquetas del sitio.
+   */
+  --textura-grano: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.84' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  --grano-tamanio: 160px 160px;
+  --grano-fuerza: 0.05;
+  --grano-fuerza-oscuro: 0.075;
+
+  /**
+   * ESCALAS DEL PATRON DE ROMBOS, ya resueltas: nadie mas calcula offsets.
+   * `--patron-paso` es el periodo horizontal de cada escala y es lo que hace
+   * posible que la deriva del patron sea SIN COSTURA (ver `.patron-vivo`).
+   */
+  --patron-tamanio-bloque: 88px 88px;
+  --patron-posicion-bloque: 0 0, 0 44px, 44px -44px, -44px 0;
+  --patron-paso-bloque: 88px;
+  --patron-tamanio-fino: 12px 12px;
+  --patron-posicion-fino: 0 0, 0 6px, 6px -6px, -6px 0;
+  --patron-paso-fino: 12px;
+  --patron-tamanio-cinta: 28px 28px;
+  --patron-posicion-cinta: 0 0, 0 14px, 14px -14px, -14px 0;
+  --patron-paso-cinta: 28px;
+
+  /**
+   * ⚠️ LAS RAYAS DIAGONALES TAMPOCO VIVEN ACA. Igual que `--patron-rombos`,
+   * llevan `var(--patron-color)` adentro y en `:root` se resolvian una sola vez:
+   * estan declaradas en el bloque "recetas de patron", arriba.
+   *
+   * ⚠️ EL PERIODO ES 13px Y 30px **MEDIDOS SOBRE EL EJE**, no en horizontal. Es
+   * el dato que necesita cualquier deriva: el paso horizontal que cierra el
+   * bucle es `periodo / sin(112deg)` (ver `.diagonales-vivas` en
+   * `movimiento.css`), no el periodo pelado.
+   */
+
+  /** Pasto recien cortado. Ambiente (lugar), no marca (el rombo es la marca). */
+  --textura-pasto: repeating-linear-gradient(
+    var(--eje),
+    rgb(250 250 247 / 0.035) 0 46px,
+    rgb(250 250 247 / 0) 46px 92px
+  );
+
+  /* ---------------------------------------------------------- elevacion */
+  /**
+   * ⚠️ CADA NIVEL SON TRES CAPAS Y ESO ES LO QUE LA HACE REAL:
+   *
+   *   contacto   1-2px, casi sin desenfoque. Es lo que un objeto proyecta JUSTO
+   *              donde toca la superficie. Sin ella el objeto flota; con ella,
+   *              apoya. Es la capa que casi siempre falta.
+   *   forma      el desenfoque medio. Da el volumen.
+   *   ambiente   grande, tenue, con offset alto. Es la luz de la habitacion
+   *              rebotando, y es la que se lee como profundidad y no como
+   *              contorno.
+   *
+   * ⚠️ VALORES CAMBIADOS (2026-09-10), NOMBRES NO: mas largas, mas blandas y mas
+   * separadas del objeto. Profundidad por capas —superficies que flotan—, no
+   * contorno. Siguen TENIDAS CON TINTA, nunca negras: una sombra negra sobre
+   * papel calido se ve gris sucia.
+   *
+   * ⚠️ `--sombra-marca` YA NO VIVE ACA: lleva un halo del color de `--luz-marca`
+   * como tercera capa —que es lo que la vuelve luz— y ese token lo remapea cada
+   * superficie, asi que va en el bloque universal (misma trampa que el patron).
+   * Es la sombra del CTA en hover (`ui.module.css` la lee como fallback de
+   * `--boton-primario-resplandor`): con esto el boton primario brilla sin que
+   * nadie toque su modulo.
+   */
+  --sombra-tinte: 16 35 26;
+  --sombra-tinte-verde: 11 90 52;
+
+  /** Hairline de apoyo. Separa sin ocupar layout como haria un `border`. */
+  --sombra-0: 0 0 0 1px rgb(var(--sombra-tinte) / 0.05);
+  /** Apoyado: ficha en reposo, input, etiqueta maciza. */
+  --sombra-1:
+    0 1px 2px rgb(var(--sombra-tinte) / 0.05), 0 4px 12px -2px rgb(var(--sombra-tinte) / 0.08);
+  /** Levantado: ficha con el mouse encima, panel, menu. */
+  --sombra-2:
+    0 2px 4px rgb(var(--sombra-tinte) / 0.05), 0 10px 24px -6px rgb(var(--sombra-tinte) / 0.12),
+    0 24px 48px -16px rgb(var(--sombra-tinte) / 0.14);
+  /** Flotando: barra despegada, popover, ficha elevada. */
+  --sombra-3:
+    0 2px 6px rgb(var(--sombra-tinte) / 0.06), 0 16px 36px -10px rgb(var(--sombra-tinte) / 0.16),
+    0 40px 80px -24px rgb(var(--sombra-tinte) / 0.2);
+  /** Superpuesto: algo que tapa la pagina. */
+  --sombra-4:
+    0 4px 8px rgb(var(--sombra-tinte) / 0.07), 0 24px 48px -12px rgb(var(--sombra-tinte) / 0.18),
+    0 60px 110px -30px rgb(var(--sombra-tinte) / 0.24);
+  --sombra-5:
+    0 6px 12px rgb(var(--sombra-tinte) / 0.09), 0 36px 72px -16px rgb(var(--sombra-tinte) / 0.22),
+    0 90px 160px -40px rgb(var(--sombra-tinte) / 0.3);
+
+  /** Pozo: interior de un input, riel de progreso, marco de foto vacio. */
+  --sombra-hundida:
+    inset 0 1px 3px rgb(var(--sombra-tinte) / 0.1), inset 0 0 0 1px rgb(var(--sombra-tinte) / 0.04);
+
+  /** Sombra AMBIENTE de color: un panel grande apoyado sobre una escena verde proyecta verde. */
+  --sombra-color: 0 30px 70px -28px rgb(var(--sombra-tinte-verde) / 0.38);
+
+  /**
+   * ⚠️ SOBRE FONDO OSCURO UNA SOMBRA NO EXISTE —negro sobre negro—. Lo que
+   * separa una ficha de su fondo oscuro es una LINEA DE LUZ arriba, como el
+   * canto iluminado de un objeto, y ahora ademas un halo verde tenue en la
+   * tercera capa. Es el error clasico al portar un sistema claro a oscuro.
+   */
+  --luz-superior: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --luz-superior-oscura: inset 0 1px 0 rgb(250 250 247 / 0.12);
+  --sombra-oscura:
+    var(--luz-superior-oscura), 0 24px 60px -20px rgb(0 0 0 / 0.6),
+    0 0 44px -10px rgb(63 189 119 / 0.22);
+
+  /* ---------------------------------------------------------- tipografia */
+  /**
+   * ESCALA FLUIDA.
+   *
+   * ⚠️ EL MINIMO DE CADA `clamp()` ES EL VALOR QUE EL TOKEN TIENE HOY. Ningun
+   * texto del sitio se achica en ningun viewport: solo crecen los grandes en
+   * pantallas grandes. Una escala fluida hecha de apuro reemplaza `22px` por
+   * `clamp(20px, …)` y encoge la interfaz entera en telefono.
+   *
+   * ⚠️ LOS CUATRO CHICOS QUEDAN FIJOS. Un cuerpo de texto que cambia de tamaño
+   * con el ancho de la ventana se lee como un error, y ademas rompe la unica
+   * garantia dura de la escala: **`--texto-md` = 16px**. Debajo de 16px iOS
+   * Safari hace zoom al enfocar un campo y **no lo deshace al salir**.
+   *
+   * Verificado a 320px: los cuatro fluidos entregan exactamente su minimo.
+   */
+  --texto-xl: clamp(22px, 1.25rem + 0.35vw, 26px);
+  --texto-2xl: clamp(28px, 1.55rem + 0.5vw, 32px);
+  --texto-3xl: clamp(36px, 1.9rem + 1.1vw, 46px);
+  --texto-4xl: clamp(48px, 2.4rem + 1.9vw, 64px);
+
+  /**
+   * ESCALA DE DISPLAY — la que hace que esto deje de verse como un CRUD.
+   *
+   * ⚠️ ES UNA SERIE APARTE Y NO "LA MISMA MAS GRANDE": un titular de vitrina es
+   * un CARTEL y un `<h2>` de seccion es ESTRUCTURA. Son tokens nuevos, asi que
+   * no pueden romper nada existente.
+   *
+   * ⚠️ VERIFICACION DE 320px, QUE ES LA REGLA DURA. A 320px `--display-1` da
+   * ~55.7px. Big Noodle es muy condensada (~0.42em de avance medio), o sea
+   * ~23.4px por caracter contra 288px utiles: **12 caracteres por linea**. Un
+   * titular se compone respetando ese corte, y una PALABRA sola mas larga que
+   * eso se parte gracias a `overflow-wrap` en `.display` (ver abajo).
+   */
+  --display-3: clamp(30px, 1.6rem + 2.2vw, 52px);
+  --display-2: clamp(40px, 1.8rem + 4.4vw, 84px);
+  --display-1: clamp(52px, 2rem + 7.4vw, 132px);
+
+  /** A 84px+ un interlineado de 0.95 abre un canal blanco que parte el titular. */
+  --interlineado-display: 0.86;
+  /** El tracking se CIERRA al crecer: es optica, no gusto. */
+  --tracking-display: -0.025em;
+  /** Para parrafos largos de lectura editorial. */
+  --interlineado-lectura: 1.65;
+
+  /* ------------------------------------------------------- forma y espacio */
+  /**
+   * CORTE DIAGONAL de seccion, en el eje del sistema. Es la manera mas barata
+   * de que la pagina deje de verse como cajas apiladas, y es literalmente la
+   * bandera.
+   *
+   * ⚠️ VIENE EN PAR CON SU COMPENSACION porque el corte COME ALTURA REAL: sin
+   * `padding-bottom` extra se recorta la ultima linea de texto.
+   * ⚠️ `clip-path` RECORTA TAMBIEN LA SOMBRA Y CUALQUIER HIJO QUE SE DESBORDE:
+   * un `sticky` adentro deja de pegarse y un desplegable queda tijereteado. No
+   * se usa en una seccion que contenga un `<details>` o un filtro pegado.
+   */
+  --corte-abajo: polygon(0 0, 100% 0, 100% calc(100% - 40px), 0 100%);
+  --corte-arriba: polygon(0 40px, 100% 0, 100% 100%, 0 100%);
+  --corte-compensacion: 40px;
+
+  /**
+   * RITMO VERTICAL FLUIDO. Es la otra mitad de por que el sitio se ve apretado:
+   * con 80px fijos entre secciones, un monitor de 27" se ve amontonado y un
+   * telefono desperdicia media pantalla.
+   */
+  --espacio-seccion: clamp(48px, 3rem + 4.5vw, 128px);
+  --espacio-bloque: clamp(28px, 1.5rem + 1.8vw, 56px);
+  /**
+   * Margen lateral de pagina. A 320px son 16px de cada lado.
+   *
+   * ⚠️ EL `max()` CON LOS INSETS ES LA CONTRACARA DE `viewportFit: 'cover'`
+   * (`app/layout.tsx`). Con `cover` el documento pasa a ocupar TAMBIEN las zonas
+   * de recorte, asi que en HORIZONTAL sobre un telefono con notch el inset
+   * lateral ronda los 44px y un canal de 40px deja el texto por debajo del
+   * recorte. Sin `cover` los dos `env()` valen 0 y esto no cambia nada, que es
+   * el caso de vertical y de escritorio.
+   *
+   * ⚠️ SE APLICA SIMETRICO A PROPOSITO, tomando el mayor de los dos insets: el
+   * token es un canal, no un padding de un lado, y varias hojas lo usan en pares
+   * de sangrado (`margin-inline: calc(var(--canal) * -1)` con
+   * `padding-inline: var(--canal)`). Un valor distinto por lado descentraria el
+   * contenido y descalzaria esos pares.
+   *
+   * ⚠️ El fallback `0px` de cada `env()` no es decorativo: sin el, un
+   * navegador que no conoce ese inset descarta la declaracion ENTERA y el sitio
+   * se queda sin canal.
+   */
+  --canal: max(
+    clamp(16px, 4vw, 40px),
+    env(safe-area-inset-left, 0px),
+    env(safe-area-inset-right, 0px)
+  );
+  --ancho-lectura: 62ch;
+  /** Composicion editorial asimetrica: convive con --ancho-contenido, no lo reemplaza. */
+  --ancho-editorial: 1360px;
+
+  /**
+   * Alto de la barra. NO dimensiona la barra —eso lo hace su contenido— sino el
+   * `scroll-padding-top`: sin eso, un salto a un ancla deja el titulo escondido
+   * DEBAJO de la barra adherida.
+   *
+   * ⚠️ LOS 76px ERAN UN NUMERO ADIVINADO Y HOY LA BARRA MIDE MAS QUE ESO EN
+   * TODAS LAS DISPOSICIONES. Se escribieron cuando la barra era una sola fila;
+   * desde que el buscador se pliega a su propia fila, en telefono mide casi el
+   * doble. Consecuencia real: **"Saltar al contenido" dejaba el `<main>` tapado
+   * por la barra**, o sea que el enlace que existe para arreglar el camino de
+   * teclado (WCAG 2.4.1) aterrizaba en un titulo invisible.
+   *
+   * ⚠️ SON TRES VALORES PORQUE LA BARRA TIENE TRES DISPOSICIONES, y los cortes
+   * son los MISMOS que usa `components/header.module.css` (900px y 480px): un
+   * corte propio aca se desincronizaria del dia que la barra mueva el suyo.
+   * Medido contra el padding de la barra, que es lo que produce el alto —el
+   * detalle esta escrito en `header.module.css`, que es donde vive el layout—:
+   *
+   *   >900   16 + 44 (control) + 16 + 6 (cinta)               =  82  →  84px
+   *   ≤900   16 + 44 + 12 (row-gap) + 44 (buscador) + 16 + 6  = 138  → 140px
+   *   ≤480   12 + 44 + 12 + 44 + 12 + 6                       = 130  → 132px
+   *
+   * ⚠️ EL BUSCADOR MIDE 44, NO 48, Y ESA CUENTA YA ESTABA ESCRITA MAL UNA VEZ.
+   * `header.module.css` le fija `line-height: 20px` con `padding: 12px`
+   * justamente para que de `--alto-control` como todo lo demas de la fila; con
+   * 48 sobraban 4px por fila y el token quedaba 6px alto, que es poco pero
+   * empuja el panel de filtros adherido de `/buscar` —su `top` sale de aca— a
+   * despegarse de la barra.
+   *
+   * ⚠️ SE REDONDEA PARA ARRIBA A PROPOSITO. Un ancla que aterriza dos pixeles
+   * mas abajo no lo nota nadie; dos pixeles mas arriba deja la primera linea
+   * cortada, que es el defecto que esto viene a cerrar.
+   *
+   * ⚠️ POR QUE VIVE ACA Y NO EN LA BARRA: `html` es quien lleva el
+   * `scroll-padding-top`, y un `*.module.css` no puede escribir un selector de
+   * nivel superior — Next compila los modulos en `mode: 'pure'` y el build
+   * entero falla. Verificado en `header.module.css`.
+   */
+  --alto-barra: 84px;
+
+  /* --------------------------------------------------------- movimiento */
+  /** Duraciones CON ROL. El nombre dice para que sirve, no cuanto dura. */
+  --dur-instante: 90ms;
+  --dur-media: 280ms;
+  /** Hover rico: elevacion con glow, tilt, zoom de foto. Un poco mas que media: la luz tarda en encenderse. */
+  --dur-hover: 320ms;
+  /** Entrada de un elemento al primer pintado. */
+  --dur-entrada: 560ms;
+  /** Cinematica: una entrada de portada, un morph grande. */
+  --dur-escena: 700ms;
+  /** Continuas. Largas a proposito: nada que corra rapido en bucle se ignora. */
+  --dur-destello: 900ms;
+  /** La banda de luz que cruza un titular, una vez. */
+  --dur-brillo: 1.6s;
+  /** El halo del CTA que respira. */
+  --dur-respirar: 3.6s;
+  /** El borde luminoso que da la vuelta. */
+  --dur-giro: 6s;
+  /** Un objeto que flota; la malla del fondo que deriva. */
+  --dur-flotar: 14s;
+  /** Un blob que cruza. A 26s no se percibe como animacion sino como luz viva. */
+  --dur-blob: 26s;
+  --dur-marquesina: 42s;
+  --dur-marquesina-corta: 26s;
+  --dur-patron: 26s;
+  --dur-ambiente: 9s;
+  /**
+   * Escalon entre hermanos de una entrada escalonada. 55 → 60ms: con entradas
+   * mas materiales el escalon se lee mejor un poco mas abierto, y el hijo 12
+   * sigue arrancando antes de los 700ms. Dos velocidades mas: para grillas
+   * largas y para tres o cuatro bloques grandes.
+   */
+  --paso-escalon: 60ms;
+  --paso-escalon-rapido: 40ms;
+  --paso-escalon-lento: 110ms;
+
+  /**
+   * Curvas con rol:
+   *
+   *   seca      frenada exponencial. Arranca de golpe y se clava. Hover sin
+   *             luz, entradas de ficha, lo que tiene que sentirse preciso.
+   *   corte     acelera y frena parejo. Para lo que CRUZA de lado a lado
+   *             (destello, barrido, telon). Con una curva de entrada, un
+   *             barrido se ve como si se cansara a la mitad.
+   *   escena    sale disparada y frena larguisimo. Una hoja de papel que se
+   *             apoya sobre la mesa. Bloques grandes y TODOS los importes.
+   *   lineal    para lo dirigido por SCROLL y para los bucles. Una marquesina
+   *             con easing PULSA, y el pulso es lo unico que la vuelve molesta.
+   *   viva      pasa de 1 un ~3% y vuelve. Fichas, paneles y bloques que ENTRAN
+   *             o se LEVANTAN: la cosa cae en su lugar en vez de desvanecerse.
+   *   pop       pasa de 1 un ~10%, mas corta. Iconos, chips, etiquetas que se
+   *             encienden. Sobre un bloque grande se ve como un temblor.
+   *   veloz     sale disparada y frena muy largo SIN pasar de 1. Entradas
+   *             laterales rapidas, lo que tiene que sentirse rapido y preciso.
+   *   flotar    ida y vuelta simetrica, para todo lo que oscila en bucle.
+   *
+   * ⚠️ ANTES ESTABA PROHIBIDO REBOTAR; AHORA ESTA PERMITIDO Y MEDIDO, CON UNA
+   * LISTA DE LO QUE NUNCA REBOTA: un importe (`alzar`, `.cifra-entra`), un aviso
+   * (`.entra-seco`), el estado de una orden y la consola de pagos. Esos usan
+   * `--curva-escena` / `--curva-seca`, que frenan sin pasarse: un numero que se
+   * pasa y vuelve se lee como un numero que se esta corrigiendo, y esto es un
+   * sitio donde se transfiere plata.
+   */
+  --curva-seca: cubic-bezier(0.16, 1, 0.3, 1);
+  --curva-corte: cubic-bezier(0.83, 0, 0.17, 1);
+  --curva-escena: cubic-bezier(0.16, 1, 0.3, 1);
+  --curva-lineal: linear;
+  --curva-viva: cubic-bezier(0.22, 1.28, 0.36, 1);
+  --curva-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --curva-veloz: cubic-bezier(0.05, 0.9, 0.1, 1);
+  --curva-flotar: ease-in-out;
+
+  /* ------------------------------------------------------------- capas */
+  --z-fondo: -1;
+  --z-contenido: 1;
+  --z-pegado: 50;
+}
+
+/**
+ * LOS OTROS DOS ALTOS DE LA BARRA (ver `--alto-barra`, arriba).
+ *
+ * ⚠️ EL ORDEN NO ES LIBRE: los dos son `max-width` y se solapan, asi que el mas
+ * angosto tiene que ir DESPUES para poder ganar. Invertidos, un telefono de
+ * 375px se llevaria los 140px del corte de 900 y el ancla quedaria 8px baja.
+ */
+@media (max-width: 900px) {
+  :root {
+    --alto-barra: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --alto-barra: 132px;
+  }
+}
+
+/* ------------------------------------------------------------------ base */
+
+html {
+  /**
+   * ⚠️ `interpolate-size` ES LO QUE HABILITA ANIMAR `height: auto`. Sin esto,
+   * desplegar un `<details>` salta de golpe y la unica alternativa era medir
+   * con JavaScript, que en este proyecto no existe. Sin soporte, se ignora y el
+   * panel abre instantaneo: exactamente como abre hoy.
+   */
+  interpolate-size: allow-keywords;
+
+  /**
+   * ⚠️ `overflow-x: clip` Y NUNCA `hidden`. Las dos frenan el desborde
+   * horizontal —la regla dura de 320px—, pero `hidden` crea un CONTENEDOR DE
+   * SCROLL, y eso **rompe el `position: sticky` de la barra** (verificado:
+   * `header.module.css` la declara `sticky`) y le cambia el timeline a todas
+   * las animaciones dirigidas por scroll de este sistema. `clip` solo recorta.
+   */
+  overflow-x: clip;
+  /** El fondo va en `html` para que el pseudo de `body` pueda pintar ENCIMA. */
+  background-color: var(--color-papel);
+  /** Sin esto, pasar de una pantalla con scroll a una sin scroll corre todo 15px. */
+  scrollbar-gutter: stable;
+  /** Un ancla nunca queda debajo de la barra adherida. */
+  scroll-padding-top: calc(var(--alto-barra) + var(--espacio-4));
+  /** El sitio es claro: sin esto un navegador en modo oscuro pinta los selects. */
+  color-scheme: light;
+}
+
+body {
+  /** El color ahora vive en `html`; el body deja pasar la malla del pseudo. */
+  background-color: transparent;
+}
+
+/**
+ * MALLA DE FONDO Y GRANO, FIJOS AL VIEWPORT.
+ *
+ * ⚠️ SON PSEUDO-ELEMENTOS `fixed` CON `z-index: -1`, NO
+ * `background-attachment: fixed`. En iOS un fondo fijo sobre el body no se
+ * compone: se repinta en cada cuadro de scroll y el sitio se arrastra. Un
+ * `position: fixed` lo resuelve el compositor y no cuesta nada.
+ */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+body::before {
+  background-image: var(--malla-papel);
+}
+
+body::after {
+  opacity: var(--grano-fuerza);
+  background-image: var(--textura-grano);
+  background-size: var(--grano-tamanio);
+}
+
+/**
+ * ⚠️ EN PANTALLA DE ALTA DENSIDAD EL RUIDO SE VE EL DOBLE DE FUERTE. Bajarlo en
+ * 2x es lo que hace que el efecto se vea igual en una notebook y en un telefono.
+ */
+@media (min-resolution: 2dppx) {
+  :root {
+    --grano-fuerza: 0.036;
+    --grano-fuerza-oscuro: 0.055;
+  }
+}
+
+/**
+ * ⚠️ `pretty` Y NO `balance` EN PARRAFOS. `balance` reparte todas las lineas
+ * —correcto en tres lineas de titular, ridiculo en un parrafo de doce— y el
+ * navegador lo limita a 4-6 lineas igual. `pretty` evita la palabra huerfana al
+ * final, que es el problema real de un parrafo largo.
+ */
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+
+/**
+ * ⚠️ SE AGREGA `color` A `::selection`. Sin el, hereda el color del texto: un
+ * enlace verde seleccionado sobre Amarillo Cambio queda en 3.1:1, y sobre una
+ * superficie oscura queda amarillo sobre amarillo. Tinta sobre Cambio: 13.97:1.
+ */
+::selection {
+  background: var(--color-cambio);
+  color: var(--color-tinta);
+}
+
+/**
+ * ⚠️ EL FOCO ES `outline` MAS HALO, Y EL `outline` SIGUE SIENDO EL QUE CUENTA.
+ * Un `box-shadow` en la regla global de `:focus-visible` lo pisa cualquier
+ * `:hover` con sombra propia —una ficha elevada tiene especificidad (0,2,0)
+ * contra (0,1,0)—, asi que el halo puede desaparecer justo en las superficies
+ * donde mas se veria; por eso es adorno y el anillo es la garantia: `outline`
+ * no lo recorta un `overflow: hidden`, que es lo que llevan la ficha de
+ * producto y el buscador. Las clases con sombra propia vuelven a poner el halo
+ * en su `:focus-visible`, declarado despues del hover (movimiento.css).
+ */
+
+/* ============================================================ superficies */
+/**
+ * ⚠️ ESTAS CLASES SON EL CONTRATO. Una superficie oscura escrita a mano es una
+ * superficie que mañana no tiene grano, o tiene el filo de luz pero no el borde
+ * de control, o define un texto tenue que no llega a AA. Es el mismo mecanismo
+ * de contexto que `.portada` YA USA para los ocho tokens de boton
+ * (`page.module.css`), llevado a todos los tokens en vez de a cuatro — asi se
+ * evitan 30 clases "variante oscura" que hay que acordarse de usar.
+ *
+ * ⚠️⚠️ NINGUNA DE ESTAS CLASES REDEFINE `--color-tinta`, Y ES DELIBERADO.
+ * Parece el atajo obvio para dar vuelta el texto, y es una mina: verificado en
+ * el repo, hay **3 declaraciones reales de `background: var(--color-tinta)`**
+ * (`components/footer.module.css:2`, `app/(admin)/admin.module.css:32` y `:161`).
+ * Adentro de una superficie oscura, esos tres bloques se volverian papel con
+ * texto papel: invisibles. Se remapean los SECUNDARIOS y el `color` se pone
+ * directo.
+ *
+ * ⚠️ TAMPOCO SE REDEFINE `--color-blanco`: se usa como COLOR DE TEXTO en 3
+ * lugares (`ui.module.css:158` y `:654`, `admin.module.css:31`) y darlo vuelta
+ * dejaria texto oscuro sobre naranja en 3.67:1, que no pasa AA.
+ *
+ * 🟡 DEUDA MEDIDA, NO ESTIMADA: quedan **35 declaraciones de `background:
+ * var(--color-blanco)` en 11 archivos** que adentro de un bloque oscuro se ven
+ * blancas. Se migran a `--superficie-1` modulo por modulo. No se resuelve por
+ * la fuerza desde aca.
+ */
+
+/** Bloque oscuro estandar: pie, tira de datos, bloque de cierre. */
+.sup-noche,
+.sup-fosa {
+  position: relative;
+  isolation: isolate;
+  color: var(--color-sobre-oscuro);
+
+  --color-neutro-texto: var(--color-sobre-oscuro-2);
+  --color-neutro-tenue: var(--color-sobre-oscuro-tenue);
+  --color-neutro-apagado: var(--color-sobre-oscuro-tenue);
+  --color-neutro-borde: var(--linea-tenue-oscura);
+  --color-neutro-suave: rgb(250 250 247 / 0.06);
+  --linea-tenue: var(--linea-tenue-oscura);
+  --linea-control: var(--linea-control-oscura);
+  --superficie-1: var(--sup-noche-alta);
+  --superficie-2: rgb(250 250 247 / 0.05);
+  /**
+   * ⚠️ ES LA UNICA CAPA DEL SISTEMA OSCURO QUE SUMA LUZ, y por eso lleva numero
+   * medido. Papel al 8% sobre `--sup-fosa` compone #1a2c24 y ahi el token de
+   * texto mas debil —`--color-sobre-oscuro-tenue`— queda en **5.71:1**: sobra.
+   * `.sup-noche` lo baja, porque su base es mas clara (ver ahi mismo).
+   */
+  --patron-color: rgb(250 250 247 / 0.08);
+  --destello: var(--destello-oscuro);
+  /** El anillo de foco verde sobre verde oscuro es invisible. */
+  --color-foco: var(--color-cambio);
+  /** Sobre oscuro el naranja SI es texto (7.26:1). No hace falta el hondo. */
+  --color-alerta: var(--color-naranja);
+  /** Verde Cancha sobre fosa da 3.34:1: los enlaces suben a --verde-400. */
+  --enlace: var(--verde-400);
+
+  --boton-primario-fondo: var(--color-cambio);
+  --boton-primario-texto: var(--color-tinta);
+  --boton-primario-fondo-activo: var(--color-papel);
+  --boton-secundario-fondo: transparent;
+  --boton-secundario-borde: var(--linea-control-oscura);
+  --boton-secundario-texto: var(--color-sobre-oscuro);
+  --boton-secundario-fondo-activo: rgb(250 250 247 / 0.12);
+  --boton-secundario-texto-activo: var(--color-cambio);
+}
+
+/**
+ * ⚠️ EL PATRON BAJA A 4% ACA, Y NO ES GUSTO: ES EL PISO DE CONTRASTE DE ESTA
+ * SUPERFICIE. Con la malla ya corregida para que solo oscurezca, el punto mas
+ * claro de `.sup-noche` es `--sup-noche-alta` (#16362a); el patron es papel con
+ * alfa, o sea que SUMA luz encima de ese punto, y el texto va arriba de los dos.
+ * Compuesto y medido con la formula WCAG, contra el token de texto mas debil
+ * (`--color-sobre-oscuro-tenue`, #8fa79a):
+ *
+ *     8% → #28463a   4.03:1   ❌
+ *     6% → #244236   4.28:1   ❌
+ *     4% → #1f3e32   4.55:1   ✅  (y --color-sobre-oscuro-2 queda en 6.52:1)
+ *
+ * O sea que el 8% heredado de `.sup-fosa` —que si lo aguanta, porque su base es
+ * mucho mas oscura— dejaba el texto tenue debajo de AA en cualquier bloque que
+ * llevara `sup-noche` mas un patron. Un modulo que quiera el rombo mas presente
+ * puede subirlo, pero entonces le toca medir de nuevo su propio texto.
+ */
+.sup-noche {
+  background-color: var(--sup-noche);
+  background-image: var(--malla-noche);
+
+  --patron-color: rgb(250 250 247 / 0.04);
+}
+
+.sup-fosa {
+  background-color: var(--sup-fosa);
+  background-image: none;
+}
+
+/** Bloque verde de marca: la portada y sus parientes. */
+.sup-cancha {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--color-cancha);
+  background-image: var(--malla-cancha);
+  color: var(--color-papel);
+
+  --color-neutro-texto: var(--color-sobre-cancha);
+  --color-neutro-tenue: var(--color-sobre-cancha);
+  --color-neutro-borde: rgb(250 250 247 / 0.22);
+  --linea-tenue: rgb(250 250 247 / 0.22);
+  /**
+   * ⚠️ ERA PAPEL AL 45% Y DABA **2.25:1** CONTRA EL VERDE, debajo del 3:1 que
+   * WCAG 1.4.11 exige al contorno de un control: el borde de un secundario o de
+   * un input sobre la portada no llegaba. Al 65% compone #a8cdb9 y da 3.11 ✅.
+   * Medido; los pasos intermedios (55%, 60%) siguen abajo.
+   */
+  --linea-control: rgb(250 250 247 / 0.65);
+  --patron-color: var(--color-tiempo-extra);
+  --destello: var(--destello-oscuro);
+  --color-foco: var(--color-cambio);
+  --enlace: var(--color-cambio);
+
+  /**
+   * ⚠️ SOBRE VERDE CANCHA NO EXISTE UN NARANJA LEGIBLE, Y HAY QUE DECIRLO.
+   * Medido: `--color-alerta` da **1.11:1** y el naranja vivo **2.39:1**. Los
+   * dos son texto invisible. `.sup-noche` y `.sup-fosa` remapean este token
+   * mas arriba; cancha se habia quedado afuera, asi que un `<Aviso tono="error">`
+   * adentro de un bloque de marca salia ilegible sin que fallara nada.
+   *
+   * Amarillo Cambio da **4.59:1**, que es AA para texto normal — con 0.09 de
+   * aire, igual que `--color-sobre-cancha`, y no por casualidad: sobre este
+   * verde no hay lugar para mas.
+   *
+   * ⚠️ LA FORMA CORRECTA DE DECIR "ALERTA" SOBRE MARCA NO ES TEXTO DE COLOR,
+   * ES UNA ETIQUETA RELLENA: naranja de fondo con texto Tinta da **7.26:1**.
+   * Este token es el piso para lo que no pueda llevar relleno.
+   */
+  --color-alerta: var(--color-cambio);
+  --color-alerta-hondo: var(--color-cambio);
+
+  --boton-primario-fondo: var(--color-cambio);
+  --boton-primario-texto: var(--color-tinta);
+  --boton-primario-fondo-activo: var(--color-papel);
+  --boton-secundario-fondo: transparent;
+  --boton-secundario-borde: var(--color-papel);
+  --boton-secundario-texto: var(--color-papel);
+  /**
+   * ⚠️ EL SECUNDARIO SOBRE MARCA SE OSCURECE AL APRETARLO, NO SE ACLARA — y es
+   * la regla de "la luz se resta" aplicada al unico lugar donde tenia una
+   * excepcion escrita a mano. Papel al 16% compuesto sobre Verde Cancha da
+   * `#358e61`, y el texto papel encima queda en **3.87:1**: debajo de AA para
+   * texto normal. O sea que el boton se volvia ilegible EXACTAMENTE mientras el
+   * dedo lo aprieta, que es cuando mas se lo esta mirando.
+   *
+   * `--verde-900` al 30% compone `#0d673a` y sube el mismo texto a **6.65:1**.
+   * De paso el gesto se lee mejor: apretar algo lo HUNDE, no lo enciende.
+   */
+  --boton-secundario-fondo-activo: rgb(7 59 34 / 0.3);
+  --boton-secundario-texto-activo: var(--color-papel);
+}
+
+/**
+ * FILO DE LUZ en el borde superior de un bloque oscuro o de marca.
+ * ⚠️ VA COMO PSEUDO Y NO COMO `border-top`: un borde de 1px de color plano se
+ * ve como una linea dibujada; esto se ve como LUZ, porque se desvanece hacia
+ * los costados. Es el detalle mas barato del archivo y el que mas hace: sin el,
+ * un bloque oscuro es un rectangulo; con el, es un objeto.
+ *
+ * ⚠️⚠️ **`.sup-noche` / `.sup-fosa` / `.sup-cancha` Y `.patron-vivo` NO PUEDEN
+ * IR EN EL MISMO ELEMENTO.** Las dos pintan en `::before`: una gana, la otra
+ * desaparece, y no falla nada. El patron va SIEMPRE en un hijo propio y vacio.
+ *
+ * ⚠️ SE EVALUO MOVER UNO DE LOS DOS Y **NO SE PUEDE**, asi que queda escrito acá
+ * en vez de arreglado. Los dos caminos estan cerrados por codigo que este
+ * archivo no manda:
+ *
+ *   filo → `::after`      lo ocuparia `.con-grano::after`, y `sup-* con-grano`
+ *                         es la combinacion mas usada del sistema (el pie, la
+ *                         portada, las consolas del back-office).
+ *   filo → capa de fondo   `components/header.module.css` APAGA el filo con
+ *                         `header.barra::before { display: none }` —la barra no
+ *                         tiene nada arriba de lo que separarse—, y
+ *                         `components/footer.module.css` depende de que el filo
+ *                         se pinte en `z-index: 1` para meterle la cinta
+ *                         encima. Como capa de `background-image` los dos
+ *                         mecanismos dejan de existir en silencio.
+ *   patron → `::after`    choca con `.con-grano::after`, y hay markup real que
+ *                         los junta (`app/buscar/page.tsx`: `sup-2 patron-vivo
+ *                         con-grano`).
+ *
+ * O sea: son tres efectos y dos pseudo-elementos. La convencion del hijo vacio
+ * es la salida, y esta documentada en los ~12 modulos que la aplican.
+ */
+.sup-noche::before,
+.sup-fosa::before,
+.sup-cancha::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  z-index: var(--z-contenido);
+  pointer-events: none;
+  /* Mas presente que antes y con Amarillo Cambio en el centro: es luz, no un borde. Mide 1px: no lleva texto. */
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(250 250 247 / 0.34) 24%,
+    rgb(var(--luz-cambio) / 0.75) 50%,
+    rgb(250 250 247 / 0.34) 76%,
+    transparent 100%
+  );
+}
+
+/**
+ * ⚠️ SUPERFICIES CLARAS TENIDAS: REMAPEO OBLIGATORIO. Sobre `#f2f3ea`,
+ * `#eef5f0` y `#f7f4cf`, `--color-neutro-tenue` cae a ~4.4:1 y `--color-alerta`
+ * a ~4.37:1 — los dos DEBAJO de AA. Estas clases lo arreglan solas.
+ *
+ * ⚠️ Y EL TERCERO ES EL BORDE, QUE FALTABA. `--linea-control` (#8a9186) sobre
+ * `--superficie-2` da **2.90:1**, debajo del 3:1 de WCAG 1.4.11: el contorno de
+ * un input o de un boton secundario adentro de un bloque tenido no llegaba al
+ * minimo. Es exactamente el mismo defecto que los dos de arriba —un token
+ * calibrado contra papel usado sobre una superficie mas apagada— y se arregla
+ * en el mismo lugar. Con el hondo queda en **3.44:1** (3.48 sobre marca).
+ */
+.sup-2,
+.sup-marca,
+.sup-calida {
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+  --linea-control: var(--linea-control-honda);
+}
+
+.sup-2 {
+  background-color: var(--superficie-2);
+}
+.sup-marca {
+  background-color: var(--superficie-marca);
+}
+.sup-calida {
+  background-color: var(--superficie-calida);
+}
+
+/** Objeto apoyado sobre el papel: la ficha estandar del sistema. Radio de ficha (20px) y filo de luz. */
+.sup-ficha {
+  background: var(--superficie-1);
+  border-radius: var(--radio-ficha);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+/** Objeto levantado: menu, panel, popover, ficha activa. Ya flota y ya trae un poco de glow. */
+.sup-flotante {
+  background: var(--superficie-1);
+  border-radius: var(--radio-grande);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-3), var(--glow-suave);
+}
+
+/** Pozo: interior de un input, riel de una barra, marco de foto vacio. */
+.sup-hundida {
+  background: var(--superficie-2);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-hundida);
+}
+
+/**
+ * VIDRIO ESMERILADO de marca (tinte verde-750): para una barra o una cinta
+ * adherida sobre el catalogo. Las tarjetas y los paneles usan
+ * `.sup-vidrio-claro` / `.sup-vidrio-oscuro`, mas abajo.
+ * ⚠️ EL FONDO SOLIDO VA AFUERA DEL `@supports`. Sin `backdrop-filter`, un fondo
+ * con alfa deja leer el catalogo a traves de la barra.
+ * ⚠️ LA BARRA SUPERIOR NO LO USA, Y NO ES UN OLVIDO: `components/header.module.css`
+ * lo rechaza con dos razones duras —lleva `viewTransitionName: 'barra'` y el
+ * backdrop no se captura en la snapshot, y una pasada de GPU por cuadro de
+ * scroll sobre la vitrina es cara—. Ahi el vidrio se reemplaza por el cambio
+ * de color al despegarse. El vidrio de barra se ofrece; no se impone.
+ */
+.sup-vidrio {
+  background-color: var(--vidrio-solido);
+  /* Filo de luz ABAJO: separa el vidrio del contenido sin ocupar layout. */
+  box-shadow: inset 0 -1px 0 rgb(250 250 247 / 0.14);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .sup-vidrio {
+    background-color: var(--vidrio-fondo);
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+}
+
+/**
+ * GRANO LOCAL, para una superficie que no herede el del body.
+ * ⚠️ `z-index: var(--z-fondo)` (-1) MAS `isolation: isolate` EN EL PADRE. Con
+ * `z-index: 0` el grano queda POR ENCIMA del texto en flujo, que es lo contrario
+ * de lo que se busca; sin `isolation`, el -1 se escapa del bloque y termina
+ * detras del fondo del ancestro.
+ */
+.con-grano {
+  position: relative;
+  isolation: isolate;
+}
+
+.con-grano::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  opacity: var(--grano-fuerza);
+  background-image: var(--textura-grano);
+  background-size: var(--grano-tamanio);
+}
+
+.sup-noche.con-grano::after,
+.sup-fosa.con-grano::after,
+.sup-cancha.con-grano::after {
+  opacity: var(--grano-fuerza-oscuro);
+}
+
+/* --------------------------------------------------- primitivas de forma */
+
+/** Titular de tapa. */
+.display {
+  font-family: var(--fuente-titulo);
+  font-weight: var(--peso-normal);
+  font-size: var(--display-1);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  text-wrap: balance;
+  /**
+   * ⚠️ ESTO ES LO QUE GARANTIZA LA REGLA DE 320px. A ~56px, una PALABRA sola de
+   * mas de 12 caracteres —el nombre de un club, un mail— no entra en la linea y
+   * empuja la pagina entera.
+   * ⚠️ SIN `hyphens: auto`: partiria un titular de tapa con un guion, que en el
+   * elemento mas visible del sistema se ve como un defecto. `overflow-wrap`
+   * cubre el requisito por si solo.
+   */
+  overflow-wrap: anywhere;
+}
+
+.display-2 {
+  font-size: var(--display-2);
+}
+
+.display-3 {
+  font-size: var(--display-3);
+}
+
+/** La oblicua real de Big Noodle: la unica variacion que la identidad admite. */
+.oblicuo {
+  font-style: italic;
+}
+
+/**
+ * Titular con gradiente. Se aisla en una clase porque `background-clip: text`
+ * exige `color: transparent`, y un elemento transparente que pierda el fondo
+ * —una extension, un modo de alto contraste— queda LITERALMENTE INVISIBLE. Por
+ * eso el `@supports`: sin soporte se queda el color solido de siempre.
+ */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .titular-degradado {
+    background-image: var(--degradado-titular);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/** Filete: el separador que un 1px gris no sabe ser. Ahora es un trazo redondeado. */
+.regla {
+  border: 0;
+  height: 4px;
+  margin: 0;
+  border-radius: var(--radio-pastilla);
+  background: var(--color-tinta);
+}
+
+/** El de acento es la linea de energia: gradiente vivo con halo. */
+.regla-acento {
+  height: 8px;
+  background-image: var(--degradado-acento);
+  box-shadow: var(--glow-suave);
+}
+
+/**
+ * Desplazamiento suave SOLO para quien no pidio lo contrario. Fuera de la media
+ * query, un `scroll-behavior: smooth` global marea a quien tiene sensibilidad
+ * vestibular.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* =============================================================================
+ * TOKENS — LUZ, GLOW Y VIDRIO (2026-09-10)
+ * =============================================================================
+ *
+ * La fundacion de la direccion nueva: redondeado, glow, gradientes vivos,
+ * vidrio y movimiento desde el primer cuadro. Complementa los dos bloques de
+ * arriba —donde los VALORES ya cambiaron en su lugar: radios, sombras, curvas,
+ * foco, mallas, vidrio— con el vocabulario que antes no existia.
+ *
+ * ⚠️ NO SE RENOMBRA NI SE BORRA UN SOLO TOKEN NI UNA SOLA CLASE. Verificado
+ * antes de escribir: 101 usos de `--radio`, 29 de `--radio-chico`, 34/30/14 de
+ * `--sombra-0/1/2`, 35 de `--degradado-acento`, 63 de `--curva`, 43 de
+ * `--curva-seca`. Todos siguen resolviendo; solo cambian de aspecto.
+ *
+ * ⚠️ LA LUZ QUE SE SUMA ES LA QUE MAS FACIL ROMPE AA, y por eso cada token de
+ * abajo que aclara trae su numero, calculado con la formula WCAG contra los
+ * hex reales de este archivo —no estimado, no copiado—. Regla de oro: **EL GLOW
+ * VA FUERA DEL TEXTO** (`box-shadow`, `filter: drop-shadow` o un pseudo
+ * alrededor de la caja) y nunca es un fondo mas claro debajo de las letras.
+ * Donde una malla aclara de verdad, el texto va sobre `.velo-texto` o sobre un
+ * vidrio, y el numero esta medido contra el punto MAS CLARO.
+ *
+ * Tabla que sostiene todo lo de abajo (papel = #fafaf7):
+ *
+ *   --verde-600 #10824a   papel 4.66 ✅ · cambio 4.14 ❌ · sobre-cancha 4.15 ❌
+ *       → el verde MAS CLARO que aguanta texto papel normal. Tope del boton.
+ *   --verde-500 #16a35c   papel 3.12  → texto GRANDE (≥24px), bordes de control y glow
+ *   --verde-400 #3fbd77   papel 2.29  → luz pura sobre claro; texto solo sobre oscuro
+ *   blanco al 6% sobre cancha → papel 4.60 ✅ · al 8% → 4.43 ❌
+ *       → un barrido blanco bajo texto papel no existe; el barrido es verde.
+ *   el tenue (#6b736a, 4.69) tiene 0.19 de aire sobre papel: cualquier lavado
+ *       de mas de un 4% de verde luminoso se lo come. De ahi los presupuestos.
+ * ========================================================================== */
+
+/* --------------------------------------------------- propiedades animables */
+/**
+ * `--brillo-x` es la posicion de la banda de luz que cruza un titular
+ * (`.shimmer-titulo`, movimiento.css). Registrada como porcentaje para que
+ * interpole. Los angulos que giran usan `--giro`, que YA esta registrada mas
+ * arriba: no se duplica con otro nombre.
+ */
+@property --brillo-x {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
+/* ------------------------------------------ recetas de luz (universal) */
+/**
+ * ⚠️ VAN EN EL BLOQUE UNIVERSAL POR LA MISMA TRAMPA QUE `--patron-rombos` (ver
+ * "recetas de patron", arriba): el valor computado de una custom property
+ * lleva sus `var()` YA SUSTITUIDOS. Declaradas en `:root` se resolverian UNA
+ * vez —con el `--giro` inicial y con la luz de papel— y ni girar un borde ni
+ * entrar en una superficie oscura cambiaria nada. Aca cada elemento y cada
+ * pseudo las resuelve con SU angulo y SU luz.
+ *
+ *   --degradado-vivo    FORMA: subrayados, filetes, barras. Lee `--giro`.
+ *   --degradado-borde   el anillo conico de `.borde-brilla`. Lee `--giro`.
+ *   --glow-marca …      los halos, del color de `--luz-marca`: verde luminoso
+ *                       sobre claro, verde-400 sobre noche, Cambio sobre cancha.
+ *   --glow-foco         el halo de foco, del color de `--luz-foco`.
+ *   --sombra-marca      la sombra del CTA, con un halo de `--luz-marca` como
+ *                       tercera capa. Es lo que hace brillar al boton primario
+ *                       en hover sin tocar `ui.module.css`.
+ *
+ * ⚠️ UN GLOW SON TRES CAPAS Y POR ESO SE VE COMO LUZ Y NO COMO SOMBRA DE COLOR:
+ *   1. un anillo de 1px con alfa (el borde que brilla)
+ *   2. un halo corto y denso (la luz pegada al objeto)
+ *   3. un halo largo y tenue (la luz que baña alrededor)
+ * Las difusas llevan `spread` negativo para no formar un bloque.
+ *
+ * ⚠️ SON `box-shadow`, O SEA PINTURA. En reposo cuestan nada; en hover son una
+ * transicion de 320ms; en BUCLE solo via `.respira`, que anima `filter` en UN
+ * elemento por pantalla. Y son ocho custom properties mas por elemento y por
+ * pseudo, ademas de las tres del patron: memoria de estilo, no pintura. Se
+ * acepta con los ojos abiertos por el mismo motivo que aquellas.
+ */
+*,
+*::before,
+*::after {
+  --degradado-vivo: linear-gradient(
+    var(--giro),
+    var(--verde-700) 0%,
+    var(--verde-500) 48%,
+    var(--color-cambio) 100%
+  );
+  --degradado-borde: conic-gradient(
+    from var(--giro),
+    transparent 0turn,
+    rgb(var(--luz-marca) / 0.95) 0.1turn,
+    transparent 0.26turn,
+    rgb(var(--luz-cambio) / 0.9) 0.52turn,
+    transparent 0.68turn,
+    rgb(var(--luz-marca) / 0.95) 0.88turn,
+    transparent 1turn
+  );
+  --glow-marca:
+    0 0 0 1px rgb(var(--luz-marca) / 0.38), 0 0 18px -2px rgb(var(--luz-marca) / 0.55),
+    0 0 56px -6px rgb(var(--luz-marca) / 0.45);
+  --glow-marca-fuerte:
+    0 0 0 1px rgb(var(--luz-marca) / 0.5), 0 0 28px 0 rgb(var(--luz-marca) / 0.6),
+    0 0 90px -4px rgb(var(--luz-marca) / 0.55);
+  /** El de una ficha en hover: acompaña a la sombra, no la reemplaza. */
+  --glow-suave:
+    0 0 0 1px rgb(var(--luz-marca) / 0.22), 0 0 26px -4px rgb(var(--luz-marca) / 0.3),
+    0 22px 52px -20px rgb(var(--luz-marca) / 0.35);
+  --glow-foco: 0 0 0 4px rgb(var(--luz-foco) / 0.32), 0 0 22px 2px rgb(var(--luz-foco) / 0.5);
+  /** Para SVG e iconos: un `filter` que sigue la silueta. Estatico. */
+  --glow-drop-marca: drop-shadow(0 0 6px rgb(var(--luz-marca) / 0.7))
+    drop-shadow(0 0 18px rgb(var(--luz-marca) / 0.45));
+  /**
+   * GLOW DE TEXTO para una cifra destacada: `text-shadow` difuso y tenue. A 16px
+   * de desenfoque y alfa 0.3 lo que se compone junto al glifo no mueve el
+   * contraste medido. Nunca se anima: un importe no late.
+   */
+  --glow-texto: 0 0 16px rgb(var(--luz-marca) / 0.3);
+  /** Borde de luz de 1px con alfa. DECORATIVO: el borde de un control sigue siendo `--linea-control`. */
+  --borde-luz: rgb(var(--luz-marca) / 0.45);
+  --sombra-marca:
+    0 4px 10px -2px rgb(var(--sombra-tinte-verde) / 0.25),
+    0 18px 40px -10px rgb(var(--sombra-tinte-verde) / 0.42),
+    0 0 32px -4px rgb(var(--luz-marca) / 0.4);
+}
+
+:root {
+  /* ----------------------------------------------------- canales de luz */
+  /**
+   * Las luces del sistema como canales `r g b`, para escribir `rgb(... / alfa)`
+   * con una alfa distinta por capa. No son colores nuevos: son cancha,
+   * verde-500, verde-400, Cambio y papel.
+   */
+  --luz-cancha: 15 122 69;
+  --luz-verde: 22 163 92;
+  --luz-verde-clara: 63 189 119;
+  --luz-cambio: 245 239 174;
+  --luz-papel: 250 250 247;
+
+  /**
+   * LUCES CONTEXTUALES. Cada superficie las fija a la luz que su fondo aguanta,
+   * y las recetas del bloque universal las siguen solas:
+   *
+   *   --luz-marca   verde luminoso sobre claro · verde-400 sobre noche y fosa ·
+   *                 Amarillo Cambio sobre cancha (un halo verde sobre verde es
+   *                 invisible; el amarillo es la chispa de la marca)
+   *   --luz-foco    verde-500 sobre claro (3.12:1 sobre papel: cumple 1.4.11 como
+   *                 indicador, y el `outline` de Verde Cancha sigue debajo) ·
+   *                 Cambio sobre oscuro
+   *   --luz-blob    el verde de los blobs: verde-400 sobre claro —por ser mas
+   *                 claro oscurece MENOS el papel— y verde-500 sobre oscuro, que
+   *                 es con lo que estan medidos los presupuestos de abajo
+   */
+  --luz-marca: var(--luz-verde);
+  --luz-foco: var(--luz-verde);
+  --luz-blob: var(--luz-verde-clara);
+
+  /* ------------------------------------------------------ glow explicito */
+  /** Para cuando se quiere UNA luz sin importar la superficie (`.glow-cambio`). */
+  --glow-cancha:
+    0 0 0 1px rgb(var(--luz-verde) / 0.38), 0 0 18px -2px rgb(var(--luz-verde) / 0.55),
+    0 0 56px -6px rgb(var(--luz-cancha) / 0.5);
+  --glow-cambio:
+    0 0 0 1px rgb(var(--luz-cambio) / 0.5), 0 0 18px -2px rgb(var(--luz-cambio) / 0.55),
+    0 0 56px -6px rgb(var(--luz-cambio) / 0.4);
+  --borde-luz-cambio: rgb(var(--luz-cambio) / 0.55);
+
+  /* ---------------------------------------------------- gradientes vivos */
+  /**
+   * BOTON PRIMARIO: la unica superficie de marca que ACLARA, porque su texto es
+   * SOLO papel. Peor punto = verde-600, papel 4.66 ✅. ⚠️ No sirve para la
+   * barra ni para ningun bloque con `--color-sobre-cancha` o Cambio encima
+   * (4.15 / 4.14 ❌): esos siguen con `--degradado-cancha`.
+   */
+  --degradado-boton: linear-gradient(
+    var(--eje),
+    var(--verde-600) 0%,
+    var(--color-cancha) 55%,
+    var(--verde-750) 100%
+  );
+  --degradado-boton-activo: linear-gradient(
+    var(--eje),
+    var(--color-cancha) 0%,
+    var(--verde-800) 100%
+  );
+
+  /**
+   * MALLA VIVA — la portada que SI aclara y satura: cancha → verde-600 →
+   * verde-500, un foco de verde-500 abajo a la derecha, un toque de Amarillo
+   * Cambio arriba a la derecha y verde-900 abajo a la izquierda, que es donde
+   * suele vivir la columna de texto. La usa `.sup-cancha-viva`.
+   *
+   * ⚠️ PUNTO MAS CLARO: Cambio al 28% sobre verde-500 compone #54b873, y ahi
+   * NINGUN texto del sistema pasa AA (papel 2.36, Cambio 2.10). Por eso la
+   * columna de texto lleva `.velo-texto`, o no lleva texto. Con el velo (tinta
+   * al 66%), medido en ese punto y tambien con un blob de Cambio al 30% encima:
+   *   papel 8.14 / 7.32 · Cambio 7.23 / 6.50 · sobre-cancha 7.25 / 6.52, ✅ todos.
+   * Los tokens tenues de noche (`--color-sobre-oscuro-tenue`, 3.0) NO pasan bajo
+   * el velo: adentro de una viva el texto secundario es `--color-sobre-cancha`,
+   * que es lo que `.sup-cancha` ya remapea.
+   */
+  --malla-viva:
+    radial-gradient(55% 50% at 84% 12%, rgb(var(--luz-cambio) / 0.28) 0%, transparent 62%),
+    radial-gradient(70% 70% at 100% 55%, var(--verde-500) 0%, transparent 60%),
+    radial-gradient(90% 85% at 8% 100%, var(--verde-900) 0%, transparent 58%),
+    linear-gradient(var(--eje), var(--color-cancha) 0%, var(--verde-600) 50%, var(--verde-500) 100%);
+
+  /** VELO DE TEXTO: la capa oscura detras del texto sobre una malla viva. El numero esta arriba. */
+  --velo-texto: rgb(16 35 26 / 0.66);
+
+  /**
+   * LUZ DEL SHIMMER DE TITULAR: la banda que cruza una vez al cargar. Sobre
+   * claro es verde-500 (3.12:1, o sea solo titulares grandes); las superficies
+   * oscuras la pasan a Amarillo Cambio.
+   */
+  --titular-luz: var(--verde-500);
+
+  /**
+   * BARRIDO DE LUZ bajo el texto de un boton (`.barrido-luz`). ⚠️ ES VERDE Y NO
+   * BLANCO, Y ES UN NUMERO: verde-500 al 20% sobre cancha compone #10824a
+   * (papel 4.64 ✅); blanco al 8% ya baja de AA (4.43). Sobre un boton amarillo
+   * con texto tinta —el primario de las superficies oscuras— las superficies lo
+   * pasan a blanco al 45% (tinta 15.02 ✅).
+   */
+  --barrido-luz: linear-gradient(
+    var(--eje),
+    transparent 30%,
+    rgb(var(--luz-verde) / 0.2) 48%,
+    rgb(var(--luz-verde) / 0.2) 52%,
+    transparent 70%
+  );
+  --barrido-luz-blanco: linear-gradient(
+    var(--eje),
+    transparent 30%,
+    rgb(255 255 255 / 0.45) 48%,
+    rgb(255 255 255 / 0.45) 52%,
+    transparent 70%
+  );
+
+  /* -------------------------------------------------------------- blobs */
+  /**
+   * PRESUPUESTO DE ALFA DE LOS BLOBS, por superficie. Es el token que hace que
+   * un blob no pueda romper AA por accidente: `.blob-cancha` y `.blob-cambio`
+   * (movimiento.css) leen estos dos, y cada `.sup-*` los fija a lo que su texto
+   * aguanta. Medidos en el centro del blob y CON dos blobs superpuestos, que es
+   * lo que pasa cuando flotan:
+   *
+   *   papel pelado        verde-400 0.04 · cambio 0.20   tenue 4.54 / 4.57 ✅ (un lavado, no una luz)
+   *   .escena-luz         verde-400 0.16 · cambio 0.55   con remapeo: texto 4.88-5.18 · alerta-hondo 4.75 ·
+   *                                                       cancha 4.54 · linea-honda 3.05-3.24 ✅ (superpuestos,
+   *                                                       en los dos ordenes de apilado; al 0.18 la linea da 3.00)
+   *   .sup-fosa           verde-500 0.14 · cambio 0.08   tenue 4.69 · verde-400 5.03 · borde 3.38 ✅ (superp.)
+   *   .sup-noche          verde-500 0.04 · cambio 0.02   tenue 4.60 ✅ (superp.); su punto mas claro
+   *                                                       tiene 0.6 de aire y no da para mas
+   *   .sup-noche.escena-luz  0.10 · 0.06                 tenue → sobre-oscuro-2 (6.81) · verde-400 5.10 ·
+   *                                                       naranja 5.41 · borde 3.43 ✅ (al 0.14 el borde da 3.03)
+   *   .sup-cancha         0 · 0                          sobre-cancha tiene 0.10 de aire: nada de luz
+   *   .sup-cancha-viva    verde-400 0.55 · cambio 0.45   SOLO bajo `.velo-texto`: con los dos encima del punto
+   *                                                       mas claro, el velo deja papel 6.9 · Cambio 6.1 ·
+   *                                                       sobre-cancha 6.1 ✅ (hasta 0.6/0.5 sigue arriba de 6)
+   *
+   * Sobre papel pelado los dos numeros son deliberadamente casi nada: al 6% de
+   * verde-400 el tenue ya cae a 4.47 ❌. La luz que se VE va en `.escena-luz`.
+   */
+  --blob-alfa-cancha: 0.04;
+  --blob-alfa-cambio: 0.2;
+  --blob-tamanio: clamp(280px, 48vw, 720px);
+
+  /* -------------------------------------------------------------- enlace */
+  --enlace: var(--color-cancha);
+  --enlace-activo: var(--color-tiempo-extra);
+}
+
+/* ------------------------------------------- superficies: luz contextual */
+/**
+ * Cada superficie fija la LUZ que su fondo aguanta; las recetas del bloque
+ * universal (`--glow-*`, `--sombra-marca`, `--borde-luz`) la siguen solas. Es
+ * el mismo mecanismo de contexto que ya usan `--color-foco` y `--destello`.
+ *
+ *   noche / fosa   luz verde-400: sobre verde oscuro el verde de marca no se ve
+ *                  y el amarillo se reserva para el foco y el titular.
+ *   cancha         luz Cambio: sobre Verde Cancha un halo verde es invisible.
+ */
+.sup-noche,
+.sup-fosa {
+  --luz-marca: var(--luz-verde-clara);
+  --luz-foco: var(--luz-cambio);
+  --luz-blob: var(--luz-verde);
+  --titular-luz: var(--color-cambio);
+  --barrido-luz: var(--barrido-luz-blanco);
+  --enlace-activo: var(--color-cambio);
+}
+
+.sup-fosa {
+  --blob-alfa-cancha: 0.14;
+  --blob-alfa-cambio: 0.08;
+}
+
+.sup-noche {
+  --blob-alfa-cancha: 0.04;
+  --blob-alfa-cambio: 0.02;
+}
+
+.sup-cancha {
+  --luz-marca: var(--luz-cambio);
+  --luz-foco: var(--luz-cambio);
+  --luz-blob: var(--luz-verde-clara);
+  --titular-luz: var(--color-cambio);
+  --barrido-luz: var(--barrido-luz-blanco);
+  --enlace-activo: var(--color-papel);
+  /** Sin velo no hay luz que sumar: el texto apoyado directo tiene 0.10 de aire. */
+  --blob-alfa-cancha: 0;
+  --blob-alfa-cambio: 0;
+}
+
+/**
+ * LA PORTADA VIVA. Modificador de `.sup-cancha` —hereda todos sus remapeos— que
+ * cambia la malla por la que SI aclara y habilita blobs fuertes.
+ *
+ * ⚠️ CONTRATO, Y ES DURO: sobre `.sup-cancha-viva` NO SE APOYA TEXTO DIRECTO.
+ * Todo texto va adentro de `.velo-texto` o de `.sup-vidrio-oscuro`. Un `<p>`
+ * suelto encima del toque amarillo es texto invisible para bastante gente y
+ * NADA falla: ni el lint, ni el chequeo, ni el build. Los numeros estan en
+ * `--malla-viva`.
+ *
+ * ⚠️ NO ES `.sup-cancha` A SECAS, Y ES A PROPOSITO: la barra y diez pantallas
+ * apoyan texto directo sobre `.sup-cancha` con contrastes medidos contra el
+ * verde plano. La viva es opt-in por eso.
+ */
+.sup-cancha.sup-cancha-viva {
+  background-image: var(--malla-viva);
+  --blob-alfa-cancha: 0.55;
+  --blob-alfa-cambio: 0.45;
+}
+
+/**
+ * ESCENA DE LUZ sobre papel: una seccion clara con blobs que se VEN. Remapea
+ * los tokens que un blob de verdad tumba, medido con verde-400 al 16% y Cambio
+ * al 55% superpuestos, en los dos ordenes de apilado: neutro-texto 4.88-5.18 ·
+ * alerta-hondo 4.75 · Verde Cancha (enlaces de los modulos) 4.54 ·
+ * linea-control-honda 3.05-3.24, todos ✅. Es el techo: al 18% la linea da 3.00
+ * justo. Es el remapeo de `.sup-2`, mas el enlace pelado a verde-750 (5.84).
+ *
+ * Sobre una superficie oscura sube el tenue a `--color-sobre-oscuro-2`, y eso
+ * compra presupuesto en noche: con 0.10 + 0.06 superpuestos, sobre-oscuro-2
+ * 6.81 · verde-400 5.10 · naranja 5.41 · borde 3.43 ✅. ⚠️ En fosa NO se sube:
+ * 0.14 / 0.08 ya es el techo por el enlace verde-400 (5.01) y el borde de
+ * control (3.37); al 0.20 / 0.10 caen a 4.30 y 2.89.
+ */
+.escena-luz {
+  position: relative;
+  isolation: isolate;
+  --blob-alfa-cancha: 0.16;
+  --blob-alfa-cambio: 0.55;
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+  --linea-control: var(--linea-control-honda);
+  --enlace: var(--verde-750);
+}
+
+.sup-noche.escena-luz,
+.sup-fosa.escena-luz {
+  --color-neutro-tenue: var(--color-sobre-oscuro-2);
+  --color-alerta: var(--color-naranja);
+  --linea-control: var(--linea-control-oscura);
+  --enlace: var(--verde-400);
+}
+
+.sup-noche.escena-luz {
+  --blob-alfa-cancha: 0.1;
+  --blob-alfa-cambio: 0.06;
+}
+
+.sup-fosa.escena-luz {
+  --blob-alfa-cancha: 0.14;
+  --blob-alfa-cambio: 0.08;
+}
+
+/* -------------------------------------------------------------- vidrios */
+
+/**
+ * VIDRIO CLARO: tarjeta flotando sobre blobs o sobre una malla viva. Borde
+ * blanco con alfa (el canto del vidrio), filo de luz arriba, sombra honda y un
+ * poco de glow. Los numeros estan en `--vidrio-claro-fondo`.
+ *
+ * ⚠️ ADENTRO DE UNA SUPERFICIE OSCURA HEREDARIA LOS TOKENS OSCUROS —texto gris
+ * claro, botones amarillos, foco amarillo—, asi que los vuelve a poner en su
+ * valor de papel. Los hex son los de `:root`, repetidos porque ahi adentro
+ * estan remapeados.
+ *
+ * ⚠️ NO MAS DE ~6 VIDRIOS CON `backdrop-filter` VISIBLES A LA VEZ. Cada uno
+ * obliga a recomponer lo que tiene detras en cada cuadro de scroll. Una grilla
+ * de 24 fichas NO es de vidrio: es `.sup-ficha` con `.eleva`.
+ */
+.sup-vidrio-claro {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--vidrio-claro-solido);
+  border: 1px solid var(--vidrio-claro-borde);
+  border-radius: var(--radio-grande);
+  box-shadow: var(--luz-superior), var(--sombra-2), var(--glow-suave);
+  color: var(--color-tinta);
+
+  /**
+   * ⚠️ MAS HONDOS QUE LOS DE PAPEL, Y ES UN NUMERO: el vidrio puede vivir
+   * sobre fosa, y ahi blanco al 82% compone #d2d6d4. Con los tokens de papel
+   * el texto secundario queda en 4.19, el alerta en 3.85 y el borde de control
+   * en 2.62: los tres ❌. Estos pasan sobre fosa (5.27 / 4.62 / 3.19) y sobran
+   * sobre blanco. Numeros completos en `--vidrio-claro-fondo`.
+   */
+  --color-neutro-texto: #4d554b;
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-neutro-apagado: #9aa396;
+  --color-neutro-borde: #e4e6de;
+  --color-neutro-suave: #f2f3ea;
+  --linea-tenue: var(--color-neutro-borde);
+  --linea-control: #6f766c;
+  --linea-control-honda: #6f766c;
+  --superficie-1: var(--color-blanco);
+  --superficie-2: var(--color-neutro-suave);
+  --patron-color: var(--color-neutro-borde);
+  --destello: var(--destello-claro);
+  --color-foco: var(--color-cancha);
+  --color-alerta: #964300;
+  --color-alerta-hondo: #964300;
+  --enlace: var(--verde-750);
+  --enlace-activo: var(--color-tiempo-extra);
+  --luz-marca: var(--luz-verde);
+  --luz-foco: var(--luz-verde);
+  --luz-blob: var(--luz-verde-clara);
+  --titular-luz: var(--verde-500);
+  --barrido-luz: linear-gradient(
+    var(--eje),
+    transparent 30%,
+    rgb(var(--luz-verde) / 0.2) 48%,
+    rgb(var(--luz-verde) / 0.2) 52%,
+    transparent 70%
+  );
+  --boton-primario-fondo: var(--color-cancha);
+  --boton-primario-texto: var(--color-papel);
+  --boton-primario-fondo-activo: var(--color-tiempo-extra);
+  --boton-secundario-fondo: var(--superficie-marca);
+  --boton-secundario-borde: var(--color-cancha);
+  --boton-secundario-texto: var(--color-tiempo-extra);
+  --boton-secundario-fondo-activo: var(--superficie-1);
+  --boton-secundario-texto-activo: var(--color-tiempo-extra);
+}
+
+/**
+ * VIDRIO OSCURO: el panel de lectura sobre una foto, sobre una malla viva o
+ * sobre blobs. Mismo contrato que `.sup-noche` —mismos remapeos— y NO necesita
+ * subir el tenue: fosa al 86% deja todos los tokens de noche en AA hasta con
+ * blanco puro detras (numeros en `--vidrio-oscuro-fondo`).
+ */
+.sup-vidrio-oscuro {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--vidrio-oscuro-solido);
+  border: 1px solid var(--vidrio-oscuro-borde);
+  border-radius: var(--radio-grande);
+  box-shadow: var(--luz-superior-oscura), var(--sombra-3);
+  color: var(--color-sobre-oscuro);
+
+  --color-neutro-texto: var(--color-sobre-oscuro-2);
+  --color-neutro-tenue: var(--color-sobre-oscuro-tenue);
+  --color-neutro-apagado: var(--color-sobre-oscuro-tenue);
+  --color-neutro-borde: var(--linea-tenue-oscura);
+  --color-neutro-suave: rgb(250 250 247 / 0.06);
+  --linea-tenue: var(--linea-tenue-oscura);
+  --linea-control: var(--linea-control-oscura);
+  --superficie-1: var(--sup-noche-alta);
+  --superficie-2: rgb(250 250 247 / 0.05);
+  --patron-color: rgb(250 250 247 / 0.05);
+  --destello: var(--destello-oscuro);
+  --color-foco: var(--color-cambio);
+  --color-alerta: var(--color-naranja);
+  --enlace: var(--verde-400);
+  --enlace-activo: var(--color-cambio);
+  --luz-marca: var(--luz-verde-clara);
+  --luz-foco: var(--luz-cambio);
+  --luz-blob: var(--luz-verde);
+  --titular-luz: var(--color-cambio);
+  --barrido-luz: var(--barrido-luz-blanco);
+  /**
+   * ⚠️ SIN BLOBS ADENTRO DEL VIDRIO: medido, con blanco detras hasta verde-500
+   * al 4% + Cambio al 2% dejan el tenue en 4.20 ❌ (la base compuesta es mas
+   * clara que la de fosa). Los blobs van DETRAS del vidrio, en la seccion.
+   */
+  --blob-alfa-cancha: 0;
+  --blob-alfa-cambio: 0;
+  --boton-primario-fondo: var(--color-cambio);
+  --boton-primario-texto: var(--color-tinta);
+  --boton-primario-fondo-activo: var(--color-papel);
+  --boton-secundario-fondo: transparent;
+  --boton-secundario-borde: var(--linea-control-oscura);
+  --boton-secundario-texto: var(--color-sobre-oscuro);
+  --boton-secundario-fondo-activo: rgb(250 250 247 / 0.12);
+  --boton-secundario-texto-activo: var(--color-cambio);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .sup-vidrio-claro {
+    background-color: var(--vidrio-claro-fondo);
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+
+  .sup-vidrio-oscuro {
+    background-color: var(--vidrio-oscuro-fondo);
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+}
+
+/**
+ * VELO DE TEXTO. Va en el contenedor de la columna de texto de una escena viva
+ * y pinta la capa oscura DEBAJO del texto (z -1 con `isolation`), redondeada con
+ * el radio de panel y desbordando 20px, para que se lea como un panel de luz
+ * negada y no como una mancha. Es `.sup-vidrio-oscuro` sin `backdrop-filter`:
+ * para una columna entera de portada, desenfocar lo de atras seria caro y
+ * ademas taparia la escena.
+ *
+ * ⚠️ PINTA EN `::before`: no va en el mismo elemento que `.sup-*`, `.patron-vivo`
+ * ni `.borde-brilla`. Va en un hijo propio.
+ */
+.velo-texto {
+  position: relative;
+  isolation: isolate;
+}
+
+.velo-texto::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--espacio-5) * -1);
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: var(--radio-panel);
+  background: var(--velo-texto);
+}
+
+/* ------------------------------------------------- primitivas de luz */
+
+/**
+ * TITULAR VIVO: gradiente con verde luminoso al final. ⚠️ SOLO EN TITULARES
+ * GRANDES (≥24px): el ultimo stop es verde-500, 3.12:1, que es AA para texto
+ * grande y nada mas. Elige sola por superficie: sobre noche y fosa termina en
+ * verde-400 (7.51 / 5.49); sobre cancha, donde verde-400 da 2.25, se queda en
+ * papel → Cambio. Mismo `@supports` que `.titular-degradado` y por la misma
+ * razon: un texto transparente sin fondo es invisible.
+ */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .titular-vivo {
+    background-image: var(--degradado-titular-vivo);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sup-noche .titular-vivo,
+  .sup-fosa .titular-vivo,
+  .sup-vidrio-oscuro .titular-vivo {
+    background-image: var(--degradado-titular-claro-vivo);
+  }
+
+  .sup-cancha .titular-vivo,
+  .sup-noche .titular-degradado,
+  .sup-fosa .titular-degradado,
+  .sup-cancha .titular-degradado,
+  .sup-vidrio-oscuro .titular-degradado {
+    background-image: var(--degradado-titular-claro);
+  }
+}
+
+/** Cifra destacada con glow de texto. Estatico: un importe no late. */
+.cifra-brilla {
+  text-shadow: var(--glow-texto);
+}
+
+/**
+ * GLOW ESTATICO: una superficie que brilla en reposo. Uno o dos por pantalla
+ * —la ficha destacada, el panel de exito—; si brilla todo, nada brilla. El
+ * borde de 1px con alfa viene adentro del glow. `.brilla` (movimiento.css) es
+ * la version que se enciende en hover.
+ */
+.glow {
+  box-shadow: var(--sombra-2), var(--glow-marca);
+}
+
+.glow-fuerte {
+  box-shadow: var(--sombra-2), var(--glow-marca-fuerte);
+}
+
+/** Amarillo pase lo que pase: la chispa, para un sello o una etiqueta destacada. */
+.glow-cambio {
+  box-shadow: var(--glow-cambio);
+}
+
+/** Solo el borde de luz, sin halo: para un chip o una fila seleccionada. */
+.borde-luz {
+  box-shadow: 0 0 0 1px var(--borde-luz);
+}

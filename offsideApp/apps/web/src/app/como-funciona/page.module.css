@@ -1,0 +1,733 @@
+/**
+ * CÓMO FUNCIONA
+ * =============================================================================
+ *
+ * ⚠️ ES LA UNICA PANTALLA DEL SITIO PENSADA PARA LEERSE DE ARRIBA A ABAJO, y por
+ * eso es la unica que se compone como una NOTA y no como una interfaz: portada
+ * de tapa, indice, tramos alternando papel y bloque oscuro, y un cierre. Todo lo
+ * demas del sitio acomoda datos; acá el texto ES el producto.
+ *
+ * ⚠️ EL RITMO VERTICAL ES LA MITAD DEL TRABAJO: cancha → papel → papel tenido →
+ * noche → papel → cancha. Sin esa alternancia una pagina de mil palabras es una
+ * tira gris, por mucho que cada bloque este bien resuelto.
+ *
+ * ⚠️ TODA CAPA DE FONDO VA EN UN HIJO ANIDADO, NUNCA COMPARTIENDO ELEMENTO CON
+ * UNA `.sup-*`. `.sup-cancha::before` es el filo de luz y `.patron-vivo::before`
+ * es el patron: misma especificidad (0,1,0), y `movimiento.css` se importa
+ * DESPUES de `tokens.css`, asi que compartir elemento apaga el filo en silencio.
+ * Ademas el envoltorio absoluto NO lleva `.patron-vivo`: esa clase declara
+ * `overflow: hidden` —o sea, contenedor de scroll—, y el orden de inyeccion
+ * entre un modulo y un global no esta garantizado en Next, asi que pisarle el
+ * `position` desde acá seria apostar.
+ */
+
+/* ====================================================== barra de lectura */
+
+/**
+ * BARRA DE PROGRESO DE LECTURA.
+ *
+ * ⚠️ ES LA UNICA PANTALLA DEL SITIO DONDE SIGNIFICA ALGO. Un progreso de
+ * lectura sobre una vitrina de catalogo no dice nada; sobre una nota larga dice
+ * cuanto falta, que es exactamente la pregunta que se hace quien la abre.
+ *
+ * ⚠️ VA ANCLADA ABAJO Y NO ARRIBA. La barra superior es `sticky` y de marca: una
+ * tira de 3px pegada a su borde inferior se lee como un defecto de la barra, no
+ * como progreso. Abajo no se pelea con nada.
+ *
+ * ⚠️ EL KEYFRAME ES LOCAL Y DECLARA `from` Y `to`. La `.barra-lectura` global de
+ * `movimiento.css` esta MUERTA por esto mismo: usa `barrer-x`, que declara solo
+ * `from { scaleX(0) }`, y su `to` implicito toma el valor subyacente del
+ * elemento — que en esa clase es otro `scaleX(0)`. Interpola 0 → 0 y no pinta
+ * nada. Acá se escribe entero.
+ *
+ * ⚠️ EL ESTADO POR DEFECTO ES INVISIBLE (`scaleX(0)`): sin soporte de
+ * `animation-timeline` no se ve nada, que es lo correcto — una barra de progreso
+ * que no progresa es peor que ninguna.
+ */
+.lectura {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 3px;
+  z-index: var(--z-pegado);
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background-image: var(--degradado-acento);
+}
+
+@keyframes dibujaLectura {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lectura {
+      animation: dibujaLectura auto linear both;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+
+/* ================================================================ portada */
+
+/**
+ * ⚠️ EL CORTE DIAGONAL ES SEGURO **ACÁ Y SOLO ACÁ**. `clip-path` recorta tambien
+ * la sombra, el anillo de foco y cualquier hijo desbordado, asi que no puede ir
+ * en un bloque con controles, con un `<details>` o con algo pegado. Esta portada
+ * es texto y nada mas: el indice y los botones viven fuera, a proposito.
+ *
+ * ⚠️ VIENE EN PAR CON SU COMPENSACION: el corte COME ALTURA REAL y sin el
+ * `padding-bottom` extra se recorta la ultima linea.
+ */
+.portada {
+  padding: var(--espacio-seccion) var(--canal)
+    calc(var(--espacio-seccion) + var(--corte-compensacion));
+  clip-path: var(--corte-abajo);
+}
+
+.portadaInterior {
+  position: relative;
+  z-index: var(--z-contenido);
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+}
+
+/**
+ * TRAMA DE ROMBOS a la derecha, en deriva lenta.
+ *
+ * ⚠️ EL ROMBO ES `--color-tiempo-extra`, O SEA MAS OSCURO QUE EL VERDE DE MARCA,
+ * y por eso puede pasar por debajo del texto sin medir nada: la luz se RESTA.
+ * Papel sobre Verde Cancha plano da 5.16:1 y sobre Tiempo Extra 7.95:1, asi que
+ * cualquier punto de la trama MEJORA el contraste en vez de degradarlo. Un
+ * acento claro "para que respire" se ve espectacular en un mockup sin texto y a
+ * 375px cae justo debajo de la bajada.
+ *
+ * `--patron-color` ya vale `--color-tiempo-extra` dentro de `.sup-cancha`: no se
+ * repite acá para que siga saliendo de un solo lugar.
+ */
+.portadaTrama {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: min(52%, 560px);
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  opacity: 0.85;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 62%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 62%);
+}
+
+/* `.patron-vivo` aporta el `position: relative` y el recorte; falta el alto. */
+.portadaTramaCapa {
+  height: 100%;
+}
+
+.antetitulo {
+  margin: 0 0 var(--espacio-4);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  /* Amarillo Cambio sobre el punto mas claro de la malla de cancha: 4.59:1. */
+  color: var(--color-cambio);
+}
+
+.bajada {
+  margin: var(--espacio-6) 0 0;
+  max-width: var(--ancho-lectura);
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  /* #e4f0e6 sobre Verde Cancha: 4.60:1, AA para los 18px de una bajada. */
+  color: var(--color-sobre-cancha);
+}
+
+/* ================================================================= indice */
+
+/**
+ * ⚠️ EL INDICE VIVE FUERA DE LA PORTADA Y NO ES CAPRICHO: la portada lleva
+ * `clip-path`, que recorta el anillo de foco de cualquier control que quede
+ * contra el borde. Un indice de anclas es exactamente eso — cuatro enlaces— asi
+ * que va sobre papel, del otro lado del corte.
+ *
+ * ⚠️ ANCLAS `<a href="#…">`: andan sin JavaScript, se pueden abrir en otra
+ * pestaña y el `scroll-padding-top` de `html` ya evita que el titulo quede
+ * debajo de la barra adherida.
+ */
+.indice {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-6) var(--canal) 0;
+}
+
+.indiceLista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3) var(--espacio-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.indiceEnlace {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--espacio-2);
+  /*
+   * Area tactil de 44px (WCAG 2.5.5). El `min-height` sola no alcanza: en una
+   * fila `flex` el enlace mide lo que su texto, y el relleno es lo que hace que
+   * el destino sea la fila entera y no trece pixeles de mayusculas.
+   */
+  min-height: var(--alto-control);
+  padding-block: var(--espacio-3);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-tinta);
+}
+
+.indiceEnlace:hover {
+  color: var(--color-tinta);
+}
+
+/**
+ * SUBRAYADO DEL INDICE — variante local, NO la global `.subraya`.
+ *
+ * ⚠️ NO ES PREFERENCIA DE ESTILO: `.subraya` dibuja el filete con
+ * `background-position: 0 100%`, o sea contra el borde de abajo de la CAJA DE
+ * RELLENO del elemento que la lleva. Puesta sobre el enlace entero, ese borde
+ * esta 12px debajo del texto —el `padding-block` que le da el area tactil de
+ * 44px— y el filete aterriza justo encima del `border-bottom` de la fila del
+ * indice, o sea que se lee como que la regla de la seccion parpadea, no como un
+ * subrayado. Peor todavia: `.subraya` declara `padding-bottom: 2px` y empata en
+ * especificidad (0,1,0) con `.indiceEnlace`, asi que cual de los dos rellenos
+ * gana lo decide el orden de inyeccion de dos archivos distintos.
+ *
+ * Sobre un `<span>` que envuelve SOLO la etiqueta, la caja es del alto del
+ * texto y el filete queda donde tiene que estar. El hover y el foco los dispara
+ * el enlace, no el span, para que la zona sensible siga siendo la de 44px.
+ */
+.indiceTexto {
+  padding-bottom: 2px;
+  background-image: var(--degradado-acento);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  /* La global `prefers-reduced-motion: reduce` de tokens.css la aplasta. */
+  transition: background-size var(--dur-media) var(--curva-corte);
+}
+
+.indiceEnlace:hover .indiceTexto,
+.indiceEnlace:focus-visible .indiceTexto {
+  background-size: 100% 2px;
+}
+
+.indiceNumero {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-md);
+  font-variant-numeric: tabular-nums;
+  /* Verde Cancha sobre papel: 5.16:1. */
+  color: var(--color-cancha);
+}
+
+/* ================================================================= tramos */
+
+.tramo {
+  padding: var(--espacio-seccion) var(--canal);
+}
+
+/**
+ * Tramo sobre superficie tenida.
+ *
+ * ⚠️ `.sup-2` NO ES SOLO UN FONDO: remapea `--color-neutro-tenue` y
+ * `--color-alerta`, que sobre `#f2f3ea` caen debajo de AA. Escribir el
+ * `background-color` a mano en vez de usar la clase es como se pierden esos dos
+ * remapeos sin que falle nada.
+ */
+.tramoTenido {
+  padding: var(--espacio-seccion) var(--canal);
+}
+
+.tramoInterior {
+  max-width: var(--ancho-medio);
+  margin: 0 auto;
+}
+
+.tramoEncabezado {
+  margin-bottom: var(--espacio-bloque);
+}
+
+.tramoRotulo {
+  margin: 0 0 var(--espacio-3);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-texto);
+}
+
+.tramoTitulo {
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+/**
+ * FILETE EDITORIAL que se dibuja al entrar la seccion.
+ *
+ * ⚠️ ESTA REGLA **NO PUEDE DECLARAR `transform`**. La global `.revela-linea` usa
+ * `@keyframes barrer-x`, que declara solo `from { scaleX(0) }`: su `to` implicito
+ * resuelve al valor subyacente del elemento. Con un `transform` propio acá, el
+ * `to` seria ese mismo valor y la linea no se dibujaria nunca — que es
+ * exactamente lo que le pasa a `.barra-lectura` en `movimiento.css`.
+ */
+.tramoFilete {
+  display: block;
+  width: 96px;
+  height: 4px;
+  margin-top: var(--espacio-5);
+  background-image: var(--degradado-acento);
+}
+
+/* ------------------------------------------------------------------ pasos */
+
+/**
+ * ⚠️ SON UNA LINEA DE TIEMPO, NO UNA GRILLA DE TARJETAS, y la diferencia es el
+ * contenido: en estos dos tramos EL ORDEN ES LA INFORMACION. Cuatro tarjetas en
+ * una grilla de dos columnas se leen en Z y no en secuencia; una columna con
+ * numeros grandes y un riel se lee como lo que es.
+ */
+.pasos {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: paso;
+}
+
+/**
+ * EL RIEL. Un hilo vertical que une los cuatro pasos.
+ *
+ * ⚠️ ARRANCA Y TERMINA CON MASCARA en vez de con un `height` calculado: asi no
+ * asoma por arriba del primer numero ni cuelga por debajo del ultimo, sin que
+ * nadie tenga que saber cuanto mide una fila.
+ */
+.pasos::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 17px;
+  width: 1px;
+  background-color: var(--linea-tenue);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+
+.paso {
+  position: relative;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: var(--espacio-4) var(--espacio-5);
+  padding-block: var(--espacio-6);
+  counter-increment: paso;
+}
+
+.paso + .paso {
+  border-top: 1px solid var(--linea-tenue);
+}
+
+/**
+ * Columna del marcador: numero grande arriba, icono de la identidad abajo.
+ *
+ * ⚠️ EL NUMERO ES `::before` CON UN CONTADOR, NO TEXTO EN EL MARCADO. Un lector
+ * de pantalla ya recorre un `<ol>` diciendo "1 de 4"; escribirlo tambien en el
+ * HTML lo haria decirlo dos veces. Acá el numero es decoracion de la lista.
+ *
+ * ⚠️ ERA `--color-neutro-borde`: **1.13:1 sobre blanco**, o sea invisible. El
+ * numero es el ancla visual de la fila, asi que no puede ser un fantasma. Verde
+ * Cancha da 5.16:1 sobre papel y 4.83:1 sobre la superficie tenida — AA incluso
+ * midiendolo como texto normal, que es mas de lo que hace falta.
+ */
+.pasoMarca {
+  position: relative;
+  z-index: var(--z-contenido);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  line-height: 0;
+}
+
+.pasoMarca::before {
+  content: counter(paso, decimal-leading-zero);
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  line-height: 0.8;
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-cancha);
+}
+
+/**
+ * ⚠️ EL ICONO LLEVA FONDO PROPIO PORQUE ESTA ENCIMA DEL RIEL. Sin el, el hilo de
+ * 1px cruza el dibujo por la mitad y se lee como un error de alineacion.
+ */
+.pasoIcono {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background-color: var(--superficie-1);
+  color: var(--color-cancha);
+}
+
+.pasoTitulo {
+  margin: 0 0 var(--espacio-3);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  letter-spacing: normal;
+  line-height: 1.3;
+}
+
+.pasoTexto {
+  margin: 0;
+  max-width: var(--ancho-lectura);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.pasoTexto strong {
+  font-weight: var(--peso-semi);
+  color: var(--color-tinta);
+}
+
+/**
+ * ⚠️ A 320px LA COLUMNA DEL MARCADOR SE VUELVE UNA FILA. Con 44px de columna mas
+ * el canal quedan 260px para el texto, que es donde un parrafo de 15px empieza a
+ * partirse cada tres palabras. Apilado, el numero y el icono comparten una fila
+ * horizontal y el texto usa todo el ancho.
+ */
+@media (max-width: 480px) {
+  .pasos::before {
+    display: none;
+  }
+
+  .paso {
+    grid-template-columns: 1fr;
+    gap: var(--espacio-3);
+  }
+
+  .pasoMarca {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--espacio-4);
+  }
+}
+
+/* ============================================================== la plata */
+
+/**
+ * EL BLOQUE OSCURO — el unico dato duro de la pantalla.
+ *
+ * ⚠️ ACÁ NO SE USAN `--color-neutro-tenue` NI `--linea-control`, Y ES UNA REGLA,
+ * NO UNA PREFERENCIA. La tabla de contrastes de la fundacion esta medida contra
+ * `--sup-noche` PLANO, pero `.sup-noche` pinta ademas `--malla-noche`, que SUMA
+ * luz: en su punto mas claro el compuesto es `#104a30`, y ahi el tenue remapeado
+ * (#8fa79a) cae a 3.99:1 y `--linea-control-oscura` a 2.88:1 — los dos debajo de
+ * su minimo. Los tokens que si aguantan, verificados contra ese mismo compuesto:
+ *
+ *   --color-papel             12.59:1
+ *   --color-cambio             8.82:1
+ *   --color-sobre-oscuro-2     5.77:1   ✅ AA texto normal
+ *
+ * ⚠️ Y LOS BORDES USAN `--linea-tenue-oscura`, que es DECORATIVA: no separa un
+ * control, separa dos parrafos.
+ */
+.plata {
+  position: relative;
+}
+
+/**
+ * CINTA DE SECCION (identidad §05) en la escala de 28px, en deriva.
+ *
+ * ⚠️ VA EN FLUJO, NO ABSOLUTA. `.patron-vivo` declara `position: relative`, y
+ * pisarlo desde un modulo depende de un orden de inyeccion que Next no
+ * garantiza. En flujo no hay nada que pisar.
+ */
+.cinta {
+  position: relative;
+  z-index: 2;
+  height: 28px;
+  background-color: var(--color-tiempo-extra);
+  --patron-color: var(--verde-400);
+}
+
+@media (max-width: 480px) {
+  .cinta {
+    height: 18px;
+  }
+}
+
+.plataInterior {
+  max-width: var(--ancho-medio);
+  margin: 0 auto;
+  padding: var(--espacio-seccion) var(--canal);
+}
+
+.plataRotulo {
+  margin: 0 0 var(--espacio-4);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-cambio);
+}
+
+.plataTitulo {
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  color: var(--color-papel);
+}
+
+/**
+ * LA CIFRA. Es el unico numero duro de la pantalla y sale del Config Store, no
+ * del codigo.
+ *
+ * ⚠️ PUEDE ENTRAR ANIMADA, NUNCA ESTAR EN MOVIMIENTO. La global `cifra-entra` la
+ * levanta UNA VEZ detras de su mascara mostrando el valor final desde el primer
+ * cuadro. Nada de contar hacia arriba: un numero que sube mientras alguien lo
+ * lee se interpreta como un numero que todavia se esta calculando, y este es el
+ * porcentaje que se le descuenta a alguien de una venta real.
+ *
+ * ⚠️⚠️ EL SELECTOR LLEVA EL NOMBRE DEL ELEMENTO A PROPOSITO, IGUAL QUE
+ * `span.mascaraCifra` EN `components/ui.module.css`. `.cifra` a secas EMPATA en
+ * especificidad (0,1,0) con la global `.cifra-entra`, y quien gana lo decide el
+ * orden de inyeccion de dos archivos distintos, que Next no garantiza. No es
+ * teorico: las dos declaran `display` Y las dos declaran margen en el eje de
+ * bloque —la global pone `margin-block: -0.06em` para compensar su propio
+ * `padding-block`—, asi que si gana la global este numero pierde los 32px de
+ * aire de arriba y los 12 de abajo y queda pegado al titulo y a su epigrafe.
+ * `span.cifra` (0,1,1) gana siempre.
+ *
+ * ⚠️ Y POR ESO EL `padding-block` SE ESCRIBE ACA, MAS GRANDE QUE EL DE LA
+ * GLOBAL. `overflow: clip` (que trae `.cifra-entra`) recorta contra la caja de
+ * contenido, y este numero va en `--display-2` con `--interlineado-display`
+ * (0.86): con interlineado menor a 1 los glifos sobresalen de su caja y los
+ * 0.06em de la global quedan justos. 0.14em despeja el tope del digito sin
+ * mover nada, porque el margen descuenta exactamente lo mismo que el padding
+ * agrega.
+ */
+span.cifra {
+  display: block;
+  padding-block: 0.14em;
+  margin-block: calc(var(--espacio-7) - 0.14em) calc(var(--espacio-3) - 0.14em);
+  margin-inline: 0;
+  font-family: var(--fuente-titulo);
+  font-weight: var(--peso-normal);
+  font-size: var(--display-2);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+  /* Fuera del @supports: si el fondo no llega, el numero sigue existiendo. */
+  color: var(--color-papel);
+}
+
+/**
+ * ⚠️ `background-clip: text` EXIGE `color: transparent`, y un texto transparente
+ * que se quede sin fondo —una extension, un modo de alto contraste— queda
+ * LITERALMENTE INVISIBLE. Por eso el `@supports`. Peor stop del degradado:
+ * Amarillo Cambio, 8.82:1 sobre el punto mas claro de la malla.
+ *
+ * ⚠️ TAMBIEN VA CON EL NOMBRE DEL ELEMENTO. Si esta regla quedara en `.cifra`
+ * (0,1,0) la ganaria la de arriba (0,1,1) y el `color: var(--color-papel)` de
+ * respaldo pisaria al `transparent`: el degradado se pintaria detras de un
+ * numero opaco y no se veria nunca, sin dar un solo error.
+ */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  span.cifra {
+    background-image: var(--degradado-titular-claro);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+.cifraPie {
+  margin: 0 0 var(--espacio-6);
+  font-size: var(--texto-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-sobre-oscuro-2);
+}
+
+.plataTexto {
+  margin: 0;
+  max-width: var(--ancho-lectura);
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-sobre-oscuro-2);
+}
+
+.plataTexto + .plataTexto {
+  margin-top: var(--espacio-5);
+  padding-top: var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue-oscura);
+}
+
+.plataTexto strong {
+  font-weight: var(--peso-semi);
+  color: var(--color-papel);
+}
+
+/* ================================================== lo que todavia no hacemos */
+
+/**
+ * ⚠️ ES LA SECCION MAS IMPORTANTE DE LA PANTALLA Y POR ESO ES LA QUE MAS PESA
+ * VISUALMENTE. Un marketplace nuevo que promete todo se parece a una estafa; uno
+ * que dice que le falta se parece a un negocio. Todo lo que se lista acá es
+ * verificable en el codigo: no hay modulo de envios, no hay disputas, no hay
+ * reviews.
+ *
+ * ⚠️ SIN COLOR DE ALERTA, Y ES DELIBERADO. Lo que falta no es un error ni un
+ * peligro: es informacion honesta. Pintarla de naranja la convierte en una
+ * advertencia y da exactamente la impresion contraria a la buscada. El peso sale
+ * del filete, del tamaño y del aire, que es como pesa un texto en papel.
+ */
+.falta {
+  padding: var(--espacio-seccion) var(--canal);
+}
+
+/**
+ * El filete macizo de la identidad: 4px de Tinta, no un hairline gris.
+ *
+ * ⚠️ SE ESCRIBE ENTERO ACÁ EN VEZ DE COMPONER LA GLOBAL `.regla`. Esa clase
+ * declara `margin: 0` y este bloque necesita separacion abajo: dos reglas de la
+ * misma especificidad, una global y una de modulo, y el orden de inyeccion entre
+ * ambas no esta garantizado en Next. Componer solo se hace cuando lo del modulo
+ * es ADITIVO.
+ */
+.faltaRegla {
+  width: 100%;
+  height: 4px;
+  border: 0;
+  margin: 0 0 var(--espacio-5);
+  background-color: var(--color-tinta);
+}
+
+.faltaLead {
+  margin: 0 0 var(--espacio-bloque);
+  max-width: var(--ancho-lectura);
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.faltantes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.faltante {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: var(--espacio-5);
+  align-items: start;
+  padding-block: var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.faltante:last-child {
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+/**
+ * ROMBO HUECO = pendiente.
+ *
+ * ⚠️ ES EL MISMO VOCABULARIO DE FORMA QUE YA USA LA PRIMITIVA `Pasos`: rombo
+ * lleno para lo hecho, hueco para lo que falta. Quien no distingue colores lee
+ * igual la diferencia, porque la diferencia es de FORMA. `--linea-control` da
+ * 3.10:1 sobre papel, que es el minimo de WCAG 1.4.11 para un grafico.
+ */
+.faltanteMarca {
+  width: 12px;
+  height: 12px;
+  /* Centra el rombo con la primera linea del titulo (18px x 1.3). */
+  margin-top: 4px;
+  border: 2px solid var(--linea-control);
+  transform: rotate(45deg);
+}
+
+.faltanteTitulo {
+  margin: 0 0 var(--espacio-2);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  letter-spacing: normal;
+  line-height: 1.3;
+  color: var(--color-tinta);
+}
+
+.faltanteTexto {
+  margin: 0;
+  max-width: var(--ancho-lectura);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+/* ================================================================= cierre */
+
+/**
+ * ⚠️ EL CIERRE **NO LLEVA CORTE DIAGONAL** aunque quede lindo: contiene dos
+ * botones, y `clip-path` recorta el anillo de foco de lo que quede contra el
+ * borde. La regla del sistema es que ningun bloque con controles se recorta.
+ */
+.cierre {
+  padding: var(--espacio-seccion) var(--canal);
+  text-align: center;
+}
+
+.cierreInterior {
+  position: relative;
+  z-index: var(--z-contenido);
+  max-width: var(--ancho-medio);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-5);
+}
+
+.cierreRotulo {
+  margin: 0;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-cambio);
+}
+
+.cierreTitulo {
+  margin: 0;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  color: var(--color-papel);
+}
+
+.cierreBajada {
+  margin: 0;
+  max-width: var(--ancho-lectura);
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-sobre-cancha);
+}

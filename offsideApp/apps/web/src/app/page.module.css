@@ -1,0 +1,1152 @@
+/**
+ * Home — la vitrina.
+ *
+ * Sigue el mockup de la identidad §06 y le agrega la capa de profundidad: la
+ * portada es una superficie de marca con malla, grano, patron vivo y fotos
+ * reales en diagonal; abajo, el ritmo alterna densidades en vez de apilar cajas
+ * blancas —cancha, fosa, calida, papel, sup-2, noche—.
+ *
+ * ⚠️ ESTE MODULO NO ESCRIBE NI UNA SUPERFICIE A MANO. El fondo, la malla, el
+ * grano, el anillo de foco y los ocho tokens de boton los ponen `.sup-cancha`,
+ * `.sup-fosa`, `.sup-calida`, `.sup-2`, `.sup-marca` y `.sup-noche`. Antes la
+ * portada declaraba las ocho variables de boton por su cuenta y ademas
+ * `--color-foco`: era la unica pantalla del sitio que sabia dar vuelta un boton
+ * sobre verde, y apilar los dos mecanismos deja ganando al de mayor
+ * especificidad, no al que alguien espera.
+ *
+ * ⚠️ NINGUNA REGLA DE ACA REDECLARA UNA PROPIEDAD QUE YA DECLARA LA UTILIDAD QUE
+ * LLEVA EL MISMO ELEMENTO. `.portada` no toca `position` (lo pone
+ * `.sup-cancha`), `.ficha` no toca `background`, `box-shadow` ni `transform`
+ * (los ponen `.sup-ficha`, `.destello` y `.eleva`). Donde SI hace falta pisar
+ * —las capas de patron, que son `position: absolute` contra el `relative` de
+ * `.patron-vivo`; y el filo de luz de las dos secciones cortadas en diagonal— se
+ * gana por especificidad descendente o con dos clases, nunca por orden.
+ *
+ * ⚠️ TODO `overflow` DE ESTE ARCHIVO ES `clip`, NUNCA `hidden`. Las dos recortan
+ * igual, pero `hidden` crea un CONTENEDOR DE SCROLL, y un contenedor de scroll
+ * le cambia el `view()` a todo lo que tenga adentro: una grilla con
+ * `revela-grilla-materia` adentro de un `overflow: hidden` mide contra una caja
+ * que no scrollea nunca y se queda clavada en `opacity: 0`. Es la razon por la
+ * que `.patron-vivo` —que declara `hidden`— va SIEMPRE en un hijo vacio y nunca
+ * en la seccion. La unica excepcion es `.fichas` en telefono, que necesita ser
+ * un contenedor de scroll de verdad, y por eso ahi el revelado se mudo al
+ * `.grupo`, que esta afuera.
+ */
+
+/* ------------------------------------------------------ escalones de entrada */
+/**
+ * Retrasos de la entrada de portada, como CLASES y no como `style` inline: un
+ * `style={{ '--retraso': ... }}` obliga a un cast de `CSSProperties` en cada
+ * nodo del JSX. Los valores son fijos —la composicion de la tapa no depende de
+ * datos—, asi que su lugar es el CSS.
+ *
+ * ⚠️ LA ESCALERA ESTA COMPRIMIDA A PROPOSITO. Con 560ms de retraso sobre una
+ * animacion de 420ms, el enlace "Ver el catálogo" —la unica señal de que hay
+ * algo abajo— recien terminaba a los 980ms: quien entra y baja de inmediato
+ * scrollea sobre elementos todavia en `opacity: 0` y ve la pagina
+ * construyendose debajo del dedo. Asi el ultimo termina a los 740ms.
+ */
+.retraso1 {
+  --retraso: 100ms;
+}
+.retraso2 {
+  --retraso: 180ms;
+}
+.retraso3 {
+  --retraso: 260ms;
+}
+.retraso4 {
+  --retraso: 320ms;
+}
+
+/* ---------------------------------------------------------------- portada */
+
+/**
+ * ⚠️ `svh` Y NO `vh`. En el telefono, `vh` cuenta la barra del navegador como si
+ * no existiera: la portada quedaba mas alta que la pantalla.
+ *
+ * ⚠️ 86% Y NO 100%. Una portada a pantalla exacta esconde que hay algo abajo;
+ * dejar asomar una franja del bloque siguiente es lo que hace que alguien
+ * scrollee sin que se lo pidan.
+ *
+ * ⚠️ `min-height` ES UN MINIMO, NO UN TECHO, Y ESO EN TELEFONO ERA UN BUG: el
+ * contenido de esta tapa a 320px suma unos 700px sobre un viewport de 568, asi
+ * que la primera camiseta quedaba a mas de un scroll completo. Abajo de 640px el
+ * minimo se apaga y la altura la da el contenido (ver la media query).
+ *
+ * ⚠️ EL `padding-bottom` LLEVA `--corte-compensacion` SUMADA porque la seccion
+ * siguiente sube 40px con margen negativo para comerse esta en diagonal: sin
+ * eso, el enlace "Ver el catálogo" queda tapado.
+ *
+ * ⚠️ ACA NO VA `clip-path`. Recortar la portada revela el fondo del documento
+ * —no la seccion siguiente—, o sea una cuña de papel entre el verde y el bloque
+ * oscuro, con el borde de abajo igual de recto que antes. El corte lo hace el
+ * bloque que ENTRA.
+ */
+.portada {
+  overflow: clip;
+  display: grid;
+  align-content: center;
+  min-height: min(86svh, 780px);
+  padding: var(--espacio-seccion) var(--canal)
+    calc(var(--espacio-seccion) + var(--corte-compensacion));
+}
+
+/**
+ * PLANO 1 — el patron de la bandera (identidad §05), escala de BLOQUE.
+ *
+ * ⚠️ SE GANA POR DESCENDENCIA (`.portada .portadaPatron`) y no por orden: la
+ * utilidad `.patron-vivo` declara `position: relative` con la misma
+ * especificidad, y entre un CSS Module y un global el orden de carga no esta
+ * garantizado. Un empate silencioso deja la capa en flujo y rompe la portada.
+ *
+ * ⚠️ LA CAPA NECESITA HOLGURA VERTICAL: `paralaje-portada` la corre un
+ * porcentaje de su propio alto, y sin el `-20%` arriba y abajo, al scrollear
+ * deja un hueco de verde plano en el borde.
+ *
+ * ⚠️ LO QUE ESTA MAS LEJOS SE MUEVE MENOS. Es al reves de lo que uno supone, y
+ * es lo unico que hace que tres capas se lean como tres planos y no como "todo
+ * se movio un poco". `--deriva` se pisa por descendencia, igual que arriba.
+ *
+ * ⚠️ EL PATRON SOLO OSCURECE —Verde Tiempo Extra sobre Verde Cancha—, asi que
+ * todo lo que caiga encima contrasta MAS que sobre el verde plano. Por eso ya no
+ * se apaga en telefono como hacia antes con `display: none`: se muda al angulo
+ * superior derecho, que es de donde viene la luz en este sistema.
+ */
+.portada .portadaPatron {
+  position: absolute;
+  inset: -20% 0 -20% auto;
+  width: min(52%, 620px);
+  pointer-events: none;
+  --deriva: 4%;
+  /* Desvanecido largo: con un corte seco el damero arranca de golpe. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    rgb(0 0 0 / 0.7) 62%,
+    rgb(0 0 0 / 0.95)
+  );
+  mask-image: linear-gradient(to right, transparent, rgb(0 0 0 / 0.7) 62%, rgb(0 0 0 / 0.95));
+}
+
+/**
+ * PLANO 2 — la tira de camisetas reales, en el eje del sistema.
+ *
+ * ⚠️ SON DOS ELEMENTOS Y NO UNO. La rotacion vive en el contenedor y la
+ * animacion en la pista: si estuvieran en el mismo elemento, el `transform` del
+ * keyframe pisaria el `rotate` y la tira se enderezaria al primer cuadro. Como
+ * la pista es hija del contenedor rotado, su deriva ocurre EN EL EJE ROTADO, que
+ * es exactamente lo que se busca.
+ *
+ * ⚠️ SE ESCONDE ABAJO DE 1024px Y NO ES PEREZA. Ahi la columna de texto ocupa
+ * casi todo el ancho y la tira caeria justo debajo de la bajada. El costo esta
+ * medido y compensado: en telefono la portada se acorta (ver la media query de
+ * 640px) para que la grilla real —que son camisetas de verdad, con precio—
+ * aparezca antes, que es mejor que una foto decorativa.
+ */
+.portadaTira {
+  position: absolute;
+  top: 50%;
+  left: 58%;
+  right: -12%;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  transform: translateY(-50%) rotate(-22deg);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(0 0 0 / 0.85) 26%,
+    #000 58%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(0 0 0 / 0.85) 26%,
+    #000 58%,
+    transparent 100%
+  );
+}
+
+.portada .portadaTiraPista {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-5);
+  --deriva: 9%;
+}
+
+/**
+ * ⚠️ SIN `clip-path` EN CADA FOTO, AUNQUE EL PARALELOGRAMO TIENTE: `clip-path`
+ * recorta tambien la sombra y el filo de luz, asi que la foto quedaria pegada al
+ * verde sin ningun canto. La diagonal ya la da la rotacion de la tira.
+ *
+ * ⚠️ SOBRE UN FONDO OSCURO UNA SOMBRA NO EXISTE: lo que separa la foto del verde
+ * es el filo de luz, no la sombra.
+ */
+.tiraFoto {
+  flex: none;
+  width: clamp(120px, 12vw, 190px);
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radio);
+  box-shadow: var(--luz-superior-oscura), var(--sombra-4);
+}
+
+@media (max-width: 1023px) {
+  .portadaTira {
+    display: none;
+  }
+
+  /*
+   * Sin la tira, el patron se corre al angulo superior derecho —donde no hay
+   * texto— en vez de apagarse.
+   */
+  .portada .portadaPatron {
+    inset: -14% -12% auto auto;
+    width: 82%;
+    height: 48%;
+    -webkit-mask-image: linear-gradient(200deg, rgb(0 0 0 / 0.95), transparent 74%);
+    mask-image: linear-gradient(200deg, rgb(0 0 0 / 0.95), transparent 74%);
+  }
+}
+
+/**
+ * PLANO 3 — el texto, y va EN CONTRA.
+ *
+ * ⚠️ LA DERIVA NEGATIVA ES LA QUE PRODUCE SEPARACION REAL. Es un 3% de la altura
+ * del bloque, o sea unos 15px: alcanza para que la tapa tenga profundidad y no
+ * tanto como para que el titular se despegue de su lugar mientras alguien lo
+ * lee.
+ */
+.portada .portadaContenido {
+  position: relative;
+  /* Por encima del patron, de la tira y del grano. */
+  z-index: var(--z-contenido);
+  width: 100%;
+  /*
+   * ⚠️ EL MISMO ANCHO QUE TODO LO DE ABAJO. Con `--ancho-editorial` (1360) el
+   * borde izquierdo del titular quedaba 80px a la izquierda del borde de la
+   * grilla y del filete: la unica seccion fuera de la grilla era justo el
+   * elemento mas grande de la pagina, y eso no se nombra pero se lee como
+   * descuido.
+   */
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  --deriva: -3%;
+}
+
+/**
+ * ⚠️ EL FILETE DELANTE DEL ANTETITULO NO ES ADORNO: es lo que ancla el bloque de
+ * texto al borde izquierdo y le da al titular un punto de partida. Amarillo
+ * Cambio sobre Verde Cancha da 4.59:1 —AA para texto normal, que es lo que son
+ * estos 12px—, y como la malla nunca aclara, ese es el PEOR caso.
+ */
+.antetitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin: 0 0 var(--espacio-5);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-cambio);
+}
+
+.antetitulo::before {
+  content: '';
+  flex: none;
+  width: clamp(24px, 6vw, 56px);
+  height: 3px;
+  background: var(--color-cambio);
+}
+
+/**
+ * ⚠️ LA MASCARA POR LINEA SE DECLARA ACA Y NO SE HEREDA DE `.revela-lineas`.
+ * `entra-lineas` solo trae la animacion; la mascara vive en `revela-lineas`, y
+ * poner las dos clases juntas hace que dos reglas de igual especificidad
+ * declaren `animation` sobre el mismo elemento —la del scroll y la del reloj—.
+ * El shorthand ademas resetea `animation-timeline` y `animation-range`.
+ *
+ * ⚠️ EL `padding-block` NEGATIVO COMPENSADO NO ES UN TRUCO: sin el, `overflow:
+ * clip` corta al ras los acentos y las descendentes de cada linea.
+ */
+.titulo {
+  margin: 0;
+  max-width: 16ch;
+  color: var(--color-papel);
+}
+
+/**
+ * ⚠️ ERA `--color-neutro-borde`: 4.29:1 sobre el verde, que alcanza para texto
+ * grande pero no para estos 18px. `--color-sobre-cancha` da 4.60:1 y sigue
+ * estando un punto por debajo del papel puro, que era lo que se buscaba para que
+ * no compita con el titulo. Como `--malla-cancha` no aclara en ningun punto,
+ * 4.60:1 es el PEOR caso y no hay que volver a medirlo por viewport.
+ */
+.bajada {
+  margin: var(--espacio-5) 0 0;
+  max-width: 46ch;
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-sobre-cancha);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-4);
+  margin-top: var(--espacio-bloque);
+}
+
+/**
+ * ⚠️ ESTO ES UNA CANTIDAD, NO PLATA. Un importe no puede contar hacia arriba
+ * mientras alguien lo lee —se interpreta como un numero que todavia no esta
+ * decidido—, pero "cuantas camisetas hay" si puede entrar animado. Igual usa
+ * `.cifra-entra`, que muestra el valor FINAL desde el primer cuadro: no cuenta,
+ * se alza.
+ *
+ * Papel sobre Verde Cancha da 5.16:1.
+ */
+.cifra {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin: var(--espacio-bloque) 0 0;
+  color: var(--color-papel);
+}
+
+.cifraNumero {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-3xl);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cifraEtiqueta {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-sobre-cancha);
+}
+
+/**
+ * ⚠️ 44px DE ALTO REAL (WCAG 2.5.5). Es un enlace chico en un fondo grande y es
+ * justo el tipo de control al que se le erra con el pulgar.
+ *
+ * ⚠️ LA REGLA GLOBAL `a:hover { color: var(--color-tiempo-extra) }` sobre verde
+ * seria invisible; esta la pisa por especificidad (0,2,0 contra 0,1,1).
+ */
+.bajar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control);
+  margin-top: var(--espacio-bloque);
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-sobre-cancha);
+  transition: color var(--transicion) var(--curva);
+}
+
+.bajar:hover,
+.bajar:focus-visible {
+  color: var(--color-cambio);
+}
+
+.bajarLinea {
+  flex: none;
+  width: 1px;
+  height: 30px;
+  background: currentColor;
+}
+
+@media (max-width: 640px) {
+  /*
+   * ⚠️ ACA SE ARREGLA LA PORTADA DE 1,3 PANTALLAS. Sin `min-height: auto`, el
+   * minimo de 86svh se suma a un contenido que ya mide mas que el viewport y la
+   * primera camiseta queda a mas de un scroll. Ademas la bajada baja a 16px
+   * —que es el piso duro del sistema: debajo de eso iOS hace zoom al enfocar un
+   * campo— y desaparece el enlace de bajar, que es redundante cuando la seccion
+   * siguiente ya asoma a un dedo de distancia.
+   */
+  .portada {
+    min-height: auto;
+    padding-block: var(--espacio-8) calc(var(--espacio-8) + var(--corte-compensacion));
+  }
+
+  .bajada {
+    font-size: var(--texto-md);
+  }
+
+  .bajar {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* A ancho completo se leen como dos opciones, no como una fila apretada. */
+  .acciones > * {
+    flex: 1 1 100%;
+  }
+}
+
+/* ------------------------------------------------ corte diagonal de seccion */
+
+/**
+ * EL CORTE LO HACE EL BLOQUE QUE ENTRA.
+ *
+ * ⚠️ ESTE ES EL ARREGLO MAS IMPORTANTE DEL ARCHIVO. `clip-path` recorta el
+ * elemento y deja ver lo que hay DETRAS, que es el fondo del documento —no la
+ * seccion siguiente, porque el borde inferior de la CAJA no se mueve—. Un
+ * `--corte-abajo` en la portada daba: verde, diagonal, triangulo de papel de
+ * 40px y despues un borde HORIZONTAL RECTO contra el bloque casi negro. Dos
+ * bordes, uno de ellos recto: exactamente lo contrario del efecto buscado.
+ *
+ * Asi, el bloque oscuro se come en diagonal al claro, sube 40px con margen
+ * negativo y lo tapa: hay UN solo borde y es diagonal.
+ *
+ * ⚠️ LAS DOS SECCIONES QUE LO LLEVAN TIENEN SU CONTENIDO A MAS DE 60px DEL BORDE
+ * SUPERIOR (`padding-block` con `--corte-compensacion` sumada), asi que el
+ * poligono no llega a tijeretear el `outline` de foco de ningun enlace. Y
+ * ninguna de las dos contiene un `<details>` ni nada pegado, que es lo que este
+ * recurso no admite.
+ *
+ * ⚠️ NO LLEVA `position`: la trae la clase de superficie (`.sup-fosa` /
+ * `.sup-noche` declaran `position: relative`). Redeclararla seria empatar con un
+ * global y depender del orden de carga.
+ */
+.corte {
+  clip-path: var(--corte-arriba);
+  margin-top: calc(var(--corte-compensacion) * -1);
+  z-index: var(--z-contenido);
+}
+
+/**
+ * ⚠️ EL FILO DE LUZ SE APAGA EN LAS SECCIONES CORTADAS. `.sup-*::before` es una
+ * linea de 1px pegada al borde SUPERIOR de la caja: con el poligono del corte,
+ * esa linea queda recortada casi entera y sobrevive un pedacito a la derecha,
+ * que se lee como un defecto de render. Con dos clases —(0,2,1) contra (0,1,1)—
+ * se gana sin depender del orden de carga.
+ */
+.cinta.corte::before,
+.cierre.corte::before {
+  display: none;
+}
+
+/* ------------------------------------------------------- bandas de catalogo */
+
+/**
+ * ⚠️ `overflow: clip` ES LO QUE GARANTIZA LA REGLA DE 320px ACA. La pista mide
+ * lo que midan los nombres repetidos —facil cuatro o cinco mil pixeles— y sin el
+ * recorte agranda el documento entero.
+ */
+.cinta {
+  overflow: clip;
+  padding-block: calc(var(--espacio-5) + var(--corte-compensacion)) var(--espacio-5);
+}
+
+.banda {
+  overflow: clip;
+  max-width: 100%;
+  /* Los bordes se desvanecen con mascara: no hay que pintar el fondo encima. */
+  -webkit-mask-image: var(--velo-lateral);
+  mask-image: var(--velo-lateral);
+}
+
+.bandaPista {
+  display: flex;
+  width: max-content;
+  /* No se encoge aunque el flex padre quiera repartir. */
+  flex: none;
+}
+
+.bandaGrupo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-7);
+  margin: 0;
+  padding: 0 calc(var(--espacio-7) / 2);
+  list-style: none;
+  white-space: nowrap;
+}
+
+/**
+ * ⚠️ EL RECORRIDO LO DA EL SCROLL, NO UN RELOJ. Una marquesina en bucle es
+ * movimiento automatico y WCAG 2.2.2 exige poder pausarlo; los dos mecanismos
+ * que da la fundacion —`:hover` y `:focus-within`— no existen en un telefono,
+ * donde para enfocar un enlace hay que tocarlo, o sea acertarle a un objetivo en
+ * movimiento. Dirigida por scroll no hay nada que pausar: se mueve mientras la
+ * persona se mueve.
+ *
+ * ⚠️ EL RANGO ES `cover` Y NO `entry`. Un revelado tiene que TERMINAR cuando el
+ * elemento ya se ve; un recorrido necesita el paso completo por la pantalla o
+ * queda congelado a mitad de camino.
+ *
+ * ⚠️ LOS DOS KEYFRAMES SON LOCALES AL MODULO y sus nombres no chocan con ninguno
+ * de `movimiento.css` ni de los otros modulos.
+ *
+ * ⚠️ EMPIEZA EN -2% Y NO EN 0: asi el borde izquierdo de la pista arranca afuera
+ * de cuadro y nunca se ve el hueco antes del primer nombre.
+ */
+@keyframes bandaCorre {
+  from {
+    transform: translate3d(-2%, 0, 0);
+  }
+  to {
+    transform: translate3d(-30%, 0, 0);
+  }
+}
+
+@keyframes bandaCorreInversa {
+  from {
+    transform: translate3d(-30%, 0, 0);
+  }
+  to {
+    transform: translate3d(-2%, 0, 0);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .bandaPista {
+      animation: bandaCorre auto linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+      will-change: transform;
+    }
+
+    /* Dos bandas en contra: es la firma visual del recurso. */
+    .bandaInversa .bandaPista {
+      animation-name: bandaCorreInversa;
+    }
+  }
+}
+
+/**
+ * ⚠️ LA RED DE SEGURIDAD VA IGUAL, AUNQUE LA REGLA GLOBAL EXISTA. La global
+ * aplasta la DURACION y devuelve el timeline al reloj: eso deja la pista en el
+ * ULTIMO cuadro, o sea corrida un 30%. `transform: none` la devuelve al
+ * principio, que es donde tiene que estar quieta.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .bandaPista {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/**
+ * ⚠️ 44px DE ALTO EN CADA NOMBRE (WCAG 2.5.5). Sobre `--sup-fosa`: papel 17.23:1
+ * y el conteo en `--color-sobre-oscuro-tenue` 7.00:1.
+ */
+.bandaEnlace {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-control);
+  padding-inline: var(--espacio-2);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-sobre-oscuro);
+  transition: color var(--transicion) var(--curva);
+}
+
+.bandaEnlace:hover,
+.bandaEnlace:focus-visible {
+  color: var(--color-cambio);
+}
+
+/** El rombo de la bandera como separador: el motivo grafico, no un guion. */
+.bandaEnlace::after {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-left: var(--espacio-4);
+  background: var(--color-cambio);
+  transform: rotate(45deg);
+}
+
+.bandaCuenta {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-sobre-oscuro-tenue);
+}
+
+/* -------------------------------------------------------------- garantias */
+
+/**
+ * ⚠️ SUPERFICIE CALIDA Y NO BLANCA. Con blanco sobre papel, la mitad del scroll
+ * de la home era una sola densidad. `.sup-calida` ademas remapea sola
+ * `--color-neutro-tenue` y `--color-alerta`, que sobre un lavado caen a ~4.4:1
+ * —debajo de AA— sin que nadie se entere.
+ */
+.garantias {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  padding-block: var(--espacio-seccion);
+}
+
+/**
+ * ⚠️ EL PATRON VA EN UN HIJO VACIO. `.patron-vivo` declara `overflow: hidden`,
+ * que ES un contenedor de scroll: puesto en la seccion, el `view()` de
+ * `revela-grilla-materia` mediria contra una caja que no scrollea nunca y la
+ * lista quedaria en `opacity: 0`. Se gana por descendencia, igual que en la
+ * portada.
+ */
+.garantias .garantiasPatron {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  --patron-color: color-mix(in oklab, var(--color-cancha) 9%, transparent);
+  -webkit-mask-image: linear-gradient(var(--eje), rgb(0 0 0 / 0.9), transparent 78%);
+  mask-image: linear-gradient(var(--eje), rgb(0 0 0 / 0.9), transparent 78%);
+}
+
+.garantiasInterior {
+  position: relative;
+  z-index: var(--z-contenido);
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+
+/**
+ * ⚠️ SE GANA POR DESCENDENCIA. La utilidad global `.regla` declara `margin: 0`
+ * con la misma especificidad (0,1,0) y en otro archivo: un empate silencioso
+ * deja el filete pegado a la lista o a la grilla segun el orden de los chunks.
+ */
+.garantiasInterior .reglaSeccion {
+  margin: 0 0 var(--espacio-bloque);
+}
+
+/**
+ * ⚠️ `minmax(min(100%, 260px), 1fr)` Y NO `minmax(260px, 1fr)`. A 320px quedan
+ * 288px utiles: un minimo duro de 260 entra por poco hoy y desborda el dia que
+ * alguien suba `--canal`. El `min(100%, …)` lo vuelve imposible por construccion
+ * en vez de por revision.
+ */
+.garantiasLista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--espacio-bloque);
+}
+
+.garantia {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  column-gap: var(--espacio-4);
+  row-gap: var(--espacio-3);
+  padding-top: var(--espacio-5);
+  /* Filete editorial macizo: un 1px gris no separa, apenas ensucia. */
+  border-top: 2px solid var(--color-tinta);
+}
+
+/**
+ * ⚠️ EL ORDINAL VA EN VERDE CANCHA Y NO EN `--color-neutro-apagado`. Ese token
+ * da 2.49:1 —su propio comentario dice que es forma, no texto— y esto son
+ * caracteres que alguien lee, aunque vayan `aria-hidden`. Verde Cancha sobre
+ * `#f7f4cf` da 4.83:1, calculado con la formula WCAG.
+ */
+.garantiaOrden {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-cancha);
+}
+
+/**
+ * ⚠️ EL MARCO DEL ICONO ESTA CORTADO EN DIAGONAL, NO REDONDEADO. Es la bandera,
+ * y es la diferencia entre este sistema y cualquier tarjeta de Material. Verde
+ * Cancha sobre `--superficie-1` da 5.40:1, muy por encima del 3:1 que WCAG
+ * 1.4.11 pide para un trazo.
+ */
+.garantiaIcono {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: var(--color-cancha);
+  background: var(--superficie-1);
+  clip-path: polygon(0 0, 100% 0, 100% 74%, 74% 100%, 0 100%);
+}
+
+.garantiaTitulo {
+  grid-column: 1 / -1;
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  letter-spacing: normal;
+  line-height: 1.25;
+}
+
+.garantiaDetalle {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+/* --------------------------------------------------------------- catalogo */
+
+.catalogo {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-seccion) var(--canal);
+}
+
+/**
+ * ROTULO CINETICO.
+ *
+ * ⚠️ ES DECORACION Y NO PUEDE DEJAR DE SERLO. Va `aria-hidden` y no dice nada
+ * que no este dicho en otro lado, asi que no tiene requisito de contraste (WCAG
+ * 1.4.3 excluye el texto puramente decorativo). El dia que alguien meta
+ * informacion aca, el color tiene que subir a 4.5:1.
+ *
+ * ⚠️ EL MARGEN NEGATIVO ARRANCA LA PISTA FUERA DE CUADRO. `.corre-con-scroll`
+ * empieza en +6%: sin esto, al principio del recorrido se ve el hueco antes de
+ * la primera palabra.
+ */
+.rotulo {
+  overflow: clip;
+  max-width: 100%;
+  margin-bottom: var(--espacio-bloque);
+  -webkit-mask-image: var(--velo-lateral);
+  mask-image: var(--velo-lateral);
+}
+
+.rotuloPista {
+  display: flex;
+  gap: var(--espacio-6);
+  width: max-content;
+  margin-inline-start: -20vw;
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-2);
+  line-height: 0.9;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
+  white-space: nowrap;
+  color: color-mix(in oklab, var(--color-cancha) 16%, transparent);
+  /*
+   * ⚠️ NO SE SELECCIONA. Son cinco copias de la misma frase puestas ahi para
+   * que la cinta tenga largo: arrastrar para copiar el titulo de la seccion se
+   * llevaba "Camisetas con historia ·" cinco veces en el medio. `aria-hidden`
+   * la saca del lector de pantalla, pero no del cursor.
+   */
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotuloPista {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/** Etiqueta de seccion. Sobre papel 4.69:1. */
+.seccionEtiqueta {
+  margin: 0 0 var(--espacio-2);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * ⚠️ EL TITULO Y LA CUENTA COMPARTEN LINEA DE BASE. Antes el titulo estaba solo
+ * y no habia forma de saber cuantas publicaciones habia sin contarlas. El borde
+ * inferior se fue: ahora la separacion la hace el filete que se dibuja con el
+ * scroll, que es la misma linea pero viva.
+ */
+.encabezado {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-4);
+}
+
+/**
+ * ⚠️ EL TAMAÑO SE FIJA POR DESCENDENCIA Y NO SE DEJA AL ORDEN. `display` y
+ * `display-3` son las dos (0,1,0) y `.display` declara `font-size:
+ * var(--display-1)`: hoy gana `display-3` solo porque esta despues en el mismo
+ * archivo. Un reordenamiento de `tokens.css` dejaria todos los `<h2>` de seccion
+ * a 132px. Con (0,2,0) el resultado no depende de nada.
+ */
+.catalogo .tituloSeccion,
+.explorarInterior .tituloSeccion {
+  margin: 0;
+  font-size: var(--display-3);
+}
+
+.catalogo .reglaCatalogo {
+  margin: 0 0 var(--espacio-bloque);
+}
+
+.cuenta {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.grilla {
+  display: grid;
+  /*
+   * Se acomoda sola: sin breakpoints que mantener.
+   *
+   * ⚠️ EL MINIMO BAJA A 150px EN TELEFONO (ver abajo). Con 220px fijos, una
+   * pantalla de 320px daba UNA columna: la vitrina se convertia en una lista
+   * vertical de fotos gigantes y ver diez camisetas eran diez pantallazos.
+   */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--espacio-6);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .grilla {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    gap: var(--espacio-4);
+  }
+}
+
+.verTodo {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--espacio-bloque);
+}
+
+/* ------------------------------------------------------------ estado vacio */
+
+/**
+ * ⚠️ ES EL ESTADO MAS PROBABLE DE UN MARKETPLACE NUEVO Y POR ESO TIENE
+ * COMPOSICION PROPIA. Con el catalogo vacio no hay bandas, no hay atajos y no
+ * hay grilla: si esto fuera el estado vacio generico —un icono gris y dos
+ * renglones—, la home entera seria una portada cinematografica y un hueco.
+ */
+.vacio {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  border-radius: var(--radio);
+  padding: var(--espacio-seccion) var(--espacio-6);
+}
+
+.vacio .vacioPatron {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  --patron-color: color-mix(in oklab, var(--color-cancha) 10%, transparent);
+  -webkit-mask-image: linear-gradient(var(--eje), rgb(0 0 0 / 0.85), transparent 70%);
+  mask-image: linear-gradient(var(--eje), rgb(0 0 0 / 0.85), transparent 70%);
+}
+
+.vacioInterior {
+  position: relative;
+  z-index: var(--z-contenido);
+  max-width: 34ch;
+}
+
+/**
+ * ⚠️ ES UN `<p>` Y NO UN `<h2>`, AUNQUE PAREZCA UN TITULO. La seccion ya tiene su
+ * `<h2>` ("En venta"): sumar otro encabezado llena de titulos falsos el indice
+ * por donde navega quien usa lector de pantalla.
+ */
+.vacioTitulo {
+  margin: var(--espacio-3) 0 0;
+  color: var(--color-tinta);
+}
+
+.vacioDetalle {
+  margin: var(--espacio-5) 0 var(--espacio-bloque);
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+/* --------------------------------------------------------------- explorar */
+
+/**
+ * ⚠️ ACA NO VA `clip-path`, Y ES DELIBERADO. `clip-path` recorta tambien la
+ * sombra y cualquier hijo que se desborde: esta es la unica seccion cuyos hijos
+ * se levantan 4px y toman `--sombra-2` al hover, asi que la ultima fila del lado
+ * derecho mostraria la sombra tijereteada. El corte de este tramo lo hace
+ * `.cierre`, que no tiene interactivos cerca del borde.
+ *
+ * El `padding-bottom` compensa que `.cierre` sube 40px a comerse esta seccion.
+ */
+.explorar {
+  padding-block: var(--espacio-seccion) calc(var(--espacio-seccion) + var(--corte-compensacion));
+}
+
+.explorarInterior {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+
+.grupo {
+  margin-top: var(--espacio-bloque);
+}
+
+.grupoTitulo {
+  margin: 0 0 var(--espacio-4);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  /* `.sup-2` remapea este token a `--color-neutro-texto`: 5.51:1 sobre #f2f3ea. */
+  color: var(--color-neutro-tenue);
+}
+
+.fichas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  gap: var(--espacio-4);
+}
+
+/**
+ * ⚠️ EN TELEFONO LOS ATAJOS SON UNA FILA QUE SE DESLIZA, NO VEINTE FICHAS
+ * APILADAS. A 320px, con una sola columna, 8 clubes + 6 marcas + 6 temporadas
+ * son unos 1600px de atajos entre el catalogo y el cierre: eso deja de ser un
+ * atajo y pasa a ser un muro que hay que scrollear.
+ *
+ * ⚠️ ESTO CONVIERTE `.fichas` EN UN CONTENEDOR DE SCROLL, y por eso el revelado
+ * vive en `.grupo` y no aca: cualquier `view()` adentro mediria contra esta caja
+ * y las fichas se quedarian invisibles.
+ *
+ * ⚠️ `max-width: 100%` NO ES DECORATIVO: es lo que impide que la fila empuje el
+ * documento a 320px.
+ */
+@media (max-width: 640px) {
+  .fichas {
+    display: flex;
+    max-width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: var(--espacio-3);
+    padding-bottom: var(--espacio-2);
+  }
+
+  .fichas > li {
+    flex: 0 0 62%;
+    scroll-snap-align: start;
+  }
+}
+
+/**
+ * ⚠️ NO DECLARA FONDO NI SOMBRA NI TRANSFORM: los ponen `.sup-ficha`,
+ * `.destello` y `.eleva`. El `border: 1px solid transparent` existe para que
+ * `.eleva:hover` tenga un borde al que cambiarle el color —sin el, esa
+ * declaracion es inerte y la ficha se levanta sin ganar el filo verde—.
+ *
+ * ⚠️ TAMPOCO DECLARA `overflow` NI `position`: los pone `.destello`, que ademas
+ * aisla el contexto para que su barrido quede debajo del texto y no lo lave.
+ */
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-height: var(--alto-control);
+  padding: var(--espacio-4) var(--espacio-4) var(--espacio-4) var(--espacio-5);
+  border: 1px solid transparent;
+  color: var(--color-tinta);
+}
+
+/**
+ * Filete de acento que se dibuja de arriba hacia abajo al pasar el mouse.
+ *
+ * ⚠️ ES `scaleY` Y NO `height`. La altura rehace layout en cada cuadro; la
+ * escala corre en el compositor.
+ *
+ * ⚠️ NO ES LA UNICA SEÑAL DE QUE ESTO SE APRIETA: en un telefono no existe el
+ * hover. La ficha ya es un enlace con nombre, cantidad y elevacion propia.
+ */
+.ficha::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background-image: var(--degradado-acento);
+  transform: scaleY(0);
+  transform-origin: 50% 0;
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.ficha:hover::before,
+.ficha:focus-visible::before {
+  transform: scaleY(1);
+}
+
+.fichaNombre {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: 1.05;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* Un nombre de club largo no puede empujar la grilla a 320px. */
+  overflow-wrap: anywhere;
+}
+
+.fichaCuenta {
+  font-size: var(--texto-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-neutro-tenue);
+}
+
+/* ----------------------------------------------------------------- cierre */
+
+/**
+ * ⚠️ EL MARGEN NEGATIVO DE ABAJO PEGA EL CIERRE AL PIE, Y NO ES UN AJUSTE
+ * ESTETICO. `footer.module.css` declara `margin-top: var(--espacio-seccion)`
+ * —correcto para las otras 21 pantallas, que terminan en papel—: aca dejaba una
+ * franja de papel de hasta 128px ENTRE dos bloques oscuros, que no se lee como
+ * separacion sino como un hueco sin pintar. Cancelarlo con el mismo token hace
+ * que el cierre y el pie sean un solo bloque oscuro, que es lo que la
+ * composicion pide.
+ *
+ * ⚠️ EL PEOR CASO SI EL PIE CAMBIA SU MARGEN ES INOCUO: el pie subiria como
+ * mucho `--espacio-seccion`, que es exactamente el `padding-bottom` VACIO de
+ * esta seccion. No puede pisar texto.
+ */
+.cierre {
+  overflow: clip;
+  padding: calc(var(--espacio-seccion) + var(--corte-compensacion)) var(--canal)
+    var(--espacio-seccion);
+  margin-bottom: calc(var(--espacio-seccion) * -1);
+}
+
+/**
+ * ⚠️ MISMA TRAMPA QUE EN LA PORTADA, MISMA SOLUCION: se gana por descendencia
+ * porque `.patron-vivo` declara `position: relative` con igual especificidad.
+ *
+ * Aca el motivo son las rayas diagonales y no los rombos: el bloque de cierre ya
+ * tiene un titular enorme y el damero le competiria.
+ */
+.cierre .cierrePatron {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(var(--eje), rgb(0 0 0 / 0.85), transparent 72%);
+  mask-image: linear-gradient(var(--eje), rgb(0 0 0 / 0.85), transparent 72%);
+}
+
+.cierreInterior {
+  position: relative;
+  z-index: var(--z-contenido);
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+}
+
+/**
+ * ⚠️ ACA NO SE USA EL TOKEN TENUE, Y NO ES CAPRICHO. `.sup-noche` remapea
+ * `--color-neutro-tenue` a `--color-sobre-oscuro-tenue` (#8fa79a), que sobre
+ * `--sup-noche` plano da 6.39:1 — pero `--malla-noche` ACLARA en el angulo
+ * superior derecho (la brasa de `--verde-800` al 55% compone ≈ #104a30) y ahi el
+ * mismo color cae a 3.99:1, debajo de AA. Hoy esta etiqueta queda a la
+ * izquierda, lejos de la brasa, pero eso es suerte de layout y no una garantia.
+ * `--color-sobre-oscuro-2` da 5.71:1 en ese mismo punto.
+ */
+.cierre .seccionEtiqueta {
+  color: var(--color-sobre-oscuro-2);
+}
+
+.cierreTitulo {
+  margin: 0;
+  max-width: 14ch;
+  color: var(--color-papel);
+}
+
+/**
+ * ⚠️ EL GRADIENTE VA EN LA LINEA, NO EN EL `<h2>`. `background-clip: text` pinta
+ * el fondo del elemento recortado por los glifos de todo su subarbol: con las
+ * lineas transformandose adentro de sus mascaras, el fondo se queda quieto y
+ * cada linea muestra un pedazo distinto del degradado a mitad de la animacion.
+ *
+ * ⚠️ EL `@supports` NO ES OPCIONAL: `background-clip: text` exige `color:
+ * transparent`, y si el fondo no llega —una extension, un modo de alto
+ * contraste— el titular queda literalmente invisible. Sin soporte se queda en
+ * papel macizo, 12.59:1 en el punto mas claro de la malla.
+ *
+ * Peor stop del degradado sobre `--malla-noche`: Amarillo Cambio sobre
+ * `--sup-noche-alta` = 11.18:1.
+ */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .cierreTitulo > span > span {
+    background-image: var(--degradado-titular-claro);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+.cierreBajada {
+  margin: var(--espacio-5) 0 0;
+  max-width: var(--ancho-lectura);
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-sobre-oscuro-2);
+}
+
+/* ------------------------------------------------- red de seguridad de 320px */
+
+/**
+ * ⚠️ LA ETIQUETA DE UN BOTON PUEDE EMPUJAR EL DOCUMENTO ENTERO, Y ACA LO HACIA.
+ * `ui.module.css` declara `white-space: nowrap` en `.boton` a proposito —un
+ * boton crece antes que recortar—, pero un elemento flex no puede encogerse por
+ * debajo de su min-content, y con `nowrap` el min-content ES el ancho completo
+ * del texto. O sea que la etiqueta no se recorta: desborda el `<body>` y el
+ * telefono queda con scroll horizontal en toda la pantalla.
+ *
+ * Medido en el peor caso, "Buscar por club, marca o temporada" en Inter 16
+ * semibold con `--tracking-etiqueta` (0.08em ≈ 1.3px por caracter) mide unos
+ * 335px de texto; con los 40px de `--espacio-5` a los costados y el borde da
+ * ~377px. En un telefono de 375 quedan 343px utiles y en uno de 320, 288: se
+ * pasa en los dos. El primario de la portada ("Ver todas las camisetas", en Big
+ * Noodle a 22px) queda en ~297px contra 288: se pasa a 320.
+ *
+ * ⚠️ NO SE ARREGLA ACORTANDO EL TEXTO. Eso lo arregla HOY y lo vuelve a romper
+ * la proxima vez que alguien reescriba una etiqueta, sin que falle nada: el
+ * desborde no tira error, no lo ve el lint y no lo ve `chequeo-css`. Dejar
+ * envolver la linea abajo de 480px lo vuelve imposible por construccion — el
+ * min-content pasa a ser la palabra mas larga— y arriba de 480px el boton sigue
+ * siendo una sola linea, que es lo que el sistema quiere.
+ *
+ * ⚠️ SE GANA CON DOS SELECTORES (0,1,1) CONTRA EL (0,1,0) DE `.boton`, no por
+ * orden: entre un CSS Module y un global el orden de carga de los chunks no
+ * esta garantizado, y un empate silencioso deja el desborde puesto.
+ */
+@media (max-width: 480px) {
+  .acciones a,
+  .verTodo a,
+  .vacioInterior a {
+    white-space: normal;
+  }
+}

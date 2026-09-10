@@ -1,0 +1,2511 @@
+/**
+ * Primitivas de interfaz — version LUMINOSA (2026-09-10).
+ *
+ * ⚠️ ESTA HOJA REEMPLAZA A LA ANTERIOR POR DECISION DEL DUEÑO. La version
+ * previa era angulosa (radio 4px), editorial y "la luz se resta": sombras
+ * cortas, cero glow, hover de 1px. El dueño la vio y la rechazo —"anticuada,
+ * sin animaciones, glow, dinamismo, muy cuadrado todo"—. Desde aca las
+ * primitivas son REDONDEADAS (12-28px), tienen GLOW (halos de la luz de marca
+ * fuera del texto), VIDRIO (tarjeta y panel con `backdrop-filter`) y responden
+ * al hover con elevacion, luz y tilt. Los NOMBRES de las clases no cambian: 22
+ * pantallas las componen y `ui.tsx` es el unico importador.
+ *
+ * ⚠️ TODO LO VISUAL SALE DE LOS TOKENS DE `tokens.css`. Este archivo no inventa
+ * un color, una sombra ni una duracion: los halos son `--glow-*`, los radios
+ * `--radio-*`, la luz `--luz-marca`. Las unicas variables propias son de
+ * CONTRATO —`--boton-primario-fondo` y familia, `--filo`/`--apoyo`,
+ * `--tarjeta-vidrio*`, `--boton-primario-luz`, `--nav-*`— y existen para que el
+ * CONTEXTO decida en vez de duplicar variantes. `--glow-alerta` es la unica
+ * receta local, porque `tokens.css` no tiene un canal de luz naranja y se arma
+ * con `color-mix()` sobre `--color-naranja`.
+ *
+ * ⚠️⚠️ REGLA DURA: ninguna regla escribe `--color-blanco`, `--color-neutro-borde`
+ * ni `--color-neutro-suave` como fondo. Se usan `--superficie-1`, `--linea-tenue`
+ * y `--superficie-2`, que `.sup-noche` / `.sup-fosa` / `.sup-cancha` /
+ * `.sup-vidrio-*` remapean. Y lo que esas clases NO remapean —tinta y tiempo
+ * extra como color de TEXTO— sale de `--texto-fuerte` / `--marca-texto`, que el
+ * contrato de abajo fija por superficie. Consecuencia: una `Tarjeta`, unas
+ * `Cifras` o un `Panel` adentro de un `<Pliego>` oscuro se dan vuelta SOLOS,
+ * importe incluido (verificado en el navegador: antes el importe era tinta
+ * sobre noche-alta, 1.25:1).
+ *
+ * ⚠️ EL GLOW VA FUERA DEL TEXTO, SIEMPRE. `box-shadow` alrededor de la caja,
+ * `filter: drop-shadow` en un icono, `text-shadow` difuso al costado de una
+ * cifra (que no toca el contraste medido del glifo). Nunca un fondo mas claro
+ * debajo de las letras. La unica luz que se suma DETRAS de texto es la del
+ * boton primario, y esta medida: verde-500 al 20% sobre cancha compone
+ * verde-600 (papel 4.64 ✅) y blanco al 45% sobre Cambio deja tinta en 15.02 ✅.
+ *
+ * ⚠️ NO HAY UNA SOLA `animation-timeline: view()` EN ESTE ARCHIVO. `view()`
+ * resuelve contra el contenedor de scroll mas cercano y `overflow: hidden` ES
+ * uno: un revelado adentro de un marco recortado no corre nunca. Ademas estas
+ * primitivas son el PRIMER bloque de su pantalla. Todo lo de aca se dibuja con
+ * RELOJ; el revelado por scroll lo componen las pantallas con las clases
+ * globales de `movimiento.css`.
+ *
+ * ⚠️ SOLO TRES `@keyframes` LOCALES: `girar`, `dibujarDesdeCero` y
+ * `dibujarRiel`. Ninguno existe en `movimiento.css` (lo verifica
+ * `scripts/chequeo-css.mjs`). Las perpetuas del sistema —blobs, `.respira`,
+ * `.flota`— se COMPONEN desde `ui.tsx` como clases globales: una copia local
+ * quedaria fuera de la red de seguridad de `prefers-reduced-motion`, que las
+ * lista por nombre.
+ */
+
+/* ================================================ contrato de superficie */
+
+/**
+ * ⚠️ SOBRE FONDO OSCURO UNA SOMBRA NO EXISTE —negro sobre negro— y el filo de
+ * luz blanco al 90% se ve como una raya de tiza. Esta regla y las que la siguen
+ * son las UNICAS globales del archivo, y son lo que evita treinta clases
+ * "variante oscura": las primitivas piden `var(--filo, …)` y `var(--apoyo, …)`,
+ * y la superficie que las contiene decide.
+ *
+ * ⚠️ `.sup-vidrio-oscuro` ENTRA EN TODOS LOS GRUPOS: es una superficie oscura
+ * mas —mismos remapeos que `.sup-noche`— y antes quedaba afuera, asi que un
+ * boton fantasma adentro de un panel de vidrio oscuro era verde sobre verde.
+ *
+ * ⚠️ `--boton-primario-luz` ES LA LUZ QUE SE SUMA AL PRIMARIO, Y ES CONTEXTUAL
+ * PORQUE SU TEXTO CAMBIA DE COLOR. Sobre claro el primario es cancha con texto
+ * papel: la luz es verde-500 al 20% (compone verde-600, papel 4.64 ✅; blanco
+ * al 8% ya fallaria, 4.43). Sobre oscuro el primario es Amarillo Cambio con
+ * texto tinta: ahi la luz es blanco al 45% (tinta 15.02 ✅). Los dos numeros
+ * estan en `tokens.css` (`--barrido-luz`).
+ *
+ * ⚠️ `--tarjeta-vidrio*` ES EL VIDRIO DE `Tarjeta` Y `Panel`. Sobre claro es el
+ * vidrio claro; adentro de una oscura, el oscuro. Un vidrio blanco al 82%
+ * adentro de un pliego noche seria una placa gris, no un vidrio.
+ */
+:global(.sup-noche),
+:global(.sup-fosa),
+:global(.sup-cancha),
+:global(.sup-vidrio-oscuro) {
+  --filo: var(--luz-superior-oscura);
+  --apoyo: 0 12px 26px -10px rgb(0 0 0 / 0.5);
+  --apoyo-alto: 0 22px 44px -16px rgb(0 0 0 / 0.62);
+  --boton-primario-luz: rgb(255 255 255 / 0.45);
+  --tarjeta-vidrio: var(--vidrio-oscuro-fondo);
+  --tarjeta-vidrio-solido: var(--vidrio-oscuro-solido);
+  --tarjeta-vidrio-borde: var(--vidrio-oscuro-borde);
+}
+
+/**
+ * ⚠️ CUARTA PARTE, Y ERA LA QUE FALTABA: EL TEXTO FUERTE Y EL TEXTO DE MARCA.
+ * `tokens.css` NO remapea `--color-tinta` ni `--color-tiempo-extra` adentro de
+ * una oscura, y con razon (tres modulos los usan como FONDO). Pero once reglas
+ * de este archivo los escriben como COLOR DE TEXTO —el importe de `Cifras`, el
+ * `Precio`, el `Aviso`, el total de `FilaDeDatos`, la columna de importes de la
+ * tabla, la pregunta de `Confirmar`, la etiqueta `marca`, la `Pastilla`— y
+ * verificado en el navegador: adentro de un `<Pliego>` noche el importe de una
+ * cifra era tinta sobre `--sup-noche-alta` (**1.25:1**, invisible) y "Activa"
+ * era Verde Tiempo Extra sobre lo mismo (1.5:1). O sea que la promesa de
+ * "todo se da vuelta solo" era falsa para exactamente lo que mas se lee.
+ *
+ * Dos variables de contrato con default en cada regla, como las demas:
+ *   --texto-fuerte   tinta sobre claro → papel sobre oscuro (15.72 / 12.59 ✅)
+ *   --marca-texto    tiempo extra sobre claro → `--verde-400` sobre oscuro
+ *                    (6.86 sobre noche, 5.49 sobre noche-alta ✅; Verde Cancha
+ *                    daba 1.9 y tiempo extra 1.5)
+ *   --marca-borde    el contorno que acompaña al texto de marca: cancha → verde-400
+ *
+ * `.sup-cancha` NO entra aca: ahi `--superficie-1` sigue siendo blanco (las
+ * tarjetas de la portada son blancas a proposito), asi que tinta sobre la
+ * tarjeta blanca es lo correcto.
+ */
+:global(.sup-noche),
+:global(.sup-fosa),
+:global(.sup-vidrio-oscuro) {
+  --texto-fuerte: var(--color-sobre-oscuro);
+  --marca-texto: var(--verde-400);
+  --marca-borde: var(--verde-400);
+}
+
+/**
+ * ⚠️ EL VIDRIO CLARO VUELVE A PONER LOS DEFAULTS. `.sup-vidrio-claro` se ofrece
+ * ADENTRO de las oscuras y resetea sus tokens a papel; sin esta regla heredaria
+ * el contrato oscuro de arriba y una `Tarjeta` adentro seria de vidrio oscuro
+ * sobre un vidrio claro.
+ */
+:global(.sup-vidrio-claro) {
+  --filo: var(--luz-superior);
+  --apoyo: var(--sombra-1);
+  --apoyo-alto: var(--sombra-2);
+  --boton-primario-luz: rgb(var(--luz-verde) / 0.2);
+  --tarjeta-vidrio: var(--vidrio-claro-fondo);
+  --tarjeta-vidrio-solido: var(--vidrio-claro-solido);
+  --tarjeta-vidrio-borde: var(--linea-tenue);
+  --texto-fuerte: var(--color-tinta);
+  --marca-texto: var(--color-tiempo-extra);
+  --marca-borde: var(--color-cancha);
+  --alerta-texto: var(--color-alerta);
+  --etiqueta-texto: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ SEGUNDA MITAD DEL CONTRATO, Y SIN ELLA EL DAR-VUELTA-SOLO ES FALSO. Varias
+ * reglas de este archivo remapean `--color-alerta: var(--color-alerta-hondo)`
+ * porque sobre las superficies TENIDAS CLARAS el alerta normal cae a ~4.36:1.
+ * Adentro de un `<Pliego>` esa misma linea es una trampa: `--color-alerta-hondo`
+ * es #a94c00 y sobre `--sup-noche-alta` da **2.30:1**. Sobre oscuro no existe
+ * un hondo —`tokens.css` ya decide que ahi el alerta ES el naranja de marca
+ * (7.26:1 sobre fosa)—, y esta linea hace que las reglas hereden esa decision.
+ *
+ * ⚠️ `.sup-cancha` QUEDA AFUERA A PROPOSITO: `tokens.css` ya remapea ahi los dos
+ * tokens a Amarillo Cambio (4.59:1), que es lo unico legible sobre ese verde.
+ *
+ * ⚠️ EL TEXTO SOBRE EL RELLENO DE ALERTA SE DA VUELTA. Blanco sobre el naranja
+ * de marca da **2.26:1**; tinta sobre ese mismo naranja, 7.27:1.
+ */
+:global(.sup-noche),
+:global(.sup-fosa),
+:global(.sup-vidrio-oscuro) {
+  --color-alerta-hondo: var(--color-naranja);
+  --peligro-texto-relleno: var(--color-tinta);
+}
+
+/**
+ * ⚠️ TERCERA PARTE: EL BOTON FANTASMA. Medido, `--color-cancha` sobre
+ * `.sup-cancha` da **1.00:1**, sobre `.sup-noche` **3.05:1** y sobre `.sup-fosa`
+ * **3.34:1**. Sale de variables con default igual que las otras variantes.
+ */
+:global(.sup-noche),
+:global(.sup-fosa),
+:global(.sup-vidrio-oscuro) {
+  /* Papel sobre noche 15.72:1, sobre fosa 17.23:1, sobre noche-alta 12.59:1. */
+  --boton-fantasma-texto: var(--color-sobre-oscuro);
+  /* Mismo relleno que el secundario sobre oscuro: papel al 12%. */
+  --boton-fantasma-fondo-activo: rgb(250 250 247 / 0.12);
+  /* Amarillo Cambio sobre ese relleno: 9.77:1 sobre noche, 11.00:1 sobre fosa. */
+  --boton-fantasma-texto-activo: var(--color-cambio);
+  /* `--degradado-acento` arranca en Verde Cancha: sobre oscuro la mitad de la raya desaparece. */
+  --boton-fantasma-subrayado: var(--degradado-titular-claro);
+}
+
+:global(.sup-cancha) {
+  /* Papel sobre Verde Cancha: 5.16:1. */
+  --boton-fantasma-texto: var(--color-papel);
+  /* Se HUNDE al apretarlo: `--verde-900` al 30% compone #0d673a y papel encima queda en 6.65:1. */
+  --boton-fantasma-fondo-activo: rgb(7 59 34 / 0.3);
+  --boton-fantasma-texto-activo: var(--color-papel);
+  --boton-fantasma-subrayado: var(--degradado-titular-claro);
+
+  /**
+   * ⚠️ SOBRE LA PORTADA, `--color-alerta` ES AMARILLO CAMBIO (tokens.css lo
+   * remapea porque sobre el verde no existe un naranja legible), pero las
+   * primitivas de alerta —`peligro`, el disparador de `Confirmar`, la etiqueta
+   * `alerta`— pintan su texto sobre `--superficie-1`, que en `.sup-cancha`
+   * SIGUE SIENDO BLANCO. Cambio sobre blanco da **1.18:1**. Y el relleno del
+   * hover pasa a ser Cambio, donde blanco da 1.10. Medido, los dos invisibles.
+   *
+   * El hex es el `--color-alerta` de `:root`, repetido porque ahi adentro
+   * esta remapeado (misma tecnica que `.sup-vidrio-claro` en tokens.css):
+   * sobre blanco da 4.88 ✅. Y tinta sobre Cambio, 13.97 ✅. Lo mismo para la
+   * etiqueta neutra: `--color-neutro-texto` es ahi `--color-sobre-cancha`, que
+   * sobre `--superficie-2` (#f2f3ea, tampoco remapeada) daba 1.05.
+   */
+  --alerta-texto: #b85400;
+  --peligro-texto-relleno: var(--color-tinta);
+  --etiqueta-texto: #5b6459;
+}
+
+/**
+ * ⚠️ EL ESTADO VACIO LLEVA BLOBS Y COMPONE `.escena-luz`, QUE FIJA EL
+ * PRESUPUESTO DE LUZ DE UNA TARJETA CLARA (verde-400 0.16 / Cambio 0.55, medido
+ * en tokens.css con los remapeos que esa clase trae). Adentro de una oscura la
+ * tarjeta es `--sup-noche-alta` y ese presupuesto la rompe: `.escena-luz` mide
+ * (0,1,0) y no sabe que esta en un pliego. Esta regla mide (0,2,0) y pone los
+ * numeros de `.sup-noche.escena-luz` —0.10 / 0.06, sobre-oscuro-2 6.81 ✅— mas
+ * los tokens oscuros que `.escena-luz` pisaba con los claros. Adentro de un
+ * vidrio oscuro, cero: esta medido que ahi no entra ni un 4%.
+ */
+:global(.sup-noche) .vacio,
+:global(.sup-fosa) .vacio {
+  --blob-alfa-cancha: 0.1;
+  --blob-alfa-cambio: 0.06;
+  --enlace: var(--verde-400);
+  --linea-control: var(--linea-control-oscura);
+  --color-neutro-tenue: var(--color-sobre-oscuro-2);
+}
+
+:global(.sup-vidrio-oscuro) .vacio {
+  --blob-alfa-cancha: 0;
+  --blob-alfa-cambio: 0;
+  --enlace: var(--verde-400);
+  --linea-control: var(--linea-control-oscura);
+  --color-neutro-tenue: var(--color-sobre-oscuro-2);
+}
+
+/**
+ * ⚠️ LA PILA DE TRES CAPAS SE DECLARA UNA VEZ Y NO CINCO. `--sombra-0` es el
+ * hairline de apoyo, el filo es el canto iluminado y `--apoyo` es el contacto
+ * con el papel. La cuarta capa es la novedad: un halo tenue de la luz de marca,
+ * que es lo que hace que una superficie apoyada se lea como un objeto con luz
+ * propia y no como un rectangulo con borde.
+ */
+.tarjeta,
+.vacio,
+.pasos,
+.cifra,
+.tablaMarco {
+  box-shadow:
+    var(--sombra-0),
+    var(--filo, var(--luz-superior)),
+    var(--apoyo, var(--sombra-1)),
+    0 0 32px -14px rgb(var(--luz-marca) / 0.3);
+}
+
+/**
+ * ⚠️ LA ELEVACION DEL HOVER TIENE QUE COMPONER CON EL FILO, NO REEMPLAZARLO.
+ * `.eleva:hover` (movimiento.css) declara `box-shadow: var(--sombra-3),
+ * var(--glow-suave)` a secas, y con (0,2,0) le gana a `.sup-ficha` (0,1,0): toda
+ * ficha elevable del sitio perdia el hairline y el filo justo al levantarse.
+ * Encadenar las dos clases sube a (0,3,0) y el orden de inyeccion deja de
+ * importar. Vive aca porque este archivo es el dueño del contrato de elevacion,
+ * asi la ficha que se levanta adentro de un `<Pliego>` oscuro tambien recibe la
+ * sombra que si se ve ahi.
+ *
+ * ⚠️ EL FOCO VA DESPUES DEL HOVER Y LLEVA `--glow-foco`: misma especificidad,
+ * declarado mas abajo, gana. El `outline` global sigue puesto ademas.
+ */
+:global(.sup-ficha.eleva:hover),
+:global(.sup-ficha.eleva:focus-within) {
+  box-shadow:
+    var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo-alto, var(--sombra-3)),
+    var(--glow-suave);
+}
+
+:global(.sup-ficha.eleva:focus-visible) {
+  box-shadow:
+    var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo-alto, var(--sombra-3)),
+    var(--glow-foco);
+}
+
+/** `:active` es la misma regla: la ficha baja pero no pierde el filo mientras el dedo la aprieta. */
+:global(.sup-ficha.eleva:active) {
+  box-shadow: var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo, var(--sombra-1));
+}
+
+/* ------------------------------------------------------------------ boton */
+
+/**
+ * ⚠️ LEVANTA CON `translate`, NO CON `transform`. Casi todas las entradas de
+ * `movimiento.css` animan `transform` con `both`, que incluye `forwards`: la
+ * animacion sigue aplicando `transform` despues de terminar y **una propiedad
+ * bajo control de una animacion que rellena no transiciona ni se puede pisar**.
+ * Un boton hijo directo de un `.escalona` quedaba sin hover y sin apreton, sin
+ * ningun error. `translate` es una propiedad distinta y se compone.
+ */
+.boton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  font-family: var(--fuente-texto);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  text-align: center;
+  cursor: pointer;
+  /* Un boton dimensionado por su contenido nunca recorta: crece. El bloque lo resuelve `.botonBloque`. */
+  white-space: nowrap;
+  user-select: none;
+  translate: 0 0;
+  transition:
+    background-color var(--transicion-rapida) var(--curva),
+    border-color var(--transicion-rapida) var(--curva),
+    color var(--transicion-rapida) var(--curva),
+    translate var(--dur-hover) var(--curva-viva),
+    transform var(--dur-media) var(--curva-seca),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+/** La flecha que se corre y se inclina. Decorativa: la etiqueta ya dice a donde va. */
+.botonFlecha {
+  flex: none;
+  transition: transform var(--dur-hover) var(--curva-pop);
+}
+
+.boton:hover:not(:disabled) .botonFlecha,
+.boton:focus-visible:not(:disabled) .botonFlecha {
+  transform: translateX(4px) rotate(-6deg);
+}
+
+.boton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------- tamanios */
+
+/**
+ * ⚠️ `min-height` Y NO SOLO `padding`: la unica forma de garantizar los 44px de
+ * area tactil de WCAG 2.5.5 es fijarlos. Ningun efecto de este archivo achica
+ * el area: el hover levanta con `translate`, que desplaza pero no encoge, y no
+ * hay un solo `scale` sobre un control.
+ */
+.botonChico {
+  min-height: var(--alto-control-chico);
+  padding: var(--espacio-2) var(--espacio-4);
+  font-size: var(--texto-sm);
+}
+
+.botonMedio {
+  min-height: var(--alto-control);
+  padding: var(--espacio-3) var(--espacio-5);
+  font-size: var(--texto-base);
+}
+
+/**
+ * ⚠️ EL BOTON GRANDE ES BIG NOODLE Y MAS REDONDO (`--radio-medio`, 16px): a
+ * 52px de alto, 12px se lee como un rectangulo con las puntas limadas; 16 se
+ * lee como una pastilla suave. El tamaño es fluido y su minimo esta calculado
+ * contra 320px: "Ingresar para comprar" (21 caracteres) mide ~231px a 22px y
+ * entra en los 288px utiles con el padding reducido de abajo.
+ */
+.botonGrande {
+  min-height: 52px;
+  padding: var(--espacio-3) var(--espacio-7);
+  border-radius: var(--radio-medio);
+  font-family: var(--fuente-titulo);
+  font-size: clamp(22px, 1rem + 1.6vw, 30px);
+  line-height: 1.1;
+}
+
+@media (max-width: 380px) {
+  .botonGrande {
+    padding-inline: var(--espacio-4);
+  }
+}
+
+/* ------------------------------------------------------------ variantes */
+
+/**
+ * PRIMARIO: la accion que la pantalla vino a ofrecer. Brilla en reposo, brilla
+ * mas al pasar el mouse, y el relleno barre en diagonal con el eje del sistema.
+ *
+ * ⚠️ EL BARRIDO DIAGONAL VIVE **SOLO** ACA. Mientras el relleno cruza, media
+ * etiqueta esta sobre el color viejo y media sobre el nuevo: si el texto
+ * TAMBIEN cambiara de color, durante ~280ms una mitad seria ilegible. El
+ * primario cumple por construccion —papel sobre cancha 5.16:1 y sobre tiempo
+ * extra 7.95:1, mismo texto; sobre oscuro, tinta sobre Cambio 13.97:1 y sobre
+ * papel 15.72:1—. `secundario` y `peligro` cambian el color del texto en hover,
+ * asi que NO llevan pseudo ni `overflow`.
+ *
+ * ⚠️ LA LUZ QUE SE SUMA ES `--boton-primario-luz` Y ESTA MEDIDA (ver el
+ * contrato de arriba). El gradiente ACLARA en el angulo de donde viene la luz y
+ * oscurece hacia el opuesto: el punto mas claro es el que se midio, y todo lo
+ * demas es mejor.
+ *
+ * ⚠️ EL GLOW DE REPOSO ES `--glow-suave` MAS UN HALO CAIDO (luz de marca al
+ * 55%, 28px, spread -10) Y EL DE HOVER `--sombra-marca` + `--glow-marca`: la
+ * luz crece, no aparece de golpe. El halo de reposo se agrego al revisar en el
+ * navegador: con `--glow-suave` solo, el primario en reposo era un boton
+ * verde plano al lado del que respira, y la direccion pide que el CTA brille
+ * ANTES de que alguien lo toque. Los dos leen `--luz-marca`,
+ * que cada superficie fija (verde sobre claro, Cambio sobre la portada, donde
+ * un halo verde no se veria).
+ */
+.botonPrimario {
+  isolation: isolate;
+  overflow: hidden;
+  --boton-barrido: var(--boton-primario-fondo-activo, var(--color-tiempo-extra));
+  --boton-luz: linear-gradient(
+    var(--eje),
+    var(--boton-primario-luz, rgb(var(--luz-verde) / 0.2)) 0%,
+    transparent 46%,
+    rgb(var(--sombra-tinte) / 0.18) 100%
+  );
+  background-color: var(--boton-primario-fondo, var(--color-cancha));
+  background-image: var(--boton-luz);
+  color: var(--boton-primario-texto, var(--color-papel));
+  box-shadow:
+    var(--luz-superior-oscura),
+    var(--sombra-1),
+    var(--glow-suave),
+    0 10px 28px -10px rgb(var(--luz-marca) / 0.55);
+}
+
+/**
+ * ⚠️ EL SESGO PIDE HOLGURA LATERAL. `skewX(-12deg)` corre cada borde ~0.21 de la
+ * altura; con 52px son ~11px de cada lado. El `inset` lateral de -12% lo cubre.
+ *
+ * ⚠️ EL PSEUDO VA EN `z-index: -1` CON `isolation: isolate` EN EL BOTON: pinta
+ * arriba del fondo del boton y debajo de la etiqueta. El barrido lleva la MISMA
+ * capa de luz que el boton, asi que cuando llega al final se ve una sola.
+ */
+.botonPrimario::before {
+  content: '';
+  position: absolute;
+  inset: -2px -12%;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--boton-barrido);
+  background-image: var(--boton-luz);
+  transform: translate3d(-101%, 0, 0) skewX(-12deg);
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.botonPrimario:hover:not(:disabled)::before,
+.botonPrimario:focus-visible:not(:disabled)::before {
+  transform: translate3d(0, 0, 0) skewX(-12deg);
+}
+
+.botonPrimario:disabled::before {
+  display: none;
+}
+
+.botonPrimario:disabled {
+  box-shadow: var(--sombra-0);
+}
+
+.botonPrimario:hover:not(:disabled),
+.botonPrimario:focus-visible:not(:disabled) {
+  /* Se repite el color porque `a:hover` global lo pisaria en un boton-enlace. */
+  color: var(--boton-primario-texto, var(--color-papel));
+  translate: 0 -2px;
+  box-shadow:
+    var(--luz-superior-oscura), var(--boton-primario-resplandor, var(--sombra-marca)),
+    var(--glow-marca);
+}
+
+/** Foco: el halo de foco reemplaza al de marca. Declarado despues del hover, gana. */
+.botonPrimario:focus-visible:not(:disabled) {
+  box-shadow: var(--luz-superior-oscura), var(--sombra-marca), var(--glow-foco);
+}
+
+/**
+ * SECUNDARIO: lavado de marca con contorno de 2px. Al pasar el mouse se levanta
+ * y se enciende un halo suave; el contorno NO cambia a `--borde-luz` porque es el
+ * limite de un control y `--borde-luz` (alfa 0.45) no llega al 3:1 de WCAG
+ * 1.4.11. Cancha sobre el lavado da 4.87:1 (medido) y se queda.
+ */
+.botonSecundario {
+  background-color: var(--boton-secundario-fondo, var(--superficie-marca));
+  border-width: 2px;
+  border-color: var(--boton-secundario-borde, var(--color-cancha));
+  color: var(--boton-secundario-texto, var(--color-tiempo-extra));
+  box-shadow: var(--sombra-0);
+  /* Superficie tenida: los dos tokens que caen debajo de AA sobre #eef5f0. */
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+}
+
+.botonSecundario:hover:not(:disabled),
+.botonSecundario:focus-visible:not(:disabled) {
+  background-color: var(--boton-secundario-fondo-activo, var(--superficie-1));
+  color: var(--boton-secundario-texto-activo, var(--color-tiempo-extra));
+  border-color: var(--boton-secundario-texto-activo, var(--color-tiempo-extra));
+  translate: 0 -2px;
+  box-shadow: var(--sombra-1), var(--glow-suave);
+}
+
+.botonSecundario:focus-visible:not(:disabled) {
+  box-shadow: var(--sombra-1), var(--glow-foco);
+}
+
+/**
+ * FANTASMA. Sin borde ni fondo hasta que se lo toca.
+ *
+ * ⚠️ EXISTE POR LAS LISTAS: con tres botones de contorno por fila, una lista de
+ * diez publicaciones es una reja de treinta rectangulos. Por eso NO eleva y NO
+ * lleva sombra: es el unico boton que tiene que poder repetirse diez veces sin
+ * hacer ruido. Lo que gana es un relleno de LUZ tenue y el subrayado que se
+ * dibuja, que es ruido cero en reposo.
+ *
+ * ⚠️ EL RELLENO POR DEFECTO ES `--luz-marca` AL 10%: verde-500 al 10% sobre
+ * blanco compone #e8f6ef y tiempo extra encima da 7.47:1 (medido). Las superficies
+ * oscuras lo pisan con su propio token (papel al 12%).
+ */
+.botonFantasma {
+  background-color: var(--boton-fantasma-fondo, transparent);
+  color: var(--boton-fantasma-texto, var(--color-cancha));
+}
+
+.botonFantasma::after {
+  content: '';
+  position: absolute;
+  inset: auto var(--espacio-3) 6px;
+  height: 2px;
+  border-radius: var(--radio-pastilla);
+  transform: scaleX(0);
+  transform-origin: left center;
+  background-image: var(--boton-fantasma-subrayado, var(--degradado-acento));
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.botonFantasma:hover:not(:disabled),
+.botonFantasma:focus-visible:not(:disabled) {
+  background-color: var(--boton-fantasma-fondo-activo, rgb(var(--luz-marca) / 0.1));
+  color: var(--boton-fantasma-texto-activo, var(--color-tiempo-extra));
+}
+
+.botonFantasma:hover:not(:disabled)::after,
+.botonFantasma:focus-visible:not(:disabled)::after {
+  transform: scaleX(1);
+}
+
+/**
+ * PELIGRO. Eliminar una publicacion, devolver plata.
+ *
+ * ⚠️ DE CONTORNO EN REPOSO, MACIZO AL PASAR POR ENCIMA. Un boton relleno de
+ * alerta en reposo compite con el primario y ademas presiona. Rellena de golpe
+ * en `--dur-instante` y no barre: la accion destructiva no se celebra.
+ *
+ * ⚠️ TEXTO Y BORDE USAN `--color-alerta` (4.88:1 sobre blanco), NO
+ * `--color-naranja` (2.26:1): el contorno ES la variante y WCAG 1.4.11 pide 3:1
+ * para el limite de un control. El naranja vivo queda para el HALO, que es
+ * forma: `--glow-alerta` se arma con `color-mix()` sobre `--color-naranja`
+ * porque `tokens.css` no tiene canal de luz naranja, y va fuera del texto.
+ */
+.botonPeligro,
+.confirmarDisparador,
+.confirmarPanel,
+.avisoError,
+.panelAlerta,
+.etiquetaAlerta {
+  --glow-alerta:
+    0 0 0 1px color-mix(in srgb, var(--color-naranja) 45%, transparent),
+    0 0 18px -2px color-mix(in srgb, var(--color-naranja) 55%, transparent),
+    0 0 48px -8px color-mix(in srgb, var(--color-naranja) 45%, transparent);
+}
+
+.botonPeligro {
+  background-color: var(--superficie-1);
+  border-color: var(--alerta-texto, var(--color-alerta));
+  color: var(--alerta-texto, var(--color-alerta));
+  box-shadow: var(--filo, var(--luz-superior)), var(--sombra-0);
+}
+
+/**
+ * ⚠️ EL TEXTO DEL RELLENO SALE DE UNA VARIABLE DE CONTRATO Y NO DE `--color-blanco`.
+ * Adentro de un `<Pliego>` oscuro `--color-alerta` vale el naranja de marca, y
+ * blanco sobre ese naranja da 2.26:1. La superficie decide; el default sigue
+ * siendo blanco, que sobre #b85400 da 4.88:1.
+ */
+.botonPeligro:hover:not(:disabled),
+.botonPeligro:focus-visible:not(:disabled) {
+  background-color: var(--color-alerta);
+  border-color: var(--color-alerta);
+  color: var(--peligro-texto-relleno, var(--color-blanco));
+  box-shadow: var(--sombra-1), var(--glow-alerta);
+  transition-duration: var(--dur-instante);
+}
+
+.botonPeligro:focus-visible:not(:disabled) {
+  box-shadow: var(--sombra-1), var(--glow-foco);
+}
+
+/**
+ * Ocupa todo el ancho.
+ *
+ * ⚠️ ACA SE DA VUELTA EL `nowrap`: un boton bloque no crece con su contenido; si
+ * la etiqueta no entra, con el `overflow` del primario se CORTA al ras. Envolver
+ * en dos lineas es feo; cortar la mitad de la frase es un defecto.
+ */
+.botonBloque {
+  width: 100%;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/**
+ * ⚠️ EL APRETON VA AL FINAL A PROPOSITO: empata en especificidad con los hover y
+ * tiene que ganar. Es la unica respuesta tactil que tiene quien usa el sitio
+ * con el dedo. Al apretar, la luz se apaga: la cosa BAJA.
+ */
+.boton:active:not(:disabled) {
+  translate: 0 1px;
+  box-shadow: var(--sombra-0);
+  transition-duration: var(--dur-instante);
+}
+
+/* --------------------------------------------------------------- girador */
+
+/** `currentColor`: el mismo anillo sirve dentro de un primario y de un secundario. */
+.girador {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--radio-pastilla);
+}
+
+/**
+ * ⚠️ LA ANIMACION INFINITA VIVE ADENTRO DE LA MEDIA QUERY. La regla global de
+ * `tokens.css` aplasta la DURACION, y una animacion infinita de 0.01ms sigue
+ * siendo infinita. Sin animacion queda el anillo incompleto y quieto, que ya
+ * comunica "esto esta trabajando".
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .girador {
+    animation: girar 700ms linear infinite;
+  }
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------- etiquetas */
+
+/**
+ * ⚠️ AHORA SON PASTILLAS (`--radio-pastilla`). Una etiqueta de 24px de alto con
+ * las puntas redondas se reconoce como "un dato" antes de leerla, que es lo que
+ * la direccion nueva pide.
+ *
+ * ⚠️ LA ETIQUETA DE DATO Y LA DE ESTADO SE DISTINGUEN POR LA FORMA, NO POR EL
+ * COLOR: las tres de estado llevan el ROMBO de la bandera adelante; la neutra
+ * no. El rombo se queda aunque todo lo demas se haya redondeado: es la marca.
+ *
+ * ⚠️ EL PADDING ES SIMETRICO EN LA BASE. El hueco del rombo lo pide solo quien
+ * lo usa: el tono `neutro` es el mas frecuente.
+ */
+.etiqueta {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: 3px var(--espacio-3);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-pastilla);
+  background-color: var(--superficie-1);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  line-height: 1.4;
+  color: var(--etiqueta-texto, var(--color-neutro-texto));
+  white-space: nowrap;
+  box-shadow: var(--sombra-0);
+}
+
+/**
+ * ⚠️⚠️ EL REMAPEO VIVE EN LA VARIANTE TENIDA, **NUNCA EN LA CLASE BASE**. Una
+ * custom property que se referencia a si misma es un CICLO y computa al
+ * guaranteed-invalid value en ese elemento y en TODOS sus descendientes.
+ * Numeros sobre `--superficie-2` (#f2f3ea): tenue 4.38 ❌ → texto 5.51 ✅;
+ * alerta 4.36 ❌ → hondo 5.05 ✅.
+ */
+.etiquetaNeutra {
+  background-color: var(--superficie-2);
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+}
+
+.etiquetaMarca,
+.etiquetaAlerta,
+.etiquetaExito {
+  padding-left: var(--espacio-2);
+}
+
+/** El rombo es un cuadrado rotado: su caja de 6px se ve ~8.5px. El margen compensa. */
+.etiquetaMarca::before,
+.etiquetaAlerta::before,
+.etiquetaExito::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: none;
+  margin-inline: 1px;
+  transform: rotate(45deg);
+  background-color: var(--etiqueta-rombo);
+  box-shadow: 0 0 6px var(--etiqueta-rombo);
+}
+
+/** Algo que Offside afirma: activa, habilitada, conectada. Un halo tenue de marca. */
+.etiquetaMarca {
+  --etiqueta-rombo: var(--marca-borde, var(--color-cancha));
+  border-color: var(--marca-borde, var(--color-cancha));
+  color: var(--marca-texto, var(--color-tiempo-extra));
+  box-shadow:
+    var(--sombra-0),
+    0 0 14px -4px rgb(var(--luz-marca) / 0.45);
+}
+
+/**
+ * Algo en riesgo o por terminarse: ultima unidad, pausada, cancelada.
+ *
+ * ⚠️ EL ROMBO USA `--color-naranja` (forma) Y EL TEXTO `--color-alerta`
+ * (informacion): 2.16:1 no se lee, 4.88:1 si. El halo naranja va AFUERA.
+ *
+ * ⚠️ LAS RAYAS DE LA BANDERA VAN EN UNA CINTA DE 3px ABAJO, **NO DETRAS DEL
+ * TEXTO**: con las rayas al 14% detras, el texto de alerta cae a 4.34:1. Y la
+ * cinta es una capa de `background-image`, **NO UN `::after`**: `Etiqueta`
+ * compone `pulso-atencion`, que dibuja su anillo en `::after`, y un elemento
+ * tiene UN solo `::after`. En una pastilla el radio recorta ~4px de la cinta en
+ * cada punta: queda como una sonrisa de rayas, que es exactamente lo buscado.
+ */
+.etiquetaAlerta {
+  --etiqueta-rombo: var(--color-naranja);
+  --patron-color: var(--color-naranja);
+  border-color: var(--color-naranja);
+  color: var(--alerta-texto, var(--color-alerta));
+  padding-bottom: 5px;
+  background-image: var(--patron-diagonales);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 3px;
+  box-shadow:
+    var(--sombra-0),
+    0 0 14px -4px color-mix(in srgb, var(--color-naranja) 55%, transparent);
+}
+
+/**
+ * Algo que se completo: pagada, entregada. Rellena de marca con halo.
+ * El degradado SOLO OSCURECE: su punto mas claro es Verde Cancha plano, o sea
+ * papel encima en 5.16:1 garantizado en cualquier punto.
+ */
+.etiquetaExito {
+  --etiqueta-rombo: var(--color-papel);
+  border-color: var(--color-tiempo-extra);
+  background-image: var(--degradado-cancha);
+  color: var(--color-papel);
+  box-shadow:
+    var(--luz-superior-oscura),
+    var(--sombra-0),
+    0 0 16px -3px rgb(var(--luz-marca) / 0.6);
+}
+
+/* ---------------------------------------------------------------- avisos */
+
+/**
+ * ⚠️ EL ACENTO LATERAL ES UNA BARRA DE LUZ, NO UN `border-left`. Es un pseudo en
+ * pastilla, despegado de los bordes, con un halo del color del tono. Vive en
+ * `z-index: -1` con `isolation`, asi que el halo pinta arriba del fondo del
+ * aviso y debajo del texto; y el texto arranca 34px mas adentro, donde el halo
+ * (18px de radio desde la barra) ya se apago. Medido: la barra va de x=8 a 12 y
+ * el halo llega a ~23.
+ */
+.aviso {
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  padding: var(--espacio-4) var(--espacio-5);
+  padding-left: calc(var(--espacio-5) + 14px);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background-color: var(--superficie-1);
+  font-size: var(--texto-base);
+  color: var(--texto-fuerte, var(--color-tinta));
+  box-shadow: var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo, var(--sombra-1));
+  --aviso-acento: var(--linea-control);
+  --aviso-halo: none;
+}
+
+.aviso::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--aviso-acento);
+  background-image: var(--aviso-acento-imagen, none);
+  box-shadow: var(--aviso-halo);
+}
+
+/**
+ * ⚠️ MISMO ARREGLO DE CICLO QUE EN LA ETIQUETA. Y aca importa mas: `Aviso`
+ * recibe `children` arbitrario —enlaces y `<strong>` adentro—: un token roto se
+ * propaga a contenido que no controla este archivo.
+ */
+.avisoNeutro {
+  background-color: var(--superficie-2);
+  color: var(--color-neutro-texto);
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+}
+
+/**
+ * ⚠️ SOLO CAMBIA EL ACENTO, NO EL FONDO ENTERO. Un bloque naranja macizo para
+ * "el email o la contraseña no coinciden" trata un error de tipeo como una
+ * catastrofe. La barra luminosa alcanza, y el fondo blanco deja a
+ * `--color-alerta` en su 4.88:1. El borde se tiñe un poco: es decorativo.
+ */
+.avisoError {
+  --aviso-acento: var(--color-naranja);
+  --aviso-acento-imagen: linear-gradient(180deg, var(--color-naranja) 0%, var(--color-alerta) 100%);
+  --aviso-halo: 0 0 14px -1px color-mix(in srgb, var(--color-naranja) 65%, transparent);
+  border-color: color-mix(in srgb, var(--color-naranja) 35%, var(--linea-tenue));
+}
+
+.avisoExito {
+  --aviso-acento: var(--color-cancha);
+  --aviso-acento-imagen: var(--degradado-acento);
+  --aviso-halo: 0 0 14px -1px rgb(var(--luz-marca) / 0.65);
+  border-color: var(--borde-luz);
+}
+
+/* ------------------------------------------------------------ estructura */
+
+/** El margen lateral es `--canal` (fluido): 16px a 320 y 40 en un monitor grande. */
+.contenedor {
+  margin: 0 auto;
+  padding-inline: var(--canal);
+  width: 100%;
+}
+
+.contenedorAncho {
+  max-width: var(--ancho-contenido);
+}
+
+.contenedorMedio {
+  max-width: var(--ancho-medio);
+}
+
+.contenedorAngosto {
+  max-width: var(--ancho-angosto);
+}
+
+.contenedorFormulario {
+  max-width: var(--ancho-formulario);
+}
+
+/**
+ * Aire vertical de una pantalla suelta. Es `--espacio-bloque` y NO
+ * `--espacio-seccion`: en un telefono de 568px de alto, 62 arriba y 62 abajo
+ * sobre un formulario de login es media pantalla vacia.
+ */
+.contenedorVertical {
+  padding-block: var(--espacio-bloque);
+}
+
+/* -------------------------------------------------------------- tarjeta */
+
+/**
+ * TARJETA DE VIDRIO. Radio de ficha (20px), fondo con alfa y `backdrop-filter`
+ * detras de un `@supports`; el solido va afuera, siempre, porque sin desenfoque
+ * un fondo con alfa deja leer lo de atras.
+ *
+ * ⚠️ EL VIDRIO SALE DEL CONTRATO (`--tarjeta-vidrio*`): claro sobre papel,
+ * oscuro adentro de un pliego. Sobre papel el vidrio claro es casi blanco y el
+ * borde es `--linea-tenue`, no el borde blanco del vidrio: un canto blanco sobre
+ * una tarjeta blanca sobre papel no existe.
+ *
+ * ⚠️ NO MAS DE ~6 VIDRIOS CON `backdrop-filter` VISIBLES A LA VEZ: cada uno
+ * recompone lo que tiene detras en cada cuadro de scroll. `Tarjeta` es para un
+ * bloque suelto, nunca para una grilla —la grilla es `.sup-ficha` + `.eleva`—.
+ */
+.tarjeta {
+  position: relative;
+  border: 1px solid var(--tarjeta-vidrio-borde, var(--linea-tenue));
+  border-radius: var(--radio-ficha);
+  background-color: var(--tarjeta-vidrio-solido, var(--vidrio-claro-solido));
+  padding: var(--espacio-5);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .tarjeta {
+    background-color: var(--tarjeta-vidrio, var(--vidrio-claro-fondo));
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+}
+
+/**
+ * ⚠️ EL DESTELLO SE TIÑE CON `--destello-oscuro` AUNQUE LA TARJETA SEA CLARA:
+ * `--destello-claro` es blanco y un brillo blanco sobre una ficha blanca no
+ * existe. El oscuro esta hecho con Amarillo Cambio, y como el pseudo de
+ * `.destello` va en `z-index: -1`, el texto queda encima: tinta sobre el pico
+ * del destello da 14.85:1.
+ */
+.tarjetaInteractiva {
+  --destello: var(--destello-oscuro);
+  cursor: pointer;
+}
+
+/**
+ * ⚠️ EL HOVER TAMBIEN SE DA VUELTA, Y HAY QUE ESCRIBIRLO: `.eleva:hover` pone
+ * `--sombra-3`, que sobre un fondo oscuro NO EXISTE. Se pide `--apoyo-alto`,
+ * que la superficie define, y se suma el glow. Encadenadas las dos clases
+ * —(0,3,0)— para que el orden de importacion no decida. El foco despues, con
+ * su propio halo.
+ */
+.tarjeta.tarjetaInteractiva:hover,
+.tarjeta.tarjetaInteractiva:focus-within {
+  border-color: var(--borde-luz);
+  box-shadow:
+    var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo-alto, var(--sombra-3)),
+    var(--glow-suave);
+}
+
+.tarjeta.tarjetaInteractiva:focus-visible {
+  box-shadow:
+    var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo-alto, var(--sombra-3)),
+    var(--glow-foco);
+}
+
+/* ----------------------------------------------------------- estado vacio */
+
+/**
+ * ESTADO VACIO: una ficha con LUZ detras. Radio de ficha, el rombo de la
+ * bandera desvanecido arriba a la derecha —de donde viene la luz— y dos blobs
+ * que flotan (`.blobs` global, compuesto desde `ui.tsx`) detras de todo.
+ *
+ * ⚠️ LOS BLOBS LEEN EL PRESUPUESTO DE `.escena-luz`, QUE `ui.tsx` COMPONE EN
+ * ESTE MISMO ELEMENTO: verde-400 0.16 / Cambio 0.55, con los remapeos que esa
+ * clase trae (tenue → texto, alerta → hondo, linea-control → honda). Medido en
+ * tokens.css con dos blobs superpuestos: texto 4.88-5.18 ✅. Adentro de una
+ * oscura el contrato de arriba baja el presupuesto al de noche.
+ *
+ * ⚠️ EL BORDE PUNTEADO NO VUELVE. Un rectangulo de linea de puntos es el
+ * lenguaje visual de un HUECO, y "todavia no publicaste nada" se leia como
+ * "algo se rompio".
+ */
+.vacio {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-4);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-ficha);
+  padding: var(--espacio-8) var(--espacio-5);
+  text-align: center;
+  background-color: var(--superficie-1);
+  color: var(--color-neutro-texto);
+}
+
+.vacio::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-bloque);
+  background-position: var(--patron-posicion-bloque);
+  -webkit-mask-image: radial-gradient(72% 96% at 100% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(72% 96% at 100% 0%, #000 0%, transparent 72%);
+}
+
+/**
+ * El icono de la identidad sobre una PLACA EN ROMBO que brilla.
+ *
+ * ⚠️ LA PLACA ROTA, EL ICONO NO: rotar el contenedor rotaria tambien el dibujo.
+ * El icono lleva `--glow-drop-marca`, un `filter` estatico que sigue su silueta.
+ *
+ * ⚠️ 78px, Y ES GEOMETRIA: un cuadrado de lado L rotado 45° inscribe un
+ * rectangulo de L/√2. Con 78 e `inset: 0` son 55.2px para un icono de 40.
+ */
+.vacioIcono {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  color: var(--color-cancha);
+  line-height: 0;
+  filter: var(--glow-drop-marca);
+}
+
+.vacioIcono::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: rotate(45deg);
+  border-radius: var(--radio-chico);
+  background-color: var(--superficie-marca);
+  box-shadow: var(--sombra-0), var(--glow-suave);
+}
+
+/**
+ * ⚠️ SIN `color`: el titulo compone la clase global `titular-degradado`, que
+ * pone `color: transparent` bajo `@supports` y elige el degradado por
+ * superficie. Escribir un color aca empataria en especificidad y el que gana lo
+ * decidiria el orden de importacion de dos archivos. Sin soporte hereda: tinta
+ * sobre claro, papel sobre oscuro.
+ */
+.vacioTitulo {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: var(--interlineado-titulo);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* Un nombre de club largo no puede empujar la pagina a 320px. */
+  overflow-wrap: anywhere;
+}
+
+.vacioCuerpo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-5);
+  /* Una linea de texto de estado vacio no deberia cruzar toda la pantalla. */
+  max-width: 46ch;
+}
+
+.vacioCuerpo p {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------ esqueletos */
+
+/**
+ * ⚠️ ACA NO HAY SHIMMER, Y ES A PROPOSITO: lo trae la clase GLOBAL `.esqueleto`,
+ * que esta en la red de seguridad de `prefers-reduced-motion`. El modulo aporta
+ * solo la forma.
+ */
+.esqueleto {
+  display: block;
+  border-radius: var(--radio);
+}
+
+/* ------------------------------------------------------ fila de acciones */
+
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}
+
+.filaCentrada {
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------ migas de pan */
+
+.migas {
+  margin-bottom: var(--espacio-6);
+}
+
+.migasLista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--espacio-2);
+  /* Ver `.migasLista a::after`: la zona tactil sobresale 10px arriba y abajo. */
+  row-gap: var(--espacio-5);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * ⚠️ EL SEPARADOR ES UN ROMBO Y NO EXISTE PARA UN LECTOR DE PANTALLA. Un "/" en
+ * el HTML se lee: "Catalogo barra Buscar". Es decoracion pura, asi que
+ * `--color-neutro-apagado` esta bien aca y NO estaria bien en un control.
+ */
+.migasLista li + li::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin-right: var(--espacio-3);
+  margin-bottom: 1px;
+  transform: rotate(45deg);
+  background-color: var(--color-neutro-apagado);
+}
+
+/**
+ * ⚠️ EL AREA TACTIL ES DE 44px Y LA CAJA VISIBLE SIGUE MIDIENDO 24. Los 20px
+ * que faltan los pone un `::after` vacio con `inset` negativo. No se usa
+ * `padding-block` porque la clase global `subraya` dibuja su raya con
+ * `background-position: 0 100%` y declara su propio `padding-bottom`.
+ *
+ * ⚠️ LAS ZONAS DE DOS MIGAS CONTIGUAS NO SE SOLAPAN: en horizontal quedan 10px
+ * de aire; en vertical, `row-gap` de 20 contra los 10 + 10 que sobresalen.
+ */
+.migasLista a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  --migas-alto-visible: 24px;
+  min-height: var(--migas-alto-visible);
+}
+
+.migasLista a::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--migas-alto-visible) - var(--alto-control)) / 2) -6px;
+}
+
+.migasLista li[aria-current] {
+  color: var(--color-neutro-texto);
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------- seccion */
+
+.seccion {
+  margin-bottom: var(--espacio-bloque);
+}
+
+/**
+ * ⚠️ EL FILETE SE DIBUJA CON RELOJ, NO CON SCROLL: `Seccion` es siempre el
+ * PRIMER bloque de su pantalla y una animacion de `view()` ahi arranca con el
+ * rango ya consumido. Ahora es un trazo redondeado con halo: la linea de
+ * energia del sistema, no un subrayado.
+ *
+ * ⚠️ `transform-origin` VA EN LA REGLA, NO EN EL KEYFRAME: en el keyframe solo
+ * aplica mientras corre la animacion.
+ */
+.seccionEncabezado {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-5);
+  padding-bottom: var(--espacio-3);
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.seccionEncabezado::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 72px;
+  height: 4px;
+  border-radius: var(--radio-pastilla);
+  transform-origin: left center;
+  background-image: var(--degradado-acento);
+  box-shadow: 0 0 12px -1px rgb(var(--luz-marca) / 0.55);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .seccionEncabezado::after {
+    animation: dibujarDesdeCero var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+/** Sin `color`: compone `titular-degradado` (ver `.vacioTitulo`). */
+.seccionTitulo {
+  font-size: var(--texto-2xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  overflow-wrap: anywhere;
+}
+
+.seccionDato {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/** Empuja la accion al extremo derecho sin importar si hay dato o no. */
+.seccionAccion {
+  margin-left: auto;
+  display: flex;
+  gap: var(--espacio-3);
+  /* Se alinea con el titulo, no con su linea de base. */
+  align-self: center;
+}
+
+/* --------------------------------------------------- mascara de un importe */
+
+/**
+ * ⚠️⚠️ ESTO ARREGLA UNA MISALINEACION REAL. La clase global `cifra-entra`
+ * recorta con `overflow: clip`, y CSS 2.1 §10.8.1 dice que un `inline-block`
+ * cuyo `overflow` no es `visible` deja de exponer la linea de base de su texto:
+ * expone el borde inferior de su caja. En la fila del TOTAL el numero quedaba
+ * flotando ~7px por encima de "Total". `clip-path` recorta igual y NO toca el
+ * modelo de linea. El selector lleva el nombre del elemento para ganarle a
+ * `.cifra-entra` sin depender del orden de importacion.
+ */
+span.mascaraCifra {
+  overflow: visible;
+  clip-path: inset(0);
+}
+
+/* ------------------------------------------------------------ fila de datos */
+
+.fila2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacio-4);
+  padding: var(--espacio-3) 0;
+}
+
+.filaConcepto {
+  color: var(--color-neutro-texto);
+}
+
+.filaValor {
+  text-align: right;
+  /* Dos importes en filas consecutivas alinean sus comas. */
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * ⚠️ EL TOTAL SE SEPARA CON LA LINEA DE ENERGIA, NO CON UNA HAIRLINE. Un trazo
+ * redondeado con el degradado de acento y un halo: la diferencia entre "otra
+ * fila" y "el total" tiene que ser visible sin leer. Va en un pseudo para que
+ * pueda redondearse y brillar, cosa que un `border-top` no sabe hacer.
+ */
+.filaTotal {
+  position: relative;
+  margin-top: var(--espacio-4);
+  padding-top: var(--espacio-5);
+}
+
+.filaTotal::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--degradado-acento);
+  box-shadow: 0 0 12px -1px rgb(var(--luz-marca) / 0.5);
+}
+
+.filaTotal .filaConcepto {
+  color: var(--texto-fuerte, var(--color-tinta));
+  font-weight: var(--peso-semi);
+}
+
+/**
+ * ⚠️ EL TOTAL BRILLA, QUIETO. `--glow-texto` es un `text-shadow` difuso y tenue
+ * (16px de desenfoque, alfa 0.3) que no mueve el contraste del glifo, y NUNCA
+ * se anima: un importe puede entrar, no late.
+ */
+.filaTotal .filaValor {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-3xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  text-shadow: var(--glow-texto);
+}
+
+/* ------------------------------------------------------------------ pasos */
+
+/**
+ * LINEA DE TIEMPO QUE SE ENCIENDE. El riel une los marcadores; el tramo
+ * recorrido se pinta de marca, se dibuja de arriba hacia abajo y lleva halo:
+ * es una linea que se ENCIENDE, no una que se pinta.
+ *
+ * ⚠️ EL RIEL VIVE EN CADA `<li>`, NO ES UNA LINEA UNICA SOBRE EL BLOQUE: una
+ * linea unica tiene que terminar en el ULTIMO rombo, y el ultimo `<li>` mide
+ * 100-140px porque contiene el boton que cierra el paso. Por item el tramo es
+ * exacto y se pinta segun el estado de ESE paso.
+ *
+ * ⚠️ EL TRAMO DEPENDE DEL `padding-block` DE `.paso2`: va de
+ * `padding + --marca-tamanio` hasta `-padding`.
+ */
+.pasos {
+  --marca-tamanio: 30px;
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-ficha);
+  background-color: var(--superficie-1);
+  padding: var(--espacio-5);
+}
+
+.pasosCabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  margin-bottom: var(--espacio-4);
+}
+
+.pasosCuenta {
+  margin: 0;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/** El riel de la barra es un POZO en pastilla con un halo tenue: hunde y brilla. */
+.pasosBarra {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--superficie-2);
+  box-shadow:
+    var(--sombra-hundida),
+    0 0 14px -3px rgb(var(--luz-marca) / 0.35);
+  overflow: hidden;
+}
+
+/**
+ * ⚠️ SE ANIMA CON `transform`, NO CON `width`, Y EL KEYFRAME SE DECLARA SIN
+ * `to`: el `to` implicito es el valor COMPUTADO del elemento, o sea el
+ * `scaleX(0.66)` que el servidor escribio en el `style` inline. Un `to {
+ * scaleX(1) }` pisaria el progreso real y la barra siempre terminaria llena.
+ */
+.pasosBarraLlena {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  background-image: var(--degradado-acento);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pasosBarraLlena {
+    animation: dibujarDesdeCero var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+.pasosLista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/** Sin `border-bottom` entre pasos: con el riel vertical, una hairline por paso arma una cuadricula. */
+.paso2 {
+  position: relative;
+  display: flex;
+  gap: var(--espacio-4);
+  align-items: flex-start;
+  padding: var(--espacio-4) 0;
+}
+
+/** TRAMO DE RIEL de este paso al siguiente. */
+.paso2::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--marca-tamanio) / 2 - 1px);
+  top: calc(var(--espacio-4) + var(--marca-tamanio));
+  bottom: calc(-1 * var(--espacio-4));
+  width: 2px;
+  border-radius: var(--radio-pastilla);
+  pointer-events: none;
+  transform-origin: top center;
+  background-color: var(--linea-tenue);
+}
+
+/** ⚠️ Una linea que sale al vacio promete un paso que no existe. */
+.paso2:last-child::before {
+  display: none;
+}
+
+.paso2:last-child {
+  padding-bottom: 0;
+}
+
+/** El tramo recorrido: luz de marca con halo. Es forma, no lleva texto encima. */
+.pasoHecho::before {
+  background-color: transparent;
+  background-image: linear-gradient(180deg, var(--verde-500) 0%, var(--color-cancha) 100%);
+  box-shadow: 0 0 10px rgb(var(--luz-marca) / 0.6);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pasoHecho::before {
+    animation: dibujarRiel var(--dur-media) var(--curva-corte) both;
+    animation-delay: calc(var(--paso-escalon) * var(--i, 0) + 200ms);
+  }
+
+  .paso2:nth-child(2) {
+    --i: 1;
+  }
+
+  .paso2:nth-child(3) {
+    --i: 2;
+  }
+
+  .paso2:nth-child(4) {
+    --i: 3;
+  }
+
+  .paso2:nth-child(5) {
+    --i: 4;
+  }
+
+  .paso2:nth-child(n + 6) {
+    --i: 5;
+  }
+}
+
+/**
+ * MARCADOR EN ROMBO — el motivo de la bandera, con las puntas suavizadas.
+ *
+ * ⚠️ EL PENDIENTE ES UN ROMBO HUECO Y NO LLEVA GLIFO: la diferencia lleno/hueco
+ * es de FORMA, no de color, y el titulo del paso ya escribe "pendiente" o
+ * "listo" con todas las letras.
+ *
+ * ⚠️ EL MARCADOR PINTA ARRIBA DEL RIEL: `z-index: 1` en vez de depender del
+ * orden del DOM.
+ */
+.pasoMarca {
+  position: relative;
+  isolation: isolate;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--marca-tamanio);
+  height: var(--marca-tamanio);
+  flex: none;
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  line-height: 1;
+  color: var(--color-papel);
+}
+
+.pasoMarca::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  transform: rotate(45deg);
+  border-radius: 4px;
+  background-color: var(--superficie-1);
+  border: 1px solid var(--linea-control);
+  transition:
+    background-color var(--transicion) var(--curva),
+    border-color var(--transicion) var(--curva),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+/** El hecho se ENCIENDE: relleno de marca y halo. Tres de cuatro encendidos se leen como progreso, no como ruido. */
+.pasoHecho .pasoMarca::before {
+  background-color: var(--color-cancha);
+  border-color: var(--color-tiempo-extra);
+  box-shadow:
+    var(--sombra-1),
+    0 0 16px -2px rgb(var(--luz-marca) / 0.7);
+}
+
+.pasoCuerpo2 {
+  flex: 1;
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.pasoTitulo2 {
+  margin: 0 0 var(--espacio-1);
+  font-weight: var(--peso-semi);
+}
+
+.pasoDetalle2 {
+  margin: 0 0 var(--espacio-3);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+}
+
+/* -------------------------------------------------------------- confirmar */
+
+.confirmar {
+  display: inline-block;
+  /* Sin esto el panel de adentro puede empujar la fila que lo contiene. */
+  max-width: 100%;
+}
+
+/**
+ * El disparador se ve como el boton destructivo que reemplaza, pero NO EJECUTA:
+ * abre. Es un `<summary>`, asi que el navegador ya le da rol de boton y foco.
+ *
+ * ⚠️ 44px: es el control que precede a eliminar una publicacion y a emitir un
+ * reembolso; que viva en una fila densa no lo exime de WCAG 2.5.5.
+ */
+.confirmarDisparador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-control);
+  padding: var(--espacio-2) var(--espacio-4);
+  /* `--color-alerta` y NO `--color-naranja`: 4.87:1 contra 2.26:1, y es el limite de un control. */
+  border: 1px solid var(--alerta-texto, var(--color-alerta));
+  border-radius: var(--radio);
+  background-color: var(--superficie-1);
+  color: var(--alerta-texto, var(--color-alerta));
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  white-space: nowrap;
+  cursor: pointer;
+  list-style: none;
+  box-shadow: var(--filo, var(--luz-superior)), var(--sombra-0);
+  transition:
+    background-color var(--dur-instante) var(--curva),
+    color var(--dur-instante) var(--curva),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+.confirmarDisparador::-webkit-details-marker {
+  display: none;
+}
+
+/** El galon que gira al abrir: `[open]` es un selector, no un evento. */
+.confirmarDisparador::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--transicion) var(--curva-pop);
+}
+
+.confirmar[open] .confirmarDisparador::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.confirmarDisparador:hover,
+.confirmarDisparador:focus-visible {
+  background-color: var(--color-alerta);
+  border-color: var(--color-alerta);
+  color: var(--peligro-texto-relleno, var(--color-blanco));
+  box-shadow: var(--sombra-1), var(--glow-alerta);
+}
+
+.confirmarDisparador:focus-visible {
+  box-shadow: var(--sombra-1), var(--glow-foco);
+}
+
+.confirmarDisparador:active {
+  transform: translateY(1px);
+}
+
+/**
+ * ⚠️ EL PANEL SE ABRE EN FLUJO, NO FLOTANDO: un menu superpuesto sobre una fila
+ * tapa las vecinas y en un telefono se sale de la pantalla.
+ *
+ * ⚠️ `min-width: min(260px, 100%)` Y NO `260px`: 260 + padding + borde son 294px
+ * contra los 288 utiles de un telefono de 320, y con `overflow-x: clip` en
+ * `html` el sintoma desaparece y el corte queda: el boton "Confirmar reembolso"
+ * se iria fuera de pantalla.
+ */
+.confirmarPanel {
+  margin-top: var(--espacio-3);
+  padding: var(--espacio-4);
+  border: 1px solid var(--color-alerta);
+  border-radius: var(--radio-medio);
+  background-color: var(--superficie-2);
+  min-width: min(260px, 100%);
+  max-width: 100%;
+  box-shadow: var(--glow-alerta);
+  /* Superficie tenida: los dos tokens que caen debajo de AA sobre #f2f3ea. */
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+}
+
+/**
+ * ⚠️ EL CONTENIDO ENTRA DESPUES DE QUE LA CAJA TERMINO DE ABRIRSE (la altura la
+ * anima la clase global `desplegable`). No se usa `@starting-style`: el panel no
+ * se monta ni se desmonta. Sin soporte de `::details-content` la regla de
+ * `[open]` aplica igual: el contenido nunca queda clavado en `opacity: 0`.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .confirmarPanel > * {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity var(--transicion) var(--curva-entrada),
+      transform var(--transicion) var(--curva-entrada);
+  }
+
+  .confirmar[open] .confirmarPanel > * {
+    opacity: 1;
+    transform: none;
+    transition-delay: 90ms;
+  }
+}
+
+.confirmarPregunta {
+  margin: 0 0 var(--espacio-4);
+  font-size: var(--texto-sm);
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+/* --------------------------------------------------------------- pastilla */
+
+/**
+ * Pastilla que se saca tocandola. Brilla al pasar el mouse y se rellena.
+ *
+ * ⚠️ 44px: es un control que se aprieta con el dedo en la pantalla de
+ * resultados; WCAG 2.5.5 no admite "es chiquito porque es un filtro".
+ */
+.pastilla {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-control);
+  padding: var(--espacio-1) var(--espacio-4);
+  border: 1px solid var(--marca-borde, var(--color-cancha));
+  border-radius: var(--radio-pastilla);
+  background-color: var(--superficie-1);
+  color: var(--marca-texto, var(--color-tiempo-extra));
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  box-shadow:
+    var(--sombra-0),
+    0 0 12px -4px rgb(var(--luz-marca) / 0.35);
+  transition:
+    background-color var(--transicion-rapida) var(--curva),
+    color var(--transicion-rapida) var(--curva),
+    box-shadow var(--dur-hover) var(--curva),
+    translate var(--dur-hover) var(--curva-viva);
+}
+
+/** La cruz gira: dice "esto se saca" antes de leer la descripcion. */
+.pastilla svg {
+  flex: none;
+  transition: transform var(--dur-hover) var(--curva-pop);
+}
+
+/**
+ * ⚠️ EL RELLENO SOLO EN PUNTERO FINO. En un telefono el `:hover` queda PEGADO
+ * despues de un toque: sacar un filtro dejaba la pastilla verde hasta recargar.
+ * El `:focus-visible` queda AFUERA de la media query: el teclado existe en las
+ * dos.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .pastilla:hover {
+    background-color: var(--color-cancha);
+    color: var(--color-papel);
+    translate: 0 -1px;
+    box-shadow: var(--sombra-1), var(--glow-marca);
+  }
+
+  .pastilla:hover svg {
+    transform: rotate(90deg) scale(1.15);
+  }
+}
+
+.pastilla:focus-visible {
+  background-color: var(--color-cancha);
+  color: var(--color-papel);
+  box-shadow: var(--sombra-1), var(--glow-foco);
+}
+
+.pastilla:focus-visible svg {
+  transform: rotate(90deg) scale(1.15);
+}
+
+/** La unica respuesta que existe en un telefono. */
+.pastilla:active {
+  background-color: var(--color-tiempo-extra);
+  color: var(--color-papel);
+  translate: 0 1px;
+  box-shadow: var(--sombra-0);
+  transition-duration: var(--dur-instante);
+}
+
+/* ----------------------------------------------------------------- tabla */
+
+/**
+ * ⚠️ EL CONTENEDOR TIENE SCROLL HORIZONTAL PROPIO: sin esto, el que scrollea de
+ * costado es el documento entero. Las sombras de borde dicen que hay mas tabla a
+ * los costados y son CSS puro: las dos primeras capas van con
+ * `background-attachment: local` y tapan a las radiales cuando no hay mas.
+ */
+.tablaMarco {
+  overflow-x: auto;
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-ficha);
+  background-color: var(--superficie-1);
+  background-image:
+    linear-gradient(90deg, var(--superficie-1) 30%, transparent),
+    linear-gradient(270deg, var(--superficie-1) 30%, transparent),
+    radial-gradient(farthest-side at 0 50%, rgb(var(--sombra-tinte) / 0.14), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgb(var(--sombra-tinte) / 0.14), transparent);
+  background-position:
+    0 0,
+    100% 0,
+    0 0,
+    100% 0;
+  background-repeat: no-repeat;
+  background-size:
+    40px 100%,
+    40px 100%,
+    14px 100%,
+    14px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--texto-sm);
+}
+
+/** `<caption>` es lo que un lector de pantalla anuncia al entrar a la tabla. */
+.tablaTitulo {
+  padding: var(--espacio-4) var(--espacio-4) 0;
+  text-align: left;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+/**
+ * ⚠️ SIN `position: sticky` EN LA CABECERA: sticky necesita un contenedor que
+ * scrollee en ESE eje, y `.tablaMarco` scrollea solo en horizontal.
+ */
+.tabla th {
+  text-align: left;
+  padding: var(--espacio-3) var(--espacio-4);
+  /* 2px de Tinta (papel sobre oscuro): la cabecera es una division, no una fila mas. */
+  border-bottom: 2px solid var(--texto-fuerte, var(--color-tinta));
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+  white-space: nowrap;
+  background-color: var(--superficie-2);
+  /* Superficie tenida: obligatorio, y aca no hay variante que lo revierta. */
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+}
+
+.tabla td {
+  padding: var(--espacio-4);
+  border-bottom: 1px solid var(--linea-tenue);
+  vertical-align: top;
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla tbody tr {
+  transition: background-color var(--dur-hover) var(--curva);
+}
+
+.tabla tbody tr td:first-child {
+  box-shadow: inset 0 0 0 0 var(--color-cancha);
+  transition: box-shadow var(--transicion) var(--curva-seca);
+}
+
+/**
+ * ⚠️ LA FILA SE ILUMINA: un lavado de luz de marca que entra desde la izquierda
+ * y un filo macizo en el primer renglon. En una tabla de seis columnas un tinte
+ * gris del 2% se pierde; una luz que arranca en el borde dice que renglon esta
+ * bajo el puntero cuando el ojo esta en la ultima columna, donde estan los
+ * importes.
+ *
+ * ⚠️ 12% ES UN NUMERO: verde-500 al 12% sobre blanco compone #e3f4eb, y ahi
+ * `--color-neutro-texto` da 5.39 ✅ y `--color-alerta-hondo` 4.95 ✅ (medidos
+ * con la formula WCAG contra los hex de tokens.css) — con los
+ * remapeos de abajo, que son obligatorios: sin ellos el tenue (4.38) y el alerta
+ * (4.36) caen debajo de AA MIENTRAS dura el hover, y eso no lo ve nadie
+ * revisando capturas. Detras de `hover: hover`: en un telefono el hover queda
+ * pegado.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .tabla tbody tr:hover {
+    background-image: linear-gradient(90deg, rgb(var(--luz-marca) / 0.12) 0%, transparent 60%);
+    --color-neutro-tenue: var(--color-neutro-texto);
+    --color-alerta: var(--color-alerta-hondo);
+  }
+
+  .tabla tbody tr:hover td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--color-cancha);
+  }
+}
+
+/** Columnas de plata: alineadas a la derecha y con cifras tabulares. */
+.tabla .numero,
+.tabla th.numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/**
+ * ⚠️ LA COLUMNA DE IMPORTES VA EN BIG NOODLE, solo en `td`: la cabecera es una
+ * ETIQUETA, no un numero. Sin esto el back-office era la unica parte del sitio
+ * donde la tipografia de la marca no aparece nunca.
+ */
+.tabla td.numero {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  line-height: 1.15;
+  letter-spacing: var(--tracking-display);
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+/* ------------------------------------------------------------ pasos breves */
+
+.pasosBreves {
+  margin-bottom: var(--espacio-6);
+}
+
+.pasosBrevesLista {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/**
+ * ⚠️ CADA PASO LLEVA SU CONECTOR: tres numeros sueltos son tres cosas; tres
+ * numeros unidos por una linea son un camino. El conector del ultimo no se
+ * dibuja.
+ */
+.pasoBreve,
+.pasoBreveActual,
+.pasoBreveHecho {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-tenue);
+  /* Cada paso ocupa lo mismo: la barra no se corre al avanzar. */
+  flex: 1;
+  min-width: 0;
+}
+
+.pasoBreve:not(:last-child)::after,
+.pasoBreveActual:not(:last-child)::after,
+.pasoBreveHecho:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  min-width: var(--espacio-3);
+  height: 2px;
+  margin-left: var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  background-color: var(--linea-tenue);
+}
+
+/** Un tramo ya recorrido se enciende. Es forma: no lleva texto encima. */
+.pasoBreveHecho:not(:last-child)::after {
+  background-image: var(--degradado-acento);
+  box-shadow: 0 0 8px rgb(var(--luz-marca) / 0.5);
+}
+
+/** NUMERO EN ROMBO — el mismo motivo que `Pasos` y que las etiquetas. */
+.pasoBreveNumero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.pasoBreveNumero::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  transform: rotate(45deg);
+  border-radius: 3px;
+  background-color: var(--superficie-1);
+  border: 1px solid var(--linea-control);
+  transition:
+    background-color var(--transicion) var(--curva),
+    border-color var(--transicion) var(--curva);
+}
+
+.pasoBreveTexto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/** El paso actual se marca con peso y color, ADEMAS del `aria-current`, y se enciende. */
+.pasoBreveActual {
+  color: var(--texto-fuerte, var(--color-tinta));
+  font-weight: var(--peso-semi);
+}
+
+.pasoBreveActual .pasoBreveNumero {
+  color: var(--color-papel);
+}
+
+.pasoBreveActual .pasoBreveNumero::before {
+  background-color: var(--color-cancha);
+  border-color: var(--color-tiempo-extra);
+  box-shadow:
+    var(--sombra-1),
+    0 0 14px -2px rgb(var(--luz-marca) / 0.7);
+}
+
+.pasoBreveHecho {
+  color: var(--color-neutro-texto);
+}
+
+.pasoBreveHecho .pasoBreveNumero {
+  color: var(--marca-texto, var(--color-tiempo-extra));
+}
+
+.pasoBreveHecho .pasoBreveNumero::before {
+  border-color: var(--marca-borde, var(--color-cancha));
+}
+
+/**
+ * ⚠️ EN TELEFONO SE LEE **SOLO EL PASO ACTUAL**, NO NINGUNO. Los otros dos no se
+ * van del arbol de accesibilidad: se ocultan con la tecnica de clip. Medido a
+ * 320px: el paso actual recibe 150px y "VERIFICAR EL EMAIL" mide ~134.
+ */
+@media (max-width: 480px) {
+  .pasoBreve .pasoBreveTexto,
+  .pasoBreveHecho .pasoBreveTexto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* El actual se queda con el ancho sobrante; los otros miden su rombo y listo. */
+  .pasoBreve,
+  .pasoBreveHecho {
+    flex: none;
+  }
+
+  .pasoBreve:not(:last-child)::after,
+  .pasoBreveActual:not(:last-child)::after,
+  .pasoBreveHecho:not(:last-child)::after {
+    min-width: var(--espacio-2);
+  }
+
+  .pasosBrevesLista {
+    gap: var(--espacio-3);
+  }
+}
+
+/* ----------------------------------------------------------------- panel */
+
+/**
+ * PANEL DE MENSAJE: "paso esto". Es el objeto mas flotante del sistema: radio
+ * de panel (28px), vidrio, sombra de nivel 3, halo suave y una manija de luz
+ * arriba en vez de un borde de color.
+ *
+ * ⚠️ NO ES `EstadoVacio`: un estado vacio dice "aca no hay nada"; un panel dice
+ * "paso esto". Por eso el panel FLOTA y el estado vacio APOYA.
+ *
+ * ⚠️ EL VIDRIO ES EL MISMO CONTRATO QUE `Tarjeta` (`--tarjeta-vidrio*`): claro
+ * sobre papel, oscuro adentro de un pliego. El solido va afuera del `@supports`.
+ */
+.panel {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--tarjeta-vidrio-borde, var(--linea-tenue));
+  border-radius: var(--radio-panel);
+  background-color: var(--tarjeta-vidrio-solido, var(--vidrio-claro-solido));
+  padding: var(--espacio-8) var(--espacio-6) var(--espacio-7);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-4);
+  box-shadow:
+    var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo-alto, var(--sombra-3)),
+    var(--glow-suave);
+  --panel-acento: var(--degradado-acento);
+  --panel-halo: 0 0 16px -1px rgb(var(--luz-marca) / 0.7);
+  --panel-icono: var(--color-cancha);
+  --panel-icono-halo: var(--glow-drop-marca);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .panel {
+    background-color: var(--tarjeta-vidrio, var(--vidrio-claro-fondo));
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+}
+
+/** El rombo de la bandera, apagado, arriba a la derecha: donde no hay texto. */
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-bloque);
+  background-position: var(--patron-posicion-bloque);
+  -webkit-mask-image: radial-gradient(60% 80% at 100% 0%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(60% 80% at 100% 0%, #000 0%, transparent 70%);
+}
+
+/**
+ * ⚠️ LA MANIJA DE LUZ ES LA UNICA SEÑAL DE COLOR: una pastilla de 120px
+ * centrada en el borde superior, con el degradado del tono y su halo. Pintar el
+ * panel entero de verde convertiria una confirmacion en una celebracion. Y en
+ * un radio de 28px una franja de 4px pegada al borde se veia recortada; una
+ * manija centrada se ve como un objeto.
+ */
+.panel::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: min(120px, 40%);
+  height: 5px;
+  translate: -50% 0;
+  pointer-events: none;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--panel-acento);
+  box-shadow: var(--panel-halo);
+}
+
+.panelExito {
+  --panel-acento: var(--degradado-acento);
+  box-shadow:
+    var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo-alto, var(--sombra-3)),
+    var(--glow-marca);
+}
+
+.panelAlerta {
+  --panel-acento: linear-gradient(96deg, var(--color-naranja) 0%, var(--color-alerta) 100%);
+  --panel-halo: 0 0 16px -1px color-mix(in srgb, var(--color-naranja) 70%, transparent);
+  --panel-icono: var(--color-alerta);
+  --panel-icono-halo: drop-shadow(0 0 6px color-mix(in srgb, var(--color-naranja) 60%, transparent))
+    drop-shadow(0 0 18px color-mix(in srgb, var(--color-naranja) 35%, transparent));
+}
+
+/** Misma placa en rombo que el estado vacio, con luz: es el mismo gesto del sistema. */
+.panelIcono {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  line-height: 0;
+  color: var(--panel-icono);
+  filter: var(--panel-icono-halo);
+}
+
+.panelIcono::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: rotate(45deg);
+  border-radius: var(--radio-chico);
+  background-color: var(--superficie-marca);
+  box-shadow: var(--sombra-0), var(--glow-suave);
+}
+
+.panelAlerta .panelIcono::before {
+  background-color: var(--superficie-calida);
+  box-shadow: var(--sombra-0), var(--glow-alerta);
+}
+
+/**
+ * ⚠️ EL TITULAR ES DISPLAY Y COMPONE `shimmer-titulo titular-vivo` (globales):
+ * gradiente con verde luminoso al final —permitido porque `--display-3` es
+ * ≥30px— y la banda de luz que lo cruza una vez. Por eso NO lleva `color`: la
+ * global pone `color: transparent` bajo `@supports` y sin soporte el titulo
+ * hereda tinta (o papel sobre oscuro).
+ *
+ * ⚠️ `overflow-wrap: anywhere` NO ES PARANOIA: a ~52px, Big Noodle entrega ~12
+ * caracteres por linea en los 288px utiles de un telefono de 320.
+ */
+.panelTitulo {
+  font-size: var(--display-3);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.panelCuerpo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-5);
+  max-width: 44ch;
+  color: var(--color-neutro-texto);
+}
+
+.panelCuerpo p {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------- nav de seccion */
+
+.navSeccion {
+  margin-bottom: var(--espacio-6);
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.navSeccionLista {
+  display: flex;
+  gap: var(--espacio-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* En telefono la barra se desplaza de costado en vez de romperse en dos filas. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.navSeccionLista::-webkit-scrollbar {
+  display: none;
+}
+
+.navSeccionItem,
+.navSeccionActivo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio) var(--radio) 0 0;
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  white-space: nowrap;
+  transition:
+    color var(--transicion-rapida) var(--curva),
+    background-color var(--transicion-rapida) var(--curva);
+}
+
+/**
+ * ⚠️ EL SUBRAYADO VIVE EN UN PSEUDO: puede tener degradado, puede DIBUJARSE y
+ * no cambia el alto de la fila. `inset: auto 0 0` y no `bottom: -1px`: la lista
+ * tiene `overflow-x: auto`, o sea que TAMBIEN recorta en vertical.
+ *
+ * ⚠️ EL ACENTO SE PIDE POR VARIABLE (`--nav-acento`) PARA QUE LA BARRA SE PUEDA
+ * REUSAR SOBRE OTRA SUPERFICIE. Es una IMAGEN, no un color. El default es el
+ * mismo `--degradado-acento` de siempre, con halo.
+ */
+.navSeccionItem::after,
+.navSeccionActivo::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  border-radius: var(--radio-pastilla) var(--radio-pastilla) 0 0;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background-image: var(--nav-acento, var(--degradado-acento));
+  box-shadow: 0 0 10px -1px rgb(var(--luz-marca) / 0.5);
+  transition: transform var(--transicion) var(--curva-corte);
+}
+
+/**
+ * ⚠️ EL HOVER TAMBIEN SE PIDE POR VARIABLE: `--color-cancha` escrito a mano
+ * sobre la banda tinta del back-office da 3.05:1. El relleno de hover es luz
+ * de marca al 8%: verde-500 al 8% sobre papel deja un texto en `--color-cancha`
+ * en 4.74 ✅ (medido; sin lavado da 5.16, o sea que cuesta 0.4 y sobra).
+ */
+.navSeccionItem:hover,
+.navSeccionItem:focus-visible {
+  color: var(--nav-hover, var(--color-cancha));
+  background-color: rgb(var(--luz-marca) / 0.08);
+}
+
+.navSeccionItem:hover::after,
+.navSeccionItem:focus-visible::after {
+  transform: scaleX(1);
+  background-image: none;
+  background-color: var(--linea-control);
+  box-shadow: none;
+}
+
+.navSeccionItem:active {
+  color: var(--marca-texto, var(--color-tiempo-extra));
+}
+
+/**
+ * ⚠️ EL ACTIVO NO ESCRIBE SU COLOR A MANO, LO PIDE: tinta literal sobre la banda
+ * tinta del back-office da 1.00:1. La superficie declara `--nav-activo`.
+ */
+.navSeccionActivo {
+  color: var(--nav-activo, var(--texto-fuerte, var(--color-tinta)));
+  font-weight: var(--peso-semi);
+}
+
+.navSeccionActivo::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .navSeccionActivo::after {
+    animation: dibujarDesdeCero var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+.navSeccionDato {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--superficie-2);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--sombra-0);
+}
+
+.navSeccionActivo .navSeccionDato {
+  background-color: var(--color-cancha);
+  color: var(--color-papel);
+  box-shadow:
+    var(--luz-superior-oscura),
+    0 0 12px -2px rgb(var(--luz-marca) / 0.6);
+}
+
+/* ----------------------------------------------------------------- precio */
+
+/**
+ * PRECIO: la primitiva que mas veces por sesion mira la persona que compra.
+ *
+ * ⚠️ LOS DOS TAMAÑOS SOLO CRECEN, y el del display esta calculado:
+ * `clamp(38px, 1.9rem + 2.6vw, 56px)` entrega 38.7px a 320 y 56 en escritorio.
+ * Un `--display-3` a secas habria dado 32.6 a 320: una rebaja del 14% justo en
+ * la pantalla donde se decide una compra.
+ *
+ * ⚠️ EL DISPLAY BRILLA, QUIETO: `--glow-texto` es estatico. Un importe puede
+ * entrar animado (`cifra-entra`); nunca late.
+ */
+.precio {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  color: var(--texto-fuerte, var(--color-tinta));
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.precioFicha {
+  font-size: var(--texto-2xl);
+}
+
+.precioDisplay {
+  font-size: clamp(38px, 1.9rem + 2.6vw, 56px);
+  text-shadow: var(--glow-texto);
+}
+
+/* ----------------------------------------------------------------- pliego */
+
+/**
+ * PLIEGO: una franja de pagina con superficie propia. Es lo que hace que los
+ * planos oscuros de la fundacion lleguen al producto. Ahora ademas lleva LUZ:
+ * `ui.tsx` mete una capa `.blobs` (global) con tres blobs que flotan, y la
+ * superficie decide cuanto se ven (presupuesto por `.sup-*` en tokens.css:
+ * fosa 0.14/0.08, noche 0.04/0.02, cancha 0).
+ *
+ * ⚠️ EL PATRON Y LOS BLOBS VAN EN HIJOS VACIOS, NUNCA EN LA MISMA CAJA QUE
+ * `.sup-*` (que pinta el filo de luz en `::before`) ni envolviendo el
+ * contenido: `.patron-vivo` declara `overflow: hidden`, que es un contenedor de
+ * scroll, y colgado del envoltorio recortaba el foco, mataba el `sticky` y
+ * dejaba sin correr todo `animation-timeline: view()` de adentro.
+ *
+ * ⚠️ `position: relative` NO ES DECORATIVO: es el contenedor de las capas.
+ */
+.pliego {
+  position: relative;
+  padding-block: var(--espacio-seccion);
+}
+
+/**
+ * PLIEGO FLOTANTE: en vez de una franja de borde a borde, un panel redondeado
+ * (radio de panel) separado del canal, con sombra ambiente verde. Es la forma
+ * "superficie que flota" de la direccion nueva aplicada a un bloque entero.
+ *
+ * ⚠️ `overflow: clip` Y NUNCA `hidden`: `clip` recorta las capas al radio sin
+ * crear un contenedor de scroll, asi que el `sticky` y el `view()` de adentro
+ * siguen funcionando. Lo que si recorta es el `outline` de un foco pegado al
+ * borde: por eso el interior conserva su padding.
+ */
+.pliegoFlotante {
+  margin-inline: var(--canal);
+  border-radius: var(--radio-panel);
+  overflow: clip;
+  box-shadow: var(--sombra-3), var(--sombra-color);
+}
+
+.pliegoCorte {
+  clip-path: var(--corte-abajo);
+  padding-bottom: calc(var(--espacio-seccion) + var(--corte-compensacion));
+}
+
+/** CAPA DEL PATRON. Vacia y hermana del contenido; cubre tambien el `padding-block`. */
+.pliegoPatron {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.pliegoInterior {
+  position: relative;
+}
+
+/* ----------------------------------------------------------------- cifras */
+
+/**
+ * ⚠️ CADA CIFRA ES SU PROPIO RECUADRO, NO UNA CELDA DE UNA GRILLA CONTINUA. El
+ * truco de `gap: 1px` sobre un contenedor con fondo deja un bloque gris muerto
+ * en cuanto las cifras no llenan la fila.
+ */
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--espacio-4);
+  margin: 0 0 var(--espacio-6);
+}
+
+.cifra {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  background-color: var(--superficie-1);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-ficha);
+  padding: var(--espacio-5);
+}
+
+/** La linea de energia arriba, con halo hacia adentro. El halo (10px) no llega a la etiqueta (20px). */
+.cifra::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  pointer-events: none;
+  transform-origin: left center;
+  background-image: var(--degradado-acento);
+  box-shadow: 0 0 10px rgb(var(--luz-marca) / 0.5);
+}
+
+/**
+ * ESCALONADO SIN UN `style` INLINE POR ITEM. Corta en el sexto: ninguna
+ * pantalla del sitio muestra mas de cuatro cifras.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .cifra::before {
+    animation: dibujarDesdeCero var(--dur-media) var(--curva-corte) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .cifra:nth-child(2) {
+    --retraso: var(--paso-escalon);
+  }
+
+  .cifra:nth-child(3) {
+    --retraso: calc(var(--paso-escalon) * 2);
+  }
+
+  .cifra:nth-child(4) {
+    --retraso: calc(var(--paso-escalon) * 3);
+  }
+
+  .cifra:nth-child(5) {
+    --retraso: calc(var(--paso-escalon) * 4);
+  }
+
+  .cifra:nth-child(n + 6) {
+    --retraso: calc(var(--paso-escalon) * 5);
+  }
+}
+
+/**
+ * ⚠️ EL NUMERO VA EN LA TIPOGRAFIA DE TITULARES Y SUBE DE ESCALA — PERO NUNCA
+ * POR DEBAJO DE LO QUE MIDE HOY: `max(var(--texto-3xl), var(--display-3))`.
+ * `--display-3` a secas no vuelve a los 36px hasta un viewport de ~472px, y
+ * "Te quedó $89.900" se ACHICARIA en todo telefono.
+ *
+ * ⚠️ BRILLA CON `--glow-texto`, ESTATICO. Nada de contar hacia arriba ni latir:
+ * dos de las tres pantallas que usan esto muestran plata ajena.
+ */
+.cifraValor {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  font-family: var(--fuente-titulo);
+  font-size: max(var(--texto-3xl), var(--display-3));
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  color: var(--texto-fuerte, var(--color-tinta));
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  text-shadow: var(--glow-texto);
+}
+
+.cifraEtiqueta {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+  line-height: var(--interlineado-texto);
+}
+
+.cifraDetalle {
+  display: block;
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-normal);
+  letter-spacing: 0;
+  line-height: var(--interlineado-texto);
+  color: var(--color-neutro-tenue);
+  text-shadow: none;
+}
+
+/* ------------------------------------------------------------- keyframes */
+
+/**
+ * ⚠️ SE DECLARAN SIN `to`, Y ES DELIBERADO. El `to` implicito es el valor
+ * COMPUTADO del elemento: para `.pasosBarraLlena`, el `scaleX(0.66)` que el
+ * servidor escribio en el `style` inline; para los demas, la identidad.
+ *
+ * ⚠️ SON LOS UNICOS DOS ADEMAS DE `girar`, y ninguno de los tres existe en
+ * `movimiento.css`: en un CSS Module los nombres de `@keyframes` son LOCALES y
+ * dos declaraciones con el mismo nombre son una trampa silenciosa.
+ */
+@keyframes dibujarDesdeCero {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes dibujarRiel {
+  from {
+    transform: scaleY(0);
+  }
+}

@@ -1,0 +1,32 @@
+# Nada de esto debe entrar a la imagen.
+
+# ⚠️ SECRETOS. Las variables se inyectan por entorno desde Coolify, nunca se
+# hornean en la imagen (CLAUDE.md §10).
+.env
+.env.*
+!.env.example
+
+# Dependencias y artefactos: se instalan y se construyen dentro de la imagen.
+node_modules
+**/node_modules
+.next
+**/.next
+.turbo
+**/.turbo
+dist
+**/dist
+coverage
+**/coverage
+
+# Desarrollo local
+docker-compose.yml
+.git
+.gitignore
+.vscode
+.idea
+*.log
+
+# Tests y documentacion: no se ejecutan ni se sirven en produccion.
+**/*.test.ts
+**/*.integration.test.ts
+docs-implementation

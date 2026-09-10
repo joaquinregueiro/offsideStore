@@ -1,0 +1,100 @@
+/**
+ * CUERPO COMPARTIDO DE LOS LIMITES DE ERROR DE GRUPO
+ * =============================================================================
+ *
+ * ⚠️ ANTES ERA UN `EstadoVacio`, o sea la caja de BORDE PUNTEADO que en este
+ * sistema significa "esta lista esta vacia". Un error no es una lista vacia:
+ * es algo que se interrumpio. Con la misma pieza para las dos cosas, la
+ * pantalla que mas gente ve cuando algo sale mal es la mas neutra del sitio.
+ *
+ * ⚠️ ES UN PANEL, NO UNA ESCENA. Este componente vive DENTRO del layout de su
+ * grupo —en (auth) cae en una columna angosta al lado del panel de marca—, asi
+ * que no puede tomar el viewport ni pintar una superficie oscura de borde a
+ * borde. La escena a pantalla completa es la de `pantalla-de-servicio`, que usa
+ * el 404 y el error de la raiz.
+ *
+ * ⚠️ ESTE MODULO NO PISA NINGUNA PROPIEDAD DE UNA UTILIDAD GLOBAL. El orden de
+ * inyeccion entre el CSS global y un CSS Module no esta garantizado en Next: la
+ * superficie la pone `.sup-flotante` (fondo, radio de 24px, sombra de nivel 3 y
+ * glow suave) desde el TSX, y aca solo se agrega lo que esa clase no declara.
+ */
+
+.panel {
+  position: relative;
+  /*
+   * Para que la cinta de arriba respete el radio que pone `.sup-flotante`.
+   * `overflow` recorta descendientes, no la sombra ni el glow del propio panel.
+   */
+  overflow: hidden;
+}
+
+/**
+ * CINTA DE ALERTA.
+ *
+ * ⚠️ RAYAS DIAGONALES Y NO UNA BARRA DE COLOR PLANO. Las rayas en el eje del
+ * sistema —112 grados, el brazo del juez de linea con la bandera levantada— son
+ * el motivo que la identidad ya usa para "se paro el juego". Una barra lisa
+ * naranja arriba de una tarjeta es la alerta de cualquier framework.
+ *
+ * ⚠️ EL NARANJA ACA ES RELLENO, NO TEXTO, Y POR ESO PUEDE SER EL DE MARCA.
+ * `--color-naranja` sobre papel da 2.16:1 y esta prohibido para texto; como
+ * forma decorativa no tiene requisito de contraste. El texto de alerta de esta
+ * pantalla usa `--color-alerta` (4.88:1 sobre la ficha blanca).
+ *
+ * ⚠️ NO SE MUEVE. El patron de rayas del sistema NO cierra el bucle en deriva
+ * —su periodo de 30px se mide sobre el eje de 112 grados y la traslacion es
+ * horizontal, asi que la fase se corre 2.19px por vuelta y las rayas saltan—, y
+ * ademas un error que late es una alarma.
+ */
+.cinta {
+  display: block;
+  height: 10px;
+  --patron-color: var(--color-naranja);
+  background-image: var(--patron-diagonales-anchas);
+}
+
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+  padding: var(--espacio-8) var(--espacio-7);
+}
+
+@media (max-width: 480px) {
+  .cuerpo {
+    padding: var(--espacio-7) var(--espacio-5);
+  }
+}
+
+/**
+ * El rotulo de categoria.
+ *
+ * ⚠️ DICE "DEL SITIO" A PROPOSITO. El titulo dice QUE no se pudo hacer, pero lo
+ * primero que alguien se pregunta al ver un error es si lo rompio el. Nombrar
+ * la categoria en dos palabras contesta eso antes de que lo lea el parrafo.
+ */
+.rotulo {
+  margin: 0;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-alerta);
+}
+
+.titulo {
+  margin: 0;
+  color: var(--color-tinta);
+}
+
+.detalle {
+  margin: 0;
+  max-width: var(--ancho-lectura);
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.acciones {
+  margin-top: var(--espacio-2);
+}

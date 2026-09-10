@@ -1,0 +1,1395 @@
+/**
+ * BUSQUEDA — /buscar
+ * =============================================================================
+ *
+ * ⚠️ LO QUE NO CAMBIA, Y ES LO QUE SOSTIENE LA PANTALLA: todo viaja por GET en
+ * la URL y esto anda sin una linea de JavaScript. Los filtros son <a>, el orden
+ * son <a>, el texto y el precio son <form method="get"> y el panel plegable de
+ * telefono es un <details>. Nada de lo de abajo agrega interactividad: agrega
+ * superficie, profundidad, direccion y movimiento.
+ *
+ * ⚠️ EL PANEL DE FILTROS NO ANIMA NADA AL ENTRAR, Y ES DELIBERADO. Cada faceta
+ * es una navegacion completa (`force-dynamic`, y el <Link> no declara
+ * `transitionTypes`, asi que `Pantalla` cae en `default: 'none'`): un escalonado
+ * ahi se reproduce ENTERO en cada click, sobre el unico control que la persona
+ * esta usando en serie. El panel es mobiliario. Lo que si anima es la fila de
+ * pastillas, porque es lo que efectivamente cambio.
+ *
+ * ⚠️ NINGUNA ANIMACION DIRIGIDA POR SCROLL VIVE ADENTRO DEL PANEL. En escritorio
+ * el panel es su propio contenedor de scroll (`overflow: hidden auto`), asi que
+ * un `view()` de adentro mediria SU scroll y no el de la pagina. En la columna
+ * de resultados —que no es contenedor de scroll— si.
+ */
+
+/* ============================================================== estructura */
+
+.pagina {
+  padding-bottom: var(--espacio-9);
+}
+
+/**
+ * ⚠️ EL `max-width` VIVE ACA Y NO EN EL `<main>`, y por eso la banda de arriba
+ * puede ir a sangre. `body > main` ya trae `width: 100%` (tokens.css), asi que
+ * no tener `max-width` en el main no dispara el bug del margen automatico que
+ * encogia los `<main>` centrados.
+ */
+.cuerpo {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+  padding-top: var(--espacio-7);
+}
+
+/* ================================================================= franja */
+
+/**
+ * MASTHEAD DE LA BUSQUEDA.
+ *
+ * ⚠️ VA OSCURA Y NO VERDE, Y NO ES CAPRICHO: la barra superior YA es Verde
+ * Cancha. Una banda verde pegada abajo se lee como una barra de 200px; la banda
+ * `sup-noche` se lee como un objeto distinto y le da a la pantalla el corte de
+ * densidad que el resto del sitio no tiene. `.sup-noche` trae ademas el filo de
+ * luz superior, el remapeo de neutros y `--color-foco: cambio`, que es lo unico
+ * que hace visible el anillo de foco sobre este fondo.
+ *
+ * Contrastes sobre `--sup-noche` (#10231a), calculados con la formula WCAG:
+ *   papel 15.72:1 · Amarillo Cambio 13.97:1 · sobre-oscuro-2 9.15:1
+ *   sobre-oscuro-tenue 6.39:1 · naranja 7.26:1 · linea-control-oscura 4.60:1
+ *
+ * ⚠️ EL CORTE DIAGONAL ES SEGURO ACA Y NO EN CUALQUIER LADO. `clip-path` recorta
+ * tambien la sombra y cualquier hijo que se desborde, y rompe un `sticky` o un
+ * desplegable de adentro. Esta banda no contiene ningun `<details>` ni nada
+ * pegado: el panel de filtros vive abajo, en `.cuerpo`. Si mañana se le mete uno
+ * aca adentro, hay que sacar el corte.
+ *
+ * ⚠️ VIENE EN PAR CON SU COMPENSACION. El corte COME 40px de altura real: sin el
+ * `--corte-compensacion` en el padding de abajo se recorta la ultima fila de
+ * pastillas y el anillo de foco de la ultima.
+ */
+.franja {
+  padding-block: clamp(28px, 3.4vw, 60px) calc(clamp(24px, 2.8vw, 44px) + var(--corte-compensacion));
+  clip-path: var(--corte-abajo);
+}
+
+.franjaCuerpo {
+  position: relative;
+  z-index: var(--z-contenido);
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+
+/**
+ * ROMBOS EN DERIVA, ARRIBA A LA DERECHA.
+ *
+ * ⚠️ VA EN UN DIV PROPIO Y NO EN LA BANDA, Y ESTO ES OBLIGATORIO: `.sup-noche`
+ * usa `::before` para su filo de luz y `.patron-vivo` usa `::before` para el
+ * mosaico. Las dos clases en el MISMO elemento se pelean el unico pseudo y queda
+ * un hibrido roto. En un div aparte cada una tiene el suyo. (`.con-grano` usa
+ * `::after`, asi que la banda si puede llevar grano sin conflicto.)
+ *
+ * ⚠️ LA DOBLE CLASE `.rombos.rombos` NO ES UN TYPEO: sube la especificidad a
+ * (0,2,0) para ganarle al `position: relative` de `.patron-vivo` sin depender del
+ * orden en que Next concatene el CSS global y el del modulo.
+ *
+ * ⚠️ LA MASCARA LO DEJA SOLO EN LA ESQUINA SUPERIOR DERECHA, que es donde no hay
+ * texto. Un patron de rombos por detras del titular compite con el titular y
+ * pierde el titular.
+ */
+.rombos.rombos {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(115% 150% at 100% 0%, #000 0%, transparent 62%);
+  mask-image: radial-gradient(115% 150% at 100% 0%, #000 0%, transparent 62%);
+}
+
+/**
+ * KICKER con filete de rayas diagonales EN EL EJE DEL SISTEMA.
+ *
+ * ⚠️ `--patron-color` SE REDEFINE ACA. Adentro de `.sup-noche` vale
+ * `rgb(250 250 247 / 0.08)`, que como textura de fondo esta bien y como filete de
+ * 10px no se ve. Amarillo Cambio sobre tinta da 13.97:1; es forma, pero se tiene
+ * que ver.
+ */
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin: 0 0 var(--espacio-3);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  /* #8fa79a sobre tinta: 6.39:1 ✅ AA */
+  color: var(--color-sobre-oscuro-tenue);
+}
+
+.kicker::after {
+  --patron-color: var(--color-cambio);
+  content: '';
+  flex: 1;
+  height: 10px;
+  max-width: 140px;
+  background-image: var(--patron-diagonales);
+}
+
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--espacio-5) var(--espacio-7);
+}
+
+/**
+ * ⚠️ EL TITULAR NO LLEVA `titular-degradado`, Y ES UNA DECISION, NO UN OLVIDO.
+ * `background-clip: text` exige `color: transparent` y pinta el fondo en la caja
+ * del <h1>; los hijos que anima `alzar` llevan `transform`, o sea que se pintan
+ * en su propia capa, y un descendiente transformado deja de recortar contra el
+ * fondo del ancestro en varios motores. El resultado no seria "no se animo":
+ * seria texto transparente sobre nada, en el elemento mas visible de la pantalla.
+ * Papel solido sobre tinta da 15.72:1 contra los 13.97 del stop mas claro del
+ * degradado: aca el degradado arriesga el titular a cambio de MENOS contraste.
+ *
+ * ⚠️ LAS DOS REGLAS DE ABAJO NO SON OPCIONALES. `.entra-lineas` anima `alzar`
+ * —`translateY(100%)`— pero, al reves que `.revela-lineas`, NO declara reglas
+ * base: sin `overflow: clip` en cada linea el texto no se revela detras de un
+ * borde, se superpone al de abajo. Y el `display: block` tiene que estar AFUERA
+ * de cualquier media query, o con `prefers-reduced-motion` las dos lineas caen en
+ * la misma.
+ */
+.titulo {
+  margin: 0;
+  /* papel sobre tinta: 15.72:1 ✅ */
+  color: var(--color-sobre-oscuro);
+}
+
+/**
+ * EL MARCADOR: cuantas publicaciones hay.
+ *
+ * ⚠️ ES EL DATO MAS IMPORTANTE DE LA PANTALLA Y ERA UN <p> GRIS DE 16px. Aca es
+ * una cifra de Big Noodle en Amarillo Cambio (13.97:1) con la palabra abajo.
+ *
+ * ⚠️ NO USA `.contador` NI `counter()`, AUNQUE SEA UNA CANTIDAD Y NO PLATA. La
+ * regla del sistema es sobre la LECTURA, no sobre el dinero: cada faceta es una
+ * navegacion completa, asi que un contador giraria de 0 a N en CADA click, sobre
+ * el unico numero que la persona esta mirando para decidir si sigue filtrando.
+ * `.cifra-entra` muestra el valor final desde el primer cuadro y solo se
+ * desplaza — y ademas es TEXTO REAL, asi que se selecciona, se copia y no
+ * necesita un `.solo-lectores` de compensacion.
+ */
+.marcador {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0;
+  line-height: 1;
+}
+
+.marcadorCifra {
+  /* Amarillo Cambio sobre tinta: 13.97:1 ✅ */
+  color: var(--color-cambio);
+  line-height: 0.9;
+}
+
+.marcadorPalabra {
+  margin-top: var(--espacio-2);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  /* #b3c6b8 sobre tinta: 9.15:1 ✅ */
+  color: var(--color-sobre-oscuro-2);
+}
+
+/* -------------------------------------------------- buscador de la banda */
+
+/**
+ * ⚠️ EL BUSCADOR DE TEXTO NO ESTABA EN LA PANTALLA DE BUSQUEDA. La banda decia
+ * "Resultados para X" y para CAMBIAR la consulta habia que subir a la barra
+ * verde: en telefono, a la segunda fila del header, ~150px arriba. Es el control
+ * mas usado del sitio y estaba fuera de la pantalla que existe para el.
+ *
+ * ⚠️ 16px OBLIGATORIO. Debajo de eso iOS Safari hace zoom al enfocar y no lo
+ * deshace al salir.
+ *
+ * ⚠️ EL BOTON LLEVA `--destello-claro` A MANO. Adentro de `.sup-noche` la
+ * variable `--destello` esta remapeada a la version Amarillo Cambio, y este boton
+ * ES Amarillo Cambio: el brillo seria invisible.
+ */
+.buscadorBanda {
+  display: flex;
+  align-items: stretch;
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-6);
+  max-width: 640px;
+}
+
+.buscadorCampo {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid var(--color-papel);
+  border-radius: var(--radio);
+  background: var(--color-papel);
+  /* Tinta sobre papel: 15.72:1 ✅ */
+  color: var(--color-tinta);
+  font: inherit;
+  font-size: var(--texto-md);
+  box-shadow: var(--sombra-hundida);
+}
+
+.buscadorCampo::placeholder {
+  /* #6b736a sobre papel: 4.69:1 ✅ */
+  color: var(--color-neutro-tenue);
+}
+
+.buscadorEnviar {
+  --destello: var(--destello-claro);
+  flex: none;
+  min-height: 52px;
+  padding-inline: var(--espacio-6);
+  border: 0;
+  border-radius: var(--radio);
+  background: var(--color-cambio);
+  /* Tinta sobre Amarillo Cambio: 13.97:1 ✅ */
+  color: var(--color-tinta);
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  cursor: pointer;
+  transition: background-color var(--transicion-rapida) var(--curva);
+}
+
+.buscadorEnviar:hover,
+.buscadorEnviar:focus-visible {
+  background: var(--color-papel);
+}
+
+/* ---------------------------------------------------- cinta de catalogo */
+
+/**
+ * MARQUESINA DE CLUBES, solo cuando la busqueda esta en blanco.
+ *
+ * ⚠️ RESUELVE UN PROBLEMA REAL, NO ES ADORNO. `/buscar` sin texto y sin filtros
+ * es hoy una grilla muda, y la migracion 0007 sembro 38 clubes, 25 selecciones y
+ * 18 marcas que nadie ve hasta abrir el panel. Nombres de club en Big Noodle
+ * corriendo en horizontal es literalmente una cinta de estadio, y cada uno es un
+ * enlace a `?club=<id>`.
+ *
+ * ⚠️ SE ESCONDE APENAS HAY UNA CONSULTA O UN FILTRO. Una cinta en movimiento al
+ * lado de un resultado que la persona esta leyendo es ruido.
+ *
+ * El resto lo hacen las clases globales `.marquesina`, `.marquesina-pista` y
+ * `.marquesina-grupo`: el corte del desborde (que es lo que garantiza los 320px),
+ * la mascara lateral y la pausa con `:hover` Y con `:focus-within`. El
+ * `aria-hidden` de la segunda copia lo pone el marcado.
+ */
+.cinta {
+  margin-top: var(--espacio-6);
+  /*
+    ⚠️ EL PADDING NO ES AIRE: ES SITIO PARA EL ANILLO DE FOCO. `.marquesina` lleva
+    `overflow: hidden`, y un `overflow` de un ANCESTRO si recorta un `outline`
+    —lo que no lo recorta es el overflow del propio elemento—. El anillo global es
+    `2px` con `outline-offset: 2px`, o sea 4px por lado: sin este colchon, quien
+    llega a un club con el teclado ve media raya arriba y media abajo. Va en el
+    envoltorio y no en el enlace porque el enlace no puede escapar del recorte.
+  */
+  padding-block: 5px;
+}
+
+.cintaEnlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control-chico);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-titulo);
+  /* #b3c6b8 sobre tinta: 9.15:1 ✅ */
+  color: var(--color-sobre-oscuro-2);
+  transition: color var(--transicion-rapida) var(--curva);
+}
+
+.cintaEnlace:hover,
+.cintaEnlace:focus-visible {
+  color: var(--color-cambio);
+}
+
+/* ------------------------------------------------------- filtros activos */
+
+/**
+ * ⚠️ ESTA FILA SIGUE SIENDO LA RESPUESTA A "¿POR QUE NO ENCUENTRO NADA?", y ahora
+ * vive DENTRO de la banda: con los filtros plegados en telefono, un talle elegido
+ * tres pantallas atras seguia aplicado sin ninguna señal visible.
+ */
+.activos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-6);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--linea-tenue-oscura);
+}
+
+/**
+ * ⚠️ `.escalona` SOLO NUMERA DOCE HIJOS, Y ESTA FILA PUEDE TENER QUINCE. La clase
+ * global asigna `--i` con `:nth-child(1)…(12)`; del trece en adelante cae el
+ * `var(--i, 0)` del fallback, o sea **retraso 0**. El maximo real de esta fila es
+ * 15 —el rotulo, la pastilla de texto, los diez grupos de `GRUPOS`, `precioMin`,
+ * `precioMax` y "Limpiar todo"—, asi que con muchos filtros puestos las tres
+ * ultimas pastillas entraban ANTES que las que tienen delante: el escalonado se
+ * leia como un salto. Se completan los tres indices que faltan, que es todo lo
+ * que el mecanismo necesita —el `animation-delay` sale de `--i` y ya vive en la
+ * clase global, dentro de su `prefers-reduced-motion`—.
+ *
+ * Doble clase para no depender del orden de concatenacion entre modulo y global.
+ */
+.activos.activos > *:nth-child(13) {
+  --i: 12;
+}
+.activos.activos > *:nth-child(14) {
+  --i: 13;
+}
+.activos.activos > *:nth-child(n + 15) {
+  --i: 14;
+}
+
+.activosTitulo {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-sobre-oscuro-tenue);
+  margin-right: var(--espacio-1);
+}
+
+/**
+ * PASTILLA DE FILTRO APLICADO. Tocarla lo saca.
+ *
+ * ⚠️ ES DE LOS POCOS LUGARES DONDE EL SISTEMA REDONDEA. `--radio-pastilla` existe
+ * para esto: la identidad reserva la forma de pastilla para cuando la forma ES el
+ * elemento, y una pastilla que se saca tocandola se reconoce por su silueta antes
+ * que por su texto.
+ *
+ * ⚠️ UNA SOLA DEFINICION PARA LAS DOS SUPERFICIES, VIA TOKENS. La misma pastilla
+ * aparece sobre la banda oscura y sobre el estado vacio claro. En vez de una
+ * version y un override, `background: var(--superficie-1)` y `color: inherit` se
+ * adaptan solos:
+ *   sobre `.sup-noche`  fondo #16362a, texto papel ....... 12.59:1 ✅
+ *   sobre `.sup-2`      fondo blanco, texto Tinta ........ 16.44:1 ✅
+ *   borde `--linea-control`: #6f8f79 sobre #16362a 3.14:1 ✅ 1.4.11,
+ *                            #7d857b sobre #f2f3ea 3.41:1 ✅ (ver `.vacio`)
+ *   hover: papel sobre Verde Cancha ..................... 5.16:1 ✅
+ *
+ * ⚠️ LA CRUZ GIRA 45 GRADOS, NO 90. `IconoCerrar` es
+ * `m5.5 5.5 13 13M18.5 5.5l-13 13`: dos diagonales simetricas respecto del centro
+ * del viewBox. Rotarla 90 grados mapea cada trazo sobre el otro y el dibujo
+ * resultante es IDENTICO pixel a pixel — o sea, una transicion que no se ve
+ * nunca. A 45 la X pasa a ser un `+` y el cambio se lee.
+ */
+.pastilla {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  max-width: 100%;
+  min-height: var(--alto-control-chico);
+  padding: var(--espacio-1) var(--espacio-3);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio-pastilla);
+  background: var(--superficie-1);
+  color: inherit;
+  font-size: var(--texto-sm);
+  transition:
+    background-color var(--transicion-rapida) var(--curva),
+    border-color var(--transicion-rapida) var(--curva),
+    color var(--transicion-rapida) var(--curva),
+    transform var(--dur-instante) var(--curva-seca);
+}
+
+/**
+ * ⚠️ SIN ESTO UNA CONSULTA LARGA SIN ESPACIOS DESBORDA A 320px. Un token de 40+
+ * caracteres —un mail, una URL pegada en el buscador— no parte, la pastilla crece
+ * por encima de los 288px utiles y con `overflow-x: clip` en `html` el texto
+ * queda CORTADO en vez de scrolleable.
+ */
+.pastillaTexto {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pastilla:hover,
+.pastilla:focus-visible {
+  background: var(--color-cancha);
+  /* papel sobre Verde Cancha: 5.16:1 ✅ */
+  color: var(--color-papel);
+  border-color: var(--color-cancha);
+}
+
+.pastilla:active {
+  transform: scale(0.97);
+}
+
+.pastilla svg {
+  flex: none;
+  transition: transform var(--dur-media) var(--curva-seca);
+}
+
+.pastilla:hover svg,
+.pastilla:focus-visible svg {
+  transform: rotate(45deg) scale(1.12);
+}
+
+.limpiar {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control-chico);
+  padding-inline: var(--espacio-2);
+  font-size: var(--texto-sm);
+  /* Adentro de `.sup-noche` este token es #b3c6b8: 9.15:1 ✅ */
+  color: var(--color-neutro-texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--transicion-rapida) var(--curva);
+}
+
+/**
+ * ⚠️ `--color-alerta` ADENTRO DE `.sup-noche` YA ES `--color-naranja` (7.26:1
+ * sobre tinta). Es la unica excepcion documentada a "naranja para forma": sobre
+ * oscuro el naranja SI es texto. No hay que escribir el hex a mano.
+ */
+.limpiar:hover,
+.limpiar:focus-visible {
+  color: var(--color-alerta);
+}
+
+/* ============================================================== columnas */
+
+.columnas {
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  gap: var(--espacio-7);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .columnas {
+    display: block;
+  }
+}
+
+/* =============================================================== filtros */
+
+/**
+ * ⚠️ ES UN `<details>` Y EN ESCRITORIO ESTA SIEMPRE ABIERTO. El problema real: a
+ * 900px la columna de filtros pasa ARRIBA de los resultados, y son diez grupos de
+ * hasta doce valores cada uno, o sea miles de pixeles antes de la primera
+ * camiseta.
+ *
+ * ⚠️ EN TELEFONO EL PANEL **NO** SE PEGA AL SCROLL, Y ESO ES UNA DECISION MEDIDA.
+ * La barra superior ya ocupa dos filas abajo de 900px; sumarle una barra
+ * "Filtrar" pegada de 44px se come casi un tercio del viewport para siempre, en
+ * la pantalla donde la persona vino a mirar fotos. Ademas un `sticky` no puede
+ * salirse de su bloque contenedor: en una grilla de una columna el bloque
+ * contenedor de un item es SU PROPIA FILA, asi que ni siquiera se pegaria. Por
+ * eso `.columnas` pasa a `block` en telefono y el panel queda estatico.
+ */
+.filtros {
+  border: 1px solid var(--linea-tenue);
+}
+
+@media (max-width: 900px) {
+  .filtros {
+    margin-bottom: var(--espacio-5);
+  }
+
+  /*
+    ⚠️ EN TELEFONO EL BORDE DEL PANEL ES EL CONTORNO DE UN CONTROL, NO UNA LINEA
+    DECORATIVA: abajo de 900px el `<summary>` se ve y ES el boton "Filtrar", asi
+    que ese 1px es su unico limite visible. Con `--linea-tenue` (#e4e6de sobre
+    papel) daba **1.20:1** — el control se leia como texto suelto flotando sobre
+    la pagina, justo en el ancho donde es la unica puerta a los filtros.
+    `--linea-control` da 3.10:1 y cumple WCAG 1.4.11.
+
+    En escritorio NO se toca: ahi el `<summary>` esta en `display: none` y el
+    panel es una ficha apoyada, no un control, asi que el hairline corresponde.
+    (`.filtros[open]` ya subia a `--linea-control`, o sea que el borde solo se
+    veia DESPUES de abrir: exactamente al reves de cuando hace falta.)
+  */
+  .filtros {
+    border-color: var(--linea-control);
+  }
+}
+
+/**
+ * ⚠️ SE COMPONE CON LA SOMBRA DE `.sup-ficha`, NO LA PISA. `.sup-ficha` declara
+ * `var(--sombra-0), var(--luz-superior), var(--sombra-1)`; escribir solo
+ * `--sombra-3` aca le sacaria al panel abierto el hairline de apoyo y el filo de
+ * luz superior, que son justo las dos capas que hacen que un objeto APOYE en vez
+ * de flotar. Se veria peor abierto que cerrado.
+ */
+.filtros[open] {
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-3);
+  border-color: var(--linea-control);
+}
+
+.filtrosBoton {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-4);
+  font-size: var(--texto-base);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* #0b5a34 sobre blanco: 8.31:1 ✅ */
+  color: var(--color-tiempo-extra);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.filtrosBoton::-webkit-details-marker {
+  display: none;
+}
+
+/** Cuantos filtros hay puestos, sin abrir el panel. */
+.contadorFiltros {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--degradado-cancha);
+  /* papel sobre el punto MAS CLARO del degradado (Verde Cancha): 5.16:1 ✅ */
+  color: var(--color-papel);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  font-variant-numeric: tabular-nums;
+}
+
+/** La flecha, dibujada con dos bordes: no hace falta un icono para un angulo. */
+.chevron {
+  flex: none;
+  margin-left: auto;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform var(--dur-media) var(--curva-seca);
+}
+
+.filtros[open] .chevron {
+  transform: rotate(225deg) translate(-2px, -2px);
+}
+
+.filtrosCuerpo {
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.filtrosLista {
+  padding: var(--espacio-5) var(--espacio-5) var(--espacio-3);
+}
+
+/* ------------------------------------------------- filtros en escritorio */
+
+@media (min-width: 901px) {
+  .filtrosBoton {
+    display: none;
+  }
+
+  /**
+   * ⚠️ ACA SI SE PEGA, Y ACA SI SIRVE: la columna queda fija al costado con
+   * scroll propio. Sin esto los filtros desaparecen apenas empieza la segunda
+   * fila de fichas y hay que volver arriba para cambiar uno.
+   *
+   * ⚠️ EL `top` SALE DE `--alto-barra`, NUNCA DE UN NUMERO ESCRITO ACA. Si el
+   * valor fuera menor que la barra real, el panel se meteria DEBAJO de ella
+   * (`--z-barra` 100 contra `--z-pegado` 50) y desapareceria justo cuando se lo
+   * necesita.
+   */
+  .filtros {
+    position: sticky;
+    top: calc(var(--alto-barra) + var(--espacio-4));
+    z-index: var(--z-pegado);
+  }
+
+  /**
+   * ⚠️ EL PANEL SE SCROLLEA POR DENTRO. Sin esto, pegarlo no sirve de nada: la
+   * columna mide varios miles de pixeles y un `sticky` mas alto que la pantalla
+   * se clava arriba y deja su mitad de abajo permanentemente fuera de cuadro.
+   *
+   * ⚠️ `overflow: hidden auto` Y NO SOLO `overflow-y: auto`. Con `overflow-y`
+   * solo, la regla de CSS Overflow computa el otro eje de `visible` a `auto`, y
+   * cualquier contenido un pixel mas ancho que el panel produce una barra de
+   * scroll horizontal ADENTRO de los filtros. (`clip` no sirve en esta
+   * combinacion: computa a `hidden` igual.)
+   *
+   * ⚠️ `overscroll-behavior: contain` ES LA MITAD QUE SIEMPRE FALTA: sin eso, al
+   * llegar al final de la lista el gesto sigue de largo y arrastra la pagina.
+   */
+  .filtrosCuerpo {
+    display: block !important;
+    border-top: none;
+    max-height: calc(100dvh - var(--alto-barra) - var(--espacio-4) - var(--espacio-6));
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--linea-control) transparent;
+  }
+
+  /**
+   * ⚠️ ESTA REGLA ARREGLA UN DEFECTO REAL, NO ES ESTETICA. El forzado-abierto de
+   * escritorio se apoyaba solo en `display: block !important` sobre
+   * `.filtrosCuerpo`, que es HIJO del `<details>`. Los motores que ya implementan
+   * `::details-content` esconden el contenido de un `<details>` cerrado con
+   * `content-visibility: hidden` sobre ese ENVOLTORIO, y eso ningun `display` del
+   * hijo revierte: con el `<summary>` en `display: none`, los filtros quedan
+   * INALCANZABLES en escritorio.
+   *
+   * Se declara en su propia regla a proposito: si el motor no conoce el pseudo,
+   * descarta ESTA regla y no las de arriba.
+   *
+   * Doble clase para ganarle por especificidad sin depender del orden de
+   * concatenacion del CSS.
+   */
+  .filtros.filtros::details-content {
+    content-visibility: visible;
+    block-size: auto;
+    opacity: 1;
+  }
+
+  /** Pie del panel, pegado abajo de su propio scroll. */
+  .filtrosPie {
+    position: sticky;
+    bottom: 0;
+  }
+}
+
+/**
+ * PLEGADO CON ALTURA ANIMADA, SIN UNA LINEA DE JAVASCRIPT.
+ *
+ * ⚠️ ACOTADO A TELEFONO A PROPOSITO: es el unico lugar donde el `<details>`
+ * realmente se pliega. En escritorio esta forzado abierto y una transicion de
+ * altura ahi solo podria pelearse con ese forzado.
+ *
+ * ⚠️ ES LA UNICA ANIMACION DE ESTA PANTALLA QUE TOCA EL LAYOUT, y esta permitida
+ * porque su proposito ES el layout: la altura es la informacion. Depende de
+ * `interpolate-size: allow-keywords` en `html` (tokens.css). Sin soporte de
+ * `::details-content` no pasa nada: abre de golpe, como hoy.
+ */
+@media (max-width: 900px) {
+  @supports selector(::details-content) {
+    @media (prefers-reduced-motion: no-preference) {
+      .filtros::details-content {
+        block-size: 0;
+        overflow: clip;
+        opacity: 0;
+        transition:
+          block-size var(--dur-media) var(--curva-entrada),
+          opacity var(--transicion) var(--curva-entrada),
+          content-visibility var(--dur-media) allow-discrete;
+      }
+
+      .filtros[open]::details-content {
+        block-size: auto;
+        opacity: 1;
+      }
+    }
+  }
+}
+
+.filtrosPie {
+  display: flex;
+  justify-content: center;
+  padding: var(--espacio-3) var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue);
+  /* Solido: con alfa se leen las facetas por debajo. */
+  background: var(--superficie-1);
+}
+
+.filtrosPieEnlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control-chico);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* #b85400 sobre blanco: 4.88:1 ✅ AA */
+  color: var(--color-alerta);
+}
+
+/* --------------------------------------------------------- filtro de precio */
+
+/**
+ * ⚠️ EL FILTRO MAS USADO DE CUALQUIER MARKETPLACE, Y NO NECESITA NADA DEL
+ * BACKEND. `SearchQuery` ya declara `precioMin`/`precioMax` y el repositorio ya
+ * los baja al SQL. Lo unico imposible es el HISTOGRAMA de precios —`SearchResponse`
+ * no devuelve minimo, maximo ni distribucion—, y descartar el filtro por no poder
+ * decorarlo es tirar la funcion.
+ *
+ * ⚠️ ES UN `<form method="get">` PROPIO Y NO ANIDADO EN NINGUN OTRO: los inputs
+ * de texto necesitan un submit, y un `<select>` o un `<a>` no sirven para un
+ * rango. Es hermano del form del buscador, no hijo (anidar forms es HTML invalido
+ * y el navegador lo desarma en silencio).
+ *
+ * ⚠️ 16px POR EL ZOOM DE iOS y 44px de area tactil, igual que todo lo demas.
+ */
+.precio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--espacio-2);
+}
+
+.precioCampo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  flex: 1 1 96px;
+  min-width: 0;
+}
+
+.precioEtiqueta {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* #5b6459 sobre blanco: 6.15:1 ✅ */
+  color: var(--color-neutro-texto);
+}
+
+.precioInput {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--alto-control);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  color: inherit;
+  font: inherit;
+  font-size: var(--texto-md);
+  box-shadow: var(--sombra-hundida);
+  transition: border-color var(--transicion-rapida) var(--curva);
+}
+
+.precioInput:hover {
+  border-color: var(--color-cancha);
+}
+
+.precioBoton {
+  flex: none;
+  min-height: var(--alto-control);
+  padding-inline: var(--espacio-4);
+  border: 1px solid var(--color-cancha);
+  border-radius: var(--radio);
+  background: transparent;
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* #0f7a45 sobre blanco: 5.40:1 ✅ */
+  color: var(--color-cancha);
+  cursor: pointer;
+  transition:
+    background-color var(--transicion-rapida) var(--curva),
+    color var(--transicion-rapida) var(--curva);
+}
+
+/**
+ * ⚠️ `background-color`, NO `background-image`: un degradado no se puede
+ * transicionar y apareceria de golpe mientras el color del texto si transiciona,
+ * o sea un parpadeo desincronizado.
+ */
+.precioBoton:hover,
+.precioBoton:focus-visible {
+  background-color: var(--color-cancha);
+  color: var(--color-papel);
+}
+
+/* ---------------------------------------------------------------- grupos */
+
+.grupo {
+  margin-bottom: var(--espacio-6);
+}
+
+.grupo:last-of-type {
+  margin-bottom: var(--espacio-5);
+}
+
+.grupoTitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  /* #5b6459 sobre blanco: 6.15:1 ✅ (era `--color-neutro-tenue`, 4.90:1) */
+  color: var(--color-neutro-texto);
+  margin: 0 0 var(--espacio-3);
+}
+
+/** Marca de seccion. Es forma: no lleva texto encima. */
+.grupoTitulo::before {
+  content: '';
+  flex: none;
+  width: 12px;
+  height: 3px;
+  background-image: var(--degradado-acento);
+}
+
+.opciones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/**
+ * ⚠️ 36px DE ALTO CON MOUSE, 44 CON EL DEDO. Eran unos 26 y en un telefono dos
+ * opciones consecutivas quedan a menos de un dedo de distancia.
+ */
+.opcion,
+.opcionActiva {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control-chico);
+  padding: var(--espacio-1) var(--espacio-3);
+  margin-inline: calc(var(--espacio-2) * -1);
+  border-radius: var(--radio);
+  color: inherit;
+  text-decoration: none;
+  font-size: var(--texto-sm);
+  transition: color var(--transicion-rapida) var(--curva);
+}
+
+/**
+ * HISTOGRAMA DE FACETAS.
+ *
+ * ⚠️ ES EL CAMBIO QUE MAS SUBE EL NIVEL Y NO PIDE UN SOLO DATO NUEVO: los conteos
+ * por valor —PS-022— ya venian del Service y se mostraban como doce numeros
+ * grises alineados a la derecha, que nadie compara. La barra los vuelve legibles
+ * de un vistazo: se ve DONDE esta el catalogo antes de leer un numero.
+ *
+ * ⚠️ LA ESCALA ES RAIZ CUADRADA CON PISO DEL 8%, NO LINEAL, Y NO ES UN CAPRICHO
+ * MATEMATICO. El catalogo es long-tail: la migracion 0007 sembro 38 clubes y 135
+ * temporadas, asi que en cualquier busqueda real un valor domina y el resto tiene
+ * 1 a 3. Con escala lineal, una faceta con 1 sobre 40 da `scaleX(0.025)` = 6px de
+ * barra en una fila de 272px: no se lee como un dato, se lee como un artefacto de
+ * render pegado al borde izquierdo, y once de las doce barras quedan invisibles.
+ * La raiz cuadrada es lo estandar para esta distribucion y el piso garantiza que
+ * toda barra existente se vea como barra. El proximo que lo lea lo va a querer
+ * "arreglar" a lineal: no lo hagas.
+ *
+ * ⚠️ LA PROPORCION ES RELATIVA AL GRUPO, no al total: contra el total, "Talle M
+ * (40)" aplastaria a los 38 clubes y todas las barras darian el piso.
+ *
+ * ⚠️ `transform: scaleX()` Y NUNCA `width`: la barra vive en la columna que mas
+ * se repinta de la pantalla y el ancho rehace layout.
+ *
+ * ⚠️ NO LLEVA `transition: transform`. Nada cambia `--proporcion` en runtime
+ * —cada filtro es una navegacion completa— y ademas `--proporcion` no esta
+ * registrada con `@property`, asi que aunque cambiara saltaria sin interpolar.
+ * Una transicion ahi es codigo muerto que hace creer que la barra se dibuja.
+ *
+ * ⚠️ `z-index: -1` MAS `isolation: isolate` EN LA FILA: sin el aislamiento el -1
+ * se escapa de la fila y termina detras del panel entero.
+ *
+ * Contrastes sobre la barra, calculados componiendo en sRGB (por eso el
+ * `color-mix` es `in srgb` y no `in oklab`: asi el numero es exacto):
+ *   reposo 12% -> #e2efe9   Tinta 13.90 · neutro-texto 5.20 · Tiempo Extra 7.03
+ *   hover  18% -> #d4e7de   Tinta 12.75 · neutro-texto 4.77 · Tiempo Extra 6.45
+ * Los dos pasan AA. Con `--color-neutro-tenue` en vez de `--color-neutro-texto`
+ * el conteo daria 4.14 y 3.80: por eso el conteo cambio de token.
+ */
+.opcion::before,
+.opcionActiva::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--radio);
+  background-color: color-mix(in srgb, var(--color-cancha) 12%, transparent);
+  transform: scaleX(var(--proporcion, 0));
+  transform-origin: left center;
+  transition: background-color var(--transicion-rapida) var(--curva);
+}
+
+.opcion:hover::before,
+.opcion:focus-visible::before,
+.opcionActiva:hover::before,
+.opcionActiva:focus-visible::before {
+  background-color: color-mix(in srgb, var(--color-cancha) 18%, transparent);
+}
+
+/**
+ * ⚠️ EL HOVER ERA `--color-cancha` Y APENAS ZAFABA: 4.83:1 sobre el gris del
+ * hover viejo, contra un minimo de 4.5, y 4.40:1 sobre la barra al 18%. Tiempo
+ * Extra da 6.45:1 sobre la barra mas fuerte y 8.31:1 sobre el panel blanco.
+ */
+.opcion:hover,
+.opcion:focus-visible,
+.opcionActiva:hover,
+.opcionActiva:focus-visible {
+  color: var(--color-tiempo-extra);
+}
+
+/**
+ * El filtro activo se marca con negrita, con color Y con una barra al costado.
+ * ⚠️ NO SOLO CON COLOR: quien no lo distingue tiene que poder ver igual cual esta
+ * aplicado. Volver a tocarlo lo saca.
+ */
+.opcionActiva {
+  font-weight: var(--peso-semi);
+  color: var(--color-tiempo-extra);
+}
+
+.opcionActiva::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 3px;
+  border-radius: var(--radio-chico);
+  background: var(--color-cancha);
+}
+
+/** Un nombre de club largo no empuja el conteo fuera de la columna. */
+.opcionTexto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cuenta {
+  flex: none;
+  /* #5b6459: 5.20:1 incluso sobre la barra en reposo, 4.77 en hover ✅ AA */
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * ⚠️ EL RECORTE SE DICE. El repositorio corta cada faceta en doce valores y hay
+ * 38 clubes sembrados: sin este renglon la lista miente por omision y no hay
+ * ninguna señal de que falten valores. Solo aparece en los grupos que llegaron al
+ * tope.
+ */
+.recorte {
+  margin: var(--espacio-2) 0 0;
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+}
+
+.nota {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  border-top: 1px solid var(--linea-tenue);
+  padding-top: var(--espacio-4);
+}
+
+/* ============================================================ resultados */
+
+.resultados {
+  min-width: 0;
+}
+
+/**
+ * BARRA DE HERRAMIENTAS: cuantos se ven y en que orden.
+ *
+ * ⚠️ EL RANGO "1–24 DE 128" ES INFORMACION QUE FALTABA. La pantalla decia el
+ * total y entregaba 24 sin decir cuales: en la pagina 3 no habia forma de saber
+ * donde estaba parado uno.
+ */
+.barraOrden {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espacio-3) var(--espacio-5);
+  margin-bottom: var(--espacio-5);
+  padding-bottom: var(--espacio-3);
+  border-bottom: 1px solid var(--linea-tenue);
+  font-size: var(--texto-sm);
+}
+
+.rango {
+  margin: 0;
+  /* #5b6459 sobre papel: 5.89:1 ✅ */
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.rangoFuerte {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  letter-spacing: var(--tracking-titulo);
+  color: var(--color-tinta);
+  margin-right: var(--espacio-1);
+}
+
+/**
+ * ORDEN COMO PASTILLAS, NO COMO `<select>` + BOTON "APLICAR".
+ *
+ * ⚠️ SE CAE EL `<select>` ENTERO Y CON EL SE CAEN TRES PROBLEMAS. El argumento
+ * viejo era correcto —sin JavaScript un `<select>` no envia el formulario al
+ * cambiar, asi que el boton "Aplicar" no sobraba—, pero la salida obvia es no
+ * usar un `<select>`: cuatro `<a>` con el activo marcado hacen exactamente lo
+ * mismo, en el mismo lenguaje visual que las pastillas de filtro que la pantalla
+ * ya tiene. Ademas desaparecen el `appearance: none` con la flecha dibujada a
+ * mano, el boton que no dice nada, y los `<input type="hidden">` que arrastraban
+ * los filtros dentro del form (un `<a>` lleva la URL entera).
+ */
+.ordenFila {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0 0 0 auto;
+}
+
+.ordenEtiqueta {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+  margin-right: var(--espacio-1);
+}
+
+.ordenOpcion,
+.ordenOpcionActiva {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control-chico);
+  padding: var(--espacio-1) var(--espacio-3);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  /* #0b5a34 sobre blanco: 8.31:1 ✅ */
+  color: var(--color-tiempo-extra);
+  font-size: var(--texto-sm);
+  white-space: nowrap;
+  transition:
+    background-color var(--transicion-rapida) var(--curva),
+    border-color var(--transicion-rapida) var(--curva),
+    color var(--transicion-rapida) var(--curva);
+}
+
+.ordenOpcion:hover,
+.ordenOpcion:focus-visible {
+  border-color: var(--color-cancha);
+  background-color: var(--superficie-2);
+}
+
+/** papel sobre el punto MAS CLARO del degradado (Verde Cancha): 5.16:1 ✅ */
+.ordenOpcionActiva {
+  border-color: transparent;
+  background-image: var(--degradado-cancha);
+  color: var(--color-papel);
+  font-weight: var(--peso-semi);
+}
+
+.grilla {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--espacio-5);
+}
+
+@media (max-width: 600px) {
+  .grilla {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--espacio-4);
+  }
+}
+
+/* =========================================================== estado vacio */
+
+/**
+ * ⚠️ EL ESTADO VACIO TIENE QUE SER UNA SALIDA, NO UN CARTEL. Antes era un
+ * recuadro punteado que decia "proba con menos palabras" y un boton de limpiar
+ * TODO: quien habia puesto cuatro filtros perdia los cuatro para sacar el que
+ * sobraba. Ahora se ofrecen las salidas reales —sacar un filtro concreto, repetir
+ * el mismo texto sin filtros con el numero de resultados que eso daria, ver el
+ * catalogo entero—.
+ *
+ * ⚠️ `--linea-control` SE REMAPEA ACA Y NO ES ADORNO. El token vale `#8a9186`,
+ * verificado por la fundacion contra papel (3.10:1) y blanco (3.24:1) pero NO
+ * contra las superficies tenidas: sobre `--superficie-2` (#f2f3ea) da **2.90:1**,
+ * debajo del 3:1 que WCAG 1.4.11 exige para el contorno de un control — y aca hay
+ * controles reales encima, que son las pastillas para sacar un filtro. `#7d857b`
+ * da 3.41:1 sobre esa misma superficie. Corresponde arreglarlo en el bloque
+ * `.sup-2, .sup-marca, .sup-calida` de `tokens.css`, que no es de esta superficie;
+ * mientras tanto se arregla donde se rompe. Doble clase para ganarle a `.sup-2`
+ * sin depender del orden de concatenacion.
+ */
+.vacio.vacio {
+  --linea-control: #7d857b;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-4);
+  padding: var(--espacio-8) var(--espacio-6);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+}
+
+/**
+ * ⚠️ EL ICONO NO PUEDE USAR `--color-neutro-apagado`. Sobre `--superficie-2`
+ * (#f2f3ea) ese token da **2.33:1**: es `aria-hidden`, asi que WCAG 1.4.11 lo
+ * exime por decorativo, pero es el ancla visual del unico bloque de la pantalla
+ * que la persona mira cuando no encontro nada, y a 2.33 no se ve. Reusa el
+ * `--linea-control` que este bloque ya remapea a #7d857b: **3.41:1**, que es el
+ * piso de forma, y sin agregar un hex mas.
+ */
+.vacioMarca {
+  color: var(--linea-control);
+  line-height: 0;
+}
+
+/**
+ * ⚠️ ACA SI VA `titular-degradado`, Y ES EL UNICO LUGAR DE LA PANTALLA. Este <h2>
+ * no tiene ningun descendiente con `transform`, asi que el recorte contra el
+ * fondo no corre riesgo. Peor stop del degradado: `--verde-750` (#0f673c) sobre
+ * #f2f3ea = 6.40:1 ✅.
+ */
+.vacioTitulo {
+  margin: 0;
+  color: var(--color-tinta);
+}
+
+.vacioTexto {
+  margin: 0;
+  max-width: var(--ancho-lectura);
+  /* Sobre `.sup-2` este token esta remapeado a #5b6459: 5.51:1 ✅ */
+  color: var(--color-neutro-tenue);
+}
+
+.vacioSalidas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.vacioEtiqueta {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+  margin-right: var(--espacio-1);
+}
+
+/**
+ * ⚠️ ACA SE DESACTIVA EL `white-space: nowrap` DEL BOTON DEL SISTEMA, Y ES UN
+ * ARREGLO DE DESBORDE, NO UNA PREFERENCIA. `ui.module.css` declara `.boton {
+ * white-space: nowrap }` —correcto para "Comprar" o "Siguiente →"— pero aca las
+ * etiquetas son frases: "Volver a la primera página" mide ~200px de min-content
+ * mas 32 de padding, contra los **288px utiles** que quedan a 320 menos los 48
+ * de padding de `.vacio` = 240. Un flex item con `nowrap` no encoge por debajo de
+ * su min-content, y como `html` lleva `overflow-x: clip` no hay scroll que lo
+ * salve: el boton queda CORTADO e inalcanzable en el telefono. `flex-wrap` en el
+ * contenedor no alcanza, porque el que desborda es UN item.
+ *
+ * Doble clase para ganarle a `.boton` por especificidad (0,2,0 contra 0,1,0) sin
+ * depender de en que orden Next concatene los dos modulos.
+ */
+.vacioAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-2);
+}
+
+.vacioAcciones.vacioAcciones > * {
+  white-space: normal;
+  text-align: center;
+  max-width: 100%;
+}
+
+/* ============================================================ paginacion */
+
+/**
+ * ⚠️ `flex-wrap` NO ES COSMETICO: SIN EL, LA PAGINACION DESBORDA A 320px. El
+ * boton del sistema declara `white-space: nowrap`, asi que los dos `BotonEnlace`
+ * no pueden encoger por debajo de su min-content. Sumado al centro, el ancho
+ * minimo de la fila supera los 288px utiles (canal de 16px por lado) — y como
+ * `html` lleva `overflow-x: clip`, no hay scroll que lo salve: "Siguiente"
+ * quedaria literalmente cortado e inalcanzable en telefono.
+ *
+ * ⚠️ EN TELEFONO EL CENTRO SUBE A SU PROPIA FILA (`order: -1`) para que los dos
+ * controles queden lado a lado y al alcance del pulgar.
+ */
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-3) var(--espacio-5);
+  margin-top: var(--espacio-7);
+  padding-top: var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.paginacionCentro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-2);
+  /* `flex-basis` y no `min-width`: un piso duro es lo que desbordaba. */
+  flex: 0 1 200px;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .paginacionCentro {
+    order: -1;
+    flex-basis: 100%;
+  }
+}
+
+.paginacionCuenta {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/**
+ * RIEL DE PROGRESO.
+ *
+ * ⚠️ "PAGINA 3 DE 47" NO SE SIENTE; UNA BARRA AL 6% SI. El dato ya estaba en la
+ * pantalla, solo que escrito.
+ *
+ * ⚠️ EL RELLENO SE DIBUJA POR RELOJ, NO POR SCROLL, Y ESO ES UN ARREGLO. Con
+ * `.revela-linea` (`animation-range: entry 10% cover 25%`) sobre un elemento de
+ * 4px que vive al final del documento hacen falta ~200px de scroll DESPUES de que
+ * asoma para completar la animacion; si el pie no da ese recorrido, la barra se
+ * congela a mitad y dibuja una fraccion ARBITRARIA del progreso real. Un
+ * indicador de progreso que miente es peor que ninguno. Por reloj siempre
+ * termina, y con `prefers-reduced-motion` queda dibujado en su proporcion
+ * correcta desde el primer cuadro.
+ *
+ * ⚠️ EL KEYFRAME SE DECLARA EN ESTE MODULO Y CON NOMBRE PROPIO. En un CSS Module
+ * los nombres de `@keyframes` son LOCALES: declararlo aca garantiza que resuelva.
+ * El nombre no colisiona con ninguno de `movimiento.css` ni con los que ya tienen
+ * tomados los otros modulos —`dibujarRiel` ya existe en `ui.module.css` y por eso
+ * este se llama distinto—.
+ *
+ * El keyframe solo declara el `from`: el `to` implicito es el valor declarado del
+ * elemento, o sea `scaleX(var(--progreso))`. Por eso no hace falta repetir la
+ * proporcion adentro de la animacion.
+ */
+.riel {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radio-chico);
+  background: var(--linea-tenue);
+  overflow: hidden;
+}
+
+.rielRelleno {
+  display: block;
+  height: 100%;
+  transform: scaleX(var(--progreso, 0));
+  transform-origin: left center;
+  background-image: var(--degradado-acento);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rielRelleno {
+    animation: dibujaRielPaginacion var(--dur-escena) var(--curva-corte) both;
+  }
+}
+
+@keyframes dibujaRielPaginacion {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/**
+ * Extremo inactivo.
+ *
+ * ⚠️ NO ES UN BOTON DESHABILITADO NI UN ENLACE MUERTO: es texto. Un `<a>` sin
+ * `href` no recibe foco y un `<button disabled>` en una barra de navegacion
+ * miente sobre lo que es. Aca solo hace falta ocupar el mismo lugar para que el
+ * control que si funciona no se corra.
+ *
+ * ⚠️ Y JUSTO POR ESO NO PUEDE USAR `--color-neutro-apagado`: #9aa396 sobre papel
+ * da **2.49:1**, y si esto es texto —lo dice el parrafo de arriba— la excepcion
+ * de WCAG 1.4.3 para componentes de interfaz inactivos NO aplica.
+ * `--color-neutro-tenue` da 4.69:1 y sigue leyendose como apagado al lado de un
+ * boton con borde verde.
+ */
+.paginacionInactiva {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control-chico);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  white-space: nowrap;
+}
+
+.volverArriba {
+  display: block;
+  width: fit-content;
+  margin: var(--espacio-5) auto 0;
+  min-height: var(--alto-control-chico);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+}
+
+/* ======================================================== areas tactiles */
+
+/**
+ * ⚠️ TODO LO QUE SE TOCA MIDE 44px CON EL DEDO (WCAG 2.5.5). Con puntero fino se
+ * dejan en 36: una columna de doce facetas a 44px ocupa el doble de alto sin que
+ * nadie lo necesite, y una fila de pastillas a 44 con mouse se ve como una barra
+ * de botones. Es un apartamiento consciente y acotado al puntero.
+ *
+ * ⚠️ ESTA LISTA INCLUYE `.volverArriba`, que es el ULTIMO control que alguien
+ * toca con el pulgar y se quedaba afuera.
+ */
+@media (pointer: coarse) {
+  .pastilla,
+  .limpiar,
+  .opcion,
+  .opcionActiva,
+  .ordenOpcion,
+  .ordenOpcionActiva,
+  .filtrosPieEnlace,
+  .volverArriba,
+  .paginacionInactiva,
+  .cintaEnlace {
+    min-height: var(--alto-control);
+  }
+}

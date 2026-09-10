@@ -1,0 +1,439 @@
+/**
+ * PANTALLAS DE SERVICIO — el 404 y el error de la raiz.
+ *
+ * ⚠️ SON LAS DOS UNICAS PANTALLAS DEL SITIO SIN CONTENIDO PROPIO, asi que son
+ * las unicas donde se puede componer una escena entera en vez de acomodar
+ * datos. Tambien son las que mas gente ve sin haberlas pedido.
+ *
+ * ⚠️ VERSION LUMINOSA (2026-09-10). Antes la escena era fosa plana con una
+ * brasa verde oscura respirando en una esquina: "la luz se resta". El dueño
+ * rechazo esa estetica. Ahora la luz se SUMA: tres blobs de verde y Amarillo
+ * Cambio flotan detras (la alfa la fija `.sup-fosa`, medida), la trama de
+ * rombos flota encima de ellos, el codigo lleva gradiente vivo con banda de
+ * luz y halo, el texto va en vidrio oscuro y la escena termina redondeada
+ * sobre la tira de recuperacion, que es otra escena de luz sobre papel.
+ *
+ * ⚠️ TODA CAPA DE FONDO VA ANIDADA, NUNCA COMPARTIENDO ELEMENTO CON `.sup-*`.
+ * `.sup-fosa::before` es el filo de luz y `.patron-vivo::before` es el patron:
+ * misma especificidad (0,1,0) y `movimiento.css` se importa DESPUES, asi que
+ * compartir elemento apaga el filo sin dar ningun error.
+ *
+ * ⚠️ NO LLEVA `.con-grano`. La escena ocupa el viewport entero y `body::after`
+ * ya pinta ahi la misma turbulencia SVG: sumar la capa local es repintar los
+ * mismos pixeles dos veces con dos opacidades distintas.
+ *
+ * ⚠️ NADA DE ESTE ARCHIVO PISA UNA PROPIEDAD DE UNA UTILIDAD GLOBAL. `.sup-fosa`
+ * y `.escena-luz` declaran `position`, `isolation`, `color`, `background-*` y
+ * tokens; `.sup-vidrio-oscuro` ademas `border`, `border-radius` y `box-shadow`;
+ * `.shimmer-titulo` `background-*` y `color`. Aca no se declara ninguna de esas
+ * sobre el mismo elemento: el codigo hereda el papel de `.sup-fosa` como
+ * fallback, no lo escribe.
+ */
+
+.marco {
+  display: flex;
+  flex-direction: column;
+}
+
+/**
+ * ⚠️ `flex: 1 0 auto` MAS `min-height`, y hacen falta los dos. En el error de la
+ * raiz no hay barra ni pie, asi que la escena tiene que estirarse hasta el
+ * fondo; en el 404 hay barra, pie y ademas la tira de recuperacion, y ahi manda
+ * el `min-height`.
+ *
+ * ⚠️ `dvh` Y NO `vh`. En el telefono `vh` cuenta la barra del navegador como si
+ * no existiera y sobra siempre una tira — que es justo lo que empujaria el pie
+ * y la tira de recuperacion fuera de pantalla en el 404.
+ *
+ * ⚠️ `clip` Y NUNCA `hidden`, Y HACE FALTA. Un blob de hasta 720px centrado en
+ * el 82% del ancho sobresale del cuadro: sin recorte pintaria POR ENCIMA de la
+ * barra superior y del pie del 404, dos bloques que ni siquiera son parte de
+ * esta escena. `hidden` lo frenaria igual, pero crea un contenedor de scroll:
+ * eso rompe cualquier `sticky` que caiga adentro y le cambia el timeline a las
+ * animaciones dirigidas por scroll. `clip` solo recorta. `.blobs` ya recorta
+ * por su cuenta; esto cubre a la trama, que flota.
+ */
+.escena {
+  flex: 1 0 auto;
+  display: grid;
+  align-content: center;
+  min-height: clamp(420px, 68dvh, 760px);
+  padding-block: var(--espacio-seccion);
+  overflow: clip;
+  /* Por encima de la tira: su sombra de color cae sobre el papel, no debajo de el. */
+  z-index: var(--z-contenido);
+}
+
+/**
+ * ESQUINAS REDONDEADAS ABAJO, SOLO CUANDO HAY ALGO DEBAJO. En el 404 la tira de
+ * recuperacion sigue a la escena y el radio de panel la convierte en una capa
+ * apoyada sobre el papel, con la sombra ambiente verde de un panel grande. En
+ * el error de la raiz la escena es lo ultimo de la pagina y llega hasta el
+ * borde: unas esquinas redondeadas contra el final del viewport se verian como
+ * un recorte.
+ */
+.escena:not(:last-child) {
+  border-end-start-radius: var(--radio-panel);
+  border-end-end-radius: var(--radio-panel);
+  box-shadow: var(--sombra-color);
+}
+
+/**
+ * Capa de rombos en deriva, flotando.
+ *
+ * ⚠️ LA MASCARA ES RADIAL DESDE ARRIBA A LA DERECHA, que es la direccion de la
+ * LUZ del sistema y el unico cuadrante sin texto: la escena centra su contenido
+ * verticalmente, asi que arriba a la derecha queda siempre libre. La
+ * composicion resuelve el contraste en vez de corregirlo bajando una opacidad.
+ *
+ * ⚠️ `z-index: var(--z-fondo)` (-1) SOLO FUNCIONA PORQUE `.sup-fosa` DECLARA
+ * `isolation: isolate`. Sin eso el -1 se escapa del bloque y termina detras del
+ * fondo de la pagina.
+ *
+ * ⚠️ FLOTA CON `.flota .flota-lento` (global): ±6px en 22s sobre el envoltorio,
+ * mientras el hijo `.patron-vivo` deriva un mosaico entero en 26s. Dos
+ * movimientos con periodos distintos es lo que hace que el patron se lea como
+ * una tela y no como un fondo que se corre. Los dos son `transform` puro.
+ */
+.trama {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  /*
+   * Papel al 7%: con los blobs de fosa debajo (0.14 / 0.08) el compuesto en el
+   * peor punto sigue dejando el texto tenue de noche arriba de 4.5 —y ademas
+   * el texto no vive en este cuadrante, por la mascara—.
+   */
+  --patron-color: rgb(var(--luz-papel) / 0.07);
+  -webkit-mask-image: radial-gradient(85% 70% at 100% 0%, #000 0%, transparent 68%);
+  mask-image: radial-gradient(85% 70% at 100% 0%, #000 0%, transparent 68%);
+}
+
+/* `.patron-vivo` aporta `position: relative` y el recorte; solo falta el alto. */
+.tramaCapa {
+  height: 100%;
+}
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+}
+
+/**
+ * La marca, SOLO en el error de la raiz.
+ *
+ * ⚠️ ESA PANTALLA NO LLEVA `Header` A PROPOSITO —si lo que fallo fue leer la
+ * sesion, renderizarlo volveria a fallar—, y el costo era que quedaba sin una
+ * sola señal de en que sitio estas. `Logo` es presentacion pura: no lee sesion,
+ * asi que no reintroduce el fallo. El halo lo pone `.marca-brilla` (global,
+ * `filter` estatico) y la entrada `.entra-veloz`, que anima solo `transform`:
+ * una entrada con `filter` pisaria el halo para siempre.
+ */
+.marcaEnlace {
+  display: inline-flex;
+  align-items: center;
+  /*
+   * ⚠️ `inline-flex` NO ALCANZA ADENTRO DE UNA COLUMNA FLEX. `.contenido` es
+   * `flex-direction: column`, o sea que el `align-items: stretch` por defecto
+   * le estira el ANCHO al item igual: el enlace terminaba midiendo toda la
+   * columna y el area clickeable invisible se comia el ancho entero de la
+   * escena. `flex-start` lo deja del ancho del logo, que es lo que se ve.
+   */
+  align-self: flex-start;
+  /* Area tactil de 44px (WCAG 2.5.5): es un enlace de salida, no un adorno. */
+  min-height: var(--alto-control);
+  margin-bottom: var(--espacio-7);
+  border-radius: var(--radio);
+  color: var(--color-papel);
+}
+
+.marcaEnlace:hover {
+  color: var(--color-cambio);
+}
+
+/**
+ * ⚠️ EL ORNAMENTO VA EN SU PROPIA FILA, ARRIBA DEL CODIGO, Y NO AL COSTADO. En
+ * una fila flex con el codigo, la bandera rotada -12deg sobre su esquina
+ * inferior izquierda saca ~12px de caja POR ARRIBA de y=0 (bounding box
+ * 68·cos12 + 66·sin12 = 80.2px contra un alto en flujo de 68px), y cualquier
+ * recorte de la fila la decapita. Apilado no hay recorte que valga y ademas no
+ * hay riesgo de desborde a 320px.
+ *
+ * ⚠️ `width: fit-content` Y EL ORIGEN ABAJO A LA IZQUIERDA SON POR `.enciende`:
+ * esa entrada escala el elemento, y un bloque de todo el ancho de la columna
+ * escalando desde su centro corre la bandera de costado durante la animacion.
+ * Del ancho del dibujo y con origen en su base, se enciende en su lugar.
+ */
+.ornamento {
+  width: fit-content;
+  margin-bottom: var(--espacio-6);
+  line-height: 0;
+  transform-origin: 0% 100%;
+}
+
+/**
+ * LA BANDERA IZADA. Es el gesto literal del fuera de juego y es lo unico de
+ * esta pantalla que ninguna otra marca puede copiar.
+ *
+ * ⚠️ SE IZA CON `rotate` Y ONDEA CON `transform`, Y SON PROPIEDADES DISTINTAS
+ * A PROPOSITO: dos animaciones sobre la MISMA propiedad no se suman, la ultima
+ * de la lista pisa a la otra. Con `rotate` para el izado y `translate3d` para
+ * el vaiven, las dos corren a la vez sobre el mismo elemento y ninguna pisa
+ * nada. El vaiven arranca cuando termina el izado y lleva `both`: sin el fill,
+ * durante la espera el transform es `none` y al arrancar salta 4px.
+ *
+ * ⚠️ EL REPOSO (`rotate: -12deg`) VA EN LA CLASE, NO SOLO EN EL KEYFRAME: sin
+ * animacion —movimiento reducido, o un navegador sin soporte— la bandera tiene
+ * que verse izada igual.
+ *
+ * ⚠️ EL HALO ES `filter` ESTATICO SOBRE UN PNG DE 72px: cuesta nada y va FUERA
+ * del dibujo. Amarillo Cambio pegado y verde luminoso alrededor: la chispa de
+ * la marca sobre fosa, donde un halo verde solo se pierde.
+ *
+ * ⚠️ LOS KEYFRAMES SON LOCALES AL MODULO Y TIENEN QUE SERLO. En un CSS Module
+ * los nombres de `@keyframes` se renombran: referenciar uno global desde
+ * `animation-name` de un modulo no resuelve. `izar` y `ondear` no existen en
+ * `movimiento.css` (lo verifica `scripts/chequeo-css.mjs`).
+ */
+.bandera {
+  display: block;
+  rotate: -12deg;
+  transform-origin: bottom left;
+  filter: drop-shadow(0 0 8px rgb(var(--luz-cambio) / 0.55))
+    drop-shadow(0 0 26px rgb(var(--luz-verde-clara) / 0.4));
+}
+
+@keyframes izar {
+  from {
+    opacity: 0;
+    rotate: 38deg;
+  }
+  to {
+    opacity: 1;
+    rotate: -12deg;
+  }
+}
+
+@keyframes ondear {
+  from {
+    transform: translate3d(0, 4px, 0);
+  }
+  to {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bandera {
+    animation:
+      izar var(--dur-escena) var(--curva-viva) both,
+      ondear var(--dur-flotar) var(--curva-flotar) var(--dur-escena) infinite alternate both;
+  }
+}
+
+/**
+ * LA HOJA DIAGONAL — el ornamento del ERROR, que NO es la bandera.
+ *
+ * ⚠️ 404 Y 500 SON EVENTOS DISTINTOS: el 404 es un problema de LUGAR (esto no
+ * existe: fuera de juego) y el error es un problema de MOMENTO (se rompio aca y
+ * ahora). Poner la bandera del juez de linea en los dos vacia el simbolo, que
+ * es lo contrario de lo que la escena busca. Aca se lee "se paro el juego".
+ *
+ * ⚠️ NO SE MUEVE EN BUCLE, asi que el desfasaje de fase de
+ * `--patron-diagonales-anchas` (periodo 30px sobre el eje contra 30px de
+ * traslacion horizontal) no puede aparecer: entra una vez con el telon
+ * diagonal (global) y se queda quieta, con su halo estatico. La mascara se
+ * aplica DESPUES del filtro, asi que el halo se desvanece con las rayas.
+ */
+.hoja {
+  display: block;
+  width: min(280px, 68vw);
+  height: 56px;
+  border-radius: var(--radio-pastilla);
+  --patron-color: var(--color-cambio);
+  background-image: var(--patron-diagonales-anchas);
+  filter: drop-shadow(0 0 10px rgb(var(--luz-cambio) / 0.5));
+  -webkit-mask-image: linear-gradient(var(--eje), #000 0%, transparent 88%);
+  mask-image: linear-gradient(var(--eje), #000 0%, transparent 88%);
+}
+
+/**
+ * HALO DEL CODIGO. Dos `drop-shadow` estaticos —Cambio pegado, verde luminoso
+ * lejos— sobre el envoltorio: filtran el resultado del hijo, gradiente
+ * recortado al texto incluido, y como el envoltorio no se anima nunca, ningun
+ * `filter` de entrada los pisa. Es un `filter` sobre UN elemento por pantalla,
+ * pintado una vez.
+ */
+.codigoHalo {
+  filter: drop-shadow(0 0 12px rgb(var(--luz-cambio) / 0.3))
+    drop-shadow(0 0 44px rgb(var(--luz-verde-clara) / 0.32));
+}
+
+/**
+ * El codigo. Es ORNAMENTO (`aria-hidden`), asi que no tiene requisito de
+ * contraste — y aun asi lo cumple: el gradiente lo pone `.shimmer-titulo`
+ * (global), que sobre `.sup-fosa` elige papel → Cambio → verde-400, con el
+ * peor stop en 7.51:1 sobre fosa y 5.03 con dos blobs encima.
+ *
+ * ⚠️ NO DECLARA `color`. `.shimmer-titulo` lo pone en `transparent` adentro de
+ * un `@supports` y un modulo no puede pisarlo sin depender del orden de
+ * inyeccion. Sin soporte de `background-clip: text`, el `<p>` HEREDA el papel
+ * de `.sup-fosa` y el texto sigue existiendo. Con movimiento reducido la banda
+ * se apaga y queda el gradiente quieto.
+ */
+.codigo {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-weight: var(--peso-normal);
+  font-size: var(--display-1);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  /* La regla dura de 320px: una palabra sola no puede empujar la pagina. */
+  overflow-wrap: anywhere;
+}
+
+.titulo {
+  margin: var(--espacio-4) 0 var(--espacio-6);
+  font-size: var(--display-3);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
+  overflow-wrap: anywhere;
+  color: var(--color-sobre-oscuro);
+}
+
+/**
+ * El panel de vidrio con el texto y las acciones. La superficie —fondo, borde,
+ * radio, sombra, desenfoque y remapeo de tokens— la pone `.sup-vidrio-oscuro`;
+ * aca solo el layout y el padding. 24px de radio con 32 de padding: los botones
+ * de adentro no tocan la curva.
+ */
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-6);
+  max-width: var(--ancho-lectura);
+  padding: var(--espacio-7);
+  /*
+   * ⚠️ `min-width: 0` PORQUE ES UN ITEM DE UNA COLUMNA FLEX. Sin esto el panel
+   * no puede medir menos que su contenido mas ancho —el boton primario, que no
+   * parte su etiqueta— y a 320px se ensanchaba 6px por fuera de la caja de
+   * contenido del contenedor, con 16 de aire a la izquierda y 10 a la derecha.
+   * Verificado en el navegador. Con esto el panel queda simetrico y, si algun
+   * dia una etiqueta no entra, invade su propio padding y no el margen de la
+   * pagina.
+   */
+  min-width: 0;
+}
+
+/**
+ * REFLEJO DEL VIDRIO: una banda de papel que se apaga desde el filo superior,
+ * como la luz que resbala por un cristal. Es lo que hace que fosa al 86% sobre
+ * fosa se lea como un panel y no como una zona un poco distinta.
+ *
+ * ⚠️ VIVE ADENTRO DEL PADDING, Y ES UN NUMERO: 24px de alto contra 32 de
+ * padding (20 en telefono chico, donde el ultimo 17% de la banda —papel al
+ * ~1%— roza la caja de la primera linea, no sus glifos). Es luz que se suma
+ * arriba de un vidrio medido con blanco detras, asi que NO puede quedar debajo
+ * de texto: por eso no es un gradiente de fondo sobre todo el panel.
+ *
+ * ⚠️ `z-index: -1` con el `isolation: isolate` que ya trae `.sup-vidrio-oscuro`:
+ * pinta por encima del fondo del panel y por debajo del contenido. Esa clase no
+ * usa pseudo-elementos, asi que el `::before` esta libre.
+ */
+.cuerpo::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 24px;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: linear-gradient(180deg, rgb(var(--luz-papel) / 0.09) 0%, transparent 100%);
+}
+
+@media (max-width: 480px) {
+  .cuerpo {
+    padding: var(--espacio-5);
+  }
+}
+
+.cuerpo p {
+  margin: 0;
+  font-size: var(--texto-lg);
+  line-height: var(--interlineado-lectura);
+  /* `.sup-vidrio-oscuro` remapea este token a #b3c6b8: 6.67:1 en su peor caso, medido. */
+  color: var(--color-neutro-texto);
+}
+
+/* ------------------------------------------------- tira de recuperacion */
+
+/**
+ * ⚠️ VA SOBRE PAPEL Y FUERA DE `.sup-fosa`, Y NO ES ESTETICA. Las fichas de
+ * catalogo declaran `background: var(--color-blanco)` literal, asi que adentro
+ * de una superficie oscura seguirian siendo blancas — pero sus tokens de texto
+ * SI se remapean: el nombre del vendedor usa `--color-neutro-tenue`, que dentro
+ * de `.sup-fosa` vale #8fa79a y sobre blanco da **2.57:1**.
+ *
+ * `.escena-luz` (global) trae `position: relative; isolation: isolate` —lo que
+ * `Blobs` necesita— y remapea los tokens de texto a los que aguantan la luz.
+ */
+.recuperacion {
+  padding: var(--espacio-seccion) var(--canal);
+}
+
+.recuperacionContenido {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+}
+
+/**
+ * El titulo de la tira, con la linea de energia debajo en vez de una regla gris
+ * a todo el ancho: un trazo corto redondeado con el gradiente de acento y su
+ * halo. Es forma, no texto: nada que medir.
+ */
+.recuperacionTitulo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0 0 var(--espacio-6);
+  font-size: var(--texto-2xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-titulo);
+}
+
+/**
+ * ⚠️ EL HALO SE ESCRIBE A MANO Y NO CON `--glow-suave`, Y ES ARITMETICA: esa
+ * receta lleva `spread` de -4px y -20px, y sobre un trazo de 4px de alto una
+ * sombra con spread -4 mide 4 - 8 = -4px, o sea que el navegador no pinta
+ * NADA salvo el anillo de 1px. El trazo quedaba sin luz sin que fallara nada.
+ * Con spread 0 la luz existe: verde luminoso pegado y un poco mas lejos.
+ */
+.recuperacionTitulo::after {
+  content: '';
+  width: 56px;
+  height: 4px;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--degradado-acento);
+  box-shadow:
+    0 0 10px rgb(var(--luz-marca) / 0.55),
+    0 0 24px rgb(var(--luz-marca) / 0.3);
+}
+
+.recuperacionGrilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--espacio-6);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 600px) {
+  .recuperacionGrilla {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    gap: var(--espacio-4);
+  }
+}

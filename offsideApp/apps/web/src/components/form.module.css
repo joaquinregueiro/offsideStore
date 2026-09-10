@@ -1,0 +1,1890 @@
+/**
+ * FORMULARIOS — autenticacion, vendedor, compra y back-office.
+ *
+ * VERSION LUMINOSA (2026-09-10). El duenio vio la version anterior —angulosa,
+ * editorial, "la luz se resta"— y la rechazo por anticuada y cuadrada. Esta la
+ * reemplaza: campos redondeados que se abren con un halo verde al enfocar,
+ * etiqueta que flota hacia el campo activo, errores que entran con halo
+ * naranja, boton de envio que respira y le corre luz por el filo, y un panel de
+ * luz detras del formulario que se mueve solo. Lo que NO cambia: los nombres de
+ * clase, los `name` de los campos y el POST nativo.
+ *
+ * ⚠️ CINCO NOMBRES DE CLASE SON CONTRATO Y NO SE RENOMBRAN: `.pagina`,
+ * `.titulo`, `.bajada`, `.pie` y `.pieSeparado`. VERIFICADO con grep
+ * (2026-09-10): `.titulo`, `.bajada`, `.pie` y `.pieSeparado` los importan las
+ * cuatro pantallas de `(auth)` con formulario (`ingresar`, `crear-cuenta`,
+ * `olvide-password`, `restablecer-password`); `.pagina` HOY NO LA USA NINGUNA
+ * PANTALLA —las de `(vendedor)` usan la `.pagina` de `vendedor.module.css` y
+ * `(auth)` usa `.hoja`— y se conserva igual porque es contrato. Un rename aca
+ * no rompe la compilacion: deja pantallas sin estilo, que es peor porque no
+ * avisa.
+ *
+ * ⚠️ TODOS LOS KEYFRAMES DE ESTE ARCHIVO SON LOCALES Y TIENEN NOMBRE PROPIO.
+ * En un CSS Module los nombres de `@keyframes` **y las referencias de
+ * `animation-name`** se hashean con el modulo: escribir `animation: surgir-luz`
+ * aca NO alcanza al keyframe global de `app/movimiento.css`, resuelve a uno
+ * inexistente y no anima nada, sin error. Por eso ninguno de los de abajo se
+ * llama como uno global (`node scripts/chequeo-css.mjs` lo verifica).
+ *
+ * ⚠️ NO HAY UNA SOLA ANIMACION DIRIGIDA POR SCROLL ACA, Y ES UNA DECISION. Un
+ * filete con `animation-timeline: view()` en una pagina que entra entera en
+ * pantalla queda congelado donde este —dibujado al 40% para siempre—, que se
+ * lee como defecto de render. Todo es de PRIMER PINTADO.
+ *
+ * ⚠️ LO QUE CORRE EN BUCLE ANIMA SOLO `transform`, `opacity` Y `filter`, Y VIVE
+ * ADENTRO DE `@media (prefers-reduced-motion: no-preference)`: el panel de luz
+ * de `.pagina` y el riel de envio. Sin preferencia de movimiento, cada cosa se
+ * ve entera y quieta —nunca `opacity: 0` clavado—: las entradas usan
+ * `backwards`, asi que fuera de la media query el estado natural es el visible.
+ *
+ * ⚠️ EL GLOW VA SIEMPRE FUERA DEL TEXTO. Halos de foco y de error son
+ * `box-shadow` del control; el brillo de una etiqueta es `text-shadow` difuso
+ * (`--glow-texto`, alfa 0.3 a 16px: no mueve el contraste medido). Ningun fondo
+ * detras de un texto se aclara mas de lo que la fundacion midio.
+ *
+ * ⚠️ `--luz-alerta` ES LOCAL. La fundacion define canales `r g b` para las
+ * luces verdes, el Cambio y el papel, pero no para el naranja: el halo de error
+ * necesita `rgb(255 144 45 / alfa)` —que es `--color-naranja`, forma, no
+ * texto— y se declara aca como canal para escribirlo con tres alfas distintas.
+ * Si algun dia la fundacion lo agrega, se borra de aca.
+ *
+ * ⚠️⚠️ NINGUN PATRON DE ESTE ARCHIVO USA `var(--patron-rombos)`, Y NO ES
+ * CAPRICHO: ESA FORMA NO ACEPTA QUE SE LE CAMBIE EL COLOR. Medido en Chromium:
+ * el valor COMPUTADO de un custom property ya lleva sus `var()` SUSTITUIDOS, y
+ * el patron se declara en `:root`, asi que el `var(--patron-color)` que lleva
+ * adentro se resuelve ALLA y se hereda ya resuelto. Redefinir `--patron-color`
+ * en un descendiente no cambia un solo rombo. La cinta del titulo de grupo se
+ * escribe con sus gradientes literales y Verde Cancha explicito.
+ */
+
+/* ================================================================= pagina */
+
+/**
+ * `.pagina` ES UN PANEL DE LUZ, NO UNA FICHA BLANCA. Lo que gana `.pagina` es
+ * el fondo: dos manchas de luz —verde clara y Amarillo Cambio— que flotan
+ * detras del formulario, y el asta de la bandera como riel luminoso en el
+ * margen izquierdo.
+ *
+ * ⚠️ HOY NO LA MONTA NINGUNA PANTALLA (ver el encabezado): las de `(auth)`
+ * envuelven el formulario en su propia `.hoja`. Se mantiene como contrato y
+ * como envoltorio listo para la proxima pantalla-formulario que no tenga hoja
+ * propia; lo que SI se ve en todas es lo de `.formulario` para abajo.
+ *
+ * ⚠️ LAS MANCHAS LEEN `--blob-alfa-cancha` / `--blob-alfa-cambio` Y NO UN
+ * NUMERO PROPIO. Sobre papel pelado la fundacion las fija en 0.04 / 0.20 porque
+ * el texto tenue de las ayudas (`--color-neutro-tenue`, 4.69:1 sobre papel) se
+ * apoya DIRECTO sobre este fondo: al 6% de verde-400 ya cae a 4.47. Si una
+ * pantalla envuelve el formulario en `.escena-luz`, los tokens suben solos y el
+ * remapeo de texto que trae esa clase mantiene AA. Nada de aca decide una alfa.
+ *
+ * ⚠️ `--canal` entrega 16px a 320px y el vertical arranca en `--espacio-7`.
+ */
+.pagina {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: var(--ancho-formulario);
+  margin: 0 auto;
+  padding: clamp(var(--espacio-7), 2rem + 5vw, var(--espacio-9)) var(--canal);
+  /* El asta vive en el margen izquierdo, no encima del texto. */
+  padding-inline-start: calc(var(--canal) + var(--espacio-4));
+}
+
+/**
+ * LAS DOS MANCHAS DE LUZ, en un solo pseudo con dos radiales.
+ *
+ * ⚠️ `inset: 3% 5%` Y TRASLACION DE 2%: el pseudo se mueve SIEMPRE adentro de
+ * su caja, asi que nunca asoma por el borde derecho de un telefono de 320px. No
+ * hace falta `overflow: clip` en `.pagina`, que recortaria el halo de foco de
+ * los campos pegados al canal.
+ *
+ * ⚠️ LAS DOS MANCHAS ESTAN EN ESQUINAS OPUESTAS Y VIAJAN JUNTAS (mismo pseudo):
+ * sus centros nunca se superponen, asi que el punto mas claro es el centro de
+ * UNA. Medido sobre papel: centro Cambio (0.20) tenue 4.58 · linea-control
+ * 3.03 · alerta 4.56; centro verde-400 (0.04) tenue 4.54 · linea 3.00. Con los
+ * dos centros apilados —que aca no pasa— la linea caeria a 2.94.
+ *
+ * ⚠️ SIN `filter: blur`: el difuminado esta en el gradiente (para en `transparent`
+ * al 70%). Un blur real sobre un pseudo del tamanio de la pagina se
+ * recalcularia en cada cuadro del bucle.
+ */
+.pagina::before {
+  content: '';
+  position: absolute;
+  inset: 3% 5%;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: var(--radio-panel);
+  background-image:
+    radial-gradient(
+      42% 38% at 16% 10%,
+      rgb(var(--luz-verde-clara) / var(--blob-alfa-cancha)) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      44% 40% at 86% 78%,
+      rgb(var(--luz-cambio) / var(--blob-alfa-cambio)) 0%,
+      transparent 70%
+    );
+}
+
+/**
+ * EL ASTA DE LA BANDERA, ahora como riel de luz: 4px redondeados con el
+ * degradado vivo de la marca y un halo verde alrededor. Es el isotipo —el
+ * asta del juez de linea— y sigue en el margen, no encima del texto.
+ *
+ * ⚠️ `--degradado-vivo` LEE `--giro`, que esta registrada con `inherits: false`
+ * e inicial 112deg: sin animarla, el asta queda en el eje del sistema.
+ */
+.pagina::after {
+  content: '';
+  position: absolute;
+  inset: var(--espacio-7) auto var(--espacio-7) 0;
+  width: 4px;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--degradado-vivo);
+  box-shadow:
+    0 0 10px rgb(var(--luz-marca) / 0.5),
+    0 0 28px -4px rgb(var(--luz-marca) / 0.45);
+  transform-origin: center top;
+}
+
+/**
+ * ⚠️ ENTRADA AL PRIMER PINTADO, NO REVELADO POR SCROLL. `.pagina` esta arriba
+ * del pliegue en todas las pantallas que la usan. La luz se prende en 1.4s y
+ * despues flota a 26s, alternando: a esa velocidad no se percibe como
+ * movimiento, se percibe como que la pagina esta viva. El asta se dibuja de
+ * arriba hacia abajo.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .pagina {
+    animation: entraPanel var(--dur-escena) var(--curva-escena) backwards;
+  }
+
+  .pagina::before {
+    will-change: transform;
+    animation:
+      prendeLuz 1.4s var(--curva-entrada) backwards,
+      flotaLuz var(--dur-blob) var(--curva-flotar) infinite alternate;
+  }
+
+  .pagina::after {
+    animation: dibujaAsta var(--dur-escena) var(--curva-corte) 120ms backwards;
+  }
+}
+
+@keyframes entraPanel {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes prendeLuz {
+  from {
+    opacity: 0;
+  }
+}
+
+/** Tres puntos de paso y ninguno repite: con dos, el ojo detecta el vaiven. */
+@keyframes flotaLuz {
+  0% {
+    transform: translate3d(-2%, -1.5%, 0) scale(0.97);
+  }
+  50% {
+    transform: translate3d(1.5%, 2%, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(2%, -1%, 0) scale(0.98);
+  }
+}
+
+@keyframes dibujaAsta {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+}
+
+/**
+ * ⚠️ SIGUE EN `--texto-3xl` Y **NO** PASA A `--display-3`. `--display-3` es
+ * `clamp(30px, …, 52px)`: a 320px entregaria ~32.6px contra los 36px de hoy, o
+ * sea ACHICARIA el titulo de "Ingresar" justo en el telefono.
+ */
+.titulo {
+  font-size: var(--texto-3xl);
+  text-transform: uppercase;
+  margin-bottom: var(--espacio-3);
+}
+
+/**
+ * ⚠️ LA ENTRADA SIN SHIMMER VA PRIMERO, Y EL ORDEN ES EL ARREGLO DE UN BUG:
+ * la regla de adentro del `@supports` tiene la MISMA especificidad y suma el
+ * shimmer al mismo `animation`; si esta quedara despues, lo pisaria y la banda
+ * no correria nunca. Sin `background-clip`, el titulo igual entra; solo le
+ * falta la banda.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .titulo {
+    animation: surgeTitulo var(--dur-entrada) var(--curva-viva) 80ms backwards;
+  }
+
+  .bajada {
+    animation: surgeTitulo var(--dur-entrada) var(--curva-viva) 180ms backwards;
+  }
+}
+
+/**
+ * EL TITULAR VIVO CON SHIMMER: gradiente tinta → cancha → verde-500 recortado
+ * al texto, y una banda de luz que lo cruza UNA vez al cargar.
+ *
+ * ⚠️ VIVE ADENTRO DE UN `@supports` PORQUE EXIGE `color: transparent`. Si el
+ * fondo no llega —una extension, alto contraste— el titulo queda literalmente
+ * invisible. Sin soporte queda el Tinta de siempre.
+ *
+ * ⚠️ PEOR STOP: verde-500 sobre papel 3.12:1, y sobre el centro de las manchas
+ * de luz de `.pagina` 3.03-3.05:1. Alcanza porque el titulo mide 36px o mas
+ * (texto grande, 3:1); la fundacion prohibe este gradiente debajo de 24px y
+ * aca no hay riesgo de que baje (ver `.titulo`). ⚠️ Si alguien sube las alfas
+ * de las manchas, este es el primer numero que se cae.
+ *
+ * ⚠️ LA BANDA SE MUEVE CON `--brillo-x`, registrada en `tokens.css`
+ * (`inherits: false`, inicial 100%). Es una `@property`, asi que un keyframe
+ * local puede interpolarla igual que a `transform`. Al 300% de ancho, en 100%
+ * y en 0% la ventana muestra un tercio transparente: arranca y termina sin
+ * banda. `both` la deja en 0%, fuera de cuadro.
+ */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .titulo {
+    background-image:
+      linear-gradient(104deg, transparent 40%, var(--titular-luz) 50%, transparent 60%),
+      var(--degradado-titular-vivo);
+    background-size:
+      300% 100%,
+      100% 100%;
+    background-repeat: no-repeat;
+    background-position:
+      var(--brillo-x) 0,
+      0 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .titulo {
+      animation:
+        surgeTitulo var(--dur-entrada) var(--curva-viva) 80ms backwards,
+        cruzaBrillo var(--dur-brillo) var(--curva-corte) 520ms both;
+    }
+  }
+}
+
+/**
+ * ⚠️ TERMINA EN `blur(0)` EXPLICITO y la clase usa `backwards`: al terminar no
+ * queda ningun `filter` puesto sobre el titular.
+ */
+@keyframes surgeTitulo {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes cruzaBrillo {
+  from {
+    --brillo-x: 100%;
+  }
+  to {
+    --brillo-x: 0%;
+  }
+}
+
+.bajada {
+  margin: 0 0 var(--espacio-7);
+  color: var(--color-neutro-texto);
+  max-width: var(--ancho-lectura);
+}
+
+/* ============================================================== formulario */
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+  /* Tine radios y cualquier control nativo que quede sin dibujar a mano. */
+  accent-color: var(--color-cancha);
+  /* Canal del naranja de marca, para los halos de error. Ver el encabezado. */
+  --luz-alerta: 255 144 45;
+}
+
+/**
+ * EL FILETE DE LUZ ARRIBA DEL FORMULARIO: 3px redondeados con el degradado
+ * vivo y un halo, que se dibujan de izquierda a derecha.
+ *
+ * ⚠️ DOS CONDICIONES, Y LAS DOS HACEN FALTA. `[data-forma='panel']` sale de
+ * `bloque`, que distingue un formulario-pantalla de un formulario-accion:
+ * verificado, los formularios en linea del sitio —pausar, reactivar, eliminar,
+ * borrar foto, desvincular MP— pasan `bloque={false}`. Y `:has(.campo)`
+ * descarta los que solo llevan un `CampoOculto` y un boton (checkout, conectar
+ * MP): un filete flotando arriba de un boton suelto se ve como un error.
+ *
+ * ⚠️ ES UN `::before` DE UN CONTENEDOR FLEX, o sea el PRIMER ITEM y el `gap` lo
+ * separa solo. Sin soporte de `:has()` no hay filete y no falta nada.
+ */
+.formulario[data-forma='panel']:has(.campo)::before {
+  content: '';
+  height: 3px;
+  flex: none;
+  border-radius: var(--radio-pastilla);
+  transform-origin: left center;
+  background-image: var(--degradado-vivo);
+  box-shadow: 0 0 14px rgb(var(--luz-marca) / 0.45);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .formulario[data-forma='panel']:has(.campo)::before {
+    animation: dibujaFilete var(--dur-escena) var(--curva-corte) backwards;
+    /* Arranca con el contenedor, igual que los campos (ver el escalonado). */
+    animation-delay: var(--retraso, 0ms);
+  }
+}
+
+@keyframes dibujaFilete {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+}
+
+/**
+ * EL CUERPO DEL FORMULARIO.
+ *
+ * ⚠️ ESTE `<div>` EXISTE PARA QUE EL ESCALONADO NO SE REINICIE EN CADA ERROR:
+ * cuando la accion falla aparece el `<Aviso>` arriba de todo y **corre el
+ * indice de todos los campos**. Con `nth-child` eso cambia el `animation-delay`
+ * de cada uno, y cambiar el delay de una animacion ya terminada la REINICIA.
+ *
+ * ⚠️ SE ESCONDE CUANDO SOLO CONTIENE CAMPOS OCULTOS. Sin esto, el checkout y
+ * "conectar Mercado Pago" ganan 20px de `gap` por un contenedor de altura cero.
+ * Un `<input type="hidden">` dentro de un `display: none` SE SIGUE ENVIANDO.
+ */
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+  min-width: 0;
+}
+
+.cuerpo:not(:has(> :not(input))) {
+  display: none;
+}
+
+/**
+ * ⚠️ MIENTRAS SE ENVIA NO SE BAJA NINGUNA OPACIDAD: un `opacity: 0.7` compone
+ * cada texto contra el fondo y `--color-neutro-tenue` cae debajo de AA justo
+ * cuando alguien relee lo que escribio. Lo unico que cambia es el cursor.
+ *
+ * ⚠️ LOS CAMPOS TAMPOCO SE DESHABILITAN: si la accion falla —rate limit, email
+ * ya registrado, stock agotado— la persona tiene que encontrar el cursor donde
+ * lo dejo. El segundo envio ya lo bloquea el boton (`disabled` + `aria-busy`).
+ */
+.formulario[data-enviando='true'] {
+  cursor: progress;
+}
+
+/**
+ * RIEL DE ENVIO. Aparece SOLO mientras la Server Action esta corriendo, pegado
+ * arriba del boton, que es donde esta el ojo justo despues del clic. Es una
+ * pastilla con un pozo suave y una banda de luz viva que la recorre.
+ *
+ * ⚠️ SIN JAVASCRIPT NO EXISTE, Y ESTA BIEN: `pending` nunca se vuelve true en
+ * el modo degradado porque el navegador ya se fue de la pagina haciendo el POST.
+ */
+.riel {
+  position: relative;
+  overflow: hidden;
+  height: 6px;
+  border-radius: var(--radio-pastilla);
+  background: var(--riel-fondo, var(--superficie-2));
+  box-shadow: var(--sombra-hundida);
+}
+
+.riel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform-origin: left center;
+  background-image: var(--degradado-vivo);
+  box-shadow: 0 0 12px rgb(var(--luz-marca) / 0.6);
+}
+
+/**
+ * ⚠️ LA ANIMACION VIVE ADENTRO DE LA MEDIA QUERY, NO AFUERA CONFIANDO EN LA
+ * REGLA GLOBAL. Una `infinite` con la duracion aplastada queda clavada en el
+ * ULTIMO cuadro: el riel terminaria en `translateX(165%)`, FUERA de pantalla, y
+ * quien pidio menos movimiento no veria ninguna senial de envio. Adentro, ve la
+ * barra llena y quieta, que ya dice "esto trabaja".
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .riel::after {
+    animation: corridaEnvio 1200ms var(--curva-corte) infinite;
+  }
+}
+
+@keyframes corridaEnvio {
+  0% {
+    transform: translateX(-100%) scaleX(0.45);
+  }
+  60% {
+    transform: translateX(55%) scaleX(0.9);
+  }
+  100% {
+    transform: translateX(165%) scaleX(0.45);
+  }
+}
+
+/* ------------------------------------------------------------------ pie de accion */
+
+/**
+ * EL PIE DEL FORMULARIO: LO QUE VA PEGADO AL BOTON DE ENVIAR. Existe porque en
+ * `/comprar` el total y el submit son un solo objeto. Es un contenedor vacio de
+ * opinion: apila y nada mas. El `sticky`, el fondo y el redondeo los trae la
+ * pantalla por `clasePie`. El gap es MENOR que el del formulario para que el
+ * objeto se lea como uno solo.
+ */
+.pieAccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+/* ------------------------------------------------------ resumen de errores */
+
+/**
+ * LA LISTA DE ERRORES CON ANCLAS: la salida sin JavaScript de "llevame al campo
+ * que fallo". `href="#nombre"` apunta al `id` del control, y saltar a un ancla
+ * que es un control lo ENFOCA. Va fuera del `<Aviso>` (que es un `<p>`) y sin
+ * `role="alert"` propio: el aviso general ya interrumpe.
+ *
+ * Es una tarjeta redondeada con borde y halo naranja tenue: el color es forma
+ * (la fundacion permite `--color-naranja` en bordes y rellenos); el texto va en
+ * `--color-alerta-hondo`, que sobre blanco da 5.64:1.
+ */
+.resumen {
+  margin: 0;
+  padding: var(--espacio-4) var(--espacio-5);
+  border: 1px solid rgb(var(--luz-alerta) / 0.45);
+  border-radius: var(--radio-medio);
+  background: var(--superficie-1);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+  box-shadow:
+    var(--sombra-1),
+    0 0 0 3px rgb(var(--luz-alerta) / 0.1),
+    0 0 26px -6px rgb(var(--luz-alerta) / 0.45);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .resumen {
+    animation: entraResumen var(--dur-media) var(--curva-viva) backwards;
+  }
+}
+
+@keyframes entraResumen {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+.resumenTitulo {
+  margin: 0 0 var(--espacio-2);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  font-size: var(--texto-xs);
+  color: var(--color-alerta-hondo);
+}
+
+.resumenLista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+/** 44px de area tactil aunque el texto sea una linea de 13px (WCAG 2.5.5). */
+.resumenLista a {
+  display: flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  color: var(--color-alerta-hondo);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition:
+    color var(--transicion) var(--curva),
+    text-decoration-thickness var(--transicion) var(--curva);
+}
+
+.resumenLista a:hover {
+  color: var(--color-tinta);
+  text-decoration-thickness: 2px;
+}
+
+/* -------------------------------------------------------------------- exito */
+
+/**
+ * EL EXITO ES TODO EL CIERRE de varias acciones: reenviar la verificacion,
+ * guardar la identidad fiscal, cambiar la comision. Entra con un pop y un halo
+ * verde que se prende UNA vez y se apaga —nunca en bucle— y lleva su filete de
+ * luz. El halo es `drop-shadow`, FUERA del texto del aviso.
+ */
+.exito {
+  position: relative;
+  padding-top: 5px;
+  transform-origin: 50% 0;
+}
+
+.exito::before {
+  content: '';
+  position: absolute;
+  inset: 0 var(--espacio-3) auto;
+  height: 3px;
+  border-radius: var(--radio-pastilla);
+  transform-origin: left center;
+  background-image: var(--degradado-vivo);
+  box-shadow: 0 0 12px rgb(var(--luz-marca) / 0.5);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .exito {
+    animation: prendeExito var(--dur-escena) var(--curva-viva) backwards;
+  }
+
+  .exito::before {
+    animation: dibujaFilete var(--dur-escena) var(--curva-corte) 120ms backwards;
+  }
+}
+
+@keyframes prendeExito {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.01);
+    filter: drop-shadow(0 0 14px rgb(var(--luz-marca) / 0.8));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+/* =================================================================== campo */
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  /*
+   * ⚠️ NO ES REDUNDANTE. El unico formulario que vive DENTRO de un
+   * `EstadoVacio` —el reenvio de la verificacion de email— heredaba su
+   * `text-align: center`. Un formulario se lee alineado a la izquierda.
+   */
+  text-align: left;
+  /* Garantia estructural de los 320px: nada de esto puede empujar la pagina. */
+  min-width: 0;
+  /* Repetido de `.formulario`: un `.campo` puede vivir fuera de un `<Formulario>`. */
+  --luz-alerta: 255 144 45;
+}
+
+/**
+ * DOS CAMPOS POR FILA, SIN UNA SOLA MEDIA QUERY. Con `auto-fit` + `minmax` el
+ * corte lo decide el ancho REAL del contenedor y no el del viewport. 180px de
+ * minimo: a 320px con `--canal` quedan ~288px utiles, asi que la fila colapsa a
+ * una columna antes de que un `<select>` con "Independiente del Valle" desborde.
+ */
+.fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--espacio-5);
+  min-width: 0;
+}
+
+/**
+ * LA ETIQUETA FLOTA.
+ *
+ * En reposo esta 2px mas cerca del campo; cuando el campo se enfoca, sube a su
+ * lugar, pasa a Verde Cancha y se enciende con un halo de texto. Es la mitad
+ * barata de "se siente preciso": con seis campos de direccion en un telefono,
+ * la senial esta arriba, donde ya estabas mirando.
+ *
+ * ⚠️ NO ES UNA ETIQUETA ADENTRO DEL CAMPO. Esa version obliga a esconderla
+ * detras del placeholder, se rompe con el autocompletado de Chrome, con un
+ * `placeholder` real y con `<select>`; y sin JavaScript no hay quien la
+ * rescate. La estructura queda: etiqueta arriba, control abajo; lo que flota
+ * es el movimiento.
+ *
+ * ⚠️ `transform` FUNCIONA PORQUE LA ETIQUETA ES ITEM DE UN FLEX (blockificada);
+ * sobre un `<label>` en linea no haria nada. `width: fit-content` para que el
+ * halo de texto no se extienda por todo el ancho.
+ */
+.etiqueta {
+  width: fit-content;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+  transform: translateY(2px);
+  transform-origin: left center;
+  transition:
+    color var(--transicion) var(--curva),
+    transform var(--dur-hover) var(--curva-viva),
+    text-shadow var(--dur-hover) var(--curva);
+}
+
+/**
+ * ⚠️ LOS TRES SELECTORES DE ERROR HACEN FALTA. `.controlError` no matchea
+ * `CampoPassword` (su marco de error es `.campoConBotonError`) ni `Casilla`
+ * (`.casillaError`).
+ *
+ * ⚠️ `:has()` ES MEJORA PROGRESIVA PURA: sin soporte la etiqueta queda gris y
+ * siguen ahi el halo de foco y el borde del control.
+ *
+ * `--color-cancha` sobre papel 5.16:1, sobre blanco 5.40:1. El `text-shadow`
+ * es `--glow-texto`: 16px de desenfoque al 30%, fuera de los glifos.
+ */
+.campo:has(.control:focus) .etiqueta,
+.campo:has(.campoConBoton:focus-within) .etiqueta {
+  color: var(--color-cancha);
+  transform: translateY(0);
+  text-shadow: var(--glow-texto);
+}
+
+.campo:has(.controlError) .etiqueta,
+.campo:has(.campoConBotonError) .etiqueta,
+.campo:has(.casillaError) .etiqueta {
+  /* `--color-alerta` y no `--color-naranja`: aca el color es informacion. */
+  color: var(--color-alerta);
+  text-shadow: none;
+}
+
+/* ================================================================= control */
+
+/**
+ * EL MARCO COMPARTIDO — el pozo redondeado.
+ *
+ * ⚠️ ESTA LISTA DE SELECTORES EXISTE PARA NO ESCRIBIR EL POZO DOS VECES:
+ * `.control` y `.campoConBoton` lo necesitan identico. No se usa `composes`:
+ * no hay uno solo en el repo y no hay forma de probarlo aca.
+ *
+ * ⚠️ UN INPUT ES UN HUECO, NO UNA FICHA. Por eso `--sombra-hundida` y no
+ * `--sombra-1`: es la diferencia entre "hay una caja apoyada" y "hay un lugar
+ * donde escribir". Al enfocar, el hueco se abre y se prende.
+ *
+ * ⚠️⚠️ EL BORDE ES `--linea-control` Y NO `--borde-luz`, aunque el segundo
+ * tenga nombre de esta version. La fundacion lo dice: `--borde-luz` es
+ * DECORATIVO (verde al 45%, ~2:1 sobre blanco) y el contorno de un control cae
+ * bajo WCAG 1.4.11 —3:1—. `--linea-control` da 3.24:1 sobre blanco y 3.10:1
+ * sobre papel; adentro de `.sup-2/.sup-marca/.sup-calida` la fundacion ya lo
+ * sube a `--linea-control-honda`. La luz va en el halo, no en el borde.
+ *
+ * ⚠️ `--borde-campo` SIGUE EXISTIENDO como punto de anclaje para superficies
+ * que quieran subir el borde de los controles sin tocar el resto.
+ */
+.control,
+.campoConBoton {
+  border: 1px solid var(--borde-campo, var(--linea-control));
+  border-radius: var(--radio);
+  background-color: var(--superficie-1);
+  box-shadow: var(--sombra-hundida);
+  transition:
+    border-color var(--transicion) var(--curva),
+    box-shadow var(--dur-hover) var(--curva),
+    background-color var(--transicion) var(--curva);
+}
+
+/**
+ * ⚠️ LAS TRES SUPERFICIES TENIDAS CLARAS: la fundacion ya les sube
+ * `--linea-control` a la honda (3.44:1), asi que el borde queda cubierto. Lo
+ * que sigue haciendo falta es `--riel-fondo`: sobre `--superficie-2` el riel
+ * del medidor seria del color del fondo y el relleno quedaria flotando solo.
+ *
+ * ⚠️ VA EN `:global()` PORQUE SON CLASES DE LA FUNDACION, y colgado de
+ * `.formulario` / `.campo` —que son locales— porque css-loader en
+ * `mode: 'pure'` rechaza un selector de nivel superior sin ninguna clase local
+ * (verificado: `Selector ":global(.sup-2), …" is not pure`).
+ */
+:global(.sup-2) .formulario,
+:global(.sup-2) .campo,
+:global(.sup-marca) .formulario,
+:global(.sup-marca) .campo,
+:global(.sup-calida) .formulario,
+:global(.sup-calida) .campo {
+  --riel-fondo: var(--superficie-1);
+}
+
+/**
+ * ⚠️ `background-color` Y NO EL ATAJO `background`: el atajo borraria el
+ * `background-image` con el que `.controlSeleccion` dibuja su chevron.
+ *
+ * ⚠️ `min-height: var(--alto-control)` EXPLICITO: los controles NO heredan el
+ * `line-height` del body y un `<select>` quedaba a un pelo de los 44px.
+ *
+ * ⚠️ `--texto-md` SON 16px Y NO SE BAJA: debajo de 16px iOS Safari hace zoom al
+ * enfocar un campo y **no lo deshace al salir**.
+ *
+ * ⚠️ EL COLOR SALE DE `--campo-texto` CON FALLBACK: una superficie oscura
+ * declara `--campo-texto` y listo, sin remapear `--color-tinta`, que la
+ * fundacion prohibe porque tres bloques lo usan de FONDO.
+ */
+.control {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--alto-control);
+  padding: var(--espacio-3) var(--espacio-4);
+  color: var(--campo-texto, var(--color-tinta));
+  caret-color: var(--color-cancha);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-md);
+  line-height: var(--interlineado-texto);
+}
+
+/**
+ * ⚠️ EL PLACEHOLDER NECESITA `opacity: 1` EXPLICITO: Firefox le baja la
+ * opacidad por su cuenta y un gris ya tenue se hunde debajo de AA sin que nadie
+ * lo note. `--color-neutro-tenue` sobre blanco 4.90:1.
+ */
+.control::placeholder {
+  color: var(--color-neutro-tenue);
+  opacity: 1;
+}
+
+/**
+ * HOVER: el borde pasa a Verde Cancha y aparece un halo suave. Solo con puntero
+ * fino: en un telefono el `:hover` se queda pegado despues de un toque.
+ *
+ * ⚠️⚠️ `:not(.controlError)` NO ES DECORATIVO. `:not()` aporta la especificidad
+ * de su argumento, asi que esta regla pesa (0,5,0) y le ganaria a
+ * `.controlError:hover` (0,2,0): pasar el mouse por un campo rechazado le
+ * devolveria el borde verde justo en el gesto de ir a corregirlo.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .control:hover:not(:focus):not(:disabled):not(.controlError) {
+    border-color: var(--color-cancha);
+    box-shadow: var(--sombra-hundida), var(--glow-suave);
+  }
+}
+
+/**
+ * FOCO: EL CAMPO SE PRENDE.
+ *
+ * El borde pasa al color de foco y alrededor aparece `--glow-foco`: un anillo
+ * de 4px al 32% y un halo de 22px al 50%, del verde de marca (Cambio sobre las
+ * superficies oscuras, que lo remapean solas). Es un `box-shadow`: no ocupa
+ * layout, no corre el texto que la persona esta escribiendo, e interpola solo.
+ *
+ * ⚠️ ES `:focus` Y NO `:focus-visible`, A PROPOSITO. Son dos cosas y conviven:
+ * el HALO dice "este es el campo activo" y corresponde tambien cuando se llego
+ * con el mouse; el ANILLO (`outline` de la regla global de `tokens.css`, que
+ * no se toca) dice "estas navegando con teclado". Fusionarlos deja a quien usa
+ * mouse sin ninguna senial.
+ *
+ * ⚠️ NINGUN `:hover` LO PISA: el hover lleva `:not(:focus)`.
+ *
+ * `--color-cancha` sobre blanco 5.40:1, cumple 1.4.11.
+ */
+.control:focus {
+  border-color: var(--color-foco);
+  /* El pozo se relaja: el campo deja de estar cerrado. */
+  box-shadow:
+    inset 0 1px 1px rgb(var(--sombra-tinte) / 0.04),
+    var(--glow-foco);
+}
+
+.control:disabled,
+.control[readonly] {
+  background-color: var(--superficie-2);
+  color: var(--color-neutro-texto);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/**
+ * VALIDACION DEL NAVEGADOR: feedback gratis antes del viaje al servidor.
+ *
+ * ⚠️ `:user-invalid` NO LO APAGA EL `noValidate` DEL `<form>`: `noValidate`
+ * frena la validacion AL ENVIAR y el globito nativo, no las pseudo-clases. No
+ * inventa ninguna politica: repite `type="email"` y `maxLength`, que ya vienen
+ * del schema.
+ *
+ * ⚠️ `:not(:placeholder-shown)` ES LO QUE LO VUELVE USABLE, Y POR ESO `Campo`
+ * pone `placeholder=" "` cuando no le dan uno. Sin ese truco, tabular por los
+ * seis campos de direccion para mirarlos deja SEIS bordes marcados.
+ *
+ * ⚠️ ES MAS SUAVE QUE `.controlError`: cambia el borde y nada mas. El error del
+ * servidor es un hecho; esto es un aviso.
+ */
+.control:user-invalid:not(:focus):not(:placeholder-shown) {
+  border-color: var(--color-alerta);
+}
+
+/**
+ * ⚠️⚠️ EL AUTOCOMPLETADO DE CHROME PINTA EL CAMPO DE CELESTE Y SE LLEVABA
+ * PUESTO TODO ESTE ARCHIVO, en la pantalla mas usada del sitio —`/ingresar`—.
+ * No hay forma de sobreescribir ese fondo: hay que taparlo con un `box-shadow`
+ * interior gigante.
+ *
+ * ⚠️ EL ORDEN DE LAS CAPAS ES EL ARREGLO. En `box-shadow` la primera sombra se
+ * pinta ARRIBA: el pozo y el halo van ANTES del relleno de 100px.
+ *
+ * ⚠️ `.control:-webkit-autofill:focus` PESA (0,3,0) Y LE GANA A `.control:focus`
+ * (0,2,0): sin la regla de abajo, un campo autocompletado y enfocado perderia
+ * el halo justo en `/ingresar`.
+ *
+ * ⚠️ `transition-property`/`-delay`/`-duration` SUELTOS Y NO EL ATAJO: el atajo
+ * resetea las transiciones de `border-color` y `box-shadow` del marco.
+ */
+.control:-webkit-autofill,
+.control:-webkit-autofill:hover {
+  -webkit-text-fill-color: var(--campo-texto, var(--color-tinta));
+  -webkit-box-shadow:
+    var(--sombra-hundida),
+    inset 0 0 0 100px var(--superficie-1);
+  transition-property: background-color;
+  transition-delay: 100000s;
+  transition-duration: 100000s;
+}
+
+.control:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--campo-texto, var(--color-tinta));
+  -webkit-box-shadow:
+    inset 0 1px 1px rgb(var(--sombra-tinte) / 0.04),
+    inset 0 0 0 100px var(--superficie-1),
+    var(--glow-foco);
+  transition-property: background-color;
+  transition-delay: 100000s;
+  transition-duration: 100000s;
+}
+
+/* Firefox usa otro mecanismo y no hay que corregirle nada. */
+.control:autofill {
+  filter: none;
+}
+
+/* --------------------------------------------------------------- seleccion */
+
+/**
+ * CHEVRON PROPIO.
+ *
+ * ⚠️ SIGUE SIENDO UN `<select>` NATIVO. Con `appearance: none` cambia el
+ * dibujo, no el comportamiento: en el telefono se abre igual el selector del
+ * sistema operativo y sigue andando sin una linea de JavaScript.
+ *
+ * ⚠️ EL CHEVRON SE DIBUJA CON DOS GRADIENTES, NO CON UN SVG EN `data:`. Un SVG
+ * inline obliga a escribir el color en hexadecimal adentro de la URL, o sea una
+ * copia muda del token. `--chevron` es una variable para que el foco y el hover
+ * lo pasen a Verde Cancha sin repetir las dos lineas.
+ *
+ * ⚠️ `--espacio-7` (32px) Y NO `--espacio-8`: el chevron termina a 15px del
+ * borde, asi que 48px eran 33px de aire muerto.
+ */
+.controlSeleccion {
+  --chevron: var(--color-neutro-texto);
+  appearance: none;
+  -webkit-appearance: none;
+  padding-inline-end: var(--espacio-7);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--chevron) 50%),
+    linear-gradient(135deg, var(--chevron) 50%, transparent 50%);
+  background-position:
+    calc(100% - 21px) calc(50% - 2px),
+    calc(100% - 16px) calc(50% - 2px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.controlSeleccion:focus {
+  --chevron: var(--color-cancha);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .controlSeleccion:hover:not(:disabled) {
+    --chevron: var(--color-cancha);
+  }
+}
+
+/* ------------------------------------------------------------ area de texto */
+
+/**
+ * ⚠️ `field-sizing: content` ARREGLA EL CONTROL MAS INCOMODO DEL SITIO: la
+ * descripcion admite 5.000 caracteres dentro de cuatro filas con scroll
+ * interno, y `resize: vertical` en un telefono no se puede agarrar. Con esto el
+ * campo crece con el texto, sin JavaScript. Sin soporte queda el `rows`.
+ *
+ * ⚠️ EL `max-height` NO ES OPCIONAL: sin el, pegar cinco mil caracteres empuja
+ * el boton de enviar a tres pantallas de distancia.
+ */
+.controlArea {
+  resize: vertical;
+  /* Un textarea que se puede achicar hasta desaparecer es un textarea roto. */
+  min-height: calc(var(--alto-control) * 2);
+  field-sizing: content;
+  max-height: 60vh;
+  border-radius: var(--radio-medio);
+}
+
+/* ---------------------------------------------------------------- archivos */
+
+/**
+ * LA ZONA DE FOTOS: es la primera pantalla que ve un vendedor con su camiseta
+ * ya fotografiada y el control mas feo que entrega el navegador. Ahora es una
+ * tarjeta redondeada con un lavado de luz verde → Cambio y un boton-pastilla
+ * con el degradado de marca.
+ *
+ * ⚠️ NO HAY ARRASTRAR Y SOLTAR: exige eventos `drop`/`DataTransfer`, o sea
+ * JavaScript de verdad. Un marco que no acepta nada es peor que no ofrecerlo.
+ *
+ * ⚠️ LAS DOS ALFAS SON NUMEROS MEDIDOS, NO GUSTO. El borde dashed es
+ * `--linea-control` y cae bajo 1.4.11 (3:1) contra CADA punto del lavado:
+ * sobre Cambio al 30% da 3.08:1 y sobre verde-400 al 6% da 3.08:1 (al 12%,
+ * que era lo lindo, caia a 2.93 ❌; al 8%, 3.03). En el medio del gradiente,
+ * con las dos capas a la vez, 3.03:1. El nombre del archivo, en tinta, da
+ * >14:1 en todo el recorrido.
+ */
+.controlArchivos {
+  padding: var(--espacio-3);
+  border-radius: var(--radio-medio);
+  border-style: dashed;
+  background-image: linear-gradient(
+    var(--eje),
+    rgb(var(--luz-verde-clara) / 0.06) 0%,
+    rgb(var(--luz-cambio) / 0.3) 100%
+  );
+  cursor: pointer;
+}
+
+/**
+ * ⚠️⚠️ 44px DE ALTO, NO `--alto-control-chico`. En Chrome y en Safari el UNICO
+ * objetivo que abre el dialogo es este boton —el resto del input no hace nada
+ * al tocarlo—, y es la pantalla donde un vendedor sube fotos desde el telefono.
+ *
+ * `--degradado-boton` es la unica malla de marca que ACLARA, porque su texto es
+ * solo papel: peor punto verde-600, papel 4.66:1.
+ */
+.controlArchivos::file-selector-button {
+  margin-inline-end: var(--espacio-4);
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-5);
+  border: 1px solid transparent;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--degradado-boton);
+  color: var(--color-papel);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  cursor: pointer;
+  box-shadow: var(--luz-superior-oscura), var(--sombra-1);
+  transition:
+    box-shadow var(--dur-hover) var(--curva),
+    transform var(--dur-media) var(--curva-seca);
+}
+
+.controlArchivos::file-selector-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--luz-superior-oscura), var(--sombra-marca);
+}
+
+/* ======================================================= ayuda y contador */
+
+.ayuda {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * CONTADOR DE CARACTERES. Solo existe con JavaScript y por eso no se renderiza
+ * en el servidor (ver `form.tsx`): un contador servido diria "0/140" al lado
+ * de un campo con texto restaurado.
+ */
+.contador {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * El riel del medidor: una pastilla hundida, mismo lenguaje que el control.
+ * `--riel-fondo` existe porque sobre una superficie tenida el riel seria del
+ * color de su fondo.
+ */
+.medidor {
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: var(--radio-pastilla);
+  background: var(--riel-fondo, var(--superficie-2));
+  box-shadow: var(--sombra-hundida);
+}
+
+/**
+ * ⚠️ `scaleX` Y NO `width`. El ancho rehace layout en cada tecla; la escala la
+ * resuelve el compositor. `--llenado` lo pone React como numero de 0 a 1.
+ *
+ * ⚠️ EL RELLENO ES `--color-cancha` MACIZO Y NO `--degradado-vivo`: verde-500
+ * sobre el riel (#f2f3ea) da 2.92:1 y no llega al 3:1 de 1.4.11.
+ * `--color-cancha` da 4.83:1. La luz va en el halo, no en el relleno.
+ */
+.medidorLleno {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform: scaleX(var(--llenado, 0));
+  transform-origin: left center;
+  background: var(--color-cancha);
+  box-shadow: 0 0 8px rgb(var(--luz-verde) / 0.55);
+  transition: transform var(--transicion) var(--curva-seca);
+}
+
+/**
+ * Cerca del limite. `--color-alerta` sobre papel 4.66:1 y sobre blanco 4.88:1.
+ * El color NO va solo: la cifra al lado dice el numero exacto.
+ */
+.contadorApretado {
+  color: var(--color-alerta);
+  font-weight: var(--peso-semi);
+}
+
+/**
+ * ⚠️ `--color-alerta` Y NO `--color-naranja` TAMBIEN ACA: el naranja sobre
+ * `--superficie-2` da 2.02:1. `--color-alerta` da 4.36:1, que cumple 1.4.11. El
+ * halo si es naranja: es luz, no borde.
+ */
+.contadorApretado .medidorLleno {
+  background: var(--color-alerta);
+  box-shadow: 0 0 8px rgb(var(--luz-alerta) / 0.6);
+}
+
+.contadorCifra {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================= casilla */
+
+/**
+ * ⚠️ EL AREA TACTIL ES LA ETIQUETA ENTERA, NO EL CUADRADITO. Un checkbox nativo
+ * mide ~13px: apuntarle con el dedo es imposible y WCAG 2.5.5 pide 44. Como la
+ * etiqueta ENVUELVE al control, toda la fila es el objetivo.
+ *
+ * ⚠️ EL BORDE ES `--linea-control` (3.24:1) Y NO `--linea-tenue` (1.26:1). Si
+ * la fila ES el control, su contorno cae bajo 1.4.11 igual que el del input.
+ */
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid var(--borde-campo, var(--linea-control));
+  border-radius: var(--radio-medio);
+  background-color: var(--superficie-1);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  cursor: pointer;
+  transition:
+    border-color var(--transicion) var(--curva),
+    background-color var(--transicion) var(--curva),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+/**
+ * EL TILDE.
+ *
+ * ⚠️ `appearance: auto` VUELVE EN MODO DE ALTO CONTRASTE FORZADO. Un checkbox
+ * dibujado a mano pierde el render del sistema, que es de lo que depende quien
+ * usa ese modo.
+ */
+.tilde {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  border: 1px solid var(--borde-campo, var(--linea-control));
+  border-radius: var(--radio-chico);
+  background-color: var(--superficie-1);
+  box-shadow: var(--sombra-hundida);
+  cursor: pointer;
+  transition:
+    background-color var(--transicion) var(--curva),
+    border-color var(--transicion) var(--curva),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+/**
+ * ⚠️⚠️ TILDADO SE DICE CON UNA MARCA DE VERIFICACION, NO CON UNA TEXTURA. Es el
+ * ultimo control que alguien toca antes de crear su cuenta y WCAG 1.4.1 pide
+ * una senial que no dependa del color: el tilde es la forma que la gente ya
+ * conoce. Ahora ademas se prende: fondo con el degradado de marca y halo verde.
+ *
+ * ⚠️ EL TILDE SE DIBUJA CON DOS GRADIENTES Y NO CON UN SVG EN `data:`. Un
+ * `<input>` no tiene `::before` en Firefox, y un SVG inline obligaria a
+ * escribir el color en hexadecimal adentro de la URL. Cada gradiente es una
+ * banda diagonal recortada a su propia caja: la de 9x9 es el brazo largo, la de
+ * 7x7 el corto. Se cruzan alrededor de (8,13) del cuadro de 20x20.
+ *
+ * ⚠️ LAS COORDENADAS SON DEL PADDING BOX (20x20: 22px menos 1px de borde por
+ * lado). Si cambia el tamanio del control hay que rehacerlas. El degradado de
+ * fondo va ULTIMO en la lista: en `background-image` la primera capa pinta
+ * arriba.
+ */
+.tilde:checked {
+  border-color: var(--color-cancha);
+  background-color: var(--color-cancha);
+  background-image:
+    linear-gradient(135deg, transparent 42%, var(--color-papel) 42% 58%, transparent 58%),
+    linear-gradient(45deg, transparent 36%, var(--color-papel) 36% 64%, transparent 64%),
+    var(--degradado-boton);
+  background-size:
+    9px 9px,
+    7px 7px,
+    100% 100%;
+  background-position:
+    8px 4px,
+    2px 7px,
+    0 0;
+  background-repeat: no-repeat;
+  box-shadow: var(--glow-marca);
+}
+
+/**
+ * ⚠️ EL POP CORRE UNA VEZ POR TILDADO, NUNCA EN BUCLE: es la unica animacion de
+ * un control que se dispara por interaccion y sin JavaScript. `--curva-pop`
+ * trae ~10% de overshoot, que es lo que hace que se sienta como un clic.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .tilde:checked {
+    animation: popTilde var(--dur-media) var(--curva-pop);
+  }
+}
+
+@keyframes popTilde {
+  from {
+    transform: scale(0.82);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (forced-colors: active) {
+  .tilde {
+    appearance: auto;
+    -webkit-appearance: auto;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .casilla:hover {
+    border-color: var(--color-cancha);
+    box-shadow: var(--glow-suave);
+  }
+}
+
+/**
+ * ⚠️ SOBRE `--superficie-marca` (#eef5f0) EL TEXTO TENUE CAERIA A 4.42:1: por
+ * eso el `color` de la fila ya es `--color-neutro-texto`, que sobre esa base da
+ * 5.56:1.
+ */
+.casilla:has(.tilde:checked) {
+  border-color: var(--color-cancha);
+  background-color: var(--superficie-marca);
+  box-shadow: var(--glow-suave);
+}
+
+/**
+ * ⚠️ NO SE DIBUJA UN SEGUNDO ANILLO EN EL CONTENEDOR. El cuadradito mide 22px,
+ * o sea que su propio anillo —la regla global de `tokens.css`— se ve
+ * perfectamente. Lo que cambia es el borde de la fila y su halo, para que el
+ * foco se lea como el del resto de los campos.
+ */
+.casilla:has(.tilde:focus-visible) {
+  border-color: var(--color-foco);
+  box-shadow: var(--glow-foco);
+}
+
+.casillaError,
+.casillaError:hover,
+.casillaError:has(.tilde:focus-visible) {
+  border-color: var(--color-alerta);
+  box-shadow:
+    0 0 0 3px rgb(var(--luz-alerta) / 0.18),
+    0 0 18px -2px rgb(var(--luz-alerta) / 0.45);
+}
+
+/* --------------------------------------------------------------------- pie */
+
+.pie {
+  margin-top: var(--espacio-6);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  text-align: center;
+}
+
+.pieSeparado {
+  margin-top: var(--espacio-3);
+}
+
+/* ------------------------------------------------------- campo con adorno */
+
+/**
+ * ⚠️ EL BOTON VA ADENTRO DEL MARCO, NO AL COSTADO. Al costado le roba ancho al
+ * campo justo en el telefono. Y el foco se dibuja sobre el conjunto: campo y
+ * boton se leen como un solo control.
+ *
+ * ⚠️ `overflow: hidden` PARA QUE NADA ASOME POR LAS ESQUINAS REDONDEADAS.
+ */
+.campoConBoton {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/**
+ * ⚠️ SE QUEDA EN `:focus-within` Y NO PASA A `:has(:focus-visible)`. Con
+ * `:has()` el anillo desapareceria por completo donde no hay soporte, y este es
+ * el unico control del sistema donde el anillo NO lo puede poner el elemento
+ * enfocado: el `<input>` lleva `outline: none` porque el marco es del
+ * contenedor. Un anillo de mas al hacer clic no es un defecto; uno de menos si.
+ * El anillo es el mismo de la regla global (3px, offset 3px) mas el halo.
+ */
+.campoConBoton:focus-within {
+  border-color: var(--color-foco);
+  box-shadow:
+    inset 0 1px 1px rgb(var(--sombra-tinte) / 0.04),
+    var(--glow-foco);
+  outline: 3px solid var(--color-foco);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .campoConBoton:hover:not(:focus-within):not(.campoConBotonError) {
+    border-color: var(--color-cancha);
+    box-shadow: var(--sombra-hundida), var(--glow-suave);
+  }
+}
+
+.campoConBoton .control {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.campoConBoton .control:focus {
+  /* El anillo y el halo los pone el contenedor. */
+  outline: none;
+  box-shadow: none;
+}
+
+/**
+ * ⚠️ EL RELLENO DE AUTOFILL SE NEUTRALIZA ADENTRO DEL MARCO. La regla de
+ * `.control:-webkit-autofill:focus` es (0,3,0) y le gana a
+ * `.campoConBoton .control` (0,2,0): sin esto, el campo de contrasenia
+ * autocompletado dibujaria su propio halo adentro del halo del marco.
+ */
+.campoConBoton .control:-webkit-autofill,
+.campoConBoton .control:-webkit-autofill:hover,
+.campoConBoton .control:-webkit-autofill:focus {
+  -webkit-box-shadow: inset 0 0 0 100px var(--superficie-1);
+}
+
+/**
+ * ⚠️⚠️ ESTA REGLA ARREGLA UN BUG DE CASCADA. `.campoConBoton:focus-within` es
+ * (0,2,0) y `.campoConBotonError` (0,1,0): al enfocar un `CampoPassword` con
+ * error el marco pasaba a verde y desaparecia el naranja. Le decia "ya esta
+ * arreglado" a alguien cuyo valor el servidor todavia no vio.
+ */
+.campoConBotonError,
+.campoConBotonError:focus-within {
+  border-color: var(--color-alerta);
+  box-shadow:
+    var(--sombra-hundida),
+    0 0 0 3px rgb(var(--luz-alerta) / 0.18),
+    0 0 18px -2px rgb(var(--luz-alerta) / 0.45);
+}
+
+.campoConBotonError:focus-within {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 3px;
+}
+
+/**
+ * "MOSTRAR" / "OCULTAR": una pastilla adentro del marco.
+ *
+ * ⚠️ EL TEXTO ES `--color-neutro-texto` SOBRE `--superficie-2`: 5.51:1. En
+ * hover la pastilla se rellena con Verde Cancha y el texto pasa a papel
+ * (5.16:1), con halo.
+ *
+ * ⚠️ EL CONTORNO DE LA PASTILLA ES `--linea-control` y se mide contra el
+ * blanco del campo, que es el lado por el que se busca: 3.24:1.
+ *
+ * ⚠️⚠️ EL AREA TACTIL SIGUE SIENDO DE 44px AUNQUE LA PASTILLA MIDA 36. Un
+ * `::before` invisible estira el objetivo 6px hacia arriba y hacia abajo, hasta
+ * llenar el alto del marco: WCAG 2.5.5 se mide por lo que responde al dedo, no
+ * por lo que se ve. Un `<button>` si tiene `::before`.
+ */
+.revelar {
+  position: relative;
+  flex: none;
+  align-self: center;
+  min-height: var(--alto-control-chico);
+  margin-inline-end: var(--espacio-1);
+  padding: 0 var(--espacio-4);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio-pastilla);
+  background: var(--superficie-2);
+  color: var(--color-neutro-texto);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--transicion-rapida) var(--curva),
+    background-color var(--transicion-rapida) var(--curva),
+    border-color var(--transicion-rapida) var(--curva),
+    box-shadow var(--dur-hover) var(--curva),
+    transform var(--dur-media) var(--curva-seca);
+}
+
+.revelar::before {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+.revelar:hover {
+  background: var(--color-cancha);
+  border-color: var(--color-cancha);
+  color: var(--color-papel);
+  box-shadow: var(--glow-marca);
+}
+
+/**
+ * ⚠️ EL ANILLO DE FOCO VA PEGADO A LA PASTILLA, SIN LOS 3px DE OFFSET GLOBALES.
+ * El marco tiene `overflow: hidden` y la pastilla de 36px deja 4px de aire
+ * arriba, abajo y a la derecha: el anillo global (3px a 3px de offset) pide 6 y
+ * quedaba RECORTADO por tres lados. Con offset 0 entra entero. El halo global
+ * de `:focus-visible` igual se recorta y no importa: el marco ya dibuja el
+ * suyo con `:focus-within`, y el anillo es la garantia. Declarado DESPUES del
+ * hover, que no toca `outline`.
+ */
+.revelar:focus-visible {
+  outline-offset: 0;
+}
+
+/** 1px y nada mas: mas que eso desalinea la fila entera. */
+.revelar:active {
+  transform: translateY(1px);
+}
+
+/* --------------------------------------------------------------- importe */
+
+/**
+ * EL CAMPO DE PLATA, EN BIG NOODLE. La identidad asigna la titular condensada a
+ * "titulares, PRECIOS, numeros de camiseta", y este es el unico input donde se
+ * escribe plata. El simbolo se enciende con el foco —halo de texto, fuera de
+ * los glifos—; la cifra en si NUNCA se anima: un numero que se mueve se lee
+ * como un numero que todavia no esta decidido.
+ *
+ * ⚠️ EL SIMBOLO ES UN `<span>` DEL CONTENEDOR, NO UN PSEUDO DEL INPUT: un
+ * `<input>` no tiene `::before`. Y va `aria-hidden`: la etiqueta ya dice
+ * "Precio en pesos".
+ *
+ * ⚠️ SE OCULTAN LOS SPINNERS. Subir de a un peso un precio de cien mil no es una
+ * funcion, es un estorbo de 20px. Las flechas del teclado siguen andando.
+ */
+.campoImporte {
+  align-items: center;
+}
+
+.signo {
+  flex: none;
+  padding-inline: var(--espacio-4) var(--espacio-1);
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  line-height: 1;
+  color: var(--color-neutro-tenue);
+  transition:
+    color var(--transicion) var(--curva),
+    text-shadow var(--dur-hover) var(--curva);
+}
+
+.campoImporte:focus-within .signo {
+  color: var(--color-cancha);
+  text-shadow: var(--glow-texto);
+}
+
+.signoFinal {
+  padding-inline: var(--espacio-1) var(--espacio-4);
+}
+
+.controlImporte {
+  padding-inline: 0 var(--espacio-4);
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  line-height: 1.05;
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.controlImporte::-webkit-outer-spin-button,
+.controlImporte::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* Firefox. */
+.controlImporte[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* -------------------------------------------------------- requisito en vivo */
+
+.requisitoOk,
+.requisitoFalta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transicion) var(--curva);
+}
+
+/**
+ * ⚠️ EL SIMBOLO ACOMPANIA AL COLOR, NUNCA LO REEMPLAZA. Con solo color, quien
+ * no distingue verde de gris no sabe si el requisito esta cumplido.
+ * `--color-tiempo-extra` sobre papel 7.95:1.
+ */
+.requisitoOk {
+  color: var(--color-tiempo-extra);
+}
+
+.requisitoFalta {
+  color: var(--color-neutro-tenue);
+}
+
+/* ------------------------------------------------------------ error de campo */
+
+/**
+ * CAMPO EN ERROR: borde `--color-alerta` y HALO NARANJA.
+ *
+ * ⚠️ EL BORDE ES `--color-alerta` Y NO `--color-naranja`, Y ES ACCESIBILIDAD:
+ * el borde de un campo en error es el indicador de estado de un control, y
+ * WCAG 1.4.11 le exige 3:1. `--color-naranja` sobre blanco da 2.26:1;
+ * `--color-alerta`, 4.88:1. El naranja de la identidad va al HALO, que es luz
+ * alrededor y no carga con el requisito.
+ *
+ * ⚠️ ESTA REGLA VA DESPUES DE `.control:focus` A PROPOSITO: misma
+ * especificidad (0,2,0), gana la ultima.
+ */
+.controlError,
+.controlError:hover {
+  border-color: var(--color-alerta);
+  box-shadow:
+    var(--sombra-hundida),
+    0 0 0 3px rgb(var(--luz-alerta) / 0.18),
+    0 0 18px -2px rgb(var(--luz-alerta) / 0.45);
+}
+
+/**
+ * ⚠️ AL ENFOCAR UN CAMPO EN ERROR, EL ERROR SIGUE AHI. Volver al verde de foco
+ * diria "ya esta arreglado" apenas se hace clic, y no se arreglo nada: el
+ * servidor todavia no vio el valor nuevo. El halo se abre un poco mas —el campo
+ * esta activo— pero el color no se mueve.
+ */
+.controlError:focus {
+  border-color: var(--color-alerta);
+  box-shadow:
+    inset 0 1px 1px rgb(var(--sombra-tinte) / 0.04),
+    0 0 0 4px rgb(var(--luz-alerta) / 0.28),
+    0 0 22px 2px rgb(var(--luz-alerta) / 0.5);
+}
+
+/**
+ * ⚠️ EL MENSAJE REEMPLAZA A LA AYUDA, no se apila debajo. Dos lineas de texto
+ * chico bajo el mismo campo compiten entre si justo cuando hay que leer una
+ * sola. `--color-alerta` sobre papel 4.66:1.
+ */
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-1);
+  font-size: var(--texto-xs);
+  color: var(--color-alerta);
+  font-weight: var(--peso-medio);
+  /* El ancla del resumen salta aca: que no quede debajo de la barra. */
+  scroll-margin-top: calc(var(--alto-barra) + var(--espacio-4));
+}
+
+/* El simbolo acompania al color: sin el, el error no existe en escala de grises. */
+.error::before {
+  content: '⚠';
+  flex: none;
+}
+
+/**
+ * ⚠️ 220ms Y 4 PIXELES. Los avisos de error ya interrumpen con `role="alert"`
+ * y el movimiento los vuelve un susto: lo que se permite es que el ojo REGISTRE
+ * que algo llego al lugar donde estaba mirando. Sin bucle, sin halo animado.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .error {
+    animation: entraError 220ms var(--curva-viva) backwards;
+  }
+}
+
+@keyframes entraError {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* --------------------------------------------------------- grupo de campos */
+
+/**
+ * EL GRUPO ES UNA TARJETA DE VIDRIO QUE FLOTA.
+ *
+ * ⚠️ ACA ESTA EL SEGUNDO PLANO DE LA PANTALLA MAS LARGA DEL SITIO. Los cuatro
+ * grupos de "Publicar" eran quince rectangulos sobre papel. Ahora la pila es:
+ * luz de la pagina → tarjeta de vidrio con sombra → campo blanco hundido. Tres
+ * planos donde habia uno, y el fondo de luz se ve A TRAVES del grupo.
+ *
+ * ⚠️ VIDRIO CON MODERACION: son hasta cuatro `backdrop-filter` por pantalla,
+ * fijos, no en una grilla. Sin soporte queda el blanco al 82%, que sobre papel
+ * es blanco casi puro.
+ *
+ * ⚠️ NO HACE FALTA REMAPEAR TOKENS ADENTRO, Y ANTES SI. Con `--superficie-2`
+ * de fondo (#f2f3ea) el texto tenue caia a 4.38:1 y el borde del campo a
+ * 2.90:1. Blanco al 82% sobre papel —y sobre el punto mas claro de las manchas
+ * de luz, que sobre papel son un lavado— compone ≥#fdfdfa: medido,
+ * `--color-neutro-tenue` da 4.81-4.86:1, `--linea-control` 3.18-3.22:1 y
+ * `--color-alerta` 4.79-4.84:1. Los tokens de papel pasan tal cual.
+ *
+ * ⚠️ NADA DE `clip-path`: recortaria el halo de foco de cualquier control cerca
+ * del borde. El filete es una banda de luz adentro del radio.
+ */
+.grupo {
+  position: relative;
+  border: 1px solid rgb(var(--luz-marca) / 0.18);
+  margin: 0;
+  padding: calc(var(--espacio-6) + 6px) var(--espacio-5) var(--espacio-6);
+  /* Sin esto, un fieldset no deja que sus hijos se achiquen en un grid. */
+  min-width: 0;
+  border-radius: var(--radio-grande);
+  background-color: var(--vidrio-claro-fondo);
+  box-shadow: var(--luz-superior), var(--sombra-2);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .grupo {
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+}
+
+/**
+ * EL FILETE DE LUZ DEL GRUPO: 3px con el degradado vivo, adentro del radio.
+ *
+ * ⚠️ ES `position: absolute` Y NO CONTENIDO EN FLUJO: en un `<fieldset>` la
+ * `<legend>` se saca del flujo, asi que un `::before` en flujo caeria DEBAJO
+ * del titulo. Ver la nota de `.grupoTitulo`, que es la que de verdad mete la
+ * legend adentro de la tarjeta.
+ */
+.grupo::before {
+  content: '';
+  position: absolute;
+  inset: 0 var(--espacio-5) auto;
+  height: 3px;
+  border-radius: 0 0 var(--radio-pastilla) var(--radio-pastilla);
+  transform-origin: left center;
+  background-image: var(--degradado-vivo);
+  box-shadow: 0 0 12px rgb(var(--luz-marca) / 0.5);
+}
+
+.grupo + .grupo {
+  margin-top: var(--espacio-6);
+}
+
+/**
+ * ⚠️ SE DIBUJA AL PRIMER PINTADO, NO CON EL SCROLL. Un `view()` sobre una banda
+ * de 3px en una pagina que entra entera queda congelado donde este.
+ *
+ * Los grupos entran escalonados con el paso LENTO (110ms) y los campos de
+ * adentro con el RAPIDO (40ms), SUMADOS: el cuarto grupo arranca a 330ms y su
+ * campo j a 330 + 100 + 40·j. Con ocho campos, el ultimo empieza a 710ms y
+ * termina antes de 1.3s.
+ *
+ * ⚠️⚠️ `--retraso-grupo` EXISTE PORQUE EL DELAY DE UN HIJO NO SE SUMA SOLO AL
+ * DEL PADRE. Antes los campos arrancaban a `140 + 40·j` contados desde cero,
+ * mientras su grupo seguia en `opacity: 0` hasta `110·i`: en los grupos 2 a 4
+ * el escalonado de adentro corria ENTERO detras de un padre invisible y no lo
+ * veia nadie. La variable se declara en el grupo, donde `--i` es el indice DEL
+ * GRUPO, y baja ya resuelta a los campos (el valor computado de una custom
+ * property lleva sus `var()` sustituidos); adentro cada campo pisa `--i` con
+ * el suyo sin tocar el retraso heredado.
+ *
+ * ⚠️ `var(--retraso, 0ms)` ES LA MISMA CONVENCION DE `.escalona` Y `.entra-suave`
+ * (movimiento.css): un contenedor que retrasa su propia entrada declara
+ * `--retraso` y lo que tiene adentro arranca con el. `(auth)` lo hace —su
+ * cuerpo entra a 220ms— y sin esto los campos terminaban de entrar detras de
+ * una hoja todavia transparente.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .grupo::before {
+    animation: dibujaFilete var(--dur-escena) var(--curva-corte) backwards;
+    animation-delay: calc(var(--retraso-grupo, 0ms) + 120ms);
+  }
+
+  .cuerpo > .grupo {
+    --retraso-grupo: calc(var(--paso-escalon-lento) * var(--i, 0) + var(--retraso, 0ms));
+    animation: entraGrupo var(--dur-entrada) var(--curva-viva) backwards;
+    animation-delay: var(--retraso-grupo);
+  }
+}
+
+@keyframes entraGrupo {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+}
+
+/**
+ * ⚠️⚠️ `float: left` + `width: 100%` ES LO UNICO QUE METE A LA `<legend>`
+ * ADENTRO DE LA TARJETA. VERIFICADO EN NAVEGADOR: por defecto Chromium saca la
+ * legend del flujo y pinta el fondo del `<fieldset>` recien DEBAJO de ella, asi
+ * que "QUÉ ESTÁS PUBLICANDO" quedaba flotando afuera del bloque, y la banda
+ * —aunque sea `absolute`— se posiciona contra ESE mismo box.
+ *
+ * ⚠️ EL AIRE DE ABAJO VA EN EL `margin-bottom` DE LA LEGEND Y NO EN EL
+ * `margin-top` DE LO QUE SIGUE: un bloque con `clear` se apoya en el borde
+ * inferior del float y su propio `margin-top` se lo come la clearance.
+ */
+.grupoTitulo {
+  float: left;
+  width: 100%;
+  /* `padding: 0` saca el hueco que el navegador reserva en el borde. */
+  padding: 0;
+  margin: 0 0 var(--espacio-4);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: var(--interlineado-titulo);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-tinta);
+}
+
+/**
+ * CINTA DE ROMBOS bajo el titulo del grupo, con brillo: la bandera del juez de
+ * linea, que ahora se enciende.
+ *
+ * ⚠️ 12px DE ALTO, QUE ES UN MOSAICO ENTERO. Con 6px se ve la mitad superior,
+ * o sea TRIANGULOS: se lee como una linea dentada, no como la bandera.
+ *
+ * ⚠️ EL GLOW ES `filter: drop-shadow` ESTATICO sobre un elemento de 48x12: sigue
+ * la silueta de cada rombo y cuesta nada. No se anima.
+ *
+ * ⚠️ VA COMO `::after` EN BLOQUE Y NO CAMBIANDOLE EL `display` A LA `<legend>`,
+ * que es el elemento con mas rarezas de posicionamiento del HTML.
+ */
+.grupoTitulo::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 12px;
+  margin-top: var(--espacio-2);
+  /* Rombos literales en Verde Cancha: ver la nota del encabezado. */
+  background-image:
+    linear-gradient(45deg, var(--color-cancha) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-cancha) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-cancha) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-cancha) 75%);
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+  filter: var(--glow-drop-marca);
+}
+
+/**
+ * ⚠️ `clear: both` EN LOS DOS: bajan del float de la legend. Sin esto se meten
+ * al costado del titulo cuando el titulo es corto.
+ */
+.grupoDetalle {
+  clear: both;
+  margin: 0 0 var(--espacio-4);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  max-width: var(--ancho-lectura);
+}
+
+.grupoCampos {
+  clear: both;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+}
+
+/**
+ * Subtitulo interno de un grupo ("Para que te encuentren"). Existe porque las
+ * pantallas del vendedor lo dibujaban en `--texto-xl`, el mismo tamanio que el
+ * titulo del grupo que lo contiene.
+ */
+.grupoSubtitulo {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-cancha);
+}
+
+/* ========================================================== escalonado */
+
+/**
+ * LA ESCENA ENTRA SOLA: cada campo sube, se enfoca y aparece, uno detras del
+ * otro.
+ *
+ * ⚠️ EL ESCALONADO ES POR `nth-child` PORQUE `calc()` NO PUEDE LEER EL INDICE
+ * DE UN HIJO. La alternativa es un `style={{'--retraso': i*55}}` en cada
+ * `.map()` de las 15 pantallas.
+ *
+ * ⚠️ CORTA EN EL DOCE Y AHI PARA. Con 60ms de paso el hijo 12 arranca a los
+ * 660ms (mas el `--retraso` del contenedor, si lo hay): ya esta en el limite
+ * entre "la pagina esta apareciendo" y "la pagina esta lenta". Del 13 en
+ * adelante entran juntos.
+ *
+ * ⚠️ CUANDO HAY GRUPOS, EL CUERPO NO ESCALONA SUS HIJOS DIRECTOS: entran los
+ * grupos (arriba) y adentro de cada uno los campos con el paso rapido. Sin el
+ * `:not(:has(.grupo))` los delays se sumarian dos veces.
+ *
+ * ⚠️ `backwards` Y NO `both`: la entrada lleva un `blur` que se enfoca, y con
+ * `both` el `filter: blur(0)` quedaria puesto para siempre sobre cada campo. Con
+ * `backwards`, al terminar el campo vuelve a su estado natural, sin filtro.
+ * Fuera de la media query el estado natural ES el visible.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .cuerpo:not(:has(.grupo)) > * {
+    animation: entraCampo var(--dur-entrada) var(--curva-viva) backwards;
+    animation-delay: calc(var(--paso-escalon) * var(--i, 0) + var(--retraso, 0ms));
+  }
+
+  /* `--retraso-grupo` ya trae el retraso del contenedor: ver la nota del grupo. */
+  .grupoCampos > * {
+    animation: entraCampo var(--dur-entrada) var(--curva-viva) backwards;
+    animation-delay: calc(
+      var(--retraso-grupo, 0ms) + var(--paso-escalon-rapido) * var(--i, 0) + 100ms
+    );
+  }
+
+  .cuerpo > *:nth-child(1),
+  .grupoCampos > *:nth-child(1) {
+    --i: 0;
+  }
+  .cuerpo > *:nth-child(2),
+  .grupoCampos > *:nth-child(2) {
+    --i: 1;
+  }
+  .cuerpo > *:nth-child(3),
+  .grupoCampos > *:nth-child(3) {
+    --i: 2;
+  }
+  .cuerpo > *:nth-child(4),
+  .grupoCampos > *:nth-child(4) {
+    --i: 3;
+  }
+  .cuerpo > *:nth-child(5),
+  .grupoCampos > *:nth-child(5) {
+    --i: 4;
+  }
+  .cuerpo > *:nth-child(6),
+  .grupoCampos > *:nth-child(6) {
+    --i: 5;
+  }
+  .cuerpo > *:nth-child(7),
+  .grupoCampos > *:nth-child(7) {
+    --i: 6;
+  }
+  .cuerpo > *:nth-child(8),
+  .grupoCampos > *:nth-child(8) {
+    --i: 7;
+  }
+  .cuerpo > *:nth-child(9),
+  .grupoCampos > *:nth-child(9) {
+    --i: 8;
+  }
+  .cuerpo > *:nth-child(10),
+  .grupoCampos > *:nth-child(10) {
+    --i: 9;
+  }
+  .cuerpo > *:nth-child(11),
+  .grupoCampos > *:nth-child(11) {
+    --i: 10;
+  }
+  .cuerpo > *:nth-child(n + 12),
+  .grupoCampos > *:nth-child(n + 12) {
+    --i: 11;
+  }
+}
+
+/** Termina en `blur(0)` explicito; ver la nota sobre `backwards`. */
+@keyframes entraCampo {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}

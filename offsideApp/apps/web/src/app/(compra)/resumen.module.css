@@ -1,0 +1,1507 @@
+/**
+ * EL TRAMO DE COMPRA — confirmar, pagar y el historial.
+ *
+ * ⚠️ ES EL UNICO LUGAR DEL SITIO DONDE ALGUIEN ENTREGA PLATA, y eso decide todo
+ * lo de abajo. Confianza no es lo mismo que entusiasmo: aca hay profundidad,
+ * direccion y movimiento, pero el movimiento SIEMPRE termina quieto y nunca
+ * ocurre encima de un importe que alguien esta leyendo.
+ *
+ * ⚠️ LAS SUPERFICIES NO SE ESCRIBEN A MANO. Elevacion, vidrio, grano, filo de
+ * luz y remapeo de tokens salen de `.sup-ficha`, `.sup-2`, `.sup-marca`,
+ * `.sup-cancha` y `.sup-noche` (tokens.css). Este archivo aporta unicamente lo
+ * que es propio de la compra.
+ *
+ * ⚠️ LOS TRES `@keyframes` SON LOCALES Y CON NOMBRES QUE NO EXISTEN EN NINGUNA
+ * OTRA HOJA. En un CSS Module los nombres son locales: declarar aca uno que
+ * TAMBIEN exista en `movimiento.css` deja el global muerto sin que falle nada.
+ * Por eso no se llaman `barrer`, `barrer-x` ni `respirar` — y tampoco
+ * `dibujarRiel`, que ya usa `ui.module.css`.
+ */
+
+/* ------------------------------------------------------------- la pagina */
+
+.pagina {
+  max-width: var(--ancho-angosto);
+  /* `body > main` ya lo declara; se repite como defensa: el `margin: 0 auto`
+     cancela el `stretch` del body flex y el main se encoge a su contenido. */
+  width: 100%;
+  margin: 0 auto;
+  /* `--canal` reemplaza el par de medias queries de padding lateral. */
+  padding: var(--espacio-7) var(--canal) var(--espacio-9);
+}
+
+/**
+ * ⚠️ EL HISTORIAL NO ES UNA COMPRA Y NO SE MIDE IGUAL. La columna angosta es
+ * correcta cuando hay una sola decision al frente y nada que comparar; "Mis
+ * compras" es un catalogo de lo que compraste, y a 1440px dejaba 680px de papel
+ * vacio a los costados con una fila de cajas identicas en el medio.
+ */
+.paginaAncha {
+  max-width: var(--ancho-contenido);
+}
+
+/**
+ * ⚠️ LA BARRA PEGADA AL PIE TAPA EL CAMPO QUE SE ACABA DE ENFOCAR, Y ESO NO SE
+ * ARREGLA SOLO. `html` declara `scroll-padding-top` para que la barra superior
+ * no coma un ancla, pero **no hay equivalente abajo**: al tabular hasta
+ * "Teléfono" —el ultimo de los seis campos de direccion— el navegador lo lleva
+ * al borde inferior del viewport, que es exactamente donde esta clavado el
+ * total. En un telefono la persona termina escribiendo un campo que no ve.
+ *
+ * `scroll-margin-bottom` en el control corre ese destino. El alto es una
+ * estimacion deliberada de la barra (dos paddings mas la linea del importe) mas
+ * aire: no hace falta que sea exacto, un `scroll-margin` de mas solo deja el
+ * campo un poco mas arriba.
+ *
+ * ⚠️ SELECTOR DE TIPO Y NO DE CLASE: `.campo` y `.control` viven en
+ * `form.module.css` y su nombre esta hasheado, asi que desde aca son
+ * inalcanzables. `input` no lo esta. Las otras dos pantallas del grupo solo
+ * tienen `<input type="hidden">`, que no participa del layout.
+ */
+.pagina input {
+  scroll-margin-bottom: calc(var(--texto-2xl) + var(--espacio-4) * 2 + var(--espacio-6));
+}
+
+@media (max-width: 480px) {
+  .pagina {
+    padding-top: var(--espacio-6);
+    padding-bottom: var(--espacio-8);
+  }
+}
+
+.cabecera {
+  margin-bottom: var(--espacio-6);
+}
+
+.titulo {
+  font-size: var(--texto-3xl);
+  text-transform: uppercase;
+  /**
+   * ⚠️ GARANTIA DE 320px. `--texto-3xl` es fluido y arranca en 36px: una palabra
+   * sola mas larga que la columna empujaria la pagina entera.
+   */
+  overflow-wrap: anywhere;
+}
+
+/** Filete de la identidad debajo del titulo. Es FORMA: no lleva texto encima. */
+.reglaTitulo {
+  display: block;
+  width: 96px;
+  height: 6px;
+  margin-top: var(--espacio-3);
+  transform-origin: left center;
+  background-image: var(--degradado-acento);
+}
+
+/**
+ * ⚠️ LA ANIMACION ES UNA CLASE APARTE Y NO VA PEGADA AL FILETE. En `/checkout`,
+ * mientras se confirma el pago, la pantalla se RECARGA ENTERA cada 5 segundos:
+ * cualquier entrada pegada al elemento se vuelve a disparar cinco veces. La
+ * pantalla decide si anima; el filete no.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .reglaTituloAnimada {
+    animation: trazarRiel var(--dur-escena) var(--curva-corte) both;
+  }
+}
+
+.fechaOrden {
+  margin: var(--espacio-2) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.subtitulo {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  margin: var(--espacio-8) 0 var(--espacio-5);
+}
+
+/* ===================================================== patrones de la marca */
+
+/**
+ * ⚠️ LA RECETA DEL ROMBO SE ESCRIBE ACA Y NO SE USA `var(--patron-rombos)`, Y
+ * NO ES DUPLICACION POR GUSTO: `--patron-rombos` esta declarada en `:root`
+ * (tokens.css) CONTENIENDO `var(--patron-color)`, y el valor computado de una
+ * custom property tiene sus `var()` YA SUSTITUIDOS. Los descendientes heredan
+ * el RESULTADO, no la receta, asi que redefinir `--patron-color` en un elemento
+ * no cambia nada: sale `#e4e6de` siempre. Verificado: le pasa igual a
+ * `page.module.css`, `como-funciona`, `(auth)/auth.module.css` y
+ * `footer.module.css` desde siempre.
+ *
+ * Declarada como PROPIEDAD NORMAL en esta clase, se resuelve en cada elemento
+ * con el `--patron-color` que ese elemento declara, y el teñido funciona.
+ *
+ * 🟡 El arreglo de fondo es mover la receta de `:root` a `*` en `tokens.css`,
+ * que no es de este grupo. Queda reportado.
+ */
+.rombos {
+  background-image:
+    linear-gradient(45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--patron-color) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--patron-color) 75%);
+}
+
+/** Escala fina: la de los huecos de foto. */
+.rombosFinos {
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+  --patron-color: color-mix(in oklab, var(--color-cancha) 22%, transparent);
+  background-color: var(--superficie-marca);
+}
+
+/* ====================================================== ruta de la compra */
+
+/**
+ * LINEA DE PASOS DE LA COMPRA.
+ *
+ * ⚠️ REEMPLAZA A `<Pasos>` Y NO ES UN CAPRICHO ESTETICO: `Pasos` solo conoce
+ * HECHO y NO HECHO, asi que en `/comprar` los tres pasos decian "pendiente" y
+ * **nada indicaba en cual estabas**. En una pantalla de pago, no saber donde
+ * estas es el problema; la falta de animacion es lo de menos.
+ *
+ * ⚠️ LA MARCA DEL PASO ES UN ROMBO, NO UN CIRCULO. El sistema es anguloso
+ * (`--radio` 4px) y el rombo ES el isotipo: un stepper de circulitos con
+ * degradado verde podria ser de cualquier tienda. El cuadrado se rota 45 grados
+ * y el contenido se contra-rota, asi que el numero se lee derecho.
+ */
+.ruta {
+  position: relative;
+  margin: var(--espacio-6) 0 var(--espacio-7);
+  /* La marca es la unidad de medida del riel: un solo numero que cambiar. */
+  --marca: 30px;
+  --riel-alto: 6px;
+  /* El rombo rotado sobresale ~6px de su caja de 30px: se le da aire arriba. */
+  --holgura: 7px;
+}
+
+/**
+ * ⚠️ EL RIEL SE MIDE CON LA CANTIDAD DE PASOS, NO CON UN 16.6667% ESCRITO A
+ * MANO. Los pasos son datos (`PASOS` en `ruta.tsx`) y el dia que exista el
+ * modulo de envios va a haber un cuarto: con el porcentaje fijo, el riel se
+ * despegaria de las marcas sin que nada avise. `50% / n` es el centro de la
+ * primera y de la ultima columna con `n` columnas iguales y `gap: 0` — por eso
+ * la lista NO lleva gap: el aire lo pone el padding de cada texto.
+ */
+.rutaRiel {
+  position: absolute;
+  left: calc(50% / var(--pasos, 3));
+  right: calc(50% / var(--pasos, 3));
+  top: calc(var(--holgura) + (var(--marca) - var(--riel-alto)) / 2);
+  height: var(--riel-alto);
+  overflow: hidden;
+  background-color: var(--superficie-2);
+  /* El tramo que falta va RAYADO EN EL EJE: es la bandera, y ademas se lee
+     como "todavia no" sin depender del color. La receta se escribe aca por el
+     mismo motivo que `.rombos` (ver arriba). */
+  --patron-color: color-mix(in oklab, var(--color-tinta) 14%, transparent);
+  background-image: repeating-linear-gradient(
+    var(--eje),
+    var(--patron-color) 0 2px,
+    transparent 2px 13px
+  );
+  box-shadow: inset 0 0 0 1px rgb(var(--sombra-tinte) / 0.07);
+}
+
+/**
+ * ⚠️ EL DEGRADADO NO ES `--degradado-acento`, Y ES A PROPOSITO. Ese token
+ * termina en Amarillo Cambio, que sobre papel da ~1.15:1: el borde de avance
+ * —justo lo que hay que leer— desapareceria. Aca el avance es INFORMACION, asi
+ * que los dos extremos cumplen WCAG 1.4.11 sobre blanco: `--verde-750` 6.64:1 y
+ * `--verde-500` 3.12:1.
+ *
+ * ⚠️ 96deg Y NO `--eje`: en una barra de 6px de alto, 112 grados es
+ * practicamente vertical y el degradado no se ve. El eje ya esta puesto en las
+ * rayas del riel, que no se escalan.
+ */
+.rutaAvance {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  transform: scaleX(var(--avance, 0));
+  background-image: linear-gradient(96deg, var(--verde-750) 0%, var(--verde-500) 100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /**
+   * El keyframe solo declara `from`, asi que el `to` implicito es el
+   * `scaleX(var(--avance))` de la regla base: el riel se dibuja hasta donde
+   * corresponde y ahi se queda.
+   */
+  .rutaAvanceAnimada {
+    animation: trazarRiel var(--dur-escena) var(--curva-corte) both;
+  }
+}
+
+.rutaLista {
+  display: grid;
+  grid-template-columns: repeat(var(--pasos, 3), minmax(0, 1fr));
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: var(--holgura) 0 0;
+}
+
+.rutaPaso {
+  position: relative;
+  z-index: var(--z-contenido);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+  text-align: center;
+}
+
+/**
+ * ⚠️ EL PASO PENDIENTE USA `--linea-control` (#8a9186, 3.24:1 sobre blanco) Y NO
+ * `--color-neutro-apagado` (2.49:1). El rombo es un objeto grafico que dice en
+ * que estado esta un paso: WCAG 1.4.11 pide 3:1 y el apagado no llega.
+ */
+.rutaMarca {
+  display: grid;
+  place-items: center;
+  width: var(--marca);
+  height: var(--marca);
+  flex: none;
+  border: 2px solid var(--linea-control);
+  /* Anguloso: 4px, no una pastilla. */
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  transform: rotate(45deg);
+  color: var(--color-neutro-tenue);
+  transition:
+    background-color var(--dur-media) var(--curva),
+    border-color var(--dur-media) var(--curva),
+    color var(--dur-media) var(--curva);
+}
+
+/** El contenido se contra-rota: el numero y el tilde se leen derechos. */
+.rutaMarca > * {
+  transform: rotate(-45deg);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.rutaTexto {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  /**
+   * ⚠️ TRACKING CERO Y NO `--tracking-etiqueta`. A 320px con 16px de canal
+   * quedan 288px utiles y cada columna mide 96px, menos el padding = 88px. La
+   * palabra mas larga que entra ahi a 12px en Inter 600 mayusculas tiene nueve
+   * caracteres: por eso los rotulos son "Direccion", "Pago" y "Confirmar", y
+   * por eso el tracking del token —0.08em, +12px sobre nueve letras— no entra.
+   */
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: var(--color-neutro-tenue);
+  padding-inline: var(--espacio-1);
+  /* Ultima red: una palabra mas larga que la columna se parte, no empuja. */
+  overflow-wrap: anywhere;
+}
+
+/** Debajo de 380px el margen se acaba: el rotulo baja un punto y entra. */
+@media (max-width: 380px) {
+  .rutaTexto {
+    font-size: 11px;
+  }
+}
+
+.rutaHecho .rutaMarca {
+  border-color: var(--color-cancha);
+  background: var(--color-cancha);
+  /* Papel sobre Verde Cancha: 5.16:1. */
+  color: var(--color-papel);
+}
+
+.rutaHecho .rutaTexto {
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ EL PASO ACTUAL SE MARCA CON TRES SEÑALES, NO CON UNA: relleno, peso y
+ * anillo. Quien no distingue el verde igual ve el rombo lleno y el texto en
+ * Tinta, y quien usa lector de pantalla escucha el `aria-current="step"` y el
+ * "en curso" del texto oculto.
+ */
+.rutaActual .rutaMarca {
+  border-color: var(--color-cancha);
+  background: var(--color-cancha);
+  color: var(--color-papel);
+  /* El anillo va en la sombra y no en el borde: no mueve el layout. */
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-cancha) 18%, transparent);
+}
+
+.rutaActual .rutaTexto {
+  color: var(--color-tinta);
+  font-weight: var(--peso-semi);
+}
+
+/* ================================================== producto que se compra */
+
+/**
+ * ⚠️ NO LLEVA `.eleva` NI `.destello`, Y ES DELIBERADO. Es un `<article>` que NO
+ * es clickeable —solo lo son la foto y el enlace de adentro—: una ficha que se
+ * levanta 4px y se pone verde al pasar el mouse promete un clic que no existe,
+ * y con `:focus-within` la promesa se dispara ademas al tabular. La jerarquia
+ * la da `.sup-ficha`, que alcanza.
+ */
+.producto {
+  display: flex;
+  gap: var(--espacio-5);
+  align-items: flex-start;
+  padding: var(--espacio-5);
+  border: 1px solid var(--linea-tenue);
+  margin-bottom: var(--espacio-5);
+}
+
+.productoFoto {
+  flex: none;
+  width: 176px;
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  line-height: 0;
+}
+
+.productoFoto img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+}
+
+/**
+ * Sin foto, el hueco es el rombo de la bandera y no un rectangulo gris: un
+ * placeholder neutro se lee como un error de carga.
+ */
+.productoPatron {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+}
+
+.productoDatos {
+  flex: 1;
+  min-width: 0;
+}
+
+.productoTitulo {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  letter-spacing: normal;
+  line-height: 1.3;
+  margin-bottom: var(--espacio-3);
+}
+
+.productoEtiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-3);
+}
+
+.productoVendedor {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0 0 var(--espacio-3);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.productoVendedor strong {
+  color: var(--color-tinta);
+  font-weight: var(--peso-semi);
+}
+
+.productoVendedor svg {
+  flex: none;
+  color: var(--color-cancha);
+}
+
+.productoEnlace {
+  font-size: var(--texto-sm);
+  /* Area tactil de 44px sin agrandar la caja visual. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+}
+
+/**
+ * ⚠️ EN TELEFONO LA FOTO CRECE, NO SE ACHICA. Es la ultima mirada a la camiseta
+ * antes de entregar plata y estaba en 128px: a ese tamaño no se distingue un
+ * escudo, que es exactamente lo que permite darse cuenta de que se entro a la
+ * publicacion equivocada. Se apila y se cierra en 240px.
+ */
+@media (max-width: 640px) {
+  .producto {
+    flex-direction: column;
+    gap: var(--espacio-4);
+    padding: var(--espacio-4);
+  }
+
+  .productoFoto {
+    width: 100%;
+    max-width: 240px;
+  }
+}
+
+/* ================================================================ ticket */
+
+/**
+ * EL RESUMEN COMO TICKET DE VERDAD.
+ *
+ * ⚠️ ES EL OBJETO PRINCIPAL DE LA PANTALLA Y TIENE QUE VERSE ASI. Antes era la
+ * misma caja blanca que el producto y que las garantias: tres rectangulos
+ * identicos, ninguno mas importante que el otro.
+ *
+ * ⚠️ EL TICKET ES LA BANDERA: ASTA MAS PAÑO. El asta es la barra vertical de la
+ * izquierda —que ademas ES el estado de la orden, asi que no es adorno— y el
+ * paño es la banda de rombos de arriba. Es el mismo dispositivo que usa la
+ * ficha del historial, asi que las dos pantallas se leen como el mismo sistema.
+ *
+ * ⚠️ `overflow: hidden` PARA QUE EL ASTA, LA BANDA Y EL TROQUEL RESPETEN EL
+ * RADIO. No recorta el foco: el anillo es `outline` y el `outline` propio de un
+ * elemento no lo recorta su propio overflow.
+ */
+.ticket {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--linea-tenue);
+  margin-bottom: var(--espacio-5);
+  /* Deja el lugar del asta. */
+  padding-left: 6px;
+  /* Color de estado del ticket. Lo pisa `[data-tono]`. */
+  --tono-estado: var(--verde-500);
+}
+
+/**
+ * ⚠️ EL TONO SALE DE `tonoDeOrden()`, NO DE UN MAPA NUEVO. Se pasa el TONO ya
+ * resuelto como `data-tono`: si mañana cambia a que estado le toca que color, se
+ * cambia en `lib/formato.ts` y esto lo sigue. Duplicar el mapa de estados es
+ * exactamente lo que ese archivo documenta que ya paso siete veces.
+ */
+.ticket[data-tono='neutro'] {
+  --tono-estado: var(--linea-control);
+}
+.ticket[data-tono='marca'] {
+  /* #16a35c, 3.12:1 sobre claro: cumple 1.4.11 y NUNCA es texto. */
+  --tono-estado: var(--verde-500);
+}
+.ticket[data-tono='exito'] {
+  --tono-estado: var(--color-cancha);
+}
+.ticket[data-tono='alerta'] {
+  /* Naranja de marca como RELLENO, que es su rol sobre claro. */
+  --tono-estado: var(--color-naranja);
+}
+
+/** El asta. */
+.ticket::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  z-index: var(--z-contenido);
+  background: var(--tono-estado);
+  pointer-events: none;
+}
+
+/**
+ * El paño: una fila entera de rombos (14px es medio mosaico de 28).
+ *
+ * ⚠️ NO LLEVA `patron-vivo` Y NO PUEDE LLEVARLO. `patron-deriva` es `infinite`:
+ * seria el unico elemento en movimiento perpetuo del sitio, sin pausa por hover
+ * ni tope de iteraciones, a veinte pixeles del importe total. La propia
+ * fundacion limita el pulso de "Ultima unidad" a TRES vueltas citando WCAG
+ * 2.2.2; aca vale el mismo criterio y con mas razon.
+ */
+.ticketBanda {
+  height: 20px;
+  border-bottom: 2px solid var(--tono-estado);
+  background-color: var(--superficie-marca);
+  background-size: var(--patron-tamanio-cinta);
+  background-position: var(--patron-posicion-cinta);
+  --patron-color: color-mix(in oklab, var(--tono-estado) 38%, transparent);
+}
+
+.ticketCabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4) var(--espacio-5) var(--espacio-3);
+}
+
+.ticketRotulo {
+  margin: 0;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* #5b6459 sobre blanco: 5.98:1. */
+  color: var(--color-neutro-texto);
+}
+
+.ticketNumero {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/** `position: relative` + `isolation` para poder meter el sello DETRAS. */
+.ticketCuerpo {
+  position: relative;
+  isolation: isolate;
+  padding: 0 var(--espacio-5) var(--espacio-4);
+}
+
+/**
+ * FILA DE TICKET, con guia punteada entre el concepto y el importe.
+ *
+ * ⚠️ NO USA `<FilaDeDatos>` Y ES DELIBERADO. Ese componente lo comparten el
+ * back-office y el panel del vendedor; una guia punteada y una tipografia de
+ * recibo son de ESTA pantalla, y restilarlo desde aca es imposible (los nombres
+ * de un CSS Module estan hasheados) mientras que tocarlo alla cambiaria seis
+ * pantallas que esta fase no verifica. `FilaDeDatos` sigue intacto y en uso.
+ */
+.lineaTicket {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) 0;
+}
+
+.conceptoTicket {
+  color: var(--color-neutro-texto);
+  flex: none;
+  max-width: 60%;
+}
+
+/** La guia: decorativa, `--linea-tenue`, nunca un borde de control. */
+.guia {
+  flex: 1;
+  min-width: var(--espacio-4);
+  height: 1px;
+  align-self: center;
+  background-image: repeating-linear-gradient(90deg, var(--linea-tenue) 0 2px, transparent 2px 6px);
+}
+
+.valorTicket {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/** "No incluido": #6b736a sobre blanco, 4.90:1. */
+.pendiente {
+  color: var(--color-neutro-tenue);
+  font-style: italic;
+}
+
+/**
+ * SELLO "PAGADA".
+ *
+ * ⚠️ ES EL UNICO DESENLACE FELIZ DEL PRODUCTO ENTERO y hasta hoy lo unico que
+ * cambiaba era un chip de 12px. Es redundancia pura —la `<Etiqueta>` y el
+ * bloque de cierre ya lo dicen con palabras— y por eso puede ser decorativo:
+ * `aria-hidden`, entra UNA vez y se queda quieto.
+ *
+ * ⚠️ VA EN `z-index: -1`, DETRAS DEL CONTENIDO. Encima, aunque sea al 15%,
+ * bajaria el contraste del titulo y del importe de cada item. Un sello no puede
+ * costarle legibilidad a un recibo.
+ */
+.sello {
+  position: absolute;
+  inset-block-start: 30%;
+  inset-inline-end: var(--espacio-5);
+  z-index: var(--z-fondo);
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--color-cancha);
+  border: 3px solid var(--color-cancha);
+  padding: 0.06em 0.28em;
+  transform: rotate(-9deg);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/**
+ * TROQUEL.
+ *
+ * ⚠️ LOS CORTES SON ROMBOS Y NO MEDIOS CIRCULOS. El sistema es anguloso y el
+ * rombo ES el isotipo: un ticket con troquel redondo seria de otra marca.
+ *
+ * ⚠️ NO SE RELLENAN CON `--color-papel`. Ese era el reflejo obvio —"que se lea
+ * como un corte hasta el fondo de la pagina"— y no funciona: papel (#fafaf7)
+ * contra el blanco del ticket da **1.02:1**, o sea que no se ve nada. Se
+ * rellenan con `--superficie-2` y llevan la sombra hundida, que es lo que los
+ * hace leer como agujeros perforados.
+ */
+.perforacion {
+  position: relative;
+  height: 14px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--linea-control) 0 5px,
+    transparent 5px 10px
+  );
+  background-size: 100% 1px;
+  background-position: 0 50%;
+  background-repeat: no-repeat;
+}
+
+.perforacion::before,
+.perforacion::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.perforacion::before {
+  left: -7px;
+}
+
+.perforacion::after {
+  right: -7px;
+}
+
+/**
+ * PIE DEL TICKET: el total.
+ *
+ * ⚠️ EL TOTAL ESTA EN OTRO PLANO Y ESA ES TODA LA JERARQUIA. Antes era una fila
+ * mas dentro de la misma caja blanca, separada por una linea de 1px. El marcado
+ * le pone `.sup-2`: sobre `#f2f3ea`, `--color-neutro-tenue` cae a 4.38:1 y
+ * `--color-alerta` a 4.36:1 —los dos debajo de AA— y esa clase los remapea sola.
+ *
+ * ⚠️ SIN `border-top`. El cambio de superficie YA separa, y el troquel esta a
+ * veinte pixeles: dos separadores seguidos se leen como un error.
+ */
+.total {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--espacio-2) var(--espacio-4);
+  padding: var(--espacio-5);
+}
+
+.totalConcepto {
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* Tinta sobre #f2f3ea: 14.01:1. */
+  color: var(--color-tinta);
+  min-width: 0;
+}
+
+/**
+ * ⚠️ EL IMPORTE PUEDE ENTRAR, NUNCA PUEDE ESTAR EN MOVIMIENTO. En el marcado
+ * lleva `.cifra-entra`, que lo sube UNA vez detras de una mascara mostrando el
+ * VALOR FINAL desde el primer cuadro. Prohibido `.contador`, contar hacia
+ * arriba, latir o brillar.
+ *
+ * ⚠️ Y NI SIQUIERA ENTRA CUANDO LA PANTALLA SE ESTA RECARGANDO SOLA. En
+ * `/checkout` con `?status=success` el `<meta refresh>` recarga el documento
+ * cada 5 segundos: la clase se aplica desde el TSX solo cuando eso no esta
+ * pasando.
+ */
+.totalValor {
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  line-height: 0.9;
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.totalNota {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--texto-sm);
+  /* `.sup-2` ya remapeo `--color-neutro-tenue` a 5.35:1 sobre esta superficie. */
+  color: var(--color-neutro-tenue);
+}
+
+@media (max-width: 480px) {
+  .ticketCabecera,
+  .ticketCuerpo,
+  .total {
+    padding-inline: var(--espacio-4);
+  }
+}
+
+/* ------------------------------------------------------ items de la orden */
+
+.itemOrden {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  padding: var(--espacio-3) 0;
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.itemMarco {
+  flex: none;
+  width: 72px;
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  line-height: 0;
+}
+
+.itemFoto,
+.itemPatron {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+}
+
+.itemDatos {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitulo {
+  margin: 0;
+  font-weight: var(--peso-medio);
+  line-height: 1.35;
+}
+
+.itemCantidad {
+  margin: var(--espacio-1) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+.itemPrecio {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/** Plazo de pago. Es un dato, no una alarma: no se anima. */
+.plazo {
+  margin: 0 0 var(--espacio-5);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+/* ================================================ confirmando el pago */
+
+/**
+ * LA ESPERA DEL WEBHOOK.
+ *
+ * ⚠️ ES EL MOMENTO MAS TENSO DEL SITIO Y HASTA HOY ERA UN PARRAFO GRIS QUIETO.
+ * La persona ya pago, volvio de Mercado Pago, y la pantalla no da ninguna señal
+ * de que algo este pasando mientras un `<meta refresh>` cuenta en silencio.
+ *
+ * ⚠️ ES EL UNICO BLOQUE OSCURO DE LA PANTALLA Y POR ESO FUNCIONA. Un plano
+ * oscuro corta el scroll y se lleva la atencion sin gritar; si hubiera tres, no
+ * seria ninguno.
+ *
+ * ⚠️ TRANQUILIZADOR NO ES ANSIOSO. No hay spinner: hay un halo que respira UNA
+ * vez por ciclo de espera y una barra que mide la espera REAL antes de la
+ * proxima recarga. El movimiento dice la verdad o no va.
+ */
+.confirmando {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--espacio-4) var(--espacio-5);
+  padding: var(--espacio-6) var(--espacio-5);
+  border-radius: var(--radio);
+  margin-bottom: var(--espacio-5);
+}
+
+.confirmandoSigno {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  /* Amarillo Cambio sobre noche: 13.97:1 plano y ~11:1 en el punto mas claro
+     de la malla. `--verde-400` ahi baja a ~4.3:1 y esto es el ancla visual. */
+  color: var(--color-cambio);
+}
+
+/**
+ * ⚠️ ES DECORATIVO, `aria-hidden`, SIN UN SOLO DATO ADENTRO: es la unica
+ * condicion bajo la que el sistema permite animar un resplandor.
+ *
+ * ⚠️ Y NO ES `.resplandor-ambiente`, QUE ES `infinite`. Esta pantalla vive
+ * exactamente un ciclo de espera antes de recargarse: el halo respira UNA vez y
+ * dura lo que dura la espera, o sea que ademas es honesto.
+ */
+.confirmandoHalo {
+  position: absolute;
+  inset: -8px;
+  border-radius: var(--radio-pastilla);
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--verde-500) 45%, transparent) 0%,
+    transparent 68%
+  );
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .confirmandoHalo {
+    animation: latirHalo var(--espera, 5s) ease-in-out 1 both;
+    will-change: opacity, transform;
+  }
+}
+
+/**
+ * ⚠️ ES UN `<h2>` REAL, NO UN PARRAFO DECORADO. El `role="status"` del bloque no
+ * anuncia nada aca y hay que decirlo: una live region solo anuncia MUTACIONES
+ * posteriores a su insercion, y en este flujo todo son cargas completas de
+ * documento. Lo que si sobrevive a una recarga es la navegacion por encabezados
+ * y el `<title>`, que la pantalla cambia con `generateMetadata`.
+ */
+.confirmandoTitulo {
+  margin: 0 0 var(--espacio-2);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  text-transform: uppercase;
+  /* Amarillo Cambio sobre noche: 13.97:1. */
+  color: var(--color-cambio);
+}
+
+.confirmandoTexto {
+  margin: 0;
+  font-size: var(--texto-base);
+  line-height: var(--interlineado-texto);
+}
+
+/**
+ * CUENTA REGRESIVA HONESTA.
+ *
+ * ⚠️ SU DURACION ES LA DEL `<meta http-equiv="refresh">`, pasada como `--espera`
+ * desde la pantalla. No es un adorno de "cargando": mide el tiempo real que
+ * falta para que la pagina vuelva a mirar.
+ *
+ * ⚠️ CON MOVIMIENTO REDUCIDO NO EXISTE, en vez de quedar llena —que se leeria
+ * como "listo"— o vacia con su margen. El texto ya dice todo.
+ */
+.confirmandoRiel {
+  display: none;
+  grid-column: 2;
+  height: var(--espacio-1);
+  margin-top: var(--espacio-4);
+  border-radius: var(--radio-chico);
+  background: rgb(250 250 247 / 0.14);
+  overflow: hidden;
+}
+
+.confirmandoAvance {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  /* Los dos extremos sobre noche: 6.86:1 y 13.97:1. */
+  background-image: linear-gradient(96deg, var(--verde-400) 0%, var(--color-cambio) 100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .confirmandoRiel {
+    display: block;
+  }
+
+  .confirmandoAvance {
+    /* Una sola vuelta: llega al final y se queda. Nunca `infinite`. */
+    animation: correrEspera var(--espera, 5s) linear both;
+  }
+}
+
+/**
+ * ⚠️ LA SALIDA MANUAL NO ES UN LUJO Y SE RENDERIZA SIEMPRE. El `<meta refresh>`
+ * no se puede pausar ni extender (WCAG 2.2.1), y cuando la espera automatica se
+ * agota la pantalla decia "esta tardando mas de lo habitual" y ofrecia CERO
+ * acciones: ni actualizar, ni volver. El enlace anda sin una linea de
+ * JavaScript.
+ */
+.confirmandoManual {
+  grid-column: 2;
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+}
+
+.confirmandoManual a,
+.confirmandoManual a:hover {
+  /* Amarillo Cambio: aguanta el punto mas claro de la malla. */
+  color: var(--color-cambio);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  /* Area tactil de 44px sin agrandar la caja visual. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+}
+
+@media (max-width: 480px) {
+  .confirmando {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .confirmandoRiel,
+  .confirmandoManual {
+    grid-column: 1;
+  }
+}
+
+/* ========================================================= accion de pago */
+
+/**
+ * EL BLOQUE QUE COBRA.
+ *
+ * ⚠️ ES LA UNICA VEZ EN TODO EL TRAMO QUE LA BANDERA CRUZA LA PANTALLA, y esta
+ * puesta donde importa: el corte diagonal de seccion sobre Verde Cancha
+ * convierte al boton de pagar en el destino visual de la pagina. Sobre
+ * `.sup-cancha` el primario pasa solo a Amarillo Cambio con texto Tinta
+ * (13.97:1), que es el contraste mas alto disponible en el sistema.
+ *
+ * ⚠️ EL `clip-path` COME ALTURA REAL: el `padding-top` incluye
+ * `--corte-compensacion` o se recorta la primera linea. Y por eso este bloque no
+ * puede contener un `<details>` ni nada pegado: `clip-path` recorta cualquier
+ * hijo que se desborde.
+ */
+.accionPago {
+  position: relative;
+  isolation: isolate;
+  margin: var(--espacio-7) 0 var(--espacio-6);
+  padding: calc(var(--espacio-7) + var(--corte-compensacion)) var(--espacio-5) var(--espacio-7);
+  clip-path: var(--corte-arriba);
+}
+
+.notaPago {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  margin: var(--espacio-4) 0 0;
+  font-size: var(--texto-xs);
+  /* `.sup-cancha` remapea `--color-neutro-tenue` a `--color-sobre-cancha`: 4.60:1. */
+  color: var(--color-neutro-tenue);
+  text-align: center;
+}
+
+/**
+ * ⚠️ EL ICONO NO PUEDE SER VERDE CANCHA ACA: sobre Verde Cancha es el mismo
+ * color. Amarillo Cambio da 4.59:1, muy por encima del 3:1 que pide un objeto
+ * grafico.
+ */
+.notaPago svg {
+  flex: none;
+  color: var(--color-cambio);
+}
+
+/* ===================================================== barra de compra */
+
+/**
+ * BARRA DE COMPRA PEGADA AL PIE.
+ *
+ * ⚠️ ARREGLA LA FALLA MAS CARA DE LA SUPERFICIE, Y NO ES ESTETICA. En
+ * `/comprar` el total estaba ARRIBA de seis campos de direccion: apenas se toca
+ * el primer input se va de pantalla, y la persona completa nombre, calle,
+ * localidad, provincia, CP y telefono sin volver a ver cuanto va a pagar.
+ *
+ * ⚠️ VA COMO ULTIMO HIJO DEL CUERPO DEL FORMULARIO, Y LA POSICION ES LO QUE LA
+ * HACE FUNCIONAR: un `sticky` con `bottom: 0` se despega cuando su posicion
+ * natural cae por debajo del viewport, o sea que puesto cerca del FINAL de un
+ * contenedor largo queda clavado abajo desde el primer cuadro y recien se
+ * suelta al llegar al final del formulario. Puesto al principio no se pegaria
+ * nunca.
+ *
+ * ⚠️ ES OPACA (`.sup-cancha`), NO VIDRIO. Un fondo translucido deja pasar el
+ * formulario por detras del total: ruido justo sobre el unico numero que
+ * importa.
+ *
+ * ⚠️ SANGRA HASTA EL BORDE DE LA COLUMNA con margenes negativos de `--canal`,
+ * que es exactamente el padding de `.pagina`.
+ */
+.barraCompra {
+  z-index: var(--z-pegado);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espacio-2) var(--espacio-4);
+  margin: var(--espacio-2) calc(var(--canal) * -1) 0;
+  padding: var(--espacio-4) var(--canal);
+  /*
+    ⚠️ SIN `border-top`. `.sup-cancha::before` ya dibuja el filo de luz del borde
+    superior, y un borde plano encima da dos lineas pegadas que se leen como un
+    error de renderizado.
+  */
+}
+
+/**
+ * ⚠️ EL `position` VA CON LA CLASE DUPLICADA Y NO ES ADORNO: el marcado le pone
+ * TAMBIEN `.sup-cancha`, que declara `position: relative` con la MISMA
+ * especificidad (0,1,0) desde `tokens.css`. Cual de las dos gana lo decide el
+ * orden en que se inyectan las hojas, y si gana `relative` la barra deja de
+ * pegarse **sin un solo error**: el total vuelve a irse de pantalla y no hay
+ * forma de notarlo salvo mirando. Con (0,2,0) el orden deja de importar. Es el
+ * mismo motivo por el que `.compra.compra:hover` va duplicada mas abajo.
+ */
+.barraCompra.barraCompra {
+  position: sticky;
+  bottom: 0;
+}
+
+.barraRotulo {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* `.sup-cancha` remapea este token a `--color-sobre-cancha`: 4.60:1. */
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * ⚠️ ESTE TOTAL NO SE ANIMA, NI SIQUIERA AL ENTRAR. Es el MISMO importe que ya
+ * esta en el ticket a media pantalla de distancia: si los dos se movieran, la
+ * pantalla tendria dos numeros acomodandose. El del ticket entra; este esta.
+ */
+.barraTotal {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-papel);
+}
+
+/* ============================================================== garantias */
+
+/**
+ * ⚠️ AHORA SI VAN JUSTO ANTES DEL BOTON. El comentario que este archivo tenia lo
+ * afirmaba y era falso: el `<ul>` estaba DESPUES de `<Formulario>`, o sea
+ * despues del submit. Ahora es hijo del formulario, arriba de la barra.
+ *
+ * ⚠️ ES EL UNICO BLOQUE OSCURO DE `/comprar`: es el momento en el que alguien
+ * duda, y un panel oscuro y quieto se lee como institucional. Las tres lineas
+ * son hechos comprobables del sistema, no promesas —BR-003 y SS-012 dicen que
+ * conectar Mercado Pago no otorga confianza—.
+ *
+ * ⚠️ SU ENTRADA LA PONE EL ESCALONADO DEL FORMULARIO, NO UNA CLASE DE REVELADO.
+ * Es hijo directo de `.cuerpo`, donde `form.module.css` ya declara
+ * `animation: entraCampo … both` con la misma especificidad que `.revela-*`:
+ * poner las dos deja el resultado a merced del orden de inyeccion de las hojas.
+ * Ver la nota en el marcado.
+ */
+.garantias {
+  list-style: none;
+  margin: var(--espacio-2) 0 0;
+  padding: var(--espacio-6) var(--espacio-5);
+  border-radius: var(--radio);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.garantias li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  font-size: var(--texto-sm);
+  /* `.sup-noche` remapea `--color-neutro-texto` a #b3c6b8: 9.15:1 sobre el
+     fondo plano y 5.74:1 en el punto mas claro de la malla. */
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ EL ICONO NO PUEDE SER VERDE CANCHA ACA: sobre fosa da 3.34:1 y se apaga.
+ * `--verde-400` da 7.51:1 plano y ~4.3:1 en el punto mas claro de la malla —muy
+ * por encima del 3:1 de un objeto grafico—. Ninguna clase `.sup-*` puede
+ * resolverlo sola porque el modulo escribe ese `color` a mano.
+ */
+.garantias svg {
+  flex: none;
+  color: var(--verde-400);
+  margin-top: 2px;
+}
+
+/* ============================================================== cierre */
+
+/**
+ * BLOQUE DE CIERRE de una orden ya pagada.
+ *
+ * ⚠️ EL FINAL FELIZ TIENE QUE VERSE COMO UN FINAL. Antes, una orden pagada
+ * terminaba en dos botones sueltos sobre papel. Aca la bandera cruza la
+ * pantalla por segunda vez —mismo corte diagonal que el bloque de pago— y
+ * cierra el documento.
+ */
+.cierre {
+  position: relative;
+  isolation: isolate;
+  margin-top: var(--espacio-7);
+  padding: calc(var(--espacio-7) + var(--corte-compensacion)) var(--espacio-5) var(--espacio-7);
+  clip-path: var(--corte-arriba);
+  text-align: center;
+}
+
+.cierreTitulo {
+  margin: 0 0 var(--espacio-4);
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  /* Amarillo Cambio sobre Verde Cancha: 4.59:1, y es texto grande. */
+  color: var(--color-cambio);
+  overflow-wrap: anywhere;
+}
+
+/**
+ * ⚠️ EL DESENLACE QUE NO ES FELIZ NO USA LA SUPERFICIE DE LA MARCA. El marcado
+ * cambia `.sup-cancha` por `.sup-fosa` cuando la orden esta cancelada: el mismo
+ * objeto, el mismo corte diagonal, otro registro. Lo unico que agrega esta clase
+ * es el color del titular, porque `.cierreTitulo` escribe `--color-cambio` a
+ * mano —Amarillo Cambio es el color de la celebracion— y ningun remapeo de
+ * superficie puede corregir un color escrito a mano.
+ *
+ * ⚠️ `--color-alerta` Y NO `--color-naranja`. Sobre `.sup-fosa` los tokens ya
+ * estan remapeados y `--color-alerta` resuelve al naranja de la identidad con
+ * 7.26:1, que es el unico contexto del sistema donde ese naranja ES texto.
+ */
+.cierreApagado .cierreTitulo {
+  color: var(--color-alerta);
+}
+
+.cierreTexto {
+  margin: 0 auto var(--espacio-6);
+  max-width: 46ch;
+  color: var(--color-neutro-tenue);
+}
+
+.nota {
+  margin-top: var(--espacio-5);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  text-align: center;
+}
+
+/* ============================================================ mis compras */
+
+/**
+ * ⚠️ EL HISTORIAL ES UNA GRILLA A PARTIR DE 900px. En una columna de una ficha
+ * por fila, `.enfoca-hermanos` no enfoca nada: no hay hermanas al lado. Y una
+ * pila vertical de cajas identicas es exactamente lo que el dueño describio como
+ * "un CRUD con estilos".
+ */
+.compras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+@media (min-width: 900px) {
+  .compras {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+}
+
+/** La ficha ocupa toda su celda: en una grilla, filas de altura despareja. */
+.compras > li {
+  display: flex;
+}
+
+/**
+ * ⚠️ EL ASTA DE ESTADO ES REDUNDANCIA, NO INFORMACION NUEVA. La `<Etiqueta>`
+ * sigue diciendo el estado en palabras; el asta solo permite barrer una lista de
+ * doce ordenes y ver de un vistazo cual esta esperando pago. Quien no distingue
+ * el color no pierde absolutamente nada. Y es la misma bandera del ticket, asi
+ * que las dos pantallas se leen como el mismo objeto.
+ */
+.compra {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  gap: var(--espacio-4);
+  align-items: stretch;
+  padding: var(--espacio-4);
+  padding-left: calc(var(--espacio-4) + 6px);
+  border: 1px solid var(--linea-tenue);
+  --tono-estado: var(--linea-control);
+  /**
+   * ⚠️ `--destello` PROPIO. `.sup-ficha` no lo redefine y el de por defecto es
+   * `--destello-claro`, que es BLANCO con alfa: sobre una ficha blanca no
+   * existe. Teñido con el verde de marca al 8/14% se ve el barrido y no se lava
+   * ni el titulo ni el importe —ademas el pseudo va en `z-index: -1`—.
+   */
+  --destello: linear-gradient(
+    var(--eje),
+    transparent 36%,
+    color-mix(in oklab, var(--color-cancha) 8%, transparent) 48%,
+    color-mix(in oklab, var(--color-cancha) 14%, transparent) 52%,
+    transparent 64%
+  );
+}
+
+/**
+ * ⚠️ EL `:hover` TIENE QUE ESTAR. `a:hover` de `tokens.css` es (0,1,1) y
+ * `.compra` es (0,1,0): al pasar el mouse, TODO el texto de la ficha —titulo,
+ * fecha, numero de orden y el total— se ponia Verde Tiempo Extra y la jerarquia
+ * de grises desaparecia. Con `.eleva` el hover pasa a ser mucho mas visible, asi
+ * que el defecto tambien.
+ */
+.compra,
+.compra:hover {
+  color: inherit;
+}
+
+/**
+ * ⚠️ LA CLASE VA DOBLE A PROPOSITO. `.eleva:hover` (movimiento.css) pisa el
+ * `box-shadow` ENTERO de `.sup-ficha` con la misma especificidad (0,2,0), asi
+ * que la ficha pierde el hairline y el filo de luz justo al levantarse —se ve
+ * mas plana elevada que apoyada—. Duplicar el nombre de clase sube a (0,3,0) y
+ * el orden de inyeccion de las hojas deja de importar.
+ */
+.compra.compra:hover,
+.compra.compra:focus-visible,
+.compra.compra:focus-within {
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-2);
+}
+
+.compra.compra:active {
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+/**
+ * ⚠️ `::before` Y NO `::after`: `.destello` del marcado usa el `::after` de este
+ * mismo elemento. Pisarlo apagaria el barrido en silencio.
+ */
+.compra::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--tono-estado);
+  pointer-events: none;
+}
+
+.compra[data-tono='marca'] {
+  --tono-estado: var(--verde-500);
+}
+.compra[data-tono='exito'] {
+  --tono-estado: var(--color-cancha);
+}
+.compra[data-tono='alerta'] {
+  --tono-estado: var(--color-naranja);
+}
+
+.compraMarco {
+  flex: none;
+  width: 96px;
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  line-height: 0;
+  align-self: flex-start;
+}
+
+.compraFoto,
+.compraPatron {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+}
+
+/**
+ * ⚠️ LA TRANSICION SE REDECLARA ACA PORQUE `.enfoca-hermanos img` LA MATA.
+ * Esa regla es (0,1,1) y `.zoom-foto` es (0,1,0): su `transition` en forma
+ * abreviada gana y RESETEA la propiedad `transform`, asi que el acercamiento de
+ * la foto pasaba a ser instantaneo en la unica grilla del tramo que combina las
+ * dos utilidades. `.compra .compraFoto` es (0,2,0) y le gana a las dos.
+ */
+.compra .compraFoto {
+  transition:
+    filter var(--dur-media) var(--curva),
+    transform var(--dur-media) var(--curva-seca);
+}
+
+.compraCuerpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.compraTitulo {
+  margin: 0;
+  font-weight: var(--peso-semi);
+  line-height: 1.35;
+  /* Un titulo largo no estira la ficha. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.compraOtros {
+  font-weight: var(--peso-normal);
+  color: var(--color-neutro-tenue);
+}
+
+.compraMeta {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.compraPie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  flex-wrap: wrap;
+  /* Empuja el estado y el total al pie de la ficha. */
+  margin-top: auto;
+  padding-top: var(--espacio-2);
+}
+
+/**
+ * ⚠️ EL TOTAL DE UNA COMPRA PASADA NO SE ANIMA NI SIQUIERA AL ENTRAR. La ficha
+ * entera entra con `.revela-grilla-materia`; el numero viaja adentro y no tiene
+ * animacion propia. Un historial donde doce importes se mueven por separado se
+ * lee como doce numeros calculandose.
+ */
+.compraTotal {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .compraMarco {
+    width: 80px;
+  }
+}
+
+/* ====================================================== esqueleto del ticket */
+
+/**
+ * ⚠️ LA SILUETA TIENE QUE SER LA DEL TICKET, no cuatro barras grises. Con las
+ * tres pantallas en `force-dynamic` y una consulta de portadas de por medio,
+ * este es literalmente el primer cuadro de cada navegacion al checkout: un
+ * esqueleto con proporciones inventadas produce un salto al llegar el contenido,
+ * que es peor que no poner nada.
+ */
+.fantasma {
+  position: relative;
+  overflow: hidden;
+  padding-left: 6px;
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+.fantasma::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--superficie-2);
+}
+
+.fantasmaBanda {
+  height: 20px;
+  background: var(--superficie-2);
+  border-bottom: 2px solid var(--linea-tenue);
+}
+
+.fantasmaCuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5);
+}
+
+.fantasmaPie {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5);
+  background: var(--superficie-2);
+}
+
+/* ========================================================= keyframes locales */
+
+/**
+ * ⚠️ NOMBRES PROPIOS, NO LOS GLOBALES. Un modulo PUEDE usar un keyframe de
+ * `movimiento.css` —css-loader solo reescribe los nombres declarados en el
+ * propio archivo—, pero declarar aca un nombre que TAMBIEN exista alla es una
+ * trampa silenciosa: el local gana y el global queda muerto. Y `dibujarRiel` ya
+ * lo usa `ui.module.css`, asi que este se llama `trazarRiel`.
+ */
+
+/** Sin `to`: el valor final es el `scaleX(var(--avance))` de la regla base. */
+@keyframes trazarRiel {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes correrEspera {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/** Una respiracion completa por ciclo de espera. Nunca en bucle. */
+@keyframes latirHalo {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.06);
+  }
+}

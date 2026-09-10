@@ -1,0 +1,72 @@
+/**
+ * LA MARCA: bandera de linea + wordmark.
+ *
+ * ⚠️ EL COLOR NO SE ESCRIBE EN `.invertido`, Y ESO NO ES UN OLVIDO. Antes era
+ * `color: var(--color-papel)` y eso volvia muerto el hover de la marca en la
+ * barra: `.invertido` esta en el MISMO elemento que `.logo`, o sea que una
+ * declaracion de color aca gana sobre cualquier color heredado del `<a>` que
+ * lo envuelve. Con `inherit` el color lo decide el contexto. Los consumidores
+ * de `invertido` ya lo declaran:
+ *   header.module.css `.marca`         → --color-papel (y --color-cambio en hover)
+ *   footer                `.sup-noche`  → --color-sobre-oscuro (= papel)
+ *   (auth)/auth.module.css `.panel`     → --color-papel
+ *
+ * ⚠️ LA LUZ DEL ISOTIPO VIVE ACA, LA RESPIRACION NO. La bandera lleva un halo
+ * estatico del color de `--luz-marca` —verde luminoso sobre papel, verde-400
+ * sobre noche, Amarillo Cambio sobre cancha: lo remapea cada superficie, no
+ * este archivo— en TODOS sus usos (barra, pie, panel de auth, esqueletos,
+ * pantallas de servicio). Es `filter: drop-shadow`: sigue la silueta del PNG
+ * transparente y sale de cualquier `overflow`. Cuesta nada: es una imagen de
+ * 26 a 72px. El halo que RESPIRA es cosa de la barra (`header.module.css`):
+ * una perpetua se decide por pantalla, no se hereda desde la marca.
+ */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  color: var(--color-cancha);
+  transition: color var(--dur-hover) var(--curva);
+}
+
+.invertido {
+  color: inherit;
+}
+
+.isotipo {
+  display: block;
+  /* No se deja encoger: el logo pierde su margen de proteccion enseguida. */
+  flex: none;
+  /*
+   * ⚠️ EL EJE DE GIRO VIVE ACA Y EN NINGUN OTRO LADO. Es la base del asta:
+   * girar desde el centro se ve como un icono que tiembla, girar desde el asta
+   * ES el gesto del juez de linea levantando la bandera, que es literalmente el
+   * isotipo. La animacion en si la pone el contenedor (ver `header.module.css`),
+   * porque el foco lo recibe el `<a>` que envuelve al logo, no el logo.
+   */
+  transform-origin: 10% 90%;
+  /*
+   * Halo de reposo: corto y tenue. Sobre papel es verde y se lee como que la
+   * bandera esta iluminada; sobre la barra es amarillo y es la chispa de la
+   * marca. Un contenedor que anime `filter` (la barra) lo pisa mientras corre.
+   */
+  filter: drop-shadow(0 0 5px rgb(var(--luz-marca) / 0.45));
+}
+
+.wordmark {
+  font-family: var(--fuente-titulo);
+  font-weight: var(--peso-normal);
+  /*
+   * Interlineado 1 y no el del sistema: el wordmark es una sola linea y con
+   * 0.95 el recuadro queda mas bajo que las letras y las corta arriba.
+   */
+  line-height: 1;
+  letter-spacing: var(--tracking-titulo);
+  text-transform: uppercase;
+  color: inherit;
+  /*
+   * Compensa la altura de la x: Big Noodle no tiene descendentes visibles en
+   * "Offside" y sin esto el wordmark se ve flotando sobre la bandera.
+   */
+  transform: translateY(1px);
+}

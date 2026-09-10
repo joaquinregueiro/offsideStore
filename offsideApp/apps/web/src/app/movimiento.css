@@ -1,0 +1,3111 @@
+/**
+ * CAPA DE MOVIMIENTO
+ * =============================================================================
+ *
+ * Vive aparte de `tokens.css` a proposito: los tokens son el VOCABULARIO del
+ * sistema (color, tipografia, espacio) y esto es la GRAMATICA del movimiento.
+ * Se importan los dos desde el layout raiz.
+ *
+ * ⚠️ CAMBIO DE ESPIRITU (2026-09-10), POR DECISION DEL DUEÑO. La version
+ * anterior era "direccional y seca": nada rebotaba, nada oscilaba, y el
+ * movimiento solo se veia al scrollear. El dueño la rechazo —"sin animaciones,
+ * glow, dinamismo"—. Ahora la pagina esta VIVA EN EL PRIMER SEGUNDO sin
+ * scrollear: todo lo visible entra escalonado, los blobs de luz flotan detras,
+ * el CTA respira, una banda de luz cruza el titular una vez, los iconos
+ * aparecen con escala, y las fichas se levantan con glow y se inclinan hacia
+ * el mouse. El revelado por scroll sigue para lo que esta abajo del pliegue.
+ *
+ * ⚠️ LO QUE SIGUE SIN ANIMARSE, Y ES PARTE DEL CONTRATO:
+ *
+ *   el precio y el total          Pueden ENTRAR (`.cifra-entra`, sin rebote) y
+ *                                 despues no se mueven: no cuentan, no laten, no
+ *                                 brillan en bucle. `.respira` y `.contador`
+ *                                 estan prohibidos sobre plata. Un numero que
+ *                                 se mueve se lee como un numero que todavia no
+ *                                 esta decidido.
+ *   los avisos de error           Ya interrumpen con `role="alert"`. Aparecen en
+ *                                 140ms (`.entra-seco`) y nada mas.
+ *   el estado de una orden        "Pagada" no es una celebracion: es un hecho.
+ *   la consola de pagos           Es una herramienta de operaciones. Sin
+ *                                 escalonado, sin revelado, sin blobs.
+ *
+ * ⚠️ CERO JAVASCRIPT. `animation`, `transition`, `@property`,
+ * `animation-timeline`, `:has()`, `@starting-style`. Nada mas.
+ *
+ * ⚠️ RENDIMIENTO. Lo que corre en bucle o con el scroll anima SOLO `transform`,
+ * `opacity`, `filter` y propiedades registradas con `@property`. Los blobs son
+ * gradientes radiales sin `filter: blur()` —el borde difuso lo da el propio
+ * gradiente— y flotan con `transform`: una capa de compositor y cero pintura.
+ * El glow de una ficha es `box-shadow` en hover (una transicion), nunca un
+ * `filter` permanente; `backdrop-filter` solo en los vidrios, nunca en una
+ * grilla.
+ *
+ * Todo lo de este archivo esta condicionado a `prefers-reduced-motion`, y no
+ * solo bajandole la duracion: las animaciones dirigidas por scroll NO se
+ * apagan con una duracion corta —su progreso lo maneja el scroll, no el
+ * reloj—, asi que la regla entera vive adentro de la media query. Sin eso,
+ * quien pide menos movimiento se queda mirando contenido en `opacity: 0`.
+ */
+
+/* ------------------------------------------------------------ keyframes */
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+/** `surgir` es la entrada de `.entra` (15 usos). Sube mas (14 → 22px) y trae un pelo de escala: la cosa VIENE. */
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+  }
+}
+
+@keyframes surgir-corto {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes entrar-izquierda {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+@keyframes crecer {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/** Barrido de izquierda a derecha: barras de progreso y subrayados. */
+@keyframes barrer {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* --------------------------------------------------------- entrada al cargar */
+
+/**
+ * Aparicion al primer pintado.
+ *
+ * ⚠️ ES UNA ANIMACION, NO UNA TRANSICION CON `@starting-style`. Las dos
+ * funcionan, pero una animacion con `both` termina SIEMPRE en el estado final
+ * aunque el navegador la interrumpa; una transicion que no llega a dispararse
+ * deja el elemento en el estado inicial. Con contenido servido desde el
+ * servidor, eso es la diferencia entre "no se animo" y "no se ve".
+ *
+ * `--retraso` lo pone quien lo usa para escalonar. Por defecto es 0.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  /**
+   * `.entra` pasa a 560ms con `--curva-viva`: sale disparada, se pasa un ~3% y
+   * se acomoda. Es la entrada estandar y esta puesta en bloques que llevan
+   * importes adentro; el overshoot es de 22px × 3% —menos de un pixel— y es un
+   * bloque que se acomoda, no un numero que cambia. El importe mismo sigue
+   * entrando con `alzar` y sin rebote.
+   */
+  .entra {
+    animation: surgir var(--dur-entrada) var(--curva-viva) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-suave {
+    animation: aparecer var(--dur-entrada) var(--curva-entrada) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+}
+
+/* ------------------------------------------------- revelado al hacer scroll */
+
+/**
+ * Contenido que aparece al entrar en pantalla, **sin una linea de JavaScript**.
+ *
+ * `animation-timeline: view()` le entrega el progreso de la animacion al
+ * scroll: no hay IntersectionObserver, no hay listener, no hay hidratacion. Es
+ * exactamente el tipo de cosa que este proyecto viene resolviendo con HTML y
+ * CSS en vez de con un bundle.
+ *
+ * ⚠️ LAS DOS GUARDAS SON OBLIGATORIAS Y POR MOTIVOS DISTINTOS:
+ *
+ *   @supports   Sin soporte (Firefox al dia de hoy), la regla no aplica y el
+ *               contenido se ve normal. Si estuviera afuera, el `opacity: 0`
+ *               del keyframe se quedaria puesto para siempre.
+ *   @media      `prefers-reduced-motion` NO puede apagar esto bajando la
+ *               duracion, porque el progreso lo da el scroll y no el reloj.
+ *
+ * `animation-range: entry 0% cover 22%` arranca cuando el borde superior del
+ * elemento entra por abajo y termina antes de que llegue al medio: se completa
+ * mientras la persona sigue bajando, no despues.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revela {
+      animation: surgir auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+
+    .revela-suave {
+      animation: aparecer auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 20%;
+    }
+
+    /**
+     * Escalonado de una grilla SIN un delay por item escrito a mano: cada
+     * ficha tiene su propio rango de scroll, asi que se revelan en el orden en
+     * que entran a la pantalla. El escalonado sale de la geometria, no de un
+     * contador.
+     */
+    .revela-grilla > * {
+      animation: surgir-corto auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 18%;
+    }
+  }
+}
+
+/* ----------------------------------------------------- transiciones de vista */
+
+/**
+ * TRANSICIONES ENTRE PANTALLAS (React 19 + Next 16).
+ *
+ * Sin soporte del navegador, la navegacion funciona igual y no se anima nada.
+ * No hay degradacion que manejar: la API es aditiva.
+ */
+
+/**
+ * La barra superior NO se mueve durante una transicion.
+ *
+ * ⚠️ ES EL ANCLA ESPACIAL. Si la barra tambien se desliza, la persona no tiene
+ * ningun punto fijo y la sensacion no es "el contenido cambio" sino "todo se
+ * fue". Se le da nombre propio y se le apaga la animacion.
+ *
+ * ⚠️ EL NOMBRE LO PONE EL TSX, NO EL CSS, Y POR ESO UN `grep
+ * view-transition-name` NO LO ENCUENTRA: `components/header.tsx` lo escribe como
+ * `style={{ viewTransitionName: 'barra' }}` y `components/footer.tsx` como
+ * `'pie'`. Verificado. Estas reglas NO estan muertas — pero la unica manera de
+ * comprobarlo es buscar tambien la forma camelCase.
+ */
+::view-transition-group(barra) {
+  animation: none;
+  z-index: 100;
+}
+
+::view-transition-old(barra),
+::view-transition-new(barra) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/**
+ * MORPH de la foto del producto entre la grilla y la ficha.
+ *
+ * Es la transicion que mas comunica de todo el sitio: la misma camiseta que se
+ * toco en la vitrina se agranda hasta ocupar la ficha. Sin esto, una foto
+ * desaparece y otra aparece, y nada dice que son la misma prenda.
+ *
+ * El desenfoque a mitad de vuelo tapa los artefactos de interpolacion entre dos
+ * recortes distintos (la grilla usa `cover`, la ficha `contain`).
+ */
+::view-transition-group(.morph) {
+  animation-duration: var(--transicion-lenta);
+  animation-timing-function: var(--curva-recorrido);
+}
+
+::view-transition-image-pair(.morph) {
+  animation-name: morph-desenfoque;
+}
+
+@keyframes morph-desenfoque {
+  30% {
+    filter: blur(3px);
+  }
+}
+
+/**
+ * Direccion de la navegacion.
+ *
+ * Adentro se entra por la derecha, para atras se sale por la derecha. Es la
+ * convencion de la pagina de un libro y esta tan asentada que romperla marea.
+ *
+ * ⚠️ 60px, NO media pantalla. Alcanza para leer la direccion sin obligar a
+ * seguir un objeto que cruza el viewport.
+ */
+::view-transition-old(.avanza) {
+  --corrimiento: -60px;
+  animation:
+    140ms var(--curva-salida) both aparecer reverse,
+    var(--transicion-lenta) var(--curva-recorrido) both deslizar reverse;
+}
+
+::view-transition-new(.avanza) {
+  --corrimiento: 60px;
+  animation:
+    200ms var(--curva-entrada) 140ms both aparecer,
+    var(--transicion-lenta) var(--curva-recorrido) both deslizar;
+}
+
+::view-transition-old(.retrocede) {
+  --corrimiento: 60px;
+  animation:
+    140ms var(--curva-salida) both aparecer reverse,
+    var(--transicion-lenta) var(--curva-recorrido) both deslizar reverse;
+}
+
+::view-transition-new(.retrocede) {
+  --corrimiento: -60px;
+  animation:
+    200ms var(--curva-entrada) 140ms both aparecer,
+    var(--transicion-lenta) var(--curva-recorrido) both deslizar;
+}
+
+@keyframes deslizar {
+  from {
+    translate: var(--corrimiento);
+  }
+}
+
+/**
+ * Esqueleto → contenido.
+ *
+ * ⚠️ EL TIEMPO ES ASIMETRICO A PROPOSITO: lo viejo se va rapido (140ms) para
+ * no competir por la atencion, lo nuevo entra mas lento (200ms) y despues, para
+ * que haya tiempo de registrarlo. Es la diferencia entre un reemplazo y un
+ * relevo.
+ */
+::view-transition-old(.baja) {
+  animation:
+    140ms var(--curva-salida) both aparecer reverse,
+    140ms var(--curva-salida) both surgir-vt reverse;
+}
+
+::view-transition-new(.sube) {
+  animation:
+    200ms var(--curva-entrada) 140ms both aparecer,
+    var(--transicion-lenta) var(--curva-entrada) both surgir-vt;
+}
+
+@keyframes surgir-vt {
+  from {
+    transform: translateY(10px);
+  }
+}
+
+/**
+ * ⚠️ CON `prefers-reduced-motion` LAS TRANSICIONES DE VISTA SE APAGAN A MANO.
+ * La regla global de `tokens.css` usa el selector `*`, que **no alcanza a los
+ * pseudo-elementos del arbol de transicion**: sin esto, quien pidio menos
+ * movimiento igual veria la pagina deslizarse.
+ */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-image-pair(*) {
+    animation: none !important;
+  }
+}
+
+/** El pie es el otro borde fijo: mismo criterio que la barra. */
+::view-transition-group(pie) {
+  animation: none;
+}
+
+::view-transition-old(pie),
+::view-transition-new(pie) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* =============================================================================
+ * CAPA DE MOVIMIENTO — VOCABULARIO COMPLETO
+ * =============================================================================
+ *
+ * Se AGREGA a `app/movimiento.css`, despues de lo que ya existe. Las cinco
+ * clases globales que las pantallas ya usan —verificado: `.entra` (3 usos),
+ * `.revela-grilla` (7), `.revela-suave` (1), mas `.revela` y `.entra-suave`—
+ * y todos los nombres de View Transition (`barra`, `pie`, `.morph`, `.avanza`,
+ * `.retrocede`, `.baja`, `.sube`) se conservan intactos.
+ *
+ * ⚠️ EL MOVIMIENTO TIENE UN SOLO EJE: 112 grados, el brazo del juez de linea.
+ * Destellos, barridos, rayas y telones van todos en esa direccion. Que todo se
+ * mueva en un mismo eje es lo que separa un sistema de una pila de efectos. Lo
+ * que ENTRA y lo que se TOCA puede pasarse un poco y volver (`--curva-viva`,
+ * `--curva-pop`); lo que FLOTA oscila lento. Un importe, no.
+ *
+ * ⚠️ QUE SE ANIMA Y QUE NO — LA REGLA SE RELAJA, NO DESAPARECE:
+ *
+ *   SI  todo puede ENTRAR animado, incluido un precio o un total: que un
+ *       importe aparezca junto con su ficha no dice nada sobre el importe.
+ *   NO  un importe no se mueve DESPUES de entrar. Nada de contar hacia arriba,
+ *       latir o brillar en bucle sobre plata: un numero en movimiento se lee
+ *       como un numero que todavia no esta decidido, y esto es un sitio donde
+ *       se transfiere plata a un desconocido.
+ *   NO  un aviso de error no se anima mas alla de aparecer, y corto. Ya
+ *       interrumpe con `role="alert"`; el movimiento lo vuelve un susto.
+ *   NO  la consola de pagos no lleva revelado por scroll ni escalonado. Es una
+ *       herramienta de operaciones: cada milisegundo de animacion es un
+ *       milisegundo esperando para leer un dato.
+ *
+ * ⚠️ CERO JAVASCRIPT. `animation-timeline: view()/scroll()`, `@property`,
+ * `:has()`, `@starting-style`, `::details-content`, `interpolate-size` y la
+ * View Transitions API que React 19 ya expone. Ni un IntersectionObserver, ni
+ * un listener, ni una libreria.
+ *
+ * ⚠️ NINGUN NOMBRE DE ESTE ARCHIVO PUEDE REPETIRSE EN UN `*.module.css`, y al
+ * reves. En un CSS Module los nombres de `@keyframes` son LOCALES: dos
+ * declaraciones con el mismo nombre son una trampa esperando, porque el modulo
+ * resuelve a la suya y el global queda muerto sin que falle nada.
+ *
+ * Los nombres tomados por los modulos los lista `scripts/chequeo-css.mjs`, que
+ * falla si alguien pisa uno (hoy son 33, en camelCase o con prefijo de modulo:
+ * `girar`, `latirHalo`, `cruzaDestello`, `admin-filete`, `vendedor-alzar`…).
+ * Los de este archivo son kebab-case sin prefijo. Correlo antes de agregar uno.
+ * ========================================================================== */
+
+/* ------------------------------------------------------------ keyframes */
+
+@keyframes surgir-largo {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+  }
+}
+
+@keyframes entrar-derecha {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+/** Entrada desde el margen. Fluida: 48px fijos en un telefono son un sexto de pantalla. */
+@keyframes entrar-margen {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * clamp(16px, 5vw, 64px)));
+  }
+}
+
+@keyframes entrar-margen-der {
+  from {
+    opacity: 0;
+    transform: translateX(clamp(16px, 5vw, 64px));
+  }
+}
+
+/**
+ * ACERCARSE — la entrada de MATERIA. Escala + desplazamiento + opacidad, los
+ * tres juntos: solo con opacidad algo "aparece", solo con escala "se infla";
+ * con los tres la cosa VIENE desde atras del plano de la pantalla.
+ * ⚠️ 0.94 y no 0.8: mas que eso y en una ficha se ve el recorte de la foto
+ * moverse dentro del marco.
+ */
+@keyframes acercarse {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.94);
+  }
+}
+
+@keyframes acercarse-corto {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.965);
+  }
+}
+
+/**
+ * TELON. Un borde que barre y descubre.
+ * ⚠️ SE VE DISTINTO A UN FADE Y POR ESO EXISTE: un fade dice "esto estaba y no
+ * se veia"; un telon dice "esto se esta REVELANDO". `clip-path` se compone en
+ * la GPU; `width` no.
+ */
+@keyframes telon-abajo {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes telon-izquierda {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/** Telon DIAGONAL, en el eje del sistema: la bandera cruzando el cuadro. */
+@keyframes telon-diagonal {
+  from {
+    clip-path: polygon(0 0, 0 0, -25% 100%, -25% 100%);
+  }
+  to {
+    clip-path: polygon(0 0, 125% 0, 100% 100%, 0 100%);
+  }
+}
+
+/**
+ * ALZAR — una linea de texto que sube desde detras de su mascara.
+ * ⚠️ ES TAMBIEN LA ANIMACION DE LOS IMPORTES, y por eso no cuenta nada: el
+ * numero muestra su valor FINAL desde el primer cuadro y solo se desplaza.
+ */
+@keyframes alzar {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+/**
+ * Barrido horizontal. `scaleX` y nunca `width`: el ancho rehace layout.
+ *
+ * ⚠️⚠️ EL `to` ES OBLIGATORIO Y FALTABA, Y ESO DEJABA MUERTA A `.barra-lectura`.
+ * Un keyframe con solo `from` toma como `to` el VALOR SUBYACENTE del elemento:
+ * si el elemento ya declara `transform: scaleX(0)` en su regla base —que es
+ * exactamente lo que hace `.barra-lectura`, para no verse donde no hay soporte—,
+ * la animacion interpola **de 0 a 0** y la barra de progreso no pinta nunca.
+ *
+ * ⚠️ NO LE CAMBIA NADA A LOS OTROS DOS USOS. `.revela-linea` y los filetes de
+ * los modulos no declaran `transform` propio, asi que su valor subyacente ya era
+ * `none` —o sea `scaleX(1)`—: escribirlo explicito da el MISMO resultado y de
+ * paso saca de la ecuacion al valor subyacente, que es lo que convertia una
+ * regla inocente (`transform` en el elemento) en un apagado silencioso.
+ */
+@keyframes barrer-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/** Mismo criterio que `barrer-x`: el `to` explicito, por el valor subyacente. */
+@keyframes barrer-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/**
+ * MARQUESINA. La pista lleva el contenido DUPLICADO: al llegar a -50% la copia
+ * esta exactamente donde estaba el original y el salto es invisible.
+ */
+@keyframes marquesina {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes marquesina-inversa {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/** Destello que cruza una superficie en hover. */
+@keyframes destello-cruza {
+  0% {
+    opacity: 0;
+    transform: translate3d(-160%, 0, 0) skewX(-14deg);
+  }
+  14% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(160%, 0, 0) skewX(-14deg);
+  }
+}
+
+/**
+ * DERIVA DEL PATRON DE ROMBOS.
+ * ⚠️ EL DESPLAZAMIENTO ES UN MULTIPLO EXACTO DEL MOSAICO (`--patron-paso`), NO
+ * UN PORCENTAJE. Es el error que hace que un patron "sin costura" salte cada
+ * vuelta: un `-50%` de un contenedor de ancho arbitrario casi nunca cae sobre
+ * un rombo entero. Con el paso del mosaico, el rombo cae sobre si mismo y el
+ * bucle es realmente invisible.
+ */
+@keyframes patron-deriva {
+  to {
+    transform: translate3d(calc(var(--patron-paso, 88px) * -1), 0, 0);
+  }
+}
+
+/** Paralaje: el elemento se corre menos que la pagina. Porcentajes de si mismo. */
+@keyframes deriva-y {
+  from {
+    transform: translate3d(0, var(--deriva, 8%), 0);
+  }
+  to {
+    transform: translate3d(0, calc(var(--deriva, 8%) * -1), 0);
+  }
+}
+
+/** Foto que deriva dentro de su propio marco recortado. */
+@keyframes deriva-foto {
+  from {
+    transform: translate3d(0, -7%, 0) scale(1.02);
+  }
+  to {
+    transform: translate3d(0, 7%, 0) scale(1.02);
+  }
+}
+
+/** Recorrido horizontal dirigido por scroll: la cinta cinetica. */
+@keyframes correr-con-scroll {
+  from {
+    transform: translate3d(6%, 0, 0);
+  }
+  to {
+    transform: translate3d(-16%, 0, 0);
+  }
+}
+
+/** Simple aparicion de una CAPA (no del contenido). Para la barra despegada. */
+@keyframes aparecer-capa {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/**
+ * SHIMMER DE ESQUELETO.
+ * ⚠️ SE MUEVE UN PSEUDO CON `transform`, NO EL `background-position` DEL
+ * BLOQUE. Lo segundo repinta un area grande en cada cuadro, y un esqueleto es
+ * justo lo que se muestra cuando el navegador ya esta ocupado.
+ */
+@keyframes shimmer {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+/** Anillo de atencion que se expande y se apaga. Compositor puro. */
+@keyframes anillo-pulso {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+/** Estado que acaba de cambiar. Una sola vuelta, nunca en bucle. */
+@keyframes marcar-estado {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/** Respiracion de un resplandor. Ambiente puro: prohibido cerca de un dato. */
+@keyframes respirar {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+}
+
+/** Contador. Interpola solo porque `--cuenta` esta registrada en tokens.css. */
+@keyframes contar {
+  from {
+    --cuenta: 0;
+  }
+}
+
+/* ==================================================== entrada al cargar */
+
+/**
+ * ⚠️ SON ANIMACIONES, NO TRANSICIONES CON `@starting-style`. Una animacion con
+ * `both` termina SIEMPRE en el estado final aunque el navegador la interrumpa;
+ * una transicion que no llega a dispararse deja el elemento en el estado
+ * inicial. Con contenido servido desde el servidor, eso es la diferencia entre
+ * "no se animo" y "no se ve".
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .entra-largo {
+    animation: surgir-largo var(--dur-escena) var(--curva-escena) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-acerca {
+    animation: acercarse var(--dur-escena) var(--curva-escena) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-acerca-corto {
+    animation: acercarse-corto var(--transicion-lenta) var(--curva-seca) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-izquierda {
+    animation: entrar-izquierda var(--transicion-lenta) var(--curva-seca) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-derecha {
+    animation: entrar-derecha var(--transicion-lenta) var(--curva-seca) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-margen {
+    animation: entrar-margen var(--dur-escena) var(--curva-escena) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-margen-der {
+    animation: entrar-margen-der var(--dur-escena) var(--curva-escena) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-telon {
+    animation: telon-abajo var(--dur-escena) var(--curva-corte) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-telon-diagonal {
+    animation: telon-diagonal var(--dur-escena) var(--curva-corte) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  /**
+   * ⚠️ `.entra-seco` ES PARA LOS AVISOS Y ES CORTA A PROPOSITO. 140ms, sin
+   * desplazamiento: alcanza para que el ojo registre que algo llego, no para
+   * que se sienta una animacion. Un error que entra deslizandose durante medio
+   * segundo se lee como una alarma.
+   */
+  .entra-seco {
+    animation: aparecer 140ms var(--curva-entrada) both;
+  }
+
+  /**
+   * ESCALONADO SIN JAVASCRIPT Y SIN UN `style` INLINE POR ITEM.
+   *
+   * ⚠️ ES `nth-child` PORQUE `calc()` NO PUEDE LEER EL INDICE DE UN HIJO. La
+   * alternativa es `style={{'--retraso': i*55}}` en el `.map()` de cada lista
+   * del sitio, que ensucia el markup de 22 pantallas.
+   *
+   * ⚠️ CORTA EN EL DOCE Y AHI PARA. Con 60ms de paso, el hijo 12 arranca a los
+   * 660ms: ya esta en el limite de "la pagina esta apareciendo" contra "la
+   * pagina esta lenta". Del 13 en adelante entran juntos, que es el
+   * comportamiento correcto — una lista larga NO se escalona con delays, se
+   * revela por scroll con `.revela-grilla`, donde el orden lo da la geometria.
+   */
+  .escalona > * {
+    animation: acercarse-corto var(--dur-entrada) var(--curva-viva) both;
+    animation-delay: calc(var(--paso-escalon) * var(--i, 0) + var(--retraso, 0ms));
+  }
+
+  .escalona > *:nth-child(1) {
+    --i: 0;
+  }
+  .escalona > *:nth-child(2) {
+    --i: 1;
+  }
+  .escalona > *:nth-child(3) {
+    --i: 2;
+  }
+  .escalona > *:nth-child(4) {
+    --i: 3;
+  }
+  .escalona > *:nth-child(5) {
+    --i: 4;
+  }
+  .escalona > *:nth-child(6) {
+    --i: 5;
+  }
+  .escalona > *:nth-child(7) {
+    --i: 6;
+  }
+  .escalona > *:nth-child(8) {
+    --i: 7;
+  }
+  .escalona > *:nth-child(9) {
+    --i: 8;
+  }
+  .escalona > *:nth-child(10) {
+    --i: 9;
+  }
+  .escalona > *:nth-child(11) {
+    --i: 10;
+  }
+  .escalona > *:nth-child(12) {
+    --i: 11;
+  }
+}
+
+/* ============================================= revelado al hacer scroll */
+
+/**
+ * ⚠️ LAS DOS GUARDAS SON OBLIGATORIAS Y POR MOTIVOS DISTINTOS:
+ *
+ *   @supports   Sin soporte la regla no aplica y el contenido se ve NORMAL. Si
+ *               estuviera afuera, el `opacity: 0` del keyframe se quedaria
+ *               puesto para siempre y la pagina apareceria VACIA — que no es
+ *               "sin animacion", es rota.
+ *   @media      `prefers-reduced-motion` NO puede apagar esto bajando la
+ *               duracion: el progreso lo da el scroll, no el reloj. La regla
+ *               ENTERA vive adentro.
+ *
+ * ⚠️ EN UNA ANIMACION DIRIGIDA POR SCROLL, `animation-delay` NO HACE NADA. El
+ * escalonado se consigue corriendo el `animation-range` de cada elemento (ver
+ * `.revela-lineas`) o dejando que lo haga la geometria (`.revela-grilla`). Un
+ * `delay` ahi es un bug silencioso que se ve como "no se escalono".
+ *
+ * ⚠️ REVELADO USA RANGO `entry`; PARALAJE USA RANGO `cover`. Un revelado tiene
+ * que TERMINAR cuando el elemento ya se ve; un paralaje necesita el paso
+ * COMPLETO o queda congelado a mitad de camino y se lee como un error de
+ * posicionamiento.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revela-acerca {
+      animation: acercarse auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
+
+    .revela-izquierda {
+      animation: entrar-izquierda auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 24%;
+    }
+
+    .revela-derecha {
+      animation: entrar-derecha auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 24%;
+    }
+
+    .revela-margen {
+      animation: entrar-margen auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
+
+    .revela-margen-der {
+      animation: entrar-margen-der auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
+
+    .revela-telon {
+      animation: telon-abajo auto var(--curva-corte) both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 30%;
+    }
+
+    /** La grilla con materia: la version "cara" de `.revela-grilla`. */
+    .revela-grilla-materia > * {
+      animation: acercarse-corto auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 20%;
+    }
+
+    /**
+     * REGLA QUE SE DIBUJA. El filete editorial crece de izquierda a derecha a
+     * medida que la seccion entra. Es el movimiento mas "impreso" del sistema y
+     * el mas barato: un `scaleX` en el compositor.
+     * ⚠️ `transform-origin` VA EN LA CLASE Y NO EN EL KEYFRAME: en el keyframe
+     * solo aplica durante la animacion, asi que sin soporte la linea quedaria
+     * dibujada al reves.
+     */
+    .revela-linea {
+      transform-origin: left center;
+      animation: barrer-x auto var(--curva-corte) both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 25%;
+    }
+
+    .revela-linea-vertical {
+      transform-origin: top center;
+      animation: barrer-y auto var(--curva-corte) both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 30%;
+    }
+  }
+}
+
+/* ------------------------------------------- revelado tipografico por lineas */
+
+/**
+ * TITULAR QUE SE REVELA LINEA POR LINEA.
+ *
+ * ⚠️ PIDE MARCADO: cada linea en su propio `<span>` desde el servidor. No hay
+ * forma de partir un titular en lineas con CSS sin JavaScript, y el JavaScript
+ * esta descartado. Como el titular de una portada es texto fijo y corto,
+ * escribir los `<span>` a mano es correcto: es composicion, igual que decidir
+ * donde corta un titulo en una revista.
+ *
+ * ⚠️ CADA LINEA NECESITA SU PROPIA MASCARA. `translateY(100%)` sin recorte no
+ * es un revelado: es texto que se superpone al de abajo. Por eso el `<span>`
+ * externo recorta y el interno se mueve.
+ *
+ * Markup:
+ *   <h1 class="display revela-lineas">
+ *     <span><i>OFFSIDE</i></span>
+ *     <span><i>ES LA CANCHA</i></span>
+ *   </h1>
+ *
+ * ⚠️ EL ESCALONADO SE HACE CORRIENDO `animation-range`, NO CON `delay`: en una
+ * animacion de scroll el delay se ignora por completo.
+ */
+/**
+ * ⚠️ LAS REGLAS BASE VALEN PARA LAS DOS VARIANTES, Y `.entra-lineas` NO LAS
+ * TENIA. Sin `display: block` + `overflow: clip` en el `<span>` externo, el
+ * `translateY(100%)` de `alzar` no revela detras de un borde: **la linea se
+ * superpone a la de abajo**, que es un defecto visible, no una animacion mas
+ * pobre. Tres modulos tuvieron que copiar estas dos declaraciones a mano
+ * (`app/page.module.css`, `app/buscar/page.module.css`, `app/(auth)/…`,
+ * `app/como-funciona/…`) y cada copia lo dice en su comentario. Ahora las trae
+ * la fundacion y esas copias pasan a ser redundantes, no obligatorias.
+ *
+ * ⚠️ LA COMPENSACION SUBE DE 0.06em A 0.08em Y ES UN NUMERO MEDIDO, no un
+ * redondeo. Contra la woff2 real de Big Noodle: la caja de fuente es 0.89em de
+ * ascendente + 0.18em de descendente = 1.07em, contra 0.86 de
+ * `--interlineado-display`, asi que la linea base cae a 0.785em del tope. La
+ * tinta de una Ñ mayuscula sube 0.86em sobre la linea base —contra 0.718em de
+ * la N pelada—: su tope queda **0.075em POR ENCIMA** de la caja de contenido, y
+ * la descendente asoma otros 0.075em por abajo. Con 0.06 se rapaba la virgulilla
+ * y la cola de la Q. En castellano hay eñes y hay tildes en casi todo titular:
+ * esto no es un caso raro, se ve siempre.
+ *
+ * ⚠️ EL `margin-block` NEGATIVO CANCELA EL PADDING, asi que la compensacion NO
+ * mueve nada de layout: solo agranda la caja que recorta.
+ */
+.revela-lineas > span,
+.entra-lineas > span {
+  display: block;
+  overflow: clip;
+  /*
+   * ⚠️ 0.12em, Y EL NUMERO ESTA MEDIDO CONTRA LA WOFF2 REAL, no elegido.
+   * Con `--interlineado-display` en 0.86 la caja de contenido llega hasta
+   * 0.787em sobre la linea base, y la tinta de Big Noodle se le va por arriba:
+   *
+   *     á é           0.1029em     ← el peor caso, y es el mas comun
+   *     Á É Í Ó Ú     0.0959em
+   *     í             0.0949em
+   *     Ñ             0.0729em
+   *     mayusculas
+   *     sin acento   -0.0691em     ← ni roza el borde
+   *
+   * O sea que 0.06 y 0.08 rapan TODA vocal acentuada, que en castellano es casi
+   * cualquier titular. Verificado en el navegador con la Canvas API sobre la
+   * fuente cargada: `actualBoundingBoxAscent` contra el tope de la caja.
+   * 0.12 deja 0.017em de aire sobre el peor glifo.
+   */
+  padding-block: 0.12em;
+  margin-block: -0.12em;
+}
+
+.revela-lineas > span > *,
+.entra-lineas > span > * {
+  display: block;
+  font-style: inherit;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revela-lineas > span > * {
+      animation: alzar auto var(--curva-escena) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 26%;
+    }
+
+    .revela-lineas > span:nth-child(2) > * {
+      animation-range: entry 8% cover 34%;
+    }
+    .revela-lineas > span:nth-child(3) > * {
+      animation-range: entry 16% cover 42%;
+    }
+    .revela-lineas > span:nth-child(4) > * {
+      animation-range: entry 24% cover 50%;
+    }
+    .revela-lineas > span:nth-child(n + 5) > * {
+      animation-range: entry 32% cover 58%;
+    }
+  }
+}
+
+/**
+ * La misma entrada, pero al primer pintado: para el titular de arriba del
+ * pliegue. La mascara por linea la traen las reglas base de arriba, que ahora
+ * son de las dos variantes.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .entra-lineas > span > * {
+    animation: alzar var(--dur-escena) var(--curva-escena) both;
+  }
+
+  .entra-lineas > span:nth-child(1) > * {
+    animation-delay: 0ms;
+  }
+  .entra-lineas > span:nth-child(2) > * {
+    animation-delay: 90ms;
+  }
+  .entra-lineas > span:nth-child(3) > * {
+    animation-delay: 180ms;
+  }
+  .entra-lineas > span:nth-child(n + 4) > * {
+    animation-delay: 270ms;
+  }
+}
+
+/* ===================================================== paralaje por capas */
+
+/**
+ * ⚠️ ACA ESTA EL "DINAMISMO" QUE PIDIO EL DUEÑO Y ES LO MAS BARATO DEL ARCHIVO:
+ * tres clases, cero JS, `transform` puro, o sea que corre en el compositor sin
+ * tocar layout ni pintura.
+ *
+ * ⚠️ LA CAPA DE FONDO NECESITA HOLGURA. Si mide exactamente lo que su
+ * contenedor, al derivar deja un hueco. Regla practica: la capa se declara
+ * 118% del alto y el contenedor lleva `overflow: hidden`.
+ *
+ * ⚠️ `will-change` SOLO EN LAS CAPAS DE ESCENA, NUNCA EN UNA FOTO DE GRILLA.
+ * Una vitrina de 24 fichas con `will-change: transform` permanente son 24 capas
+ * de compositor promovidas para siempre, y eso en un telefono de gama media se
+ * paga en memoria de GPU. `.foto-paralaje` NO lo declara: la animacion ya la
+ * promueve mientras corre.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .capa-fondo,
+    .capa-media,
+    .capa-frente {
+      animation: deriva-y auto linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+      will-change: transform;
+    }
+
+    /** Lo que esta mas LEJOS se mueve MENOS. Es al reves de lo que uno supone. */
+    .capa-fondo {
+      --deriva: 3.5%;
+    }
+
+    .capa-media {
+      --deriva: 7%;
+    }
+
+    /**
+     * ⚠️ LA CAPA DE FRENTE VA EN CONTRA. La deriva negativa invierte el sentido
+     * y es lo que produce separacion real entre planos: sin una capa que vaya
+     * al reves, el paralaje se lee como "todo se movio un poco".
+     */
+    .capa-frente {
+      --deriva: -6%;
+    }
+
+    .foto-paralaje {
+      animation: deriva-foto auto linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+
+    /**
+     * CINTA CINETICA: un rotulo enorme que corre en horizontal con el scroll.
+     * Es movimiento constante y a la vez completamente controlado por la
+     * persona, que es la unica manera de tener dinamismo permanente sin
+     * distraer.
+     */
+    .corre-con-scroll {
+      animation: correr-con-scroll auto linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+      will-change: transform;
+    }
+  }
+}
+
+/**
+ * PARALAJE DE PORTADA, dirigido por el scroll del DOCUMENTO.
+ *
+ * ⚠️ `scroll(root)` Y NO `view()`, Y LA DIFERENCIA IMPORTA: `view()` mide el
+ * paso de UN elemento por la pantalla y sirve para lo que esta a mitad de
+ * pagina; `scroll(root)` mide el scroll del documento y es el correcto para la
+ * portada, que ya esta en pantalla cuando la persona empieza a bajar. Con
+ * `view()` la portada arrancaria su animacion ya empezada.
+ */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .paralaje-portada {
+      --deriva: 14%;
+      animation: deriva-y auto linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 100vh;
+      will-change: transform;
+    }
+  }
+}
+
+/* ============================== barra de progreso y barra adherida */
+
+/**
+ * BARRA DE LECTURA.
+ * ⚠️ EL ESTADO POR DEFECTO ES `scaleX(0)`, o sea INVISIBLE. Donde no hay
+ * soporte no se ve nada, que es lo correcto: una barra de progreso que no
+ * progresa es peor que ninguna.
+ * ⚠️ VA CON `aria-hidden="true"`: es informacion redundante para un lector de
+ * pantalla, que ya sabe donde esta en el documento.
+ */
+.barra-lectura {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: var(--z-superpuesto);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background-image: var(--degradado-acento);
+  pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .barra-lectura {
+      animation: barrer-x auto linear both;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+
+/**
+ * LA BARRA SUPERIOR SE DESPEGA AL BAJAR.
+ *
+ * ⚠️ NO SE ANIMA EL ALTO NI EL PADDING, AUNQUE "ACHICAR LA BARRA AL SCROLLEAR"
+ * SEA EL EFECTO OBVIO. Verificado: `header.module.css` la declara `position:
+ * sticky`, o sea que esta EN FLUJO. Cambiarle el alto reflowea el documento
+ * mientras la persona scrollea: se pelea con el propio gesto y da un salto.
+ *
+ * ⚠️ TAMPOCO SE ANIMA `box-shadow` EN LA LINEA DE TIEMPO. `box-shadow` es una
+ * propiedad de PINTURA: animada bajo `scroll()` repinta la barra adherida en
+ * cada cuadro de scroll, que es el escenario mas caliente del sitio. Es la
+ * trampa en la que caen todos los headers "modernos" —y las tres propuestas que
+ * revise—. Lo que se anima es la OPACIDAD de una capa que ya trae la sombra y
+ * el fondo denso pintados: compositor puro.
+ *
+ * ⚠️ EL PSEUDO VA EN `z-index: -1` CON `isolation: isolate` EN LA BARRA. Asi
+ * queda por encima del fondo propio de la barra y por debajo de su contenido,
+ * sin tocar el z-index de ningun enlace.
+ *
+ * Uso: `<header class="barra-adherida sup-vidrio">`
+ */
+.barra-adherida {
+  position: sticky;
+  top: 0;
+  isolation: isolate;
+  z-index: var(--z-barra);
+}
+
+.barra-adherida::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background-color: var(--vidrio-solido);
+  box-shadow: var(--sombra-3);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .barra-adherida::after {
+    background-color: var(--vidrio-fondo-denso);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .barra-adherida::after {
+      animation: aparecer-capa auto linear both;
+      animation-timeline: scroll(root block);
+      /* Termina antes de que la persona llegue a la primera fila de fichas. */
+      animation-range: 0 140px;
+    }
+  }
+}
+
+/* ============================================================ marquesina */
+
+/**
+ * MARQUESINA INFINITA — nombres de clubes, marcas, temporadas.
+ *
+ * Markup obligatorio:
+ *   <div class="marquesina">
+ *     <div class="marquesina-pista">
+ *       <ul class="marquesina-grupo">…38 clubes…</ul>
+ *       <ul class="marquesina-grupo" aria-hidden="true">…los mismos…</ul>
+ *     </div>
+ *   </div>
+ *
+ * ⚠️ LA SEGUNDA COPIA LLEVA `aria-hidden="true"`. Es el detalle que casi
+ * siempre falta: sin eso un lector de pantalla lee los 38 clubes DOS VECES.
+ *
+ * ⚠️ EL CONTENEDOR CORTA EL DESBORDE Y ESO NO ES ADORNO: es lo que garantiza la
+ * regla de 320px. Una pista de 3000px adentro de un `overflow: hidden` no
+ * agranda el documento.
+ */
+.marquesina {
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+  /* Los bordes se desvanecen con mascara: no hay que pintar el fondo encima. */
+  -webkit-mask-image: var(--velo-lateral);
+  mask-image: var(--velo-lateral);
+}
+
+.marquesina-pista {
+  display: flex;
+  width: max-content;
+  /* No se encoge aunque el flex padre quiera repartir. */
+  flex: none;
+}
+
+.marquesina-grupo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-7);
+  margin: 0;
+  padding: 0 calc(var(--espacio-7) / 2);
+  list-style: none;
+  white-space: nowrap;
+}
+
+/**
+ * ⚠️ LA ANIMACION VIVE ADENTRO DE LA MEDIA QUERY, NO AFUERA CONFIANDO EN LA
+ * REGLA GLOBAL. La regla global de `tokens.css` aplasta la DURACION, y una
+ * animacion infinita con duracion 0.01ms queda clavada en el ULTIMO cuadro: la
+ * marquesina quedaria corrida un 50% y a mitad de camino, no quieta al
+ * principio. Asi, sin animacion, se ven los primeros nombres recortados por el
+ * contenedor: correcto y legible.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .marquesina-pista {
+    animation: marquesina var(--dur-marquesina) linear infinite;
+    will-change: transform;
+  }
+
+  .marquesina-inversa .marquesina-pista {
+    animation-name: marquesina-inversa;
+  }
+
+  .marquesina-rapida .marquesina-pista {
+    animation-duration: var(--dur-marquesina-corta);
+  }
+
+  /**
+   * ⚠️ SE FRENA CON `:hover` Y CON `:focus-within`, Y LAS DOS HACEN FALTA. El
+   * hover es para poder LEER un nombre que pasa; el `focus-within` es para que
+   * quien navega con teclado no persiga un enlace en movimiento, que es un
+   * fallo de WCAG 2.2.2 en toda regla si el contenido es interactivo.
+   *
+   * ⚠️ PERO NINGUNA DE LAS DOS ALCANZA PARA WCAG 2.2.2, Y HAY QUE DECIRLO: el
+   * criterio pide un MECANISMO para detener cualquier movimiento automatico que
+   * dure mas de cinco segundos, y esto dura 42. En un telefono no existe el
+   * hover, y para enfocar hay que TOCAR: o sea acertarle a un objetivo en
+   * movimiento. Por eso abajo hay un control de verdad.
+   */
+  .marquesina:hover .marquesina-pista,
+  .marquesina:focus-within .marquesina-pista {
+    animation-play-state: paused;
+  }
+
+  /**
+   * ⚠️ EL CONTROL DE PAUSA, SIN UNA LINEA DE JAVASCRIPT. Un checkbox recortado
+   * mas su `<label>` visible: el estado lo guarda el navegador y `:has()` lo
+   * lleva hasta la pista. Es el mismo recurso con el que el sitio hace los menus
+   * y las confirmaciones en dos pasos.
+   *
+   * Markup (el control va DENTRO de `.marquesina`, que es lo que `:has()`
+   * mira; la pista sigue igual):
+   *
+   *   <div class="marquesina">
+   *     <input type="checkbox" id="pausa-clubes"
+   *            class="marquesina-pausa solo-lectores">
+   *     <label for="pausa-clubes" class="marquesina-boton">
+   *       <span class="marquesina-si-corre">Pausar</span>
+   *       <span class="marquesina-si-para">Reanudar</span>
+   *     </label>
+   *     <div class="marquesina-pista">…</div>
+   *   </div>
+   *
+   * ⚠️ TODO ESTO VIVE ADENTRO DE LA MEDIA QUERY A PROPOSITO. Con
+   * `prefers-reduced-motion` no hay animacion que pausar, asi que el boton no se
+   * dibuja: ofrecer un control que no controla nada es peor que no ofrecerlo.
+   * Fuera de la media query el `<label>` queda como texto en flujo, y el
+   * checkbox sigue recortado por `.solo-lectores`.
+   *
+   * ⚠️ LA POSICION ESQUIVA LA MASCARA. `.marquesina` se desvanece en el 8% de
+   * cada borde (`--velo-lateral`), y la mascara alcanza a TODOS sus hijos: un
+   * boton pegado al borde derecho saldria semitransparente. Por eso el inset es
+   * un `calc()` sobre ese mismo 8%.
+   *
+   * ⚠️ EL FOCO SE DIBUJA EN LA ETIQUETA. El checkbox esta recortado, asi que su
+   * propio anillo no se ve por ningun lado; sin esta regla el control existe
+   * pero es invisible para quien navega con teclado. Es `outline`, no
+   * `box-shadow`.
+   *
+   * ⚠️ SI `:has()` NO ESTA, el selector entero se descarta y queda el
+   * comportamiento de hoy —hover y focus—: el boton se ve y no hace nada. Es la
+   * unica degradacion posible sin JavaScript, y hoy `:has()` es baseline.
+   *
+   * ⚠️ PENDIENTE DEL LADO DEL MARCADO: los dos usos actuales
+   * (`app/buscar/page.tsx` y `app/(auth)/layout.tsx`) todavia no ponen el
+   * control, asi que hasta que lo pongan 2.2.2 sigue sin cumplirse ahi. El de
+   * `auth` ademas lleva `aria-hidden` en el contenedor entero: un control
+   * enfocable adentro de un subarbol oculto es un defecto propio, asi que ese
+   * `aria-hidden` tiene que bajar a la pista.
+   */
+  .marquesina:has(.marquesina-pausa:checked) .marquesina-pista {
+    animation-play-state: paused;
+  }
+
+  .marquesina-boton {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: calc(8% + var(--espacio-2));
+    z-index: var(--z-contenido);
+    translate: 0 -50%;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* Area tactil de 44px (WCAG 2.5.5), como cualquier control del sistema. */
+    min-width: var(--alto-control);
+    min-height: var(--alto-control);
+    padding: 0 var(--espacio-3);
+
+    /**
+     * ⚠️⚠️ EL PAR DE COLOR ES CRUDO —`--color-papel` sobre `--color-tinta`— Y NO
+     * `--superficie-1` / `--color-tinta`, QUE ERA LO "CORRECTO" Y QUEDABA
+     * ILEGIBLE. Los dos usos reales de la marquesina viven sobre banda oscura, y
+     * `.sup-noche` remapea `--superficie-1` a `--sup-noche-alta` (#16362a) pero
+     * NO remapea `--color-tinta` (#10231a): el rotulo quedaba en **1.25:1**, o
+     * sea un boton en blanco. Papel y tinta son los dos unicos colores del
+     * archivo que NINGUNA superficie remapea, asi que el chip se lee igual sobre
+     * noche, sobre fosa, sobre cancha y sobre papel: **15.72:1** siempre.
+     *
+     * ⚠️ EL BORDE ES TINTA Y NO `--linea-control` POR LO MISMO: sobre
+     * `.sup-cancha` ese token es papel translucido al 45% (2.26:1) y sobre
+     * `.sup-noche` es el verde claro. Contra el relleno papel del propio chip,
+     * tinta da 15.72:1, y el limite de la forma contra la superficie lo pone el
+     * relleno: papel contra `--sup-noche-alta` da 12.59:1 y contra Verde Cancha
+     * 5.16:1, los dos muy arriba del 3:1 de WCAG 1.4.11.
+     */
+    border: 1px solid var(--color-tinta);
+    border-radius: var(--radio);
+    background-color: var(--color-papel);
+    color: var(--color-tinta);
+
+    font-family: var(--fuente-texto);
+    font-size: var(--texto-xs);
+    font-weight: var(--peso-medio);
+    letter-spacing: var(--tracking-etiqueta);
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .marquesina-pausa:focus-visible + .marquesina-boton {
+    outline: 2px solid var(--color-foco);
+    outline-offset: 2px;
+  }
+
+  /* Un solo rotulo a la vez: el que corresponde al estado. */
+  .marquesina-pausa:not(:checked) + .marquesina-boton .marquesina-si-para,
+  .marquesina-pausa:checked + .marquesina-boton .marquesina-si-corre {
+    display: none;
+  }
+}
+
+/**
+ * Sin movimiento no hay nada que pausar: el control desaparece entero, checkbox
+ * incluido, para que no quede un elemento enfocable sin funcion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .marquesina-pausa,
+  .marquesina-boton {
+    display: none;
+  }
+}
+
+/* ================================================ patron de rombos en deriva */
+
+/**
+ * ⚠️ EL PSEUDO MIDE EL ANCHO DEL CONTENEDOR MAS UN MOSAICO, Y SE CORRE
+ * EXACTAMENTE UN MOSAICO. No un 200% corrido un 50%: eso es un desplazamiento
+ * de "100% de un ancho arbitrario en px", que casi nunca cae sobre un rombo
+ * entero y hace saltar el patron cada vuelta. Con `--patron-paso` el rombo cae
+ * sobre si mismo y el bucle es realmente invisible.
+ *
+ * 26 segundos para cruzar un mosaico: apenas se percibe como movimiento, que es
+ * exactamente lo que se busca en un fondo.
+ */
+.patron-vivo {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  --patron-paso: var(--patron-paso-bloque);
+}
+
+.patron-vivo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% + var(--patron-paso));
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-bloque);
+  background-position: var(--patron-posicion-bloque);
+}
+
+/** Escala fina: la de la ficha de producto. */
+.patron-vivo-fino {
+  --patron-paso: var(--patron-paso-fino);
+}
+
+.patron-vivo-fino::before {
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+}
+
+/** Escala de cinta: la del §05 de la identidad. */
+.patron-vivo-cinta {
+  --patron-paso: var(--patron-paso-cinta);
+}
+
+.patron-vivo-cinta::before {
+  background-size: var(--patron-tamanio-cinta);
+  background-position: var(--patron-posicion-cinta);
+}
+
+/**
+ * Rayas diagonales en movimiento: cintas de seccion, pie, estados vacios.
+ *
+ * ⚠️⚠️ EL PASO NO ES 30px, Y ESA ERA LA RAZON DE QUE ESTE BUCLE SALTARA. Los
+ * rombos son un MOSAICO de 88x88 —correrlo 88px horizontales lo apoya sobre si
+ * mismo, y por eso ahi el paso es el tamaño pelado—. Una raya diagonal no: es un
+ * `repeating-linear-gradient` en el eje de 112°, o sea que su periodo de 30px se
+ * mide **sobre el eje**, mientras que `patron-deriva` traslada horizontal.
+ *
+ * La proyeccion de un corrimiento horizontal sobre ese eje es `dx · sin(112°)`,
+ * asi que los 30px de antes corrian la fase 30 × 0.92718 = **27.81px**: cada
+ * vuelta del bucle las rayas pegaban un salto de 2.19px. En 26 segundos y con un
+ * fondo tenue no se lee como un error de calculo, se lee como un parpadeo raro,
+ * que es peor: nadie sabe que buscar.
+ *
+ * El paso que cierra el bucle es el inverso: `periodo / sin(112°)`, o sea
+ * 30px / 0.92718 = 32.36px. Se escribe como division para que se vea de donde
+ * sale y para que siga siendo correcto si algun dia cambia el periodo.
+ */
+.diagonales-vivas::before {
+  background-image: var(--patron-diagonales-anchas);
+  background-size: auto;
+  background-position: 0 0;
+  --patron-paso: calc(30px / 0.92718);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .patron-vivo::before {
+    animation: patron-deriva var(--dur-patron) linear infinite;
+    will-change: transform;
+  }
+}
+
+/* ============================================== hover, foco y elevacion */
+
+/**
+ * ELEVACION EN UN SOLO GESTO. Reemplaza al `translateY(-2px)` suelto que hoy
+ * tiene la ficha de producto y unifica los hover que cada modulo escribe a mano.
+ *
+ * ⚠️ 6px Y GLOW. Era 4px con sombra de nivel 2; ahora sube 6, con sombra de
+ * nivel 3 y `--glow-suave` (verde luminoso sobre claro, verde-400 sobre noche,
+ * Cambio sobre cancha). Con 8 la grilla entera parece temblorosa al pasar el
+ * mouse en diagonal, porque cada ficha empuja a la siguiente fuera del puntero.
+ *
+ * ⚠️ AL APRETAR, LA COSA BAJA Y EL GLOW SE APAGA. Es la mitad que casi siempre
+ * falta: un objeto que se levanta con el mouse y no reacciona al clic se
+ * siente roto.
+ *
+ * ⚠️ EL FOCO TIENE SU PROPIA REGLA, DESPUES DEL HOVER, Y POR ESO NINGUN HOVER
+ * LO PISA: misma especificidad, declarada mas abajo, gana. Lleva `--glow-foco`
+ * en vez del glow de marca, y el `outline` global sigue puesto ademas.
+ *
+ * ⚠️ `prefers-reduced-motion` ANULA LA TRANSICION PERO NO EL ESTADO: el hover
+ * sigue siendo visible, simplemente aparece sin animarse. Apagarlo seria
+ * sacarle a esa persona la unica señal de que el elemento responde.
+ *
+ * ⚠️⚠️ LEVANTA CON `translate`, NO CON `transform`, Y ESA ES LA LINEA QUE MAS
+ * IMPORTA DE ESTE BLOQUE. Casi todas las entradas del archivo —`acercarse-corto`
+ * de `.revela-grilla` y de `.escalona`, `surgir-corto`, `acercarse`— animan
+ * `transform` con `both`, y `both` incluye `forwards`: la animacion sigue
+ * APLICANDO `transform` para siempre despues de terminar, y **una propiedad bajo
+ * control de una animacion que rellena no transiciona ni se puede pisar**. Con
+ * las dos clases en el mismo elemento, `.eleva` quedaba sin hover y sin
+ * `:active`, sin ningun error. Con la propiedad individual las dos conviven:
+ * `translate` y `transform` son propiedades DISTINTAS, se componen (primero
+ * `translate`, despues `rotate` —que usa `.tilt`—, despues `transform`) y
+ * ninguna pisa a la otra.
+ *
+ * ⚠️ `.presiona` SIGUE FUNCIONANDO, Y SE VERIFICO. Usa `transform:
+ * translateY(1px)` en `:active`; `.eleva:active` baja `--elev` a 1, asi que el
+ * hundido queda igual que antes. Por eso la transicion declara las DOS
+ * propiedades: si sacara `transform`, el apreton de `.presiona` pasaria a ser
+ * instantaneo.
+ *
+ * ⚠️ LA FICHA DEL CATALOGO (`listing-card.module.css`) ESCRIBE SU HOVER A MANO
+ * —`transform: translateY(-4px)` y `--sombra-2`— y una regla de modulo le gana
+ * a esta. Para que la ficha reciba los 6px, el glow y el tilt, ese modulo tiene
+ * que migrar su hover a `.eleva` + `.tilt`; esta hoja no lo puede forzar.
+ */
+.eleva {
+  --elev: 0;
+  translate: 0 calc(var(--elev) * -1px);
+  transition:
+    translate var(--dur-hover) var(--curva-viva),
+    transform var(--dur-media) var(--curva-seca),
+    box-shadow var(--dur-hover) var(--curva),
+    border-color var(--transicion-rapida) var(--curva);
+}
+
+.eleva:hover,
+.eleva:focus-within {
+  --elev: 6;
+  box-shadow: var(--sombra-3), var(--glow-suave);
+  border-color: var(--borde-luz);
+}
+
+.eleva:focus-visible {
+  --elev: 6;
+  box-shadow: var(--sombra-3), var(--glow-foco);
+  border-color: var(--color-foco);
+}
+
+.eleva:active {
+  --elev: 1;
+  box-shadow: var(--sombra-1);
+  transition-duration: var(--dur-instante);
+}
+
+/** Variante con resplandor de marca pleno, para el elemento destacado de una vitrina. */
+.eleva-marca:hover,
+.eleva-marca:focus-within {
+  box-shadow: var(--sombra-marca), var(--glow-marca);
+}
+
+/**
+ * La version oscura: la elevacion se hace con luz, no con sombra.
+ * ⚠️ MISMO `translate` QUE `.eleva`, y por el mismo motivo: una entrada que
+ * rellena `transform` le apagaba el hover.
+ */
+.eleva-oscuro {
+  --elev: 0;
+  translate: 0 calc(var(--elev) * -1px);
+  box-shadow: var(--luz-superior-oscura);
+  transition:
+    translate var(--dur-hover) var(--curva-viva),
+    transform var(--dur-media) var(--curva-seca),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+.eleva-oscuro:hover,
+.eleva-oscuro:focus-within {
+  --elev: 6;
+  box-shadow: var(--sombra-oscura), var(--glow-marca);
+}
+
+.eleva-oscuro:focus-visible {
+  --elev: 6;
+  box-shadow: var(--sombra-oscura), var(--glow-foco);
+}
+
+/**
+ * DESTELLO QUE CRUZA (shine sweep), en el eje del sistema.
+ *
+ * ⚠️ EL COLOR SALE DE `--destello`, QUE CADA SUPERFICIE REDEFINE: un brillo
+ * blanco sobre una ficha blanca no existe; sobre verde oscuro, un brillo
+ * amarillo si. Es el mismo mecanismo de contexto que ya usa `--color-foco`.
+ *
+ * ⚠️ EL PSEUDO VA EN `z-index: -1`, NO ENCIMA DEL CONTENIDO. Un destello con
+ * alfa alta pasando POR ARRIBA de una ficha lava el titulo y el precio durante
+ * casi un segundo en cada hover, y en una grilla es el efecto que mas se
+ * dispara del sitio. Debajo del contenido se ve el barrido y el texto no se
+ * toca.
+ *
+ * ⚠️ `pointer-events: none` NO ES OPCIONAL: la ficha entera es un `<a>` y un
+ * pseudo que capture el puntero la vuelve inutil sin dar ningun error.
+ */
+.destello {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.destello::after {
+  content: '';
+  position: absolute;
+  inset: -45% -25%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background-image: var(--destello);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .destello:hover::after,
+  .destello:focus-visible::after,
+  .destello:focus-within::after {
+    animation: destello-cruza var(--dur-destello) var(--curva-corte);
+  }
+}
+
+/**
+ * ACERCAMIENTO DE FOTO.
+ * ⚠️ 6% Y NO 15%: mas que eso y en una camiseta se pierde el cuello o el
+ * escudo, que es exactamente lo que la persona esta mirando.
+ */
+.zoom-marco {
+  overflow: hidden;
+}
+
+.zoom-foto {
+  transition: transform var(--dur-hover) var(--curva-viva);
+}
+
+.zoom-marco:hover .zoom-foto,
+.zoom-marco:focus-within .zoom-foto {
+  transform: scale(1.06);
+}
+
+/**
+ * SUBRAYADO QUE SE DIBUJA.
+ *
+ * ⚠️ SE HACE CON `background-size` Y NO CON UN `::after`. Un pseudo subraya el
+ * RECTANGULO del enlace: si el enlace parte en dos lineas, la raya cruza el aire
+ * a la derecha de la primera. Con un gradiente de fondo, el subrayado sigue el
+ * texto linea por linea, que es como se subraya en papel.
+ *
+ * `:focus-visible` esta incluido a proposito: quien navega con teclado tiene
+ * que ver lo mismo que quien navega con mouse.
+ */
+.subraya {
+  background-image: var(--degradado-acento);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  /* Un pelito de aire para que la raya no toque las descendentes. */
+  padding-bottom: 2px;
+  transition: background-size var(--dur-media) var(--curva-corte);
+}
+
+.subraya:hover,
+.subraya:focus-visible {
+  background-size: 100% 2px;
+}
+
+/** El enlace ya activo lleva el subrayado puesto. */
+.subraya[aria-current],
+.subraya-fijo {
+  background-size: 100% 2px;
+}
+
+/**
+ * BARRIDO DIAGONAL DE FONDO. El relleno de un boton entra en diagonal en vez de
+ * aparecer de golpe. `transform`, no `background-position`.
+ */
+.barrido-diagonal {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.barrido-diagonal::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--degradado-cancha-activo);
+  transform: translate3d(-101%, 0, 0) skewX(-12deg);
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.barrido-diagonal:hover::before,
+.barrido-diagonal:focus-visible::before {
+  transform: translate3d(0, 0, 0) skewX(-12deg);
+}
+
+/**
+ * ATENCION DIRIGIDA CON `:has()`.
+ *
+ * ⚠️ ES EL EFECTO QUE MAS "PRODUCTO 2026" SE VE Y CUESTA CUATRO LINEAS: al
+ * entrar el mouse en UNA ficha, las hermanas bajan. La grilla deja de ser una
+ * lista y pasa a tener foco.
+ *
+ * ⚠️ SOLO SE TOCA LA FOTO, NUNCA EL TEXTO. Bajarle la opacidad a la ficha
+ * entera arruina el contraste del titulo y del precio de todo lo que no esta
+ * bajo el mouse, y el contraste no es negociable ni por un instante. Una foto
+ * no tiene requisito de contraste; un precio si.
+ *
+ * ⚠️ SOLO CON PUNTERO FINO: en un telefono el `:hover` queda pegado despues de
+ * un toque y la grilla se quedaria con diecinueve fotos apagadas.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .enfoca-hermanos img,
+  .enfoca-hermanos [data-foto] {
+    transition: filter var(--dur-media) var(--curva);
+  }
+
+  .enfoca-hermanos:has(> *:hover) > *:not(:hover) img,
+  .enfoca-hermanos:has(> *:hover) > *:not(:hover) [data-foto] {
+    filter: saturate(0.5) brightness(0.95);
+  }
+}
+
+/**
+ * RESPLANDOR AMBIENTE que respira.
+ * ⚠️ LAS PERPETUAS DEL SISTEMA SON POCAS Y TIENEN UNA REGLA DURA: esta, los
+ * blobs, `.flota`, `.respira` (un CTA por pantalla) y los bordes que giran van
+ * SOLO sobre elementos DECORATIVOS o sobre la accion principal. Nunca detras de
+ * un precio, un estado de orden o un aviso. Nueve segundos y no dos: a esa
+ * velocidad no se percibe como animacion sino como que la luz de la escena
+ * esta viva.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .resplandor-ambiente {
+    animation: respirar var(--dur-ambiente) ease-in-out infinite;
+    will-change: opacity, transform;
+  }
+}
+
+/**
+ * APRETON. La unica respuesta tactil que tiene quien usa el sitio con el dedo,
+ * porque en un telefono no existe el hover.
+ * ⚠️ 1px y nada mas: mas que eso desalinea la fila entera.
+ */
+.presiona:active:not(:disabled) {
+  transform: translateY(1px);
+  transition-duration: var(--dur-instante);
+}
+
+/* ================================= pulso de atencion: "Ultima unidad" */
+
+/**
+ * PULSO DE ATENCION PARA "ULTIMA UNIDAD".
+ *
+ * ⚠️ EL MOVIMIENTO NO ES LA INFORMACION, Y ESA ES LA CONDICION PARA QUE ESTO
+ * SEA LEGITIMO. La etiqueta ya dice "Última unidad" con su texto y su color
+ * (`--color-alerta`, 4.66:1 sobre papel — verificado): quien no ve la animacion
+ * no se pierde absolutamente nada. El pulso solo ayuda a ENCONTRARLA en una
+ * grilla de veinte fichas.
+ *
+ * ⚠️ TRES VUELTAS Y PARA. No es `infinite` y no puede serlo: un elemento que
+ * late para siempre al lado de un precio es una alarma, y ademas WCAG 2.2.2
+ * exige poder detener cualquier movimiento que dure mas de cinco segundos. Con
+ * tres iteraciones de 1.6s el asunto se termina solo en 4.8s.
+ *
+ * ⚠️ EL PULSO ES UN ANILLO EN UN PSEUDO, NO UN `box-shadow` ANIMADO SOBRE LA
+ * ETIQUETA: `transform` + `opacity` corren en el compositor; `box-shadow`
+ * repinta. Y el anillo NO toca el texto, asi que el contraste de la etiqueta no
+ * cambia en ningun cuadro.
+ *
+ * Uso: <span class="etiqueta pulso-atencion">Última unidad</span>
+ */
+.pulso-atencion {
+  position: relative;
+}
+
+.pulso-atencion::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--color-naranja);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulso-atencion::after {
+    animation: anillo-pulso 1.6s var(--curva-salida) 3;
+    animation-delay: var(--retraso, 600ms);
+  }
+}
+
+/** Estado que acaba de cambiar por una accion. Una sola vuelta, nunca en bucle. */
+@media (prefers-reduced-motion: no-preference) {
+  .estado-entra {
+    animation: marcar-estado var(--dur-media) var(--curva-seca) both;
+    transform-origin: 0 50%;
+  }
+}
+
+/* ==================================================== shimmer de esqueleto */
+
+/**
+ * SHIMMER DE ESQUELETO.
+ *
+ * ⚠️ HOY NO EXISTE: verificado, `components/esqueletos.module.css` son bloques
+ * grises quietos. Un esqueleto quieto no se lee como "cargando", se lee como
+ * "roto" — sobre todo en un sitio que sirve todo con `force-dynamic`.
+ *
+ * ⚠️ EL CONTRASTE DEL BRILLO ES 1.10:1 CONTRA LA BASE, MEDIDO. Es la ventana
+ * angosta que hay: debajo de ~1.05 no se ve nada y arriba de ~1.25 el esqueleto
+ * chicharrea y le gana a la pagina que se esta cargando detras.
+ *
+ * ⚠️ SE MUEVE UN PSEUDO CON `transform`, NO EL `background-position` DEL
+ * BLOQUE. Un esqueleto se muestra justo cuando el navegador ya esta ocupado:
+ * repintar un area grande por cuadro es el peor momento posible.
+ *
+ * ⚠️ `aria-hidden` EN EL ESQUELETO ENTERO. El estado de carga se anuncia con
+ * `aria-busy` en la region, no describiendo cajas grises.
+ */
+.esqueleto {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radio);
+  background-color: var(--superficie-2);
+}
+
+/** La banda tira a verde y a amarillo: el esqueleto tiene que parecer de este sitio. Pico blanco, como antes. */
+.esqueleto::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    var(--eje),
+    transparent 0%,
+    rgb(var(--luz-verde) / 0.08) 40%,
+    rgb(255 255 255 / 0.8) 50%,
+    rgb(var(--luz-cambio) / 0.3) 60%,
+    transparent 100%
+  );
+  transform: translate3d(-100%, 0, 0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .esqueleto::after {
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  /**
+   * Escalonado del shimmer: sin esto, doce bloques brillan al mismo tiempo y el
+   * esqueleto entero parpadea como un cartel.
+   */
+  .esqueleto:nth-child(2n)::after {
+    animation-delay: 180ms;
+  }
+
+  .esqueleto:nth-child(3n)::after {
+    animation-delay: 340ms;
+  }
+}
+
+/* ============================================== desplegables sin JavaScript */
+
+/**
+ * `<details>` QUE ABRE Y CIERRA CON ALTURA ANIMADA, SIN UNA LINEA DE JS.
+ *
+ * Hasta hace muy poco era imposible: animar `height: auto` obligaba a medir el
+ * contenido con JavaScript. Ahora son tres piezas y las tres degradan solas:
+ *
+ *   interpolate-size: allow-keywords     (en `html`, tokens.css) permite
+ *                                        interpolar hacia `auto`
+ *   ::details-content                    da un elemento al que aplicarle el alto
+ *   transition-behavior: allow-discrete   deja transicionar `content-visibility`
+ *
+ * ⚠️ SIN SOPORTE NO PASA NADA MALO: el `<details>` abre de golpe, que es
+ * exactamente lo que hace hoy. Por eso va tras `@supports selector()`.
+ *
+ * ⚠️ ES LA UNICA ANIMACION DEL SISTEMA QUE TOCA EL LAYOUT, y esta permitida
+ * porque su proposito ES el layout: la altura es la informacion. Dura 280ms y
+ * ocurre por una accion explicita, no en un scroll.
+ *
+ * Verificado: alcanza al menu de telefono de la barra, al panel de confirmacion
+ * en dos pasos de `ui.tsx`, a los filtros de `/buscar`, al desplegable de
+ * `revisa-tu-email` y al de habilitacion del panel de vendedor — cinco lugares
+ * que hoy abren de un salto.
+ */
+@supports selector(::details-content) {
+  @media (prefers-reduced-motion: no-preference) {
+    .desplegable::details-content {
+      block-size: 0;
+      overflow: clip;
+      opacity: 0;
+      transition:
+        block-size var(--dur-media) var(--curva-entrada),
+        opacity var(--transicion) var(--curva-entrada),
+        content-visibility var(--dur-media) allow-discrete;
+    }
+
+    .desplegable[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+}
+
+/**
+ * ELEMENTOS QUE APARECEN DESPUES DEL PRIMER PINTADO (un popover, un aviso que
+ * llega tras una Server Action).
+ *
+ * ⚠️ ACA SI CORRESPONDE TRANSICION CON `@starting-style`, AL REVES QUE EN
+ * `.entra`: el elemento NO existe en el primer pintado, aparece despues, asi
+ * que hay un cambio de estado real que transicionar — y ademas tiene que poder
+ * IRSE animado, cosa que una animacion de entrada no sabe hacer.
+ * ⚠️ `overlay` con `allow-discrete` evita que el elemento desaparezca de la capa
+ * superior ANTES de terminar de salir.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .aparece-al-montar {
+    transition:
+      opacity var(--transicion) var(--curva-entrada),
+      transform var(--transicion) var(--curva-entrada),
+      overlay var(--transicion) allow-discrete,
+      display var(--transicion) allow-discrete;
+  }
+
+  @starting-style {
+    .aparece-al-montar {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+}
+
+/* ================================================================ contador */
+
+/**
+ * CONTADOR ANIMADO, para CANTIDADES.
+ *
+ * Uso:
+ *   <span class="contador" style="--cuenta: 128">
+ *     <span class="solo-lectores">128 publicaciones</span>
+ *   </span>
+ *
+ * ⚠️ EL NUMERO VISIBLE SALE DE `content: counter()`, QUE NO ES TEXTO REAL: no
+ * se selecciona ni se copia. Por eso el valor va SIEMPRE tambien en un
+ * `.solo-lectores`, y el contenedor lleva `aria-hidden` en el pseudo por
+ * construccion. (El `::after` se anuncia en varios navegadores, asi que sin la
+ * version accesible bien puesta el riesgo real es el ANUNCIO DOBLE, no el
+ * silencio.)
+ *
+ * ⚠️⚠️ PROHIBIDO SOBRE PLATA. Precio, total, comision, saldo y monto de
+ * reembolso NUNCA usan esto. Un importe que sube mientras alguien lo lee se
+ * interpreta como un importe que todavia se esta calculando, y en la pantalla
+ * donde se aprieta "Pagar" eso es exactamente lo que no puede pasar. Es para
+ * publicaciones, resultados de busqueda y ventas.
+ */
+.contador {
+  font-variant-numeric: tabular-nums;
+  counter-reset: cifra var(--cuenta);
+}
+
+.contador::after {
+  content: counter(cifra);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .contador {
+    animation: contar var(--dur-escena) var(--curva-recorrido) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+}
+
+/**
+ * IMPORTE QUE ENTRA — la unica animacion permitida sobre un numero de plata.
+ * Tres condiciones que no se relajan: ocurre UNA VEZ, muestra el valor FINAL
+ * desde el primer cuadro y termina QUIETA.
+ */
+.cifra-entra {
+  display: inline-block;
+  overflow: clip;
+  /* Sin esto se recortan al ras los acentos y las descendentes. */
+  padding-block: 0.06em;
+  margin-block: -0.06em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cifra-entra > * {
+    display: inline-block;
+    animation: alzar var(--dur-media) var(--curva-escena) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+}
+
+/* ================================================ transiciones de vista */
+
+/**
+ * ⚠️ EL MECANISMO YA EXISTE Y ES DECLARATIVO. Verificado en el repo:
+ * `components/movimiento.tsx` mapea los `transitionTypes` de cada `<Link>`
+ * (`avanza` / `retrocede`) a la clase de View Transition, `header.tsx` y
+ * `footer.tsx` fijan `viewTransitionName: 'barra'` y `'pie'`, y la foto usa
+ * `share="morph"`. No hace falta JavaScript nuevo para saber la direccion de una
+ * navegacion: la decide quien enlaza.
+ *
+ * Estos dos tipos se AGREGAN a los que ya existen.
+ */
+
+/**
+ * WIPE DIAGONAL — para saltos LATERALES entre pantallas hermanas
+ * (vitrina ↔ busqueda, pestañas del back-office), donde "avanzar" y
+ * "retroceder" no significan nada.
+ *
+ * ⚠️ LA PANTALLA VIEJA NO SE MUEVE: la nueva la tapa con un corte en diagonal.
+ * Es la bandera cruzando el cuadro. Dos capas desplazandose a la vez se lee como
+ * un error de sincronizacion.
+ */
+::view-transition-old(.barrido) {
+  animation: var(--dur-media) var(--curva-salida) both aparecer reverse;
+}
+
+::view-transition-new(.barrido) {
+  animation: var(--transicion-lenta) var(--curva-corte) both telon-diagonal;
+}
+
+/**
+ * `.emerge` — para una pantalla que se abre POR ENCIMA de la anterior, no al
+ * lado: el checkout, una confirmacion.
+ * ⚠️ NO ES UN CAPRICHO: deslizar de costado dice "seguis en la misma serie de
+ * pantallas"; subir dice "esto es un paso aparte, y cuando termine volves".
+ * Confundirlas desorienta.
+ */
+::view-transition-new(.emerge) {
+  animation:
+    220ms var(--curva-entrada) 100ms both aparecer,
+    var(--transicion-lenta) var(--curva-seca) both emerger-vt;
+}
+
+::view-transition-old(.emerge) {
+  animation: 160ms var(--curva-salida) both aparecer reverse;
+}
+
+@keyframes emerger-vt {
+  from {
+    transform: translateY(22px) scale(0.985);
+  }
+}
+
+/**
+ * El morph de la foto ahora tambien LEVANTA: la foto no solo cambia de tamaño,
+ * se despega de la grilla y aterriza en la ficha.
+ */
+::view-transition-image-pair(.morph) {
+  animation-duration: var(--transicion-lenta);
+}
+
+/* ================================= red de seguridad de reduced-motion */
+
+/**
+ * ⚠️ ESTA REGLA NO DEBERIA HACER FALTA NUNCA, Y POR ESO ESTA.
+ *
+ * Todo lo dirigido por scroll de este archivo ya vive adentro de
+ * `@media (prefers-reduced-motion: no-preference)`, que es la forma correcta.
+ * Pero basta con que alguien agregue una clase nueva olvidandose la media query
+ * para que quien pidio menos movimiento se quede mirando una pagina en
+ * `opacity: 0` —no "sin animacion": VACIA—, y eso es un sitio roto, no un sitio
+ * menos vistoso.
+ *
+ * `animation-timeline: none` devuelve la animacion al reloj, y el reloj ya esta
+ * aplastado por la regla global de `tokens.css`.
+ *
+ * ⚠️ `animation-iteration-count: 1` ESTA PORQUE LA REGLA GLOBAL NO LO CUBRE:
+ * una animacion `infinite` con duracion 0.01ms sigue siendo infinita y sigue
+ * despertando al compositor para siempre.
+ *
+ * ⚠️ `animation-direction: normal` FUERZA EL ESTADO FINAL DEL SENTIDO CORRECTO.
+ * Sin esto, un keyframe que solo declara `to` —`deriva-y`, `shimmer`— deja el
+ * elemento en su posicion desplazada en vez de en la natural.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-timeline: none !important;
+    animation-range: normal !important;
+    animation-iteration-count: 1 !important;
+    animation-direction: normal !important;
+  }
+
+  /**
+   * ⚠️ Y ESTAS TRES SE APAGAN A MANO PORQUE SU ESTADO FINAL NO ES EL NEUTRO.
+   * Aplastar la duracion las deja en el ultimo cuadro: la marquesina corrida a
+   * mitad de camino, el paralaje desplazado, el shimmer fuera de cuadro.
+   */
+  .marquesina-pista,
+  .capa-fondo,
+  .capa-media,
+  .capa-frente,
+  .foto-paralaje,
+  .paralaje-portada,
+  .corre-con-scroll,
+  .patron-vivo::before,
+  .esqueleto::after,
+  .blob,
+  .flota,
+  .flota-lento,
+  .flota-inverso,
+  .borde-brilla::before,
+  .gira-angulo,
+  .luz-filo::after,
+  body::before {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /**
+   * Y LAS DE LUZ, QUE ADEMAS DEJAN UN `filter` O UNA `@property` PUESTOS. El
+   * CTA queda sin halo animado (conserva el de hover); el titular queda con su
+   * gradiente y sin banda; los blobs quedan quietos y VISIBLES en su alfa base.
+   * Nunca `opacity: 0` clavado.
+   */
+  .respira {
+    animation: none !important;
+    filter: none !important;
+  }
+
+  .shimmer-titulo {
+    animation: none !important;
+    --brillo-x: 100%;
+  }
+}
+
+/* =============================================================================
+ * CAPA DE MOVIMIENTO — LUZ VIVA (2026-09-10)
+ * =============================================================================
+ *
+ * Todo lo anterior sigue valiendo; aca se le cambia el caracter y se agrega el
+ * vocabulario de la direccion nueva: blobs, flotacion, halo que respira, borde
+ * que gira, shimmer de titular, entradas con luz y overshoot, tilt, barrido de
+ * luz e iconos vivos.
+ *
+ * ⚠️ NOMBRES DE KEYFRAMES NUEVOS, verificados contra `scripts/chequeo-css.mjs`
+ * (ningun `*.module.css` los declara): `surgir-luz`, `entrar-luz`,
+ * `luz-aparece`, `flotar-a`, `flotar-b`, `flotar-c`, `flotar-suave`,
+ * `girar-angulo`, `brillo-titular`, `escala-icono`, `encender`, `entrar-veloz`,
+ * `entrar-veloz-der`, `respirar-glow`, `luz-filo`, `deriva-malla`.
+ *
+ * ⚠️ CONVIVENCIA DE `animation`. Es un shorthand: dos clases que lo declaran
+ * sobre el MISMO elemento se pisan (gana la ultima) y, con `both`, el perdedor
+ * puede quedar clavado en su cuadro inicial. Regla: UNA clase de animacion por
+ * elemento. La entrada en el padre y la flotacion en el hijo; el titular con
+ * shimmer ya trae su entrada incluida (`.shimmer-titulo`), no se le suma
+ * `.entra`; las variantes de `.escalona` son modificadores del mismo
+ * contenedor, no clases sueltas en los hijos; `.gira-angulo` va en un pseudo
+ * o en un hijo, nunca en el elemento que entra.
+ * ========================================================================== */
+
+/* ------------------------------------------------------------ keyframes */
+
+/**
+ * SURGIR CON LUZ — la entrada de esta version: sube, se enfoca y se enciende.
+ * ⚠️ `filter: blur` SOLO durante la entrada (una vez, 700ms) y termina en
+ * `blur(0)` explicito para que el elemento no quede con un filtro puesto. NO va
+ * en una grilla dirigida por scroll: ahi el blur se recalcularia en cada cuadro
+ * de scroll sobre 24 fichas (`.revela-grilla-luz` usa otra, sin filtro).
+ */
+@keyframes surgir-luz {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/** Entrada lateral con la misma luz, para elementos de una fila. */
+@keyframes entrar-luz {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+/** Una capa de luz que se enciende (blob, halo): solo opacidad. */
+@keyframes luz-aparece {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/**
+ * FLOTAR — tres trayectorias distintas para que tres blobs nunca se muevan al
+ * unisono. Tres puntos de paso y ninguno repite el anterior: con dos, el ojo
+ * detecta el vaiven en tres segundos. Solo `transform`; `alternate` en la clase.
+ */
+@keyframes flotar-a {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(6%, -9%, 0) scale(1.08);
+  }
+  66% {
+    transform: translate3d(-4%, 5%, 0) scale(0.95);
+  }
+  100% {
+    transform: translate3d(3%, -3%, 0) scale(1.04);
+  }
+}
+
+@keyframes flotar-b {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(-7%, 6%, 0) scale(0.94);
+  }
+  66% {
+    transform: translate3d(5%, -8%, 0) scale(1.1);
+  }
+  100% {
+    transform: translate3d(-2%, 2%, 0) scale(1.02);
+  }
+}
+
+@keyframes flotar-c {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+  }
+  33% {
+    transform: translate3d(4%, 7%, 0) scale(1);
+  }
+  66% {
+    transform: translate3d(-6%, -4%, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(2%, 5%, 0) scale(0.98);
+  }
+}
+
+/** Flotacion de un OBJETO (isotipo, icono, tarjeta destacada): ±6px, nada mas. */
+@keyframes flotar-suave {
+  from {
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+/** Giro del angulo registrado `--giro`: los bordes conicos y los gradientes vivos dan la vuelta. */
+@keyframes girar-angulo {
+  from {
+    --giro: 112deg;
+  }
+  to {
+    --giro: 472deg;
+  }
+}
+
+/**
+ * SHIMMER DE TITULAR. Mueve `--brillo-x` (registrada) y con ella la posicion
+ * de una banda de luz recortada al texto. De 100% a 0%: la banda cruza de
+ * izquierda a derecha y termina fuera del texto.
+ */
+@keyframes brillo-titular {
+  from {
+    --brillo-x: 100%;
+  }
+  to {
+    --brillo-x: 0%;
+  }
+}
+
+/** Icono que aparece con escala y un giro chiquito. Con `--curva-pop` se pasa y vuelve. */
+@keyframes escala-icono {
+  from {
+    opacity: 0;
+    transform: scale(0.5) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/**
+ * ENCENDER: una etiqueta o un contador que se prende como una luz del tablero.
+ * ⚠️ EL FLASH ES `drop-shadow` (FUERA del texto), NO `brightness`: aclarar el
+ * texto mismo bajaria su contraste durante el flash. El texto entra con su
+ * color final desde el primer cuadro; lo que se enciende es el halo, del color
+ * de `--luz-marca` (verde sobre claro, Cambio sobre cancha).
+ */
+@keyframes encender {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 12px rgb(var(--luz-marca) / 0.95));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+/**
+ * VELOZ: entra de costado con un sesgo que se endereza. `skewX` y no `rotate`:
+ * la caja no sale de su columna. ⚠️ DOS SENTIDOS, DOS KEYFRAMES: reproducir uno
+ * con `reverse` y `both` termina en el `from` y deja el elemento INVISIBLE.
+ */
+@keyframes entrar-veloz {
+  from {
+    opacity: 0;
+    transform: translateX(-36px) skewX(-8deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(3px) skewX(1.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) skewX(0deg);
+  }
+}
+
+@keyframes entrar-veloz-der {
+  from {
+    opacity: 0;
+    transform: translateX(36px) skewX(8deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(-3px) skewX(-1.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) skewX(0deg);
+  }
+}
+
+/**
+ * EL HALO QUE RESPIRA. `filter: drop-shadow` y no `box-shadow`: `box-shadow`
+ * repinta el elemento en cada cuadro, `filter` se compone en la GPU. Y
+ * `drop-shadow` sale del boton aunque tenga `overflow: hidden` —que el primario
+ * tiene, por su barrido—: un pseudo con `box-shadow` quedaria recortado. Lee
+ * `--luz-marca`: verde sobre claro, Cambio sobre la portada, donde un halo
+ * verde no se veria.
+ */
+@keyframes respirar-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgb(var(--luz-marca) / 0.35))
+      drop-shadow(0 4px 14px rgb(var(--luz-marca) / 0.25));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgb(var(--luz-marca) / 0.75))
+      drop-shadow(0 8px 26px rgb(var(--luz-marca) / 0.45));
+  }
+}
+
+/**
+ * Luz que corre por el FILO superior de un boton (2px, nunca debajo del texto).
+ * ⚠️ DOS KEYFRAMES IDENTICOS A PROPOSITO: `luz-filo` corre una vez al cargar y
+ * `luz-filo-hover` en cada hover. Si el hover reusara el mismo nombre solo
+ * cambiando el delay, NO se reproduciria: cambiar delay o fill de una
+ * animacion ya terminada no la reinicia (CSS Animations 1 §3.1). Un nombre
+ * nuevo en la lista es una animacion nueva, y esa si arranca.
+ */
+@keyframes luz-filo {
+  0% {
+    opacity: 0;
+    transform: translate3d(-120%, 0, 0);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(220%, 0, 0);
+  }
+}
+
+@keyframes luz-filo-hover {
+  0% {
+    opacity: 0;
+    transform: translate3d(-120%, 0, 0);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(220%, 0, 0);
+  }
+}
+
+/**
+ * Deriva de la malla del fondo del documento. `scale(1.06)` extiende un 3% por
+ * lado y la traslacion es de 2.5%: nunca asoma el papel plano por un borde
+ * (con 1.04 quedaba una franja de medio por ciento en el extremo del bucle).
+ */
+@keyframes deriva-malla {
+  from {
+    transform: translate3d(-2.5%, -2%, 0) scale(1.06);
+  }
+  to {
+    transform: translate3d(2.5%, 2%, 0) scale(1.06);
+  }
+}
+
+/* ============================================================== blobs */
+
+/**
+ * BLOBS DE FONDO. Luz difusa flotando detras del contenido.
+ *
+ * Markup (las posiciones por defecto salen del orden; `--blob-x/--blob-y` en
+ * el `style` las cambian):
+ *   <section class="sup-fosa">
+ *     <div class="blobs" aria-hidden="true">
+ *       <i class="blob blob-cancha"></i>
+ *       <i class="blob blob-cambio"></i>
+ *       <i class="blob blob-cancha blob-chico"></i>
+ *     </div>
+ *     …contenido…
+ *   </section>
+ *
+ * ⚠️ EL COLOR NO LO ELIGE EL BLOB: LO ELIGE LA SUPERFICIE. `.blob-cancha` y
+ * `.blob-cambio` leen `--luz-blob`, `--blob-alfa-cancha` y `--blob-alfa-cambio`,
+ * que cada `.sup-*` y `.escena-luz` fijan a lo que su texto aguanta (tabla en
+ * tokens.css). Sobre papel pelado el presupuesto es un lavado a proposito: el
+ * gris de las ayudas de formulario tiene 0.19 de aire y un verde luminoso se
+ * lo come. Una seccion que quiera blobs que se VEAN sobre claro lleva
+ * `.escena-luz`, que remapea esos tokens.
+ *
+ * ⚠️ SIN `filter: blur()`. La caida suave la da el `radial-gradient` con
+ * `closest-side`: el borde ya es difuso. Un blur de 60px sobre tres capas de
+ * 700px que se mueven es lo que hace que un telefono se arrastre. Tres por
+ * bloque, no mas: cada uno es una capa promovida.
+ *
+ * ⚠️ `overflow: clip` EN `.blobs` ES LA REGLA DE 320px: un blob de 720px
+ * centrado en `--blob-x: 90%` sobresale del contenedor y sin esto agranda el
+ * documento. El padre lleva `position: relative; isolation: isolate` (todas
+ * las `.sup-*` y `.escena-luz` ya lo tienen). El grano de `.con-grano::after`
+ * pinta por encima de los blobs (mismo z, despues en el arbol): es lo deseado.
+ */
+.blobs {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  overflow: clip;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  left: var(--blob-x, 50%);
+  top: var(--blob-y, 50%);
+  width: var(--blob-tamanio);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  /* Centrado con `translate` (propiedad aparte): el `transform` queda libre para flotar. */
+  translate: -50% -50%;
+  background-image: radial-gradient(closest-side, var(--blob-color) 0%, transparent 72%);
+}
+
+/** Posiciones por defecto, por orden: arriba a la derecha (la luz), abajo a la izquierda, arriba al medio. */
+.blob:nth-child(1) {
+  --blob-x: 82%;
+  --blob-y: 18%;
+}
+
+.blob:nth-child(2) {
+  --blob-x: 12%;
+  --blob-y: 88%;
+}
+
+.blob:nth-child(3) {
+  --blob-x: 56%;
+  --blob-y: 4%;
+}
+
+.blob-cancha {
+  --blob-color: rgb(var(--luz-blob) / var(--blob-alfa-cancha));
+}
+
+.blob-cambio {
+  --blob-color: rgb(var(--luz-cambio) / var(--blob-alfa-cambio));
+}
+
+/** Escalas: la mitad y una vez y media del tamaño base. */
+.blob-chico {
+  width: calc(var(--blob-tamanio) * 0.55);
+}
+
+.blob-grande {
+  width: calc(var(--blob-tamanio) * 1.5);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .blob {
+    will-change: transform;
+    animation:
+      luz-aparece 1.4s var(--curva-entrada) both,
+      flotar-a var(--dur-blob) var(--curva-flotar) infinite alternate;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  /* Tres trayectorias, tres duraciones: nunca coinciden. */
+  .blob:nth-child(3n + 2) {
+    animation-name: luz-aparece, flotar-b;
+    animation-duration: 1.4s, calc(var(--dur-blob) * 1.25);
+  }
+
+  .blob:nth-child(3n) {
+    animation-name: luz-aparece, flotar-c;
+    animation-duration: 1.4s, calc(var(--dur-blob) * 0.85);
+  }
+
+  /**
+   * LA MALLA DEL DOCUMENTO DERIVA. Es el pseudo fijo de `body` que pinta
+   * `--malla-papel`: se agranda un 6% y se traslada 2.5%, en el compositor. Es
+   * la unica animacion que corre en TODAS las pantallas, y a 14s con ese
+   * recorrido no se percibe como movimiento: se percibe como que la luz de la
+   * pagina esta viva.
+   */
+  body::before {
+    animation: deriva-malla var(--dur-flotar) var(--curva-flotar) infinite alternate;
+    will-change: transform;
+  }
+}
+
+/* ========================================================== flotacion */
+
+/**
+ * `.flota` para un OBJETO decorativo o una imagen: el isotipo, un icono
+ * grande, la foto de portada. ⚠️ Un texto que flota se lee peor y un boton
+ * que flota se le escapa al dedo. Usa `transform`, asi que no va junto con una
+ * entrada `.entra-*` en el MISMO elemento: la entrada en el padre, la
+ * flotacion en el hijo.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .flota {
+    animation: flotar-suave var(--dur-flotar) var(--curva-flotar) infinite alternate;
+    animation-delay: var(--retraso, 0ms);
+    will-change: transform;
+  }
+
+  .flota-lento {
+    animation-duration: calc(var(--dur-flotar) * 1.6);
+  }
+
+  /** Dos hermanos que flotan a contratiempo se leen como dos objetos, no como un temblor. */
+  .flota-inverso {
+    animation-direction: alternate-reverse;
+  }
+}
+
+/* ============================================================ halos */
+
+/**
+ * EL CTA QUE RESPIRA. `filter` en bucle, sobre UN elemento por pantalla: el
+ * boton de comprar, el de publicar, el "Crear cuenta" de la portada. Dos en la
+ * misma pantalla se pelean y ninguno es el principal. ⚠️ PROHIBIDO ALREDEDOR DE
+ * UN PRECIO O DE UN TOTAL.
+ *
+ * ⚠️ Se detiene en `:hover` y `:focus-visible` y deja paso al glow fijo del
+ * boton (`--sombra-marca`, que ya trae halo): un halo que respira ADEMAS de
+ * crecer al pasar el mouse es demasiado.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .respira {
+    animation: respirar-glow var(--dur-respirar) var(--curva-flotar) infinite;
+    animation-delay: var(--retraso, 0ms);
+    will-change: filter;
+  }
+
+  .respira:hover,
+  .respira:focus-visible {
+    animation-play-state: paused;
+  }
+}
+
+/**
+ * BRILLA — glow en hover para cualquier superficie clickeable que no sea
+ * `.eleva`: chips, pastillas de filtro, iconos-boton, filas. No levanta:
+ * brilla. Es una transicion de `box-shadow` (pintura una vez por hover, nada
+ * en bucle). El foco va despues del hover, mismo motivo que en `.eleva`.
+ */
+.brilla {
+  transition:
+    box-shadow var(--dur-hover) var(--curva),
+    border-color var(--dur-hover) var(--curva);
+}
+
+.brilla:hover,
+.brilla:focus-within {
+  box-shadow: var(--sombra-2), var(--glow-marca);
+  border-color: var(--borde-luz);
+}
+
+.brilla:focus-visible {
+  box-shadow: var(--sombra-2), var(--glow-foco);
+  border-color: var(--color-foco);
+}
+
+/**
+ * GLOW DE FOCO explicito, para inputs, selects, textareas y cualquier control
+ * que maneje su propia sombra: al enfocar, el borde pasa al color de foco y
+ * aparece el halo. ⚠️ Es ADEMAS del `outline` global: el halo es adorno, el
+ * anillo es la garantia. `:focus-within` cubre un envoltorio de campo.
+ */
+.glow-foco {
+  transition:
+    box-shadow var(--dur-hover) var(--curva),
+    border-color var(--transicion-rapida) var(--curva);
+}
+
+.glow-foco:focus-visible,
+.glow-foco:focus-within {
+  border-color: var(--color-foco);
+  box-shadow: var(--sombra-hundida), var(--glow-foco);
+}
+
+/**
+ * BORDE QUE BRILLA — un anillo conico de 1px con dos chispas, dibujado con
+ * mascara para que solo pinte el borde. Gira en hover; `.borde-brilla-siempre`
+ * gira solo (una o dos por pantalla, no en una grilla: 24 bordes girando
+ * marean).
+ *
+ * ⚠️ EL CONIC ES `--degradado-borde`, del bloque universal, y `--giro` se
+ * anima EN EL PSEUDO porque esta registrada con `inherits: false`: el pseudo
+ * no la hereda del elemento, y la receta se resuelve con la suya.
+ *
+ * ⚠️ USA `::before`. No convive con `.patron-vivo`, `.sup-noche/.sup-fosa/
+ * .sup-cancha` (filo de luz) ni `.velo-texto` en el mismo elemento: el anillo
+ * va en el elemento y esos en un hijo, o al reves.
+ */
+.borde-brilla {
+  position: relative;
+  isolation: isolate;
+}
+
+.borde-brilla::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-contenido);
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--degradado-borde);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.55;
+  transition: opacity var(--dur-hover) var(--curva);
+}
+
+.borde-brilla:hover::before,
+.borde-brilla:focus-within::before,
+.borde-brilla-siempre::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .borde-brilla:hover::before,
+  .borde-brilla:focus-within::before,
+  .borde-brilla-siempre::before {
+    animation: girar-angulo var(--dur-giro) linear infinite;
+  }
+
+  /**
+   * ANGULO QUE GIRA para cualquier elemento que pinte `--degradado-vivo` o
+   * `--degradado-borde` (un subrayado, un filete, un anillo). Va en un pseudo o
+   * en un hijo decorativo, nunca en el elemento que entra (comparte `animation`).
+   */
+  .gira-angulo {
+    animation: girar-angulo var(--dur-giro) linear infinite;
+  }
+}
+
+/** El isotipo y los iconos grandes con luz: `filter` estatico (un svg de 36px, cuesta nada). */
+.marca-brilla {
+  filter: var(--glow-drop-marca);
+}
+
+/* ======================================================= titular vivo */
+
+/**
+ * SHIMMER QUE CRUZA EL TITULAR UNA VEZ AL CARGAR, con su entrada incluida.
+ *
+ * Dos capas recortadas al texto: la banda de luz arriba (posicion animada por
+ * `--brillo-x`) y el gradiente del titular abajo. La banda ocupa el tercio
+ * central de una imagen al 300%: en 100% y en 0% la ventana muestra un tercio
+ * transparente, o sea que el titular arranca y termina sin banda.
+ *
+ * ⚠️ TRAE SU PROPIA ENTRADA (`surgir-luz`) EN EL MISMO `animation`, y por eso
+ * NO se combina con `.entra`: dos shorthands sobre el mismo elemento se pisan.
+ * Adentro de `.escalona` o de `.escena-entra` hay reglas propias mas abajo.
+ *
+ * ⚠️ ES UNA ANIMACION DE PINTURA, UNA VEZ, 1.6s, SOLO EN EL TITULAR DE
+ * PORTADA. No va en una lista ni en una grilla.
+ *
+ * ⚠️ SOLO TITULARES GRANDES: sobre claro la banda es verde-500 (3.12:1). Las
+ * superficies oscuras la pasan a Amarillo Cambio via `--titular-luz`.
+ */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .shimmer-titulo {
+    background-image:
+      linear-gradient(104deg, transparent 40%, var(--titular-luz) 50%, transparent 60%),
+      var(--degradado-titular);
+    background-size:
+      300% 100%,
+      100% 100%;
+    background-repeat: no-repeat;
+    background-position:
+      var(--brillo-x) 0,
+      0 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .shimmer-titulo.titular-vivo {
+    background-image:
+      linear-gradient(104deg, transparent 40%, var(--titular-luz) 50%, transparent 60%),
+      var(--degradado-titular-vivo);
+  }
+
+  .sup-noche .shimmer-titulo,
+  .sup-fosa .shimmer-titulo,
+  .sup-vidrio-oscuro .shimmer-titulo {
+    background-image:
+      linear-gradient(104deg, transparent 40%, var(--titular-luz) 50%, transparent 60%),
+      var(--degradado-titular-claro-vivo);
+  }
+
+  .sup-cancha .shimmer-titulo {
+    background-image:
+      linear-gradient(104deg, transparent 40%, var(--titular-luz) 50%, transparent 60%),
+      var(--degradado-titular-claro);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .shimmer-titulo {
+      animation:
+        surgir-luz var(--dur-escena) var(--curva-viva) both,
+        brillo-titular var(--dur-brillo) var(--curva-corte) both;
+      animation-delay: var(--retraso, 0ms), calc(var(--retraso, 0ms) + 500ms);
+    }
+
+    /* Adentro de un escalonado, el titular conserva su escalon y suma el brillo. */
+    .escalona > .shimmer-titulo {
+      animation:
+        surgir-luz var(--dur-escena) var(--curva-viva) both,
+        brillo-titular var(--dur-brillo) var(--curva-corte) both;
+      animation-delay:
+        calc(var(--paso-escalon) * var(--i, 0) + var(--retraso, 0ms)),
+        calc(var(--paso-escalon) * var(--i, 0) + var(--retraso, 0ms) + 500ms);
+    }
+  }
+}
+
+/* ============================================ entrada al primer pintado */
+
+/**
+ * ENTRADAS CON LUZ Y CON POP. Animaciones con `both`: terminan siempre en el
+ * estado final aunque el navegador las interrumpa. `--retraso` lo pone quien
+ * lo usa para componer una escena a mano.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .entra-luz {
+    animation: surgir-luz var(--dur-escena) var(--curva-viva) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-luz-lado {
+    animation: entrar-luz var(--dur-entrada) var(--curva-viva) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  /** Icono, chip o sello que aparece con escala y overshoot (~10%). */
+  .aparece-escala {
+    animation: escala-icono var(--dur-entrada) var(--curva-pop) both;
+    animation-delay: var(--retraso, 0ms);
+    transform-origin: 50% 50%;
+  }
+
+  /**
+   * ENCENDER: etiquetas, contadores de cantidades, KPIs del panel.
+   * ⚠️ PROHIBIDO SOBRE PLATA. Un precio que se enciende con un flash es un
+   * precio que llama la atencion sobre si mismo, y en este sitio un importe
+   * tiene que ser lo mas quieto de la pantalla.
+   */
+  .enciende {
+    animation: encender var(--dur-entrada) var(--curva-pop) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-veloz {
+    animation: entrar-veloz var(--dur-entrada) var(--curva-veloz) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .entra-veloz-der {
+    animation: entrar-veloz-der var(--dur-entrada) var(--curva-veloz) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  /**
+   * VARIANTES DE `.escalona`. Se combinan con ella (`class="escalona
+   * escalona-luz"`): los `nth-child` que asignan `--i` ya estan en `.escalona`
+   * y estas solo cambian el keyframe, la curva o el paso.
+   *
+   *   escalona           acercarse-corto, viva   60ms   tarjetas, paneles, bloques
+   *   escalona-luz       surgir-luz, viva        60ms   bloques de portada, tarjetas de valor
+   *   escalona-pop       escala-icono, pop       60ms   filas de iconos, chips, pasos
+   *   escalona-lado      entrar-luz, viva        60ms   listas, filas de datos
+   *   escalona-veloz     entrar-veloz, veloz     40ms   nav, chips. SIN rebote: sirve con importes
+   *   escalona-rapido    (la misma)              40ms   grillas de mas de seis
+   *   escalona-lento     (la misma)             110ms   tres o cuatro bloques grandes
+   *
+   * ⚠️ `.escalona` sigue cortando en el doce: del 13 en adelante entran juntos.
+   * Una lista larga no se escalona con delays, se revela por scroll.
+   */
+  .escalona.escalona-luz > * {
+    animation-name: surgir-luz;
+    animation-duration: var(--dur-escena);
+  }
+
+  .escalona.escalona-pop > * {
+    animation-name: escala-icono;
+    animation-timing-function: var(--curva-pop);
+    transform-origin: 50% 50%;
+  }
+
+  .escalona.escalona-lado > * {
+    animation-name: entrar-luz;
+  }
+
+  .escalona.escalona-veloz {
+    --paso-escalon: var(--paso-escalon-rapido);
+  }
+
+  .escalona.escalona-veloz > * {
+    animation-name: entrar-veloz;
+    animation-timing-function: var(--curva-veloz);
+  }
+
+  .escalona.escalona-rapido {
+    --paso-escalon: var(--paso-escalon-rapido);
+  }
+
+  .escalona.escalona-lento {
+    --paso-escalon: var(--paso-escalon-lento);
+  }
+
+  /**
+   * ESCENA DE PORTADA. Un solo contenedor y adentro todo entra con ritmo, sin
+   * poner una clase en cada hijo. Los tiempos salen del ORDEN de los hijos, no
+   * de su tipo; del sexto en adelante entran juntos a 400ms:
+   *
+   *   <section class="escena-entra">
+   *     <p class="kicker">…</p>            ← 0ms, se enciende
+   *     <h1 class="display">…</h1>         ← 90ms, surge con luz (o `.shimmer-titulo`)
+   *     <p>…</p>                           ← 200ms, veloz
+   *     <div>…botones…</div>               ← 300ms, cae en su lugar
+   *     <aside>…foto…</aside>              ← 160ms, se acerca
+   *   </section>
+   */
+  .escena-entra > :nth-child(1) {
+    animation: encender var(--dur-entrada) var(--curva-pop) both;
+  }
+
+  .escena-entra > :nth-child(2) {
+    animation: surgir-luz var(--dur-escena) var(--curva-viva) 90ms both;
+  }
+
+  .escena-entra > :nth-child(3) {
+    animation: entrar-veloz var(--dur-entrada) var(--curva-veloz) 200ms both;
+  }
+
+  .escena-entra > :nth-child(4) {
+    animation: acercarse-corto var(--dur-entrada) var(--curva-viva) 300ms both;
+  }
+
+  .escena-entra > :nth-child(5) {
+    animation: acercarse var(--dur-escena) var(--curva-escena) 160ms both;
+  }
+
+  .escena-entra > :nth-child(n + 6) {
+    animation: surgir var(--dur-entrada) var(--curva-veloz) 400ms both;
+  }
+
+  /* El titular con shimmer adentro de la escena: entrada de la escena + banda. Va segundo. */
+  .escena-entra > .shimmer-titulo {
+    animation:
+      surgir-luz var(--dur-escena) var(--curva-viva) 90ms both,
+      brillo-titular var(--dur-brillo) var(--curva-corte) 590ms both;
+  }
+}
+
+/* ============================================= revelado al hacer scroll */
+
+/**
+ * Las variantes nuevas del revelado. Mismas dos guardas, mismo motivo. En una
+ * animacion dirigida por scroll la CURVA si aplica (mapea el progreso), asi
+ * que `--curva-viva` rebota igual que al cargar.
+ * ⚠️ `.revela-luz` lleva el blur de `surgir-luz` y es para UN bloque grande.
+ * La grilla usa `acercarse-corto`, sin filtro: 24 fichas con blur por cuadro
+ * de scroll es lo mas caro que este archivo podria pedirle a un telefono.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revela-luz {
+      animation: surgir-luz auto var(--curva-viva) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
+
+    .revela-grilla-luz > * {
+      animation: acercarse-corto auto var(--curva-viva) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+
+    /** Etiquetas y contadores que se encienden al entrar. Nunca importes. */
+    .revela-enciende {
+      animation: encender auto var(--curva-pop) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+  }
+}
+
+/* ========================================================= hover rico */
+
+/**
+ * TILT FINGIDO. Sin JavaScript no se puede seguir el cursor; lo que se puede
+ * es inclinar la tarjeta hacia el cursor DE FORMA FIJA y en perspectiva, que a
+ * 3 grados es lo que el ojo registra como "reacciona a mi". La grilla lleva
+ * `.tilt-escena` (perspectiva); cada ficha `.tilt`. Las columnas pares se
+ * inclinan al reves para que la fila no se vea torcida toda hacia un lado.
+ *
+ * ⚠️ ROTA CON LA PROPIEDAD `rotate` —aparte de `transform` y de `translate`—,
+ * asi que convive con `.eleva` y con cualquier `.entra-*`. ⚠️ Pero NO con un
+ * modulo que ponga `transform` en su propio `:hover` (la ficha del catalogo lo
+ * hace con `translateY(-4px)`): ahi el tilt se ve, pero la elevacion del
+ * modulo sigue mandando.
+ *
+ * ⚠️ 3 GRADOS. Con mas, en una grilla de 24 fichas la fila entera se ve
+ * torcida al pasar en diagonal. ⚠️ SOLO CON PUNTERO FINO: en un telefono el
+ * `:hover` queda pegado tras un toque y la tarjeta se quedaria torcida.
+ */
+.tilt-escena {
+  perspective: 1200px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /**
+   * ⚠️ DECLARA LA LISTA ENTERA DE `.eleva` MAS `rotate`, no solo `rotate`:
+   * `transition` es un shorthand, y `.tilt` esta declarada DESPUES de `.eleva`.
+   * Con `transition: rotate` a secas, `class="eleva tilt"` perdia la
+   * transicion de `translate` y de `box-shadow` y la ficha SALTABA 6px con el
+   * glow de golpe. En un `.tilt` sin `.eleva` las entradas de mas no hacen
+   * nada.
+   */
+  .tilt {
+    transition:
+      rotate var(--dur-hover) var(--curva-viva),
+      translate var(--dur-hover) var(--curva-viva),
+      transform var(--dur-media) var(--curva-seca),
+      box-shadow var(--dur-hover) var(--curva),
+      border-color var(--transicion-rapida) var(--curva);
+  }
+
+  .tilt:hover,
+  .tilt:focus-within {
+    rotate: -0.6 1 0 3deg;
+  }
+
+  .tilt-escena > :nth-child(even).tilt:hover,
+  .tilt-escena > :nth-child(even).tilt:focus-within {
+    rotate: -0.6 -1 0 3deg;
+  }
+
+  .tilt:active {
+    rotate: -0.6 1 0 0deg;
+    transition-duration: var(--dur-instante);
+  }
+}
+
+/**
+ * BARRIDO DE LUZ en un boton: una banda de luz cruza en el eje del sistema al
+ * pasar el mouse. Reusa `destello-cruza`. Va en `::after` y por DEBAJO del
+ * texto (z -1 con `isolation`), con `--barrido-luz`, que cada superficie fija
+ * al maximo que su texto aguanta (verde-600 bajo papel, blanco bajo tinta).
+ * ⚠️ No convive con `.destello` (mismo pseudo). Compatible con `.botonPrimario`,
+ * que usa `::before` para su relleno. Para un boton, este; para una ficha,
+ * `.destello`.
+ */
+.barrido-luz {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.barrido-luz::after {
+  content: '';
+  position: absolute;
+  inset: -45% -25%;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  opacity: 0;
+  background-image: var(--barrido-luz);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barrido-luz:hover::after,
+  .barrido-luz:focus-visible::after {
+    animation: destello-cruza var(--dur-destello) var(--curva-corte);
+  }
+}
+
+/**
+ * LUZ EN EL FILO de un boton: una banda de 2px que corre por el borde superior
+ * al cargar y en cada hover. Es el barrido que cumple AA POR CONSTRUCCION: en
+ * el filo no hay texto —un boton mide 44px y la etiqueta esta centrada—, asi
+ * que se barre luz blanca sin tocar ni un glifo. Mismo pseudo que
+ * `.barrido-luz`: uno o el otro.
+ */
+.luz-filo {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.luz-filo::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 46%;
+  height: 2px;
+  z-index: var(--z-contenido);
+  pointer-events: none;
+  opacity: 0;
+  border-radius: var(--radio-pastilla);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.55) 30%,
+    rgb(255 255 255 / 0.95) 50%,
+    rgb(255 255 255 / 0.55) 70%,
+    transparent 100%
+  );
+  transform: translate3d(-120%, 0, 0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .luz-filo::after {
+    animation: luz-filo var(--dur-destello) var(--curva-corte) both;
+    animation-delay: var(--retraso, 700ms);
+  }
+
+  /**
+   * ⚠️ LA DE CARGA SE QUEDA EN LA LISTA y el hover AGREGA la segunda: asi la
+   * primera no se reinicia al salir del hover (seguiria siendo la misma
+   * animacion, terminada) y la segunda es nueva cada vez que se entra. La
+   * ultima de la lista gana mientras corre; al terminar vuelve a mandar el
+   * `both` de la primera, que deja la banda fuera de cuadro y en `opacity: 0`.
+   */
+  .luz-filo:hover::after,
+  .luz-filo:focus-visible::after {
+    animation:
+      luz-filo var(--dur-destello) var(--curva-corte) both,
+      luz-filo-hover var(--dur-destello) var(--curva-corte);
+    animation-delay: var(--retraso, 700ms), 0ms;
+  }
+}
+
+/**
+ * ICONOS QUE SE MUEVEN. El svg de adentro reacciona al hover del padre: la
+ * flecha avanza y se inclina, el favorito crece con overshoot.
+ */
+.icono-vivo svg {
+  transition: transform var(--dur-hover) var(--curva-pop);
+}
+
+.icono-vivo:hover svg,
+.icono-vivo:focus-visible svg {
+  transform: translateX(3px) rotate(-6deg);
+}
+
+.icono-crece svg {
+  transition: transform var(--dur-hover) var(--curva-pop);
+}
+
+.icono-crece:hover svg,
+.icono-crece:focus-visible svg {
+  transform: scale(1.18);
+}

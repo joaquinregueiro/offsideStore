@@ -1,0 +1,33 @@
+# === Dependencias ===
+node_modules/
+
+# === Build / cache ===
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# === Entorno (NUNCA commitear secretos — CLAUDE.md §10) ===
+.env
+.env.*
+!.env.example
+
+# === Testing ===
+coverage/
+.vitest/
+
+# === Logs ===
+*.log
+npm-debug.log*
+
+# === Datos locales de Docker ===
+.docker-data/
+
+# Subidas del adaptador de storage LOCAL (desarrollo y tests).
+# La ruta es relativa a `process.cwd()`: `apps/web/` con `next dev`, la raiz del
+# monorepo cuando corren los tests. Se ignoran las dos.
+public/uploads/
+apps/web/public/uploads/

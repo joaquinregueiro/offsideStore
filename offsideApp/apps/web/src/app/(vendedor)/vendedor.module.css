@@ -1,0 +1,1698 @@
+/* =============================================================================
+ * PANEL DEL VENDEDOR
+ * =============================================================================
+ *
+ * Es la superficie donde un vendedor pasa tiempo de verdad: entra a mirar
+ * numeros, a corregir un precio y a ver si le pagaron. Por eso tiene MAS
+ * jerarquia que el resto del sitio y no menos.
+ *
+ * ⚠️ LOS FONDOS OSCUROS Y DE MARCA NO SE ESCRIBEN ACA. Se componen las clases
+ * globales `.sup-cancha` / `.sup-noche` / `.con-grano`, que ya traen su filo de
+ * luz, su `--color-foco`, su `--destello` y la familia de neutros que
+ * corresponde. Este archivo pone LAYOUT y ESTADO, no color de superficie.
+ *
+ * ⚠️ `.sup-*` Y `.patron-vivo` NO PUEDEN IR EN EL MISMO ELEMENTO. Las dos pintan
+ * `::before` —una el filo de luz que le da canto al bloque, la otra el patron de
+ * rombos en deriva— y la segunda mata a la primera sin dar ningun error. El
+ * patron vive siempre en un `<span>` decorativo propio.
+ *
+ * ⚠️ NINGUN CONTENEDOR CON CONTROLES ENFOCABLES LLEVA `overflow: hidden`. El
+ * `outline` del foco no lo recorta el propio elemento, pero SI lo recorta un
+ * ANCESTRO con overflow oculto. Por eso el recorte vive siempre en el pseudo o
+ * en el `<span>` decorativo, nunca en el bloque que contiene botones. Vale
+ * tambien para `clip-path`, que ademas rompe `position: sticky`.
+ *
+ * ⚠️ LOS `@keyframes` DE ESTE ARCHIVO SON LOCALES Y LLEVAN PREFIJO. En un CSS
+ * Module el nombre se hashea: declarar aca uno que ya exista en `movimiento.css`
+ * deja muerta a la global, y referenciar una global por nombre resuelve a un
+ * nombre que no existe. Los tres de abajo no estan en ningun otro archivo.
+ * ========================================================================== */
+
+/* --------------------------------------------------------------- keyframes */
+
+/** Barra o riel que se dibuja de izquierda a derecha. `scaleX`, nunca `width`. */
+@keyframes vendedor-barra {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/** Linea de titular que sube desde detras de su mascara. */
+@keyframes vendedor-alzar {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+/** Entrada de materia: viene desde atras del plano, no se infla. */
+@keyframes vendedor-acerca {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+/* ------------------------------------------------------------------ pagina */
+
+/*
+ * ⚠️ EL ANCHO SALE DE UN TOKEN y el margen lateral de `--canal`, que a 320px
+ * entrega 16px de cada lado sin necesitar una media query. El aire de abajo es
+ * `--espacio-seccion`: con 80px fijos un monitor de 27" se ve amontonado y un
+ * telefono desperdicia media pantalla.
+ */
+.pagina {
+  max-width: var(--ancho-medio);
+  margin: 0 auto;
+  padding: var(--espacio-5) var(--canal) var(--espacio-seccion);
+}
+
+/* ------------------------------------------------------------------ chapa */
+
+/**
+ * LA CHAPA — el masthead de la seccion.
+ *
+ * ⚠️ ES LO QUE CONVIERTE NUEVE PANTALLAS SUELTAS EN UNA SECCION. Antes cada una
+ * arrancaba con un `<h1>` negro a 36px sobre papel, igual que cualquier otra
+ * pantalla del sitio: nada decia "esto es tu tienda".
+ *
+ * Contrastes verificados sobre Verde Cancha plano, que es el punto MAS CLARO
+ * posible de `--malla-cancha` (la luz se resta, nunca se suma):
+ *   papel 5.16:1 · --color-sobre-cancha 4.60:1 · Amarillo Cambio 4.59:1
+ *
+ * ⚠️ LA PISTA DEL TITULO ARRANCA EN `min(100%, 16ch)`. Con `minmax(0, 1fr)` a
+ * secas, entre 561 y ~760px la columna `auto` se lleva ~200px con el chip mas el
+ * boton y el titular queda partido en lineas de tres caracteres.
+ */
+.chapa {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(min(100%, 16ch), 1fr) auto;
+  align-items: end;
+  gap: var(--espacio-4) var(--espacio-5);
+  padding: var(--espacio-7) var(--espacio-6);
+  margin-bottom: var(--espacio-5);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-2);
+
+  /**
+   * ⚠️ LOS TRES REMAPEOS NO SON PRECAUCION, SON UN ARREGLO. `.sup-cancha` da
+   * vuelta `--color-neutro-texto` y `--color-alerta` pero NO
+   * `--color-neutro-suave` ni `--superficie-1`, asi que cualquier chip del
+   * sistema que se apoye en un fondo claro queda con texto casi blanco sobre
+   * fondo casi blanco. Aca las superficies chicas pasan a ser POZOS OSCUROS
+   * —la luz se resta— y el texto claro que ya viene remapeado se lee:
+   * `--color-sobre-cancha` sobre el compuesto da 7.90:1.
+   */
+  --superficie-1: rgb(7 26 18 / 0.42);
+  --superficie-2: rgb(7 26 18 / 0.42);
+  --color-neutro-suave: rgb(7 26 18 / 0.42);
+}
+
+/* A partir de aca el chip y la accion se van abajo en vez de aplastar al titulo. */
+@media (max-width: 640px) {
+  .chapa {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--espacio-6) var(--espacio-5);
+  }
+}
+
+/** Variante de las pantallas internas: la misma marca, menos volumen. */
+.chapaChica {
+  padding: var(--espacio-6);
+}
+
+/**
+ * ⚠️ EL ROTULO USA `--color-neutro-texto` Y NO UN HEX. Adentro de `.sup-cancha`
+ * ese token esta remapeado a `--color-sobre-cancha` (4.60:1). El mismo codigo
+ * cumple AA en las dos superficies.
+ */
+.chapaRotulo {
+  margin: 0 0 var(--espacio-3);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ SE DECLARA CON `.chapa .chapaTitulo` (0,2,0) A PROPOSITO. Con un solo
+ * nombre de clase empataria con las primitivas globales (`.display`,
+ * `.display-2`) y el ganador dependeria del orden en que Next emite el CSS, que
+ * no esta garantizado.
+ */
+.chapa .chapaTitulo {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-weight: var(--peso-normal);
+  font-size: var(--display-2);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--color-papel);
+  /*
+   * ⚠️ ESTO ES LO QUE GARANTIZA LA REGLA DE 320px. A ~43px, el nombre de una
+   * tienda de una sola palabra larga no entra en los 248px utiles y empujaria
+   * la pagina entera.
+   */
+  overflow-wrap: anywhere;
+}
+
+/**
+ * ⚠️ EL TITULO CHICO TAMBIEN CRECE EN TELEFONO, Y ESO ERA LA MITAD DEL TRABAJO.
+ * Un `max(--texto-3xl, --display-3)` entrega exactamente 36px a 320 —el tamaño
+ * de hoy—, o sea que en cuatro de las nueve pantallas el titular en el telefono
+ * quedaba igual que antes, justo donde esta la mayor parte del trafico. El piso
+ * es 40px: Big Noodle es muy condensada (~0.42em de avance), asi que a 40px
+ * entran ~14 caracteres en los 248px utiles de un telefono de 320.
+ */
+.chapaChica .chapaTitulo {
+  font-size: clamp(40px, 1.7rem + 3vw, 62px);
+}
+
+/**
+ * LA MASCARA DEL TITULAR. `translateY(100%)` sin recorte no es un revelado: es
+ * texto que se superpone al de abajo. El span externo recorta, el interno se
+ * mueve.
+ */
+.chapaTitulo > span {
+  display: block;
+  overflow: clip;
+  /*
+   * ⚠️ 0.12em MEDIDO, no elegido: la tinta de una vocal acentuada de Big Noodle
+   * se va 0.1029em por encima de la caja de contenido con este interlineado.
+   * Con 0.06 se rapaba el acento de cualquier titular con tilde.
+   *
+   * ⚠️ ESTA COPIA NO ES REDUNDANTE, al reves que las otras cuatro que habia: el
+   * `<h1>` de la chapa NO lleva `entra-lineas`, asi que las reglas base de
+   * `movimiento.css` no lo alcanzan. Si algun dia se le agrega esa clase, esta
+   * regla se borra.
+   */
+  padding-block: 0.12em;
+  margin-block: -0.12em;
+}
+
+.chapaTitulo > span > span {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chapaTitulo > span > span {
+    animation: vendedor-alzar var(--dur-escena) var(--curva-escena) both;
+  }
+}
+
+/** Antiguedad, no reputacion. Hereda el remapeo de la superficie. */
+.chapaDetalle {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  max-width: var(--ancho-lectura);
+}
+
+.chapaAccion {
+  display: flex;
+  align-self: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}
+
+/**
+ * EL CHIP DE ESTADO DE LA CHAPA.
+ *
+ * ⚠️ NO ES UNA `Etiqueta`, Y NO PODIA SERLO. La primitiva compartida pinta su
+ * fondo con `--superficie-1` / `--superficie-2` —que `.sup-cancha` NO remapea— y
+ * su texto con `--color-neutro-texto` / `--color-alerta` —que SI remapea—: un
+ * `<Etiqueta tono="alerta">` adentro de un bloque de marca sale Amarillo Cambio
+ * sobre blanco, ~1.2:1. Invisible, y sin ningun error. Acá el chip es un pozo
+ * oscuro con texto papel (8.87:1) y el tono viaja en el rombo, que es FORMA.
+ *
+ * ⚠️ EL COLOR NO VA SOLO: el texto del chip dice el estado con todas las letras,
+ * igual que la `Etiqueta` que reemplaza.
+ */
+.chapaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: 5px var(--espacio-3);
+  border: 1px solid rgb(250 250 247 / 0.38);
+  border-radius: var(--radio-chico);
+  background: rgb(7 26 18 / 0.42);
+  color: var(--color-papel);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/**
+ * El rombo de la bandera. Es el mismo motivo que usan las etiquetas del sistema.
+ * Sobre el compuesto oscuro los cuatro pasan 3:1, que es lo que WCAG 1.4.11 pide
+ * para una forma que porta significado.
+ */
+.chapaChip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  margin-inline: 1px;
+  transform: rotate(45deg);
+  background: var(--chip-rombo, var(--color-sobre-oscuro-tenue));
+}
+
+.chapaChip[data-tono='marca'] {
+  --chip-rombo: var(--verde-400);
+}
+
+.chapaChip[data-tono='alerta'] {
+  --chip-rombo: var(--color-naranja);
+}
+
+.chapaChip[data-tono='exito'] {
+  --chip-rombo: var(--color-cambio);
+}
+
+/**
+ * EL PATRON DE ROMBOS EN DERIVA.
+ *
+ * ⚠️ VA EN SU PROPIO ELEMENTO: `.sup-cancha::before` es el filo de luz y
+ * `.patron-vivo::before` es el patron. En el mismo elemento se pisan.
+ *
+ * ⚠️ LA MASCARA LO APAGA HACIA LA IZQUIERDA, que es donde vive el titulo. El
+ * patron ocupa arriba a la derecha —donde la identidad lo pone y donde no hay
+ * texto—, asi que la composicion resuelve el contraste en vez de corregirlo.
+ */
+.chapa .chapaPatron {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: min(46%, 300px);
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: inherit;
+  -webkit-mask-image: linear-gradient(270deg, #000 0%, transparent 100%);
+  mask-image: linear-gradient(270deg, #000 0%, transparent 100%);
+}
+
+/**
+ * ⚠️ RED DE SEGURIDAD PARA LOS ENLACES PELADOS. La regla global de `tokens.css`
+ * pinta todo `<a>` con `--color-cancha`: adentro de la chapa eso es verde sobre
+ * verde y adentro del tablero, verde sobre negro (3.34:1). Las clases `.sup-*`
+ * definen `--enlace` justamente para esto y hoy no lo consume nadie; el arreglo
+ * de fondo es que `tokens.css` pase a `a { color: var(--enlace, …) }`, y queda
+ * reportado. Esto es el parche local de las dos superficies que este modulo
+ * introduce.
+ */
+.chapa a:not([class]) {
+  color: var(--color-cambio);
+}
+
+.tablero a:not([class]) {
+  color: var(--verde-400);
+}
+
+/* ------------------------------------------------------------- navegacion */
+
+/**
+ * LA NAV DE SECCION, SOBRE UN RIEL HUNDIDO.
+ *
+ * ⚠️ EL ACTIVO SE ENGANCHA POR `[aria-current='page']`, NO POR SU CLASE. La
+ * clase la genera `ui.module.css` y se hashea al compilar; el atributo lo pone el
+ * mismo componente y es estable. De paso es la señal accesible, asi que estilo y
+ * semantica no pueden desincronizarse.
+ *
+ * ⚠️ EL PADDING VA EN LA `<ul>`, QUE ES LA QUE SCROLLEA. `.navSeccionLista` tiene
+ * `overflow-x: auto`, y cuando un eje no es `visible` el otro computa a `auto`:
+ * o sea que TAMBIEN recorta en vertical. Sin esos 4px, el `outline` de foco de un
+ * item —2px de trazo mas 2px de offset— queda tijereteado arriba y abajo.
+ */
+.navMarco {
+  margin-bottom: var(--espacio-7);
+}
+
+.navMarco > nav {
+  margin-bottom: 0;
+  border-bottom: 0;
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+
+  /* Superficie clara tenida: los dos tokens que caen debajo de AA sobre #f2f3ea. */
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+}
+
+.navMarco ul {
+  gap: var(--espacio-1);
+  padding: var(--espacio-1);
+}
+
+.navMarco a {
+  position: relative;
+  isolation: isolate;
+  border-radius: calc(var(--radio) - 1px);
+  /* WCAG 2.5.5: el alto de 44px lo pone el componente y aca no se toca. */
+  padding: 0 var(--espacio-4);
+  transition: color var(--dur-instante) var(--curva-seca);
+}
+
+.navMarco a:hover {
+  color: var(--color-tiempo-extra);
+}
+
+/** SUBRAYADO QUE SE DIBUJA AL PASAR. `transform` puro: ni ancho ni pintura. */
+.navMarco a::after {
+  content: '';
+  position: absolute;
+  inset: auto var(--espacio-3) 5px;
+  height: 2px;
+  border-radius: var(--radio-chico);
+  background-image: var(--degradado-acento);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.navMarco a:hover::after,
+.navMarco a:focus-visible::after {
+  transform: scaleX(1);
+  background-image: var(--degradado-acento);
+}
+
+/**
+ * EL ACTIVO.
+ *
+ * ⚠️ EL RELLENO ES UNA CAPA APARTE EN `z-index: -1`, no el `background` del
+ * enlace: asi puede entrar animado sin repintar el texto en cada cuadro, y con
+ * `isolation: isolate` en el propio enlace el -1 no se escapa del bloque.
+ *
+ * Contraste: papel sobre `--degradado-cancha`, cuyo stop mas claro es Verde
+ * Cancha plano = 5.16:1. ✅ AA.
+ */
+.navMarco a[aria-current='page'] {
+  color: var(--color-papel);
+}
+
+.navMarco a[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: var(--degradado-cancha);
+  box-shadow: var(--sombra-1);
+  transform-origin: left center;
+}
+
+.navMarco a[aria-current='page']::after {
+  transform: scaleX(1);
+}
+
+/**
+ * ⚠️ EL INDICADOR ENTRA EN CADA NAVEGACION Y ESO ES GRATIS: la pantalla se
+ * vuelve a renderizar entera, asi que el elemento es nuevo y su animacion de
+ * entrada corre de nuevo. Sin JavaScript y sin estado compartido.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .navMarco a[aria-current='page']::before {
+    animation: vendedor-barra var(--dur-media) var(--curva-corte) both;
+  }
+
+  .navMarco a[aria-current='page']::after {
+    animation: vendedor-barra var(--dur-media) var(--curva-corte) 120ms both;
+  }
+}
+
+/**
+ * El contador de la pestaña activa: Tinta sobre papel (15.72:1) en vez de papel
+ * sobre Verde Cancha, que a 12px queda en 5.16:1 y con un fondo que ya es verde.
+ */
+.navMarco a[aria-current='page'] > span {
+  background-color: var(--color-papel);
+  color: var(--color-tinta);
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------- tablero */
+
+/**
+ * EL TABLERO DE CIFRAS.
+ *
+ * ⚠️ ES UN PLIEGO OSCURO Y ESO ES LO QUE LE DA RITMO VERTICAL AL PANEL. No es un
+ * "modo oscuro": una revista alterna pliegos claros de catalogo con pliegos
+ * oscuros de editorial. El panel tenia cuatro recuadros blancos sobre papel, asi
+ * que los numeros —que son el contenido— pesaban lo mismo que un borde.
+ *
+ * ⚠️ EL FONDO LO PONE `.sup-noche con-grano` DESDE EL TSX. Aca solo va layout.
+ *
+ * ⚠️ EL CORTE DIAGONAL ES LEGAL ACA Y NO EN CUALQUIER LADO: `clip-path` recorta
+ * la sombra, el `outline` de foco y cualquier hijo desbordado, y rompe
+ * `position: sticky`. Este bloque es un `<dl>` de numeros: no tiene un solo
+ * elemento enfocable ni nada pegado. Va sin `box-shadow` justamente porque el
+ * recorte se la comeria; la que separa el bloque del papel es la diagonal.
+ *
+ * Contrastes verificados en el punto MAS CLARO de `--malla-noche` (la brasa
+ * verde de arriba a la derecha, que es donde caen los detalles de las cifras):
+ *   papel 9.82:1 · --color-sobre-oscuro-2 5.72:1 · --color-sobre-oscuro-tenue 3.99:1 ❌
+ */
+.tablero {
+  padding: var(--espacio-6) var(--espacio-6) calc(var(--espacio-6) + var(--corte-compensacion));
+  margin-bottom: var(--espacio-7);
+  clip-path: var(--corte-abajo);
+}
+
+/*
+ * ⚠️ SE PISA A `Cifras` DESDE AFUERA, SIN TOCAR EL COMPONENTE COMPARTIDO. Los
+ * selectores de elemento (`dl`, `div`, `dd`, `dt`, `p`) no se hashean en un CSS
+ * Module, y `.tablero dl > div` (0,1,2) le gana a `.cifra` (0,1,0). El mismo
+ * componente sigue viendose como siempre en cualquier otra pantalla.
+ */
+.tablero dl {
+  margin: 0;
+  gap: var(--espacio-6) var(--espacio-5);
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.tablero dl > div {
+  min-width: 0;
+  padding: var(--espacio-4) 0 0;
+  border: 0;
+  border-radius: 0;
+  /* `--color-blanco` NO se remapea nunca (es color de texto en tres lugares del
+     sistema), asi que el fondo de la ficha se apaga a mano. */
+  background: none;
+}
+
+.tablero dd {
+  font-size: max(var(--texto-3xl), var(--display-3));
+  color: var(--color-sobre-oscuro);
+  /* Un importe largo en una celda de 132px se parte en vez de empujar la pagina. */
+  overflow-wrap: anywhere;
+}
+
+/**
+ * ⚠️ EL DETALLE NO PUEDE USAR EL TENUE. `--color-sobre-oscuro-tenue` da 6.39:1
+ * sobre `--sup-noche` plano pero **3.99:1** sobre la brasa verde de la malla, y
+ * la brasa esta arriba a la derecha, o sea justo encima de la cuarta cifra. Con
+ * `--color-sobre-oscuro-2` el peor punto queda en 5.72:1.
+ */
+.tablero dl > div > p,
+.tablero dd > span {
+  color: var(--color-sobre-oscuro-2);
+}
+
+/**
+ * ⚠️ LA CIFRA ENTRA, PERO NUNCA CUENTA. Muestra su valor FINAL desde el primer
+ * cuadro y solo se desplaza. Un numero que sube mientras alguien lo lee se
+ * interpreta como un numero que todavia se esta calculando, y dos de las cifras
+ * de `/vendedor/ventas` son plata que le entro a una persona.
+ *
+ * ⚠️ EL ESCALONADO CORTA EN LA CUARTA: son cuatro cifras como maximo.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .tablero dl > div {
+    animation: vendedor-acerca var(--dur-media) var(--curva-seca) both;
+  }
+
+  .tablero dl > div:nth-child(2) {
+    animation-delay: 70ms;
+  }
+
+  .tablero dl > div:nth-child(3) {
+    animation-delay: 140ms;
+  }
+
+  .tablero dl > div:nth-child(n + 4) {
+    animation-delay: 210ms;
+  }
+}
+
+/* -------------------------------------------------------------- checklist */
+
+/**
+ * EL CHECKLIST DE HABILITACION (componente `Pasos`).
+ *
+ * ⚠️ NO SE LE TOCA NI EL RIEL NI EL MARCADOR EN ROMBO. La primitiva ya es una
+ * linea de tiempo con su barra que se dibuja y sus marcadores llenos/huecos: lo
+ * unico que agrega esta superficie es el filo de marca que dice que ese bloque
+ * es LA tarea del dia 1.
+ */
+.checklist > div {
+  border-left: 3px solid var(--color-cancha);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+/* ------------------------------------------------------ tarjetas de acceso */
+
+.accesos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--espacio-4);
+}
+
+/**
+ * ⚠️ SIN `overflow: hidden` PROPIO — se lo pone la clase global `destello`, y ahi
+ * si es seguro: la tarjeta ENTERA es el `<a>`, o sea que el elemento recortado es
+ * el enfocable, y un elemento no recorta su propio `outline`. No contiene ningun
+ * otro control.
+ *
+ * ⚠️ LA ELEVACION USA LA PROPIEDAD `translate`, NO `transform`, Y NO ES UN
+ * CAPRICHO NI UNA COPIA DE `.eleva`. El contenedor lleva `revela-grilla`, cuya
+ * animacion de scroll controla `transform` con `fill: both` de forma permanente:
+ * una animacion le gana SIEMPRE a una transicion de la misma propiedad, asi que
+ * un hover escrito con `transform` no se anima, salta. `translate` es una
+ * propiedad distinta, compone con la matriz de la animacion y si transiciona.
+ * Queda reportado como arreglo de fundacion para `.eleva`.
+ */
+.acceso {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--espacio-2);
+  min-height: 152px;
+  padding: var(--espacio-5);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background-color: var(--superficie-1);
+  background-image: var(--malla-papel);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  color: inherit;
+  text-decoration: none;
+  translate: 0 0;
+  transition:
+    translate var(--dur-media) var(--curva-seca),
+    box-shadow var(--dur-media) var(--curva),
+    border-color var(--transicion-rapida) var(--curva);
+}
+
+.acceso:hover,
+.acceso:focus-visible {
+  translate: 0 -4px;
+  border-color: var(--linea-marca);
+  box-shadow: var(--sombra-2);
+}
+
+/* ⚠️ AL APRETAR, LA COSA BAJA. Es la mitad que casi siempre falta. */
+.acceso:active {
+  translate: 0 0;
+  box-shadow: var(--sombra-1);
+  transition-duration: var(--dur-instante);
+}
+
+/**
+ * CUÑA DE RAYAS EN EL EJE DEL SISTEMA (112 grados), abajo a la derecha. Entra al
+ * pasar el mouse desplazandose, no apareciendo: `transform` puro.
+ *
+ * ⚠️ VA EN `::before` PORQUE `::after` ES DEL DESTELLO. Un elemento tiene un solo
+ * `::after`: si la cuña viviera ahi, las dos reglas se fusionarian y el
+ * `opacity: 0` del destello apagaria la cuña.
+ *
+ * ⚠️ EL COLOR DEL PATRON SE DECLARA ACA. Fuera de un `.sup-*`, `--patron-color`
+ * vale `--color-neutro-borde` (#e4e6de): sobre blanco da 1.25:1 y la cuña es un
+ * fantasma. Con Verde Cancha al 26% queda en 1.46:1, que es lo que se pide de una
+ * textura —perceptible, no legible—.
+ */
+.acceso::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 96px;
+  height: 96px;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: 0 0 var(--radio) 0;
+  background-image: var(--patron-diagonales);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  transform: translate3d(14px, 14px, 0);
+  transition: transform var(--dur-media) var(--curva-seca);
+
+  --patron-color: color-mix(in oklab, var(--color-cancha) 26%, transparent);
+}
+
+.acceso:hover::before,
+.acceso:focus-visible::before {
+  transform: translate3d(0, 0, 0);
+}
+
+/**
+ * ⚠️ EL ICONO PASA DE SER UN TRAZO VERDE SUELTO A UNA PLACA DE MARCA. Le da a la
+ * tarjeta un punto de peso y de paso mide 44x44.
+ * Papel sobre `--degradado-cancha`: peor stop 5.16:1 (forma, minimo 3:1). ✅
+ *
+ * ⚠️ SIN `margin-bottom`: la tarjeta es una grilla con `gap`, y sumarle un margen
+ * al icono daba 18px debajo del icono contra 6px entre las otras dos filas.
+ */
+.accesoIcono {
+  display: inline-grid;
+  place-items: center;
+  width: var(--alto-control);
+  height: var(--alto-control);
+  border-radius: var(--radio);
+  background-image: var(--degradado-cancha);
+  color: var(--color-papel);
+  box-shadow: var(--sombra-1);
+  line-height: 0;
+  transition: transform var(--dur-media) var(--curva-seca);
+}
+
+.acceso:hover .accesoIcono,
+.acceso:focus-visible .accesoIcono {
+  transform: translateY(-2px) rotate(-3deg);
+}
+
+.accesoTitulo {
+  /* `display: block` porque son <span>: inline ignora el margin vertical. */
+  display: block;
+  margin-top: var(--espacio-3);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: var(--interlineado-titulo);
+  letter-spacing: var(--tracking-titulo);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.accesoDetalle {
+  display: block;
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+}
+
+/* -------------------------------------------------------- tira de la tienda */
+
+/**
+ * "COMO SE VE MI TIENDA" — la tira de portadas del panel.
+ *
+ * ⚠️ ES EL UNICO LUGAR DEL PANEL DONDE HAY UNA CAMISETA. Nueve pantallas de una
+ * tienda de ropa y el panel era cuatro cajas de numeros: la pregunta que un
+ * vendedor viene a hacerse es "¿como se ve lo mio?", y la respuesta estaba a dos
+ * clics. No pide ningun dato nuevo —`listMyListings` y `coverUrls` son las mismas
+ * funciones que ya usa la pantalla de inventario—.
+ *
+ * ⚠️ `enfoca-hermanos` SOLO APAGA LAS FOTOS, NUNCA EL TEXTO, y vive detras de
+ * `(hover: hover)`: en un telefono el `:hover` queda pegado despues de un toque.
+ */
+.tira {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tiraItem {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+}
+
+.tiraFoto,
+.tiraPatron {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tiraPatron {
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+}
+
+/**
+ * ⚠️ EL VELO ES UN DEGRADADO QUE SOLO OSCURECE. El estado se escribe encima de
+ * la foto, y una foto puede ser de cualquier color: sin el velo no hay contraste
+ * garantizado. Papel sobre Tinta al 88% compuesto sobre lo que sea: peor caso
+ * ~11:1.
+ */
+.tiraEstado {
+  position: absolute;
+  inset: auto 0 0;
+  padding: var(--espacio-4) var(--espacio-2) var(--espacio-2);
+  background-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-tinta) 88%, transparent) 62%
+  );
+  color: var(--color-papel);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  text-align: center;
+}
+
+/* ---------------------------------------------------- habilitacion plegada */
+
+/**
+ * La habilitacion, una vez resuelta, se pliega. No se borra: se guarda.
+ *
+ * ⚠️ EL DESPLIEGUE ANIMADO LO APORTA LA CLASE GLOBAL `desplegable` DESDE EL TSX
+ * (`::details-content` + `interpolate-size`). Sin soporte abre de golpe, que es
+ * exactamente lo que hace hoy.
+ */
+.habilitacion {
+  margin-bottom: var(--espacio-7);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+.habilitacionTitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-5);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  color: var(--color-tiempo-extra);
+  cursor: pointer;
+  list-style: none;
+}
+
+.habilitacionTitulo::-webkit-details-marker {
+  display: none;
+}
+
+/* La tilde en un rombo de marca: el estado se lee sin abrir. */
+.habilitacionTitulo::before {
+  content: '✓';
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-cancha);
+  border-radius: var(--radio-chico);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  line-height: 1;
+  color: var(--color-cancha);
+}
+
+/**
+ * ⚠️ EL GALON SE HACE CON DOS BORDES Y GIRA CON `transform`. Un caracter
+ * tipografico cambia de forma segun la fuente instalada, y animar `rotate` es
+ * compositor puro.
+ */
+.habilitacionTitulo::after {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--dur-media) var(--curva-seca);
+}
+
+.habilitacion[open] .habilitacionTitulo::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.habilitacionPanel {
+  padding: var(--espacio-4) var(--espacio-5) var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+/* ------------------------------------------------------------- inventario */
+
+.inventario {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+/**
+ * LA FILA DE INVENTARIO.
+ *
+ * ⚠️ `grid` Y NO `flex`: con `minmax(0, 1fr)` la pista del cuerpo no puede crecer
+ * mas que su fraccion, que es lo que sostiene la regla de 320px en una fila con
+ * un titulo largo y cinco controles. (No garantiza que un hijo con `min-width`
+ * propio no se recorte: el panel de confirmacion de `Confirmar` declara
+ * `min-width: min(260px, 100%)`, y ese `min()` es justamente lo que lo salva.)
+ *
+ * ⚠️ ELEVACION CON `translate`, por el mismo motivo que en `.acceso`: el `<ul>`
+ * lleva `revela-grilla` y su animacion de scroll ocupa `transform` de forma
+ * permanente.
+ *
+ * ⚠️ SIN `destello` Y SIN `overflow: hidden`: la fila contiene cinco controles y
+ * un ancestro con overflow oculto les recorta el anillo de foco.
+ */
+.fila {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--espacio-4);
+  align-items: start;
+  padding: var(--espacio-4) var(--espacio-4) var(--espacio-4) var(--espacio-5);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  translate: 0 0;
+  transition:
+    translate var(--dur-media) var(--curva-seca),
+    box-shadow var(--dur-media) var(--curva),
+    border-color var(--transicion-rapida) var(--curva);
+}
+
+.fila:hover,
+.fila:focus-within {
+  translate: 0 -4px;
+  border-color: var(--linea-marca);
+  box-shadow: var(--sombra-2);
+}
+
+.fila:active {
+  translate: 0 0;
+  transition-duration: var(--dur-instante);
+}
+
+/**
+ * RIEL DE ESTADO.
+ *
+ * ⚠️ ES DECORATIVO Y TIENE QUE SERLO. La `Etiqueta` de al lado ya dice "Activa",
+ * "Pausada" o "Borrador" con texto y con forma: quien no distingue los colores lee
+ * exactamente lo mismo. El riel solo sirve para encontrar de un vistazo las
+ * pausadas en un inventario de veinte.
+ *
+ * ⚠️ ES UNA TERCERA EXPRESION DEL MAPEO estado→tono QUE YA VIVE EN
+ * `lib/formato.ts` (`tonoDePublicacion`). Es duplicacion consciente —el CSS no
+ * puede leer una funcion de TypeScript— y el dia que `paused` deje de ser alerta
+ * en `formato.ts`, este riel se queda solo.
+ */
+.fila::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radio) 0 0 var(--radio);
+  background: var(--color-neutro-apagado);
+  transform: scaleY(0.62);
+  transform-origin: top center;
+  transition: transform var(--dur-media) var(--curva-seca);
+}
+
+.fila:hover::before,
+.fila:focus-within::before {
+  transform: scaleY(1);
+}
+
+.fila[data-estado='active']::before {
+  background-image: var(--degradado-acento);
+}
+
+.fila[data-estado='paused']::before {
+  background: var(--color-naranja);
+}
+
+.fila[data-estado='draft']::before {
+  background: var(--linea-control);
+}
+
+.fila[data-estado='sold_out']::before {
+  background: var(--color-tiempo-extra);
+}
+
+/**
+ * ⚠️ EL MARCO DE LA FOTO ES EL QUE RECORTA, NO LA FILA.
+ */
+.filaMarco {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  width: 84px;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radio);
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+}
+
+/**
+ * ⚠️ LA `transition` SE ESCRIBE CON (0,3,0) Y CON LAS DOS PROPIEDADES JUNTAS, Y
+ * ESO NO ES PARANOIA: `transition` es un shorthand, no se acumula, y la utilidad
+ * global `.enfoca-hermanos [data-foto]` la declara con (0,2,0). El dia que esta
+ * lista componga esa utilidad —hoy no lo hace: es una lista de trabajo, no una
+ * vitrina—, una regla de un solo nombre de clase perderia y el acercamiento de la
+ * foto dejaria de animarse, saltando, sin que nada avise.
+ *
+ * ⚠️ 6% Y NO 15%: mas que eso y en una camiseta se pierde el cuello o el escudo,
+ * que es justo lo que la persona esta mirando.
+ */
+.fila .filaMarco .filaFoto,
+.fila .filaMarco .filaPatron {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    transform var(--dur-media) var(--curva-seca),
+    filter var(--dur-media) var(--curva);
+}
+
+.fila:hover .filaFoto,
+.fila:focus-within .filaFoto {
+  transform: scale(1.06);
+}
+
+.filaPatron {
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+}
+
+.filaCuerpo {
+  min-width: 0;
+}
+
+.filaTitulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--espacio-2);
+}
+
+/**
+ * ⚠️ EL TITULO ES TINTA, NO VERDE. Es el nombre del producto, no una accion:
+ * pintarlo del color de enlace lo pone a competir con los cinco botones de la
+ * fila. El subrayado que se dibuja (clase global `subraya`) es lo que dice que es
+ * clickeable, y sigue al texto si parte en dos lineas.
+ */
+.filaTitulo a,
+.filaTitulo a:hover {
+  color: var(--color-tinta);
+  font-weight: var(--peso-semi);
+}
+
+.filaMeta {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ EL PRECIO SUBE A `--texto-2xl` (28→32px fluido). Es el dato que el vendedor
+ * viene a mirar cuando entra al inventario; a 22px se confundia con el talle.
+ */
+.filaPrecio {
+  margin: var(--espacio-2) 0 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * "ULTIMA UNIDAD".
+ *
+ * ⚠️ EL TEXTO USA `--color-alerta` (4.88:1 sobre blanco) Y EL BORDE
+ * `--color-naranja` (2.26:1). Es la regla del sistema: naranja para forma, alerta
+ * para informacion. El chip NO reemplaza al dato de stock de la linea de arriba:
+ * lo repite en grande, asi que una publicacion pausada con una sola unidad sigue
+ * diciendo cuantas quedan.
+ */
+.chipUltima {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--espacio-2);
+  padding: 3px var(--espacio-2);
+  border: 1px solid var(--color-naranja);
+  border-radius: var(--radio-chico);
+  background: var(--superficie-1);
+  color: var(--color-alerta);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.filaAviso {
+  margin: var(--espacio-3) 0 0;
+  padding: var(--espacio-3);
+  border-left: 3px solid var(--color-naranja);
+  border-radius: 0 var(--radio-chico) var(--radio-chico) 0;
+  background: var(--superficie-2);
+  font-size: var(--texto-sm);
+  /* Tinta sobre #f2f3ea: 14.71:1. */
+  color: var(--color-tinta);
+}
+
+/**
+ * ⚠️ LAS ACCIONES SON TERCIARIAS, Y ESO ES LO QUE HACE LEGIBLE LA LISTA. Con
+ * cinco botones de contorno por fila, un inventario de diez publicaciones se
+ * convierte en una reja de cincuenta rectangulos y no se ve el producto.
+ */
+.filaAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-4);
+  padding-top: var(--espacio-3);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+/**
+ * ⚠️ EN TELEFONO LAS ACCIONES DE FILA SUBEN A 44px. `tamanio="chico"` son 36 y
+ * esta bien en una fila densa de escritorio, pero en un telefono son cuatro
+ * blancos de 36px pegados, contra los 44 que pide WCAG 2.5.5. El `<summary>` de
+ * "Eliminar" ya viene en 44 desde `ui.module.css`; se lo incluye igual para que la
+ * fila no dependa de que esa decision no cambie.
+ */
+@media (max-width: 640px) {
+  .filaAcciones a,
+  .filaAcciones button,
+  .filaAcciones summary {
+    min-height: var(--alto-control);
+  }
+}
+
+@media (max-width: 480px) {
+  .filaMarco {
+    width: 64px;
+  }
+
+  .fila {
+    gap: var(--espacio-3);
+    padding: var(--espacio-3) var(--espacio-3) var(--espacio-3) var(--espacio-4);
+  }
+}
+
+/* ---------------------------------------------------------------- ventas */
+
+/**
+ * LA BANDEJA DE VENTAS.
+ *
+ * ⚠️ LA CABECERA PASA A SER UNA FRANJA DE NOCHE, Y EL MOTIVO ES JERARQUIA, NO
+ * `sticky`: `.tablaMarco` scrollea solo en horizontal, asi que una cabecera
+ * pegajosa nunca se pegaria a nada (`ui.module.css` ya le saco el `sticky` por
+ * eso mismo). Lo que resuelve el fondo oscuro es que la cabecera deje de ser otra
+ * fila gris en una tabla de cinco columnas de numeros.
+ *
+ * ⚠️ CADA SELECTOR LLEVA `table` ADENTRO A PROPOSITO. `.marcoVentas th` es (0,1,1)
+ * y empata con `.tabla th` de `ui.module.css`: en un empate decide el orden de
+ * emision de dos CSS Modules, que Next no garantiza y que puede cambiar al
+ * reordenar un import. Con `table` en el medio queda (0,1,2) y gana siempre.
+ *
+ *   --color-sobre-oscuro-2 sobre --sup-noche: 9.15:1 ✅
+ */
+.marcoVentas table th {
+  background-color: var(--sup-noche);
+  border-bottom: 2px solid var(--sup-fosa);
+  color: var(--color-sobre-oscuro-2);
+
+  /* Sobre oscuro los dos tokens tenidos vuelven a su version clara. */
+  --color-neutro-tenue: var(--color-sobre-oscuro-tenue);
+  --color-alerta: var(--color-naranja);
+}
+
+.marcoVentas table tbody td:first-child {
+  padding-left: var(--espacio-5);
+}
+
+.celdaVenta {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  /* La columna no se estira: el resto de la tabla son numeros cortos. */
+  min-width: 220px;
+}
+
+.celdaMarco {
+  display: block;
+  flex: none;
+  overflow: hidden;
+  width: 44px;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radio-chico);
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+}
+
+.celdaFoto,
+.celdaPatron {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.celdaPatron {
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+}
+
+.celdaTitulo {
+  margin: 0;
+  font-weight: var(--peso-semi);
+  line-height: 1.3;
+}
+
+.celdaOtros {
+  color: var(--color-neutro-tenue);
+  font-weight: var(--peso-normal);
+}
+
+.celdaMeta {
+  margin: 2px 0 0;
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * BARRA DE REPARTO — que parte del total te quedo.
+ *
+ * ⚠️ ES FORMA, NO EL DATO: el importe esta escrito arriba y la barra va
+ * `aria-hidden`. Sirve para comparar dos ventas de un vistazo, que es exactamente
+ * lo que alguien viene a hacer a esta pantalla.
+ *
+ * ⚠️ ENTRA UNA VEZ Y QUEDA QUIETA, y no toca el numero: es un `scaleX` de un
+ * pseudo. Un importe puede entrar animado; nunca puede estar en movimiento.
+ */
+.barraNeto {
+  display: block;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: var(--radio-chico);
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+  overflow: hidden;
+}
+
+.barraNeto::after {
+  content: '';
+  display: block;
+  height: 100%;
+  background-image: var(--degradado-acento);
+  transform: scaleX(var(--parte, 0));
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barraNeto::after {
+    animation: vendedor-barra var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+/* ------------------------------------------------------------ mercado pago */
+
+/**
+ * LOS CUATRO ESTADOS DE LA CONEXION, CON CUATRO SUPERFICIES.
+ *
+ * ⚠️ ANTES ERAN CUATRO TEXTOS Y UNA ETIQUETA DENTRO DE LA MISMA CAJA BLANCA. La
+ * pantalla existe para gestionar la conexion: que "Conectada" y "Vencida" se vean
+ * igual salvo por dos palabras es el defecto central de esta pantalla.
+ *
+ *   connected      pliego de marca (la clase `.sup-cancha` la agrega el TSX)
+ *   expired        papel con riel de alerta
+ *   revoked        idem + rayas diagonales: lo corto un tercero
+ *   disconnected   pozo con borde punteado: esta vacio a proposito
+ *   none           igual que disconnected
+ */
+.tarjetaConexion {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: var(--espacio-3);
+  padding: var(--espacio-6);
+  border-radius: var(--radio);
+}
+
+.tarjetaConexion[data-estado='connected'] {
+  box-shadow: var(--sombra-2);
+}
+
+.tarjetaConexion[data-estado='expired'],
+.tarjetaConexion[data-estado='revoked'] {
+  border: 1px solid var(--linea-tenue);
+  border-left: 4px solid var(--color-naranja);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+/*
+ * ⚠️ LAS RAYAS VAN EN EL EJE DEL SISTEMA (112 grados) Y DEBAJO DEL CONTENIDO, con
+ * una mascara que las apaga antes de llegar al texto. El color se declara porque
+ * el `--patron-color` por defecto (#e4e6de) sobre blanco es 1.25:1: un fantasma.
+ */
+.tarjetaConexion[data-estado='revoked']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: var(--patron-diagonales);
+  -webkit-mask-image: linear-gradient(var(--eje), #000 0%, transparent 60%);
+  mask-image: linear-gradient(var(--eje), #000 0%, transparent 60%);
+
+  --patron-color: color-mix(in oklab, var(--color-naranja) 34%, transparent);
+}
+
+/*
+ * ⚠️ SUPERFICIE CLARA TEÑIDA: REMAPEO OBLIGATORIO. Sobre #f2f3ea,
+ * `--color-neutro-tenue` cae a 4.38:1 y `--color-alerta` a 4.36:1, los dos debajo
+ * de AA — y esta tarjeta contiene los dos.
+ *
+ * ⚠️ `--linea-control` TAMBIEN SE REMAPEA, Y POR EL MISMO MOTIVO. `tokens.css` lo
+ * garantiza sobre papel (3.10:1) y sobre blanco (3.24:1), NO sobre esta
+ * superficie: medido sobre #f2f3ea da **2.90:1**, o sea que el borde punteado
+ * —que es la forma que dice "esto esta vacio a proposito"— quedaba abajo de los
+ * 3:1 de WCAG 1.4.11. Con Neutro Texto sube a 5.51:1 y de paso el pozo se nota,
+ * que es justo lo que este estado necesita.
+ */
+.tarjetaConexion[data-estado='disconnected'],
+.tarjetaConexion[data-estado='none'] {
+  border: 1px dashed var(--linea-control);
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+
+  --color-neutro-tenue: var(--color-neutro-texto);
+  --color-alerta: var(--color-alerta-hondo);
+  --linea-control: var(--color-neutro-texto);
+}
+
+.estadoConexion {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--espacio-2) var(--espacio-4);
+  padding-bottom: var(--espacio-4);
+  margin-bottom: var(--espacio-1);
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+/**
+ * ⚠️ NO SE DECLARA `color` ACA. En el estado conectado lo pone `.sup-cancha`
+ * (papel, 5.16:1); en los demas se hereda Tinta del body. Declararlo obligaria a
+ * un selector por estado para no empatar con la clase de superficie.
+ *
+ * ⚠️ VA EN OBLICUA, que es la unica variacion que la identidad admite en Big
+ * Noodle: la palabra del estado ES el titular de la tarjeta.
+ */
+.estadoPalabra {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-style: italic;
+  font-size: max(var(--texto-2xl), var(--display-3));
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.estadoTexto {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  max-width: var(--ancho-lectura);
+}
+
+/**
+ * Identificadores externos: monoespaciada para poder cotejarlos a ojo.
+ *
+ * ⚠️ EL `color` ES EXPLICITO Y ESO ARREGLA UN BUG EN GERMEN: sin el, hereda —y
+ * adentro del pliego de marca eso deja texto papel sobre un fondo claro, que es
+ * exactamente donde va a quedar el `mpUserId` cuando la conexion este activa.
+ */
+.dato {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--texto-sm);
+  color: var(--color-tinta);
+  background: var(--color-neutro-suave);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-chico);
+  padding: 1px var(--espacio-2);
+}
+
+/* Adentro del pliego de marca el chip se invierte. Papel sobre el compuesto
+   (#0b4f2e): 9.25:1. ✅ */
+.tarjetaConexion[data-estado='connected'] .dato {
+  color: var(--color-papel);
+  background: rgb(7 26 18 / 0.45);
+  border-color: var(--linea-control);
+}
+
+/**
+ * LOS TRES PASOS DE LA CONEXION.
+ *
+ * ⚠️ NO INVENTA NINGUN DATO: describe lo que el boton de al lado hace. Existe
+ * porque "Te llevamos a Mercado Pago" en una linea de texto chico no alcanza para
+ * que alguien entienda que va a salir del sitio y volver — y salir del sitio para
+ * autorizar un cobro es donde mas gente abandona.
+ */
+.tresPasos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--espacio-4);
+  margin: var(--espacio-6) 0 var(--espacio-5);
+  padding: 0;
+  list-style: none;
+  counter-reset: conexion;
+}
+
+.tresPasos li {
+  counter-increment: conexion;
+  padding-top: var(--espacio-4);
+  border-top: 3px solid var(--linea-tenue);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.tresPasos li::before {
+  content: counter(conexion, decimal-leading-zero);
+  display: block;
+  margin-bottom: var(--espacio-1);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  line-height: 1;
+  color: var(--color-cancha);
+}
+
+/* ------------------------------------------------- formulario de publicar */
+
+/**
+ * EL FORMULARIO DE PUBLICAR Y EL DE EDITAR, EN GRUPOS NUMERADOS.
+ *
+ * ⚠️ AGRUPAR YA ESTABA HECHO, Y `form.module.css` YA LE DIO SUPERFICIE, BANDA DE
+ * BANDERA Y CINTA DE ROMBOS AL `<fieldset>`. Lo unico que falta para que "cuatro
+ * decisiones en vez de quince campos" se lea es DECIR CUANTAS SON.
+ *
+ * ⚠️ LA NUMERACION LA HACE UN `counter()` DE CSS, sin JavaScript y sin tocar
+ * `GrupoDeCampos`, que es compartido con el alta y con la compra. Se renumera sola
+ * el dia que se agregue o se saque un grupo.
+ *
+ * ⚠️ EL NUMERO ENTRA EN EL NOMBRE ACCESIBLE DEL GRUPO: varios lectores van a
+ * anunciar "01 Qué estás publicando". Es una decision, no un efecto colateral —
+ * dice en cual de los grupos estas parado, que es informacion util—. Mudarlo
+ * exigiria markup nuevo dentro del componente compartido.
+ *
+ * ⚠️ EL CONTADOR SE REINICIA POR FORMULARIO Y NO ES LO MISMO EN LAS DOS
+ * PANTALLAS: publicar tiene cuatro grupos y editar tres, porque las fotos se
+ * administran aparte. El `counter()` lo resuelve solo; escribir "de 4" a mano
+ * habria mentido en una de las dos.
+ */
+.formPublicar {
+  counter-reset: grupo;
+}
+
+.formPublicar fieldset {
+  counter-increment: grupo;
+  transition: background-color var(--dur-media) var(--curva);
+}
+
+/**
+ * ⚠️ EL GRUPO ENFOCADO SE TIÑE, NO SE ELEVA. Un `box-shadow` sobre un
+ * `<fieldset>` que es una superficie HUNDIDA lo contradice; el cambio de tinte
+ * dice "estas trabajando acá" sin mover nada de lugar.
+ *
+ * ⚠️ ES PROGRESO DE UBICACION, NO DE COMPLETITUD, y la distincion importa: saber
+ * cuantos campos faltan por llenar exige leer los valores, o sea JavaScript. Una
+ * barra de "3 de 4 completos" seria una promesa que el CSS no puede cumplir.
+ *
+ * `.grupo` ya remapea `--color-neutro-tenue` y `--color-alerta`, y sobre
+ * `--superficie-marca` los dos siguen cumpliendo: 5.56:1 y 5.09:1. ✅
+ */
+.formPublicar fieldset:focus-within {
+  background-color: var(--superficie-marca);
+}
+
+/**
+ * Verde Cancha sobre `--superficie-2` (#f2f3ea): **4.83:1** medido, y sobre
+ * `--superficie-marca` —el tinte del grupo enfocado— **4.87:1**. Los dos pasan AA
+ * para texto normal, y el titulo del grupo es ademas `--texto-xl` (22px+), o sea
+ * texto grande, donde el piso es 3:1. ✅
+ */
+.formPublicar legend::before {
+  content: counter(grupo, decimal-leading-zero);
+  margin-right: var(--espacio-3);
+  color: var(--color-cancha);
+  font-variant-numeric: tabular-nums;
+}
+
+/** Dos columnas para campos cortos. */
+.par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-4) var(--espacio-5);
+}
+
+@media (max-width: 640px) {
+  .par {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -------------------------------------------------------------- galeria */
+
+/** Galeria de fotos de una publicacion (vista del vendedor). */
+.galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--espacio-4);
+  margin: 0 0 var(--espacio-6);
+  padding: 0;
+  list-style: none;
+}
+
+/**
+ * ⚠️ LA GRILLA ES UNA `<ul>` Y CADA FOTO UN `<li>`, asi que el item de grilla es
+ * el `<li>` y no la `<figure>`. Sin estas dos reglas la tarjeta no llena su
+ * celda y una galeria de fotos verticales queda con las cajas desalineadas.
+ */
+.galeria > li {
+  display: flex;
+}
+
+.galeria > li > .miniatura {
+  flex: 1;
+}
+
+/**
+ * ⚠️ `isolation: isolate` NO ES DECORACION: es lo que le da a la cinta de portada
+ * un contexto de apilado propio. Sin el, su `z-index` sale de esta figura y
+ * queda comparandose con el resto de la pagina, que es una carambola esperando.
+ */
+.miniatura {
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+/**
+ * ⚠️ EL RECORTE VIVE EN EL MARCO, NO EN LA `<figure>`: el pie de cada foto lleva
+ * el boton de borrar, y un ancestro con overflow oculto le recorta el anillo de
+ * foco.
+ */
+.miniaturaMarco {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radio) var(--radio) 0 0;
+  background: var(--superficie-2);
+  box-shadow: var(--sombra-hundida);
+}
+
+.miniaturaMarco img {
+  display: block;
+  width: 100%;
+  /* Cuadrado uniforme: `cover` recorta, no deforma. */
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.miniatura figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  flex-wrap: wrap;
+  padding: var(--espacio-3);
+  font-size: var(--texto-sm);
+}
+
+/**
+ * LA PORTADA SE MARCA SOBRE LA FOTO, NO DEBAJO.
+ *
+ * ⚠️ EL VELO ES OBLIGATORIO. La cinta se apoya sobre una foto de cualquier color:
+ * sin oscurecer, no hay contraste garantizado para ningun texto. Papel sobre
+ * Verde Cancha: 5.16:1. ✅
+ *
+ * ⚠️⚠️ EL `z-index` ES LO QUE LA HACE VISIBLE, Y SIN EL LA CINTA NO EXISTIA. Dos
+ * elementos posicionados con `z-index: auto` se pintan en ORDEN DE ARBOL, y en
+ * el marcado la cinta va ANTES que el marco de la foto — que es `position:
+ * relative`, tiene fondo opaco y una imagen que lo llena—. O sea que la foto se
+ * pintaba encima y "Portada" quedaba tapada al 100%: el unico dato de esta
+ * pantalla que cambia lo que ve un comprador, invisible y sin ningun error.
+ */
+.portada {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: var(--z-contenido);
+  padding: 4px var(--espacio-3);
+  border-radius: var(--radio) 0 var(--radio) 0;
+  background-image: var(--degradado-cancha);
+  color: var(--color-papel);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  box-shadow: var(--sombra-1);
+}
+
+.miniaturaOrden {
+  color: var(--color-neutro-tenue);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  line-height: 1;
+}
+
+/**
+ * ⚠️ EL AREA TACTIL DEL BOTON DE BORRAR SUBE A 44px EN TELEFONO, igual que en la
+ * fila del inventario. Es `tamanio="chico"` (36px) porque en escritorio una
+ * galeria de ocho fotos con botones de 44 se convierte en una reja; en un
+ * telefono, en cambio, es un control destructivo de 36px al lado de una foto que
+ * se toca.
+ */
+@media (max-width: 640px) {
+  .miniatura figcaption button {
+    min-height: var(--alto-control);
+  }
+}
+
+/* ------------------------------------------------------------- compartidas */
+/*
+ * Todo lo de abajo lo consumen varias de las nueve pantallas del grupo.
+ */
+
+.bajada {
+  margin: 0 0 var(--espacio-7);
+  max-width: var(--ancho-lectura);
+  color: var(--color-neutro-texto);
+}
+
+/** Tarjeta generica. Ahora apoya de verdad: hairline + filo de luz + sombra. */
+.tarjeta {
+  margin-bottom: var(--espacio-5);
+  padding: var(--espacio-5);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+}
+
+/*
+ * ⚠️ `.linea` Y `.concepto` SE FUERON DE ACA, no se perdieron. Eran el par
+ * concepto/valor que estaba triplicado identico en tres modulos y que hoy es la
+ * primitiva compartida `FilaDeDatos` — que ademas alinea los importes con cifras
+ * tabulares, cosa que la copia local nunca hizo. El ultimo consumidor era
+ * `/vendedor/fiscal`, que ya usa la primitiva.
+ */
+
+/** Detalle de un paso o de un formulario. */
+.pasoDetalle {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0 0 var(--espacio-3);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+}
+
+.nota {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * EL BLOQUE DE CIERRE.
+ *
+ * ⚠️ EXISTE PORQUE LA ADVERTENCIA MAS IMPORTANTE DE TRES PANTALLAS ERA GRIS DE
+ * 13px AL PIE. "Eliminar es definitivo", "Mercado Pago cobra ademas su costo" y
+ * "estar habilitado no es un distintivo de confianza" son cosas que hay que leer,
+ * y ademas le dan el segundo corte de densidad a un scroll que despues del
+ * tablero es blanco sobre papel hasta el pie.
+ *
+ * ⚠️ NO CONTIENE CONTROLES, asi que el `overflow: hidden` de `.patron-vivo` no
+ * recorta ningun anillo de foco. La superficie tenida la pone `.sup-2` desde el
+ * TSX, que ya remapea los dos tokens que caen debajo de AA sobre #f2f3ea.
+ */
+.cierre {
+  margin-top: var(--espacio-8);
+  padding: var(--espacio-5) var(--espacio-6);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-hundida);
+
+  --patron-color: color-mix(in oklab, var(--color-cancha) 22%, transparent);
+}
+
+.acciones {
+  display: flex;
+  gap: var(--espacio-4);
+  flex-wrap: wrap;
+  margin-top: var(--espacio-6);
+}
+
+/* ------------------------------------------------------------- esqueletos */
+
+/**
+ * Formas del `loading.tsx` del grupo. Imitan la chapa, el riel de la nav y las
+ * filas de contenido, que es lo comun a las nueve pantallas.
+ */
+.cargandoChapa {
+  height: 172px;
+  border-radius: var(--radio);
+  margin-bottom: var(--espacio-5);
+}
+
+.cargandoNav {
+  height: 52px;
+  border-radius: var(--radio);
+  margin-bottom: var(--espacio-7);
+}
+
+.cargandoBloques {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.cargandoBloque {
+  height: 116px;
+  border-radius: var(--radio);
+}

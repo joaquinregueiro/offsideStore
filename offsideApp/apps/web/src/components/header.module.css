@@ -1,0 +1,1246 @@
+/**
+ * BARRA SUPERIOR
+ * =============================================================================
+ *
+ * ⚠️ VERSION LUMINOSA (2026-09-10), POR DECISION DEL DUEÑO. La anterior era una
+ * franja verde plana, cuadrada y quieta —"anticuada, sin animaciones, glow,
+ * dinamismo, muy cuadrado todo"— y esta la reemplaza entera: una ISLA DE
+ * VIDRIO que flota despegada de los bordes, redondeada, con canto de luz, un
+ * buscador en pastilla con halo de foco, enlaces con subrayado que se dibuja y
+ * brilla, la bandera del isotipo con un halo que respira y un menu que abre
+ * con escena. Es la superficie que esta en las 22 pantallas: si algo tiene que
+ * verse de 2026, es esto.
+ *
+ * ⚠️ LA BARRA SI ES DE VIDRIO, Y LA VERSION ANTERIOR LO RECHAZABA CON DOS
+ * RAZONES QUE HAY QUE CONTESTAR, NO IGNORAR:
+ *
+ *   (a) `viewTransitionName: 'barra'` la captura como SNAPSHOT y el backdrop
+ *       no se captura. Cierto. Lo que pasa de verdad durante los ~420ms de una
+ *       navegacion: `old` y `new` quedan apiladas con `animation: none` y
+ *       `mix-blend-mode: normal`, o sea la nueva TAPA a la vieja, y las dos son
+ *       un tinte al 92% sin desenfoque. Resultado: durante la transicion el
+ *       vidrio se ve un 8% mas transparente y sin blur. No se apilan "dos
+ *       barras": se ve una, apenas menos esmerilada, por menos de medio
+ *       segundo, mientras todo lo demas se esta moviendo. Costo aceptado.
+ *   (b) `backdrop-filter` en una barra adherida es una pasada de GPU por cuadro
+ *       de scroll. Cierto, y es UNA sola superficie, de ~82px, con un blur de
+ *       18px: el presupuesto de `tokens.css` es "no mas de ~6 vidrios a la vez"
+ *       y este es uno. Lo que sigue prohibido es el vidrio en la grilla.
+ *
+ * ⚠️ EL TINTE ES `--vidrio-fondo` (Verde 750 al 92%) Y NO VERDE CANCHA CON ALFA,
+ * y no es gusto: un vidrio se COMPONE con lo que tiene detras. `tokens.css` lo
+ * midio: cancha al 94% sobre blanco compone #1d8250 y ahi Amarillo Cambio —que
+ * es "Crear cuenta" y el anillo de foco de toda la barra— cae a 4.09 ❌. Verde
+ * 750 al 92% sobre blanco puro, que es el PEOR fondo posible, compone
+ * **#22734c**: papel 5.54 · Cambio 4.92 · `--color-sobre-cancha` 4.94, todos
+ * AA. Recalculado aca con la formula WCAG, no copiado. La capa de gradiente
+ * que va encima SOLO OSCURECE (transparente → Verde 900 al 35%), asi que ese
+ * sigue siendo el punto mas claro en cualquier pixel de la barra.
+ *
+ * ⚠️ LA BARRA NO CAMBIA DE ALTO AL SCROLLEAR. Es `position: sticky`, o sea que
+ * esta EN FLUJO: animarle el alto reflowea el documento mientras la persona
+ * scrollea. Lo que reacciona al scroll es la SUPERFICIE —se densifica, gana
+ * sombra y un halo amarillo— con `opacity` pura sobre una capa que ya trae todo
+ * pintado: compositor, cero repintado por cuadro.
+ *
+ * ⚠️ NADA DE LA BARRA ENTRA ANIMADO AL CARGAR, Y ES A PROPOSITO. La barra se
+ * REMONTA en cada navegacion; una entrada escalonada se repetiria en cada clic
+ * —tapada por la snapshot durante la transicion y asomando a medias al
+ * terminar— justo en el elemento que existe para ser el punto fijo. Lo VIVO de
+ * la barra es perpetuo o reactivo: la bandera respira, la cinta deriva, el
+ * buscador se enciende al enfocar, todo lo clickeable responde.
+ *
+ * ⚠️ POR QUE `header.barra` Y NO `.barra` A SECAS. La barra lleva ademas la
+ * clase global `.sup-cancha`, que declara `position: relative`,
+ * `background-color`, `background-image` y varios tokens con especificidad
+ * (0,1,0) — la MISMA que `.barra`. Cual gana lo decide el ORDEN DE INSERCION de
+ * las hojas, que en Next App Router no es un contrato estable entre `dev` y
+ * `build`: si ganara `.sup-cancha`, la barra dejaria de acompañar el scroll y
+ * volveria a ser verde opaco sin que nada avisara. Tipo + clase da (0,1,1) y no
+ * depende del orden. Lo mismo vale para `.barra .cinta` y `.menu .menuPanel`.
+ */
+
+header.barra {
+  /*
+   * La barra acompaña el scroll. En una vitrina larga, volver arriba para
+   * buscar otra cosa es el gesto mas repetido del sitio.
+   */
+  position: sticky;
+  top: var(--margen-barra);
+  z-index: var(--z-barra);
+
+  /**
+   * ISLA FLOTANTE. La barra se despega 12px de los tres bordes y se redondea a
+   * 20px (`--radio-ficha`): el papel se ve alrededor y la barra pasa a ser un
+   * OBJETO apoyado sobre la pagina, no una franja pegada al techo.
+   *
+   * ⚠️ EL DESPEGUE ENTRA EN LA CUENTA DE `--alto-barra` Y CIERRA, VERIFICADO.
+   * `tokens.css` fija `scroll-padding-top` y dos paneles adheridos (`/buscar`,
+   * `/p/[id]`) en `--alto-barra + 16px`. El alto INTERIOR de la barra no
+   * cambia —los mismos 82 / 138 / 130px de siempre—, asi que con el margen el
+   * borde inferior queda en 12 + 82 = 94 contra un padding de 84 + 16 = 100:
+   * sobran 6px. En telefono: 12 + 138 = 150 contra 156, y a ≤480 con margen de
+   * 8: 8 + 130 = 138 contra 148. Subir el margen por encima de 18px rompe el
+   * ancla de escritorio: no se sube sin tocar el token.
+   */
+  --margen-barra: 12px;
+  --radio-barra: var(--radio-ficha);
+  margin: var(--margen-barra) var(--margen-barra) 0;
+  border-radius: var(--radio-barra);
+
+  /*
+   * Alto de la cinta luminosa del filo inferior. Entra en el padding para que
+   * ningun enlace se apoye encima.
+   */
+  --alto-cinta: 6px;
+  padding: var(--espacio-4) var(--espacio-6) calc(var(--espacio-4) + var(--alto-cinta));
+
+  /**
+   * VIDRIO. El solido va afuera del `@supports` y NO es decorativo: sin
+   * `backdrop-filter`, un fondo con alfa deja leer el catalogo a traves de la
+   * barra. La capa de gradiente en el eje del sistema (112°) solo resta luz.
+   */
+  background-color: var(--vidrio-solido);
+  background-image: linear-gradient(var(--eje), transparent 0%, rgb(7 59 34 / 0.35) 100%);
+
+  /**
+   * CANTO DE VIDRIO: filo de luz arriba (sigue la curva, cosa que el pseudo de
+   * `.sup-cancha` no sabe hacer), un anillo de 1px de papel con alfa, la
+   * sombra de nivel 2 y un halo amarillo TENUE hacia abajo, ya en reposo: la
+   * isla apoyada sobre el papel proyecta luz, no solo sombra. Es `box-shadow`
+   * estatico, fuera de todo texto, y el que se ve con el scroll (`::after`)
+   * es mas fuerte, no otro.
+   */
+  box-shadow:
+    var(--luz-superior-oscura),
+    0 0 0 1px rgb(var(--luz-papel) / 0.12),
+    var(--sombra-2),
+    0 10px 36px -14px rgb(var(--luz-cambio) / 0.28);
+
+  /**
+   * ⚠️ ARREGLA UN TOKEN QUE `.sup-cancha` HEREDA: define `--linea-control` como
+   * papel al 65%, medido contra Verde Cancha plano. Sobre el vidrio compuesto
+   * (#22734c) ese mismo papel al 65% da 3.33 —pasa, sin aire—, y
+   * `--color-sobre-cancha` solido da **4.94**: es el borde del boton de menu, el
+   * unico control visible del menu en telefono, y se prefiere el margen.
+   */
+  --linea-control: var(--color-sobre-cancha);
+
+  /*
+   * ⚠️ ACENTO PROPIO, NO UN REMAPEO DE `--degradado-acento`. El de raiz arranca
+   * en Verde Cancha —el MISMO verde de la barra—, asi que un subrayado hecho
+   * con el arrancaria invisible. Este va de Amarillo Cambio (4.92:1 sobre el
+   * vidrio) a papel (5.54:1): muy por encima del 3:1 que WCAG 1.4.11 pide para
+   * un indicador de estado. Y no se pisa `--degradado-acento`: el buscador es
+   * una isla clara y ahi el amarillo sobre blanco (1.35:1) no existe.
+   */
+  --acento-barra: linear-gradient(96deg, var(--color-cambio) 0%, var(--color-papel) 100%);
+
+  transition:
+    border-radius var(--dur-media) var(--curva-seca),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  header.barra {
+    background-color: var(--vidrio-fondo);
+    -webkit-backdrop-filter: var(--vidrio-desenfoque);
+    backdrop-filter: var(--vidrio-desenfoque);
+  }
+}
+
+@media (max-width: 480px) {
+  header.barra {
+    /*
+     * En telefono chico la isla se pega un poco mas al borde: 12px por lado
+     * sobre 320 son 24 de 320. El canal interior queda en 16, el mismo que
+     * `.contenedor` de `ui.module.css` a ≤480, asi la marca sigue alineada con
+     * la primera fila de fichas.
+     */
+    --margen-barra: 8px;
+    padding: var(--espacio-3) var(--espacio-4) calc(var(--espacio-3) + var(--alto-cinta));
+  }
+}
+
+/**
+ * ⚠️ SE APAGA EL FILO DE LUZ QUE TRAE `.sup-cancha`. Es un pseudo de 1px con
+ * extremos cuadrados que en una caja redondeada asoma por fuera de las
+ * esquinas. El canto de luz de la barra lo hace `--luz-superior-oscura` en el
+ * `box-shadow`, que si sigue la curva.
+ */
+header.barra::before {
+  display: none;
+}
+
+/**
+ * ⚠️ CON EL MENU ABIERTO LAS ESQUINAS DE ABAJO SE ENDEREZAN: el panel sale por
+ * debajo con las suyas redondeadas, y barra + panel se leen como UN objeto que
+ * se desplego. La especificidad de `:has()` es la de su argumento mas
+ * especifico —`.menu[open]`, (0,2,0)— asi que le gana a `header.barra` sin
+ * `!important`.
+ */
+.barra:has(.menu[open]) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* --------------------------------------------------- la barra se densifica */
+
+/**
+ * VELO DE BARRA DESPEGADA.
+ *
+ * Arriba del pliegue la barra es vidrio al 92% sobre el papel; despegada, pasa
+ * al vidrio denso (97%) con un oscurecido mas fuerte, gana `--sombra-3` y un
+ * halo amarillo tenue por debajo. Arriba y abajo del pliegue son dos estados
+ * que se ven, y el cambio es de OPACIDAD sobre una capa ya pintada.
+ *
+ * ⚠️ DENSIFICAR SOLO MEJORA EL CONTRASTE: el punto mas claro del estado denso
+ * sobre blanco puro es #166c42 → papel 6.16 · Cambio 5.48 · sobre-cancha 5.50,
+ * todos por encima del estado de reposo.
+ *
+ * ⚠️ `z-index: -2` ACA Y -1 EN LA CINTA, EN ESE ORDEN. Los descendientes con
+ * z-index negativo pintan DESPUES del fondo del elemento y ANTES de su
+ * contenido, de menor a mayor: el velo tapa el fondo base y la cinta queda por
+ * encima del velo. Lo hace posible el `isolation: isolate` de `.sup-cancha`
+ * (y el propio `backdrop-filter`, que tambien aisla).
+ *
+ * ⚠️ `border-radius: inherit` NO ES OPCIONAL: un `inset: 0` sin radio pintaria
+ * cuatro esquinas cuadradas asomando por fuera de la isla.
+ */
+.barra::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: inherit;
+  background-color: var(--vidrio-solido);
+  background-image: linear-gradient(var(--eje), transparent 0%, rgb(7 59 34 / 0.5) 100%);
+  box-shadow:
+    var(--sombra-3),
+    0 12px 40px -12px rgb(var(--luz-cambio) / 0.35);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .barra::after {
+    background-color: var(--vidrio-fondo-denso);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .barra::after {
+      animation: barraVelo auto linear both;
+      animation-timeline: scroll(root block);
+      /* Termina antes de que la persona llegue a la primera fila de fichas. */
+      animation-range: 0 160px;
+    }
+  }
+}
+
+/**
+ * ⚠️ CON EL MENU ABIERTO, LA BARRA SE DENSIFICA SI O SI. El panel es
+ * `.sup-noche`; con la barra todavia en vidrio claro, panel y barra se leen
+ * como dos bloques que no tienen nada que ver.
+ *
+ * ⚠️ `animation: none` NO ES REDUNDANTE. Una animacion en curso gana el cascade
+ * sobre cualquier declaracion normal por mas especifica que sea: sin sacarla,
+ * el `opacity: 1` no se aplicaria mientras la barra este arriba de todo.
+ */
+.barra:has(.menu[open])::after {
+  animation: none;
+  opacity: 1;
+}
+
+/**
+ * ⚠️ LOS KEYFRAMES SE DECLARAN ACA Y CON NOMBRE PROPIO. En un CSS Module los
+ * nombres de `@keyframes` son LOCALES: si se llamaran igual que un global de
+ * `movimiento.css`, el modulo resolveria a la suya y el global quedaria muerto
+ * sin avisar. `scripts/chequeo-css.mjs` lo verifica.
+ */
+@keyframes barraVelo {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------ cinta luminosa del filo */
+
+/**
+ * DIAGONALES DE LA BANDERA, AHORA COMO UNA TIRA DE LUZ.
+ *
+ * ⚠️ VA ENTRE LAS DOS ESQUINAS, NO DE PUNTA A PUNTA. La barra es redondeada y
+ * un hijo absoluto de `left: 0; right: 0` pintaria por fuera de la curva en
+ * las dos esquinas de abajo; recortarlo desde la barra con `overflow` o
+ * `clip-path` decapitaria el panel del menu y el enlace de saltar al contenido,
+ * que salen de la caja. Inset por el radio, la tira vive en el tramo recto y
+ * termina en dos puntas redondeadas: se lee como el neon del filo.
+ *
+ * ⚠️ SON DIAGONALES Y NO ROMBOS, Y ES ESCALA, NO GUSTO. El rombo mide 28px en
+ * su escala de cinta: en 6px se ve una astilla. La raya a 112° es el OTRO motivo
+ * de la bandera y a 6px se lee entera. El rombo se queda en el pie.
+ *
+ * ⚠️ VA COMO `<div>` HIJO Y NO COMO PSEUDO: `.patron-vivo` declara
+ * `overflow: hidden`, que sobre el `<header>` recortaria el menu.
+ *
+ * Amarillo Cambio sobre Verde Tiempo Extra: 7.06:1. Es decorativa
+ * (`aria-hidden`), pero se la mantiene legible: una textura al 8% se ve como un
+ * defecto de render. El glow es `box-shadow` estatico: pintura una vez.
+ */
+.barra .cinta {
+  position: absolute;
+  left: var(--radio-barra);
+  right: var(--radio-barra);
+  bottom: 0;
+  height: var(--alto-cinta);
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  --patron-color: var(--color-cambio);
+  background-color: var(--color-tiempo-extra);
+  border-radius: var(--radio-pastilla) var(--radio-pastilla) 0 0;
+  box-shadow:
+    0 -1px 0 rgb(var(--luz-cambio) / 0.35),
+    0 0 16px -2px rgb(var(--luz-cambio) / 0.55);
+}
+
+/*
+ * ⚠️ NO SE USA LA GLOBAL `.diagonales-vivas`: esa pinta la raya ancha (10px cada
+ * 30), que en 6px de alto se ve como bloques sueltos. La fina (2px cada 13) se
+ * lee como cinta. El paso de la deriva es el PERIODO de la raya —13px—, no un
+ * porcentaje del contenedor: eso es lo que hace que el bucle no salte.
+ */
+.barra .cinta::before {
+  --patron-paso: 13px;
+  background-image: var(--patron-diagonales);
+  background-size: auto;
+  background-position: 0 0;
+}
+
+/**
+ * ⚠️ Y SE LE CAMBIA LA DURACION, PORQUE SI NO LA CINTA NO SE MUEVE. `--dur-patron`
+ * son 26s para cruzar UN mosaico, pensado para el rombo de 88px del pie. Aca el
+ * mosaico es la raya de 13px: medio pixel por segundo, invisible. Con 9s deriva
+ * a ~1.4 px/s. Va adentro de la media query: todo lo que toca un bucle infinito
+ * vive del lado de quien no pidio menos movimiento.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .barra .cinta::before {
+    animation-duration: var(--dur-ambiente);
+  }
+}
+
+/**
+ * CHISPA QUE RECORRE LA CINTA. Una banda de luz papel que cruza el filo de
+ * punta a punta cada 9s y descansa el resto del ciclo: es lo que convierte la
+ * tira de rayas en un tubo de neon por el que pasa corriente, y es la unica
+ * pieza de la barra que se MUEVE de verdad a simple vista (la deriva de las
+ * rayas es de 1.4 px/s; la bandera respira sin desplazarse).
+ *
+ * ⚠️ VA EN `::after` DEL MISMO HIJO: `.patron-vivo` pinta las rayas en
+ * `::before` (z -1) y deja `::after` libre, y su `overflow: hidden` +
+ * `isolation` recortan la banda a la cinta. `transform` puro, `will-change`
+ * solo dentro de la media query, y sin ella la banda queda fuera de la cinta
+ * (-120%): invisible, que es lo correcto. Keyframe local con nombre propio.
+ */
+.barra .cinta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 22%;
+  pointer-events: none;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(var(--luz-papel) / 0.28) 40%,
+    rgb(var(--luz-papel) / 0.55) 50%,
+    rgb(var(--luz-papel) / 0.28) 60%,
+    transparent 100%
+  );
+  transform: translate3d(-120%, 0, 0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barra .cinta::after {
+    animation: cintaChispa var(--dur-ambiente) var(--curva-corte) infinite;
+    animation-delay: 2.4s;
+    will-change: transform;
+  }
+}
+
+@keyframes cintaChispa {
+  0% {
+    transform: translate3d(-120%, 0, 0);
+  }
+  42%,
+  100% {
+    /* 100% / 22% de ancho propio = 455% para cruzar entera, mas el margen de salida. */
+    transform: translate3d(580%, 0, 0);
+  }
+}
+
+/* ---------------------------------------------------- saltar al contenido */
+
+/**
+ * Invisible hasta que recibe el foco.
+ *
+ * ⚠️ NO SE OCULTA CON `display: none`. Eso lo sacaria tambien del recorrido del
+ * teclado, que es exactamente para lo que existe (WCAG 2.4.1). Se mueve con
+ * `transform`, no con `top`.
+ */
+.saltar {
+  position: absolute;
+  left: var(--espacio-4);
+  top: var(--espacio-3);
+  z-index: var(--z-superpuesto);
+  /*
+   * ⚠️ 44px COMPLETOS: es el unico control que alguien que navega con
+   * conmutador o con teclado en pantalla tiene que poder acertar.
+   */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  padding: var(--espacio-3) var(--espacio-5);
+  background: var(--color-cambio);
+  color: var(--color-tinta);
+  border-radius: var(--radio-pastilla);
+  box-shadow: var(--glow-cambio);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  transform: translateY(calc(-100% - var(--espacio-7)));
+  transition: transform var(--dur-media) var(--curva-viva);
+}
+
+.saltar:focus {
+  transform: translateY(0);
+  color: var(--color-tinta);
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.contenido {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  column-gap: var(--espacio-6);
+  /*
+   * ⚠️ EL `row-gap` ES LA SEPARACION REAL ENTRE LAS DOS FILAS DE TELEFONO y se
+   * declara aparte: entra directo en el alto de una barra ADHERIDA.
+   */
+  row-gap: var(--espacio-3);
+  /* En telefono el buscador baja a su propia fila (ver mas abajo). */
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------- la marca */
+
+.marca {
+  color: var(--color-papel);
+  /* No se encoge: es lo primero que identifica el sitio. */
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  border-radius: var(--radio);
+  transition: color var(--dur-hover) var(--curva);
+}
+
+.marca:hover,
+.marca:focus-visible {
+  color: var(--color-cambio);
+}
+
+/**
+ * LA BANDERA RESPIRA. Un halo del color de `--luz-marca` —Amarillo Cambio
+ * adentro de `.sup-cancha`— que crece y se apaga cada 3.6s alrededor del
+ * isotipo. Es `filter: drop-shadow`: sigue la silueta de la bandera, sale de
+ * cualquier `overflow` y se compone en la GPU. Un PNG de 26px: cuesta nada.
+ *
+ * ⚠️ ES LA UNICA PERPETUA DE LA BARRA Y VA SOBRE UN ELEMENTO DECORATIVO, que es
+ * la regla dura de `movimiento.css`. No se usa la global `.respira` porque esa
+ * es "un CTA por pantalla" y cada pantalla ya tiene el suyo: dos elementos
+ * respirando en la misma pantalla se pelean.
+ *
+ * ⚠️ EL `transform-origin` NO SE DECLARA ACA. Vive en `marca.module.css`,
+ * sobre `.isotipo`, porque el eje de giro es una propiedad de la MARCA y no del
+ * contexto. Aca va solo el disparador, porque el foco lo recibe el `<a>`.
+ *
+ * ⚠️ SE ENGANCHA POR `[data-marca]` Y NO POR `img`: el dia que el isotipo sea
+ * un `<svg>`, un selector de tag deja de aplicar en silencio.
+ */
+.marca [data-marca='isotipo'] {
+  transition: transform var(--dur-hover) var(--curva-viva);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .marca [data-marca='isotipo'] {
+    animation: marcaRespira var(--dur-respirar) var(--curva-flotar) infinite;
+    will-change: filter;
+  }
+}
+
+/*
+ * ⚠️ EL HOVER NO TOCA EL `filter`, Y NO ES PEREZA: mientras la animacion corre,
+ * su valor gana sobre cualquier declaracion; pausarla la deja clavada en el
+ * cuadro en que estaba, y sacarla la reinicia al soltar. El halo sigue
+ * respirando; lo que responde al hover es la bandera, que se levanta, y el
+ * wordmark, que se enciende.
+ */
+.marca:hover [data-marca='isotipo'],
+.marca:focus-visible [data-marca='isotipo'] {
+  transform: rotate(-8deg) scale(1.1);
+}
+
+.marca:active [data-marca='isotipo'] {
+  transform: rotate(-3deg) scale(1.02);
+  transition-duration: var(--dur-instante);
+}
+
+/**
+ * El wordmark se enciende con el hover: `text-shadow` difuso ALREDEDOR de las
+ * letras, nunca un fondo debajo. Cambio sobre el vidrio sigue en 4.92:1.
+ */
+.marca [data-marca='wordmark'] {
+  transition: text-shadow var(--dur-hover) var(--curva);
+}
+
+.marca:hover [data-marca='wordmark'],
+.marca:focus-visible [data-marca='wordmark'] {
+  text-shadow: 0 0 16px rgb(var(--luz-cambio) / 0.55);
+}
+
+@keyframes marcaRespira {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgb(var(--luz-marca) / 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgb(var(--luz-marca) / 0.85))
+      drop-shadow(0 0 22px rgb(var(--luz-marca) / 0.4));
+  }
+}
+
+/* --------------------------------------------------------------- buscador */
+
+/**
+ * ⚠️ EL BUSCADOR ES UNA ISLA CLARA DENTRO DE UNA SUPERFICIE OSCURA, Y ESO NO ES
+ * UN DETALLE ESTETICO. `.sup-cancha` remapea `--color-neutro-*` para fondo
+ * oscuro, y adentro de ese bloque una variable CSS resuelve al valor del
+ * ancestro mas cercano. Un campo blanco ahi adentro hereda un placeholder color
+ * papel SOBRE BLANCO (1.14:1). El unico color de texto que `.sup-*` NO da
+ * vuelta —por regla explicita de `tokens.css`— es `--color-tinta`, asi que el
+ * gris del placeholder se construye desde ahi: tinta al 62% sobre blanco
+ * compone #6b7771, **4.66:1**, AA para texto normal.
+ *
+ * PASTILLA. Es la forma que el sistema quiere para "lo que se escribe": una
+ * capsula blanca hundida (`--sombra-hundida`) con un anillo fino de papel que
+ * la despega del vidrio. Al enfocar se ENCIENDE: anillo de foco en Amarillo
+ * Cambio (`--color-foco` en cancha) mas el halo `--glow-foco`, del mismo color.
+ *
+ * ⚠️ EL FOCO SE DIBUJA SOBRE EL CONJUNTO, NO SOBRE EL CAMPO. Campo y boton son
+ * un solo control a la vista. `outline` NO lo recorta este `overflow: hidden`;
+ * el halo es `box-shadow` del propio elemento, que tampoco.
+ *
+ * ⚠️ Y NO SE ENSANCHA AL ENFOCARLO, que es el efecto de moda: el buscador es un
+ * item flex de la barra, asi que crecer le mueve la marca y los enlaces de
+ * lugar mientras alguien esta tipeando.
+ */
+.buscadorForm {
+  flex: 1;
+  max-width: 460px;
+  margin: 0;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: stretch;
+  background: var(--superficie-1);
+  border-radius: var(--radio-pastilla);
+  box-shadow:
+    var(--sombra-hundida),
+    0 0 0 1px rgb(var(--luz-papel) / 0.3);
+  overflow: hidden;
+  transition: box-shadow var(--dur-hover) var(--curva);
+}
+
+.buscadorForm:hover {
+  box-shadow:
+    var(--sombra-hundida),
+    0 0 0 1px rgb(var(--luz-papel) / 0.55),
+    0 0 22px -6px rgb(var(--luz-cambio) / 0.5);
+}
+
+/*
+ * ⚠️ DECLARADO DESPUES DEL HOVER, para que el hover no lo pise: misma
+ * especificidad, gana el ultimo.
+ */
+.buscadorForm:focus-within {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 3px;
+  box-shadow: var(--sombra-hundida), var(--glow-foco);
+}
+
+.buscador {
+  flex: 1;
+  min-width: 0;
+  padding: var(--espacio-3) var(--espacio-3) var(--espacio-3) var(--espacio-5);
+  border: none;
+  background: transparent;
+  color: var(--color-tinta);
+  font-family: var(--fuente-texto);
+  /*
+   * ⚠️ 16px Y NO 13px. iOS Safari hace ZOOM sobre cualquier campo de menos de
+   * 16px al enfocarlo, y no lo deshace al salir.
+   */
+  font-size: var(--texto-md);
+  /*
+   * ⚠️ EL INTERLINEADO SE FIJA, Y ES LO QUE LE DA A ESTA BARRA UN ALTO EXACTO.
+   * Un `<input>` NO hereda `line-height`: el alto del campo lo decidian las
+   * metricas de la fuente (42.5px con el fallback, 43.36 con Inter) y la barra
+   * adherida cambiaba de alto al terminar de cargar la tipografia. Con 20px el
+   * campo mide 12 + 20 + 12 = 44 = `--alto-control`, la fuente cargue o no.
+   */
+  line-height: calc(var(--alto-control) - var(--espacio-3) * 2);
+}
+
+.buscador::placeholder {
+  /* Ver la nota de isla clara arriba: #6b7771 sobre blanco, 4.66:1. */
+  color: color-mix(in srgb, var(--color-tinta) 62%, transparent);
+  opacity: 1;
+}
+
+.buscador:focus-visible {
+  /*
+   * El anillo lo pone el contenedor. El `box-shadow` tambien: la regla global
+   * de `:focus-visible` le pondria `--glow-foco` al campo, y adentro de la
+   * capsula con `overflow: hidden` ese halo se ve como un borde amarillo
+   * recortado en el filo del boton.
+   */
+  outline: none;
+  box-shadow: none;
+}
+
+/**
+ * EL BOTON DE LUPA: macizo, con el gradiente de boton del sistema.
+ *
+ * ⚠️ `--degradado-boton` Y NO `--degradado-cancha`: es la unica superficie de
+ * marca que ACLARA, y puede porque su texto es SOLO papel — el icono. Peor stop
+ * Verde 600, papel 4.66 ✅. Al activarse pasa al activo (cancha → Tiempo
+ * Extra): 5.16 → 7.95.
+ *
+ * ⚠️ SE QUEDA EN VERDE Y NO EN AMARILLO CAMBIO: Cambio es "Crear cuenta", el
+ * unico enlace de conversion de la barra. Dos amarillos en la misma fila y
+ * ninguno es el importante.
+ *
+ * ⚠️ 44px DE ALTO COMPLETOS, sin margen adentro de la capsula: una lupa de 36px
+ * "flotando" adentro se ve mas fina y se falla con el dedo. La forma de
+ * capsula se la da el `overflow: hidden` del contenedor.
+ *
+ * ⚠️ EL CAMBIO DE FONDO ES DISCRETO A PROPOSITO: dos gradientes distintos no
+ * interpolan en ningun navegador. Lo que si se anima: el icono y la banda de
+ * luz que cruza en diagonal por DEBAJO del icono (`::after`, z -1).
+ */
+.buscadorBoton {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Area tactil: el icono mide 18px, el boton 44 de alto y 52 de ancho. */
+  min-width: 52px;
+  padding: 0 var(--espacio-5) 0 var(--espacio-4);
+  border: none;
+  background-image: var(--degradado-boton);
+  color: var(--color-papel);
+  cursor: pointer;
+  transition: transform var(--dur-instante) var(--curva-seca);
+}
+
+.buscadorBoton:hover,
+.buscadorForm:focus-within .buscadorBoton {
+  background-image: var(--degradado-boton-activo);
+}
+
+/** Banda de luz verde-500 al 20% bajo el icono: papel encima queda en 4.64 (medido en tokens.css). */
+.buscadorBoton::after {
+  content: '';
+  position: absolute;
+  inset: -45% -25%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background-image: linear-gradient(
+    var(--eje),
+    transparent 30%,
+    rgb(var(--luz-verde) / 0.2) 48%,
+    rgb(var(--luz-verde) / 0.2) 52%,
+    transparent 70%
+  );
+  transform: translate3d(-160%, 0, 0) skewX(-14deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .buscadorBoton:hover::after,
+  .buscadorForm:focus-within .buscadorBoton::after {
+    animation: lupaBarre var(--dur-destello) var(--curva-corte);
+  }
+}
+
+@keyframes lupaBarre {
+  0% {
+    opacity: 0;
+    transform: translate3d(-160%, 0, 0) skewX(-14deg);
+  }
+  14% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(160%, 0, 0) skewX(-14deg);
+  }
+}
+
+/**
+ * ⚠️ EL BOTON LLEVA SU PROPIO ANILLO, HACIA ADENTRO. El contenedor ya dibuja el
+ * anillo del conjunto con `:focus-within`, asi que sin esto quien tabula del
+ * campo al boton no ve NINGUN cambio de foco. El offset va en NEGATIVO porque
+ * `.buscadorForm` lleva `overflow: hidden`: el outline de un HIJO si lo recorta
+ * el contenedor. Amarillo Cambio sobre Tiempo Extra: 7.06:1. Es `outline`, no
+ * `box-shadow`: sobrevive a `forced-colors`.
+ */
+.buscadorBoton:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: -3px;
+  border-radius: var(--radio-pastilla);
+}
+
+/*
+ * ⚠️ EL APRETON ES LA UNICA RESPUESTA TACTIL QUE EXISTE EN UN TELEFONO, donde no
+ * hay hover. 1px y nada mas: mas desalinea la fila.
+ */
+.buscadorBoton:active {
+  transform: translateY(1px);
+}
+
+/** La lupa crece con overshoot y se inclina: un icono que se mueve. */
+.buscadorBoton svg {
+  transition: transform var(--dur-hover) var(--curva-pop);
+}
+
+.buscadorBoton:hover svg,
+.buscadorForm:focus-within .buscadorBoton svg {
+  transform: scale(1.18) rotate(-8deg);
+}
+
+/* --------------------------------------------------------------- enlaces */
+
+.acciones {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-5);
+}
+
+.enlace,
+.enlaceBoton,
+.enlaceDestacado {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  /*
+   * Sin esto los enlaces median ~20px de alto. Arriba de 900px la barra
+   * tambien la usa gente con pantalla tactil, y ahi 20px es un blanco que se
+   * falla.
+   */
+  min-height: var(--alto-control);
+  color: var(--color-papel);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  white-space: nowrap;
+  transition:
+    color var(--dur-hover) var(--curva),
+    text-shadow var(--dur-hover) var(--curva);
+}
+
+/**
+ * SUBRAYADO QUE SE DIBUJA Y BRILLA.
+ *
+ * ⚠️ NO SE USA LA GLOBAL `.subraya`: pinta `--degradado-acento`, cuyo primer
+ * stop es Verde Cancha —el MISMO verde de la barra—, asi que arrancaria
+ * invisible. Aca si corresponde un pseudo y no `background-size`: estos enlaces
+ * son `white-space: nowrap`, nunca se parten.
+ *
+ * ⚠️ NO HAY RELLENO DE HOVER DETRAS DEL TEXTO, Y ES UN NUMERO: papel al 8%
+ * sobre el vidrio compone #337e5a y ahi Amarillo Cambio cae a **4.18** ❌. La
+ * luz va DEBAJO de la linea de texto —la raya y su halo—, donde no hay glifos.
+ *
+ * ⚠️ `bottom: 8px` NO ES MAGICO: la caja mide 44, el texto de 13px ocupa una
+ * linea de ~20px centrada, o sea que su borde inferior cae a 12px del fondo;
+ * 8px deja la raya 4px por debajo de las mayusculas.
+ *
+ * ⚠️ EL HOVER NO ES LA UNICA SEÑAL. La seccion activa lleva `aria-current` y
+ * ahi la linea esta puesta SIEMPRE: quien navega en un telefono igual ve donde
+ * esta.
+ */
+.enlace::after,
+.enlaceBoton::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  height: 2px;
+  pointer-events: none;
+  border-radius: var(--radio-pastilla);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background-image: var(--acento-barra);
+  box-shadow: 0 0 10px rgb(var(--luz-cambio) / 0.7);
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.enlace:hover,
+.enlace:focus-visible,
+.enlaceBoton:hover,
+.enlaceBoton:focus-visible {
+  color: var(--color-cambio);
+  text-shadow: 0 0 14px rgb(var(--luz-cambio) / 0.45);
+}
+
+.enlace:hover::after,
+.enlace:focus-visible::after,
+.enlaceBoton:hover::after,
+.enlaceBoton:focus-visible::after,
+.enlace[aria-current]::after {
+  transform: scaleX(1);
+}
+
+.enlace[aria-current] {
+  color: var(--color-cambio);
+}
+
+/** Boton que se ve como los enlaces de la barra. Es un boton porque muta. */
+.enlaceBoton {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/**
+ * "Crear cuenta": LA PASTILLA QUE BRILLA.
+ *
+ * ⚠️ NO ES JERARQUIA INVENTADA: de todos los enlaces de la barra sin sesion, es
+ * el unico que le sirve al sitio y a la persona a la vez. En reposo lleva un
+ * anillo de Cambio con alfa y un halo tenue; en hover el relleno amarillo entra
+ * en diagonal, en el eje del sistema, y el halo pasa a `--glow-cambio`.
+ *
+ * ⚠️ EL PSEUDO VA EN `z-index: -1` CON `isolation: isolate`: encima taparia el
+ * texto, y sin `pointer-events: none` el enlace dejaria de responder al clic.
+ * El `overflow: hidden` recorta el relleno a la pastilla; el `box-shadow` del
+ * propio elemento no lo recorta su propio overflow, asi que el glow sale.
+ *
+ * ⚠️ NO RESPIRA. `.respira` es un CTA por pantalla y cada pantalla ya tiene el
+ * suyo. Cambio sobre el vidrio: 4.92; tinta sobre Cambio en hover: 13.97.
+ */
+.enlaceDestacado {
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--espacio-2) var(--espacio-5);
+  min-height: var(--alto-control);
+  border: 1px solid rgb(var(--luz-cambio) / 0.75);
+  border-radius: var(--radio-pastilla);
+  color: var(--color-cambio);
+  box-shadow: 0 0 18px -6px rgb(var(--luz-cambio) / 0.5);
+  transition:
+    color var(--dur-media) var(--curva-seca),
+    border-color var(--dur-hover) var(--curva),
+    box-shadow var(--dur-hover) var(--curva),
+    translate var(--dur-hover) var(--curva-viva),
+    transform var(--dur-instante) var(--curva-seca);
+}
+
+.enlaceDestacado::before {
+  content: '';
+  position: absolute;
+  inset: -2px -12%;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--color-cambio);
+  transform: translate3d(-101%, 0, 0) skewX(-12deg);
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.enlaceDestacado:hover,
+.enlaceDestacado:focus-visible {
+  color: var(--color-tinta);
+  border-color: var(--color-cambio);
+  box-shadow: var(--glow-cambio);
+  translate: 0 -1px;
+}
+
+.enlaceDestacado:hover::before,
+.enlaceDestacado:focus-visible::before {
+  transform: translate3d(0, 0, 0) skewX(-12deg);
+}
+
+.enlaceDestacado:active {
+  translate: 0 1px;
+  box-shadow: 0 0 10px -4px rgb(var(--luz-cambio) / 0.4);
+}
+
+/* ------------------------------------------------------ menu de telefono */
+
+/**
+ * Escondido en escritorio: ahi los enlaces se ven todos.
+ *
+ * ⚠️ QUEDA `static` A PROPOSITO: asi el bloque contenedor del panel es la BARRA
+ * (que es `sticky`, o sea posicionada) y el panel sale a lo ancho de la isla en
+ * vez de colgar del boton.
+ */
+.menu {
+  display: none;
+  margin-left: auto;
+}
+
+.menuBoton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--alto-control);
+  height: var(--alto-control);
+  /*
+   * ⚠️ EL BORDE ES `--linea-control`, que en esta barra vale
+   * `--color-sobre-cancha`: **4.94:1** sobre el vidrio. WCAG 1.4.11 exige 3:1
+   * para el contorno de algo que se aprieta, y este es el UNICO control visible
+   * del menu en telefono.
+   */
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio);
+  background-color: rgb(var(--luz-papel) / 0.06);
+  color: var(--color-papel);
+  cursor: pointer;
+  /* Saca el triangulito que el navegador pone por defecto en un <summary>. */
+  list-style: none;
+  transition:
+    background-color var(--dur-hover) var(--curva),
+    border-color var(--dur-hover) var(--curva),
+    box-shadow var(--dur-hover) var(--curva),
+    color var(--dur-hover) var(--curva),
+    transform var(--dur-instante) var(--curva-seca);
+}
+
+.menuBoton::-webkit-details-marker {
+  display: none;
+}
+
+/*
+ * ⚠️ `:focus-visible` VA EN LA MISMA LISTA QUE `:hover`: quien navega con
+ * teclado tiene que ver el mismo cambio de superficie. El fondo se OSCURECE
+ * (Verde 900 al 35%: la luz se resta) y la luz va afuera, en `--glow-marca`,
+ * que adentro de `.sup-cancha` es Amarillo Cambio.
+ */
+.menuBoton:hover,
+.menuBoton:focus-visible,
+.menu[open] .menuBoton {
+  border-color: var(--color-cambio);
+  color: var(--color-cambio);
+  background-color: rgb(7 59 34 / 0.35);
+  box-shadow: var(--glow-marca);
+}
+
+.menuBoton:active {
+  transform: translateY(1px);
+}
+
+/**
+ * CRUCE DE ICONOS: hamburguesa ↔ cruz, SIN JAVASCRIPT.
+ *
+ * ⚠️ NO SE ROTA EL ICONO DE MENU. Girar tres rayas 90° da tres rayas
+ * verticales, que no significan nada. Se renderizan los dos iconos apilados y
+ * `[open]` decide cual esta a la vista, con `opacity` + `rotate` y la curva pop.
+ */
+.menuIcono {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity var(--transicion) var(--curva),
+    transform var(--dur-hover) var(--curva-pop);
+}
+
+.menuIcono[data-icono='cerrar'] {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
+}
+
+.menu[open] .menuIcono[data-icono='abrir'] {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+
+.menu[open] .menuIcono[data-icono='cerrar'] {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+/**
+ * PANEL DESPLEGADO.
+ *
+ * ⚠️ `.menu .menuPanel` Y NO `.menuPanel` A SECAS. El panel lleva la clase
+ * global `.sup-noche`, que declara `position: relative` con especificidad
+ * (0,1,0) — la misma que `.menuPanel`. Si ganara `.sup-noche`, el panel
+ * entraria en flujo dentro del `<details>` y **empujaria la barra hacia abajo
+ * al abrirse**.
+ *
+ * ⚠️ EL FONDO Y LOS NEUTROS SALEN DE `.sup-noche` + `.escena-luz`: la malla, el
+ * filo de luz que lo separa de la barra, los neutros para oscuro y el
+ * presupuesto de blobs de noche (verde-500 al 10%, Cambio al 6%: medido en
+ * `tokens.css`, sobre-oscuro-2 6.81 · verde-400 5.10 · borde 3.43). Los blobs
+ * flotan DETRAS de los enlaces en un hijo propio con `border-radius: inherit`,
+ * para que no asomen por las esquinas redondeadas.
+ *
+ * ⚠️ NO LLEVA `overflow: clip`: recortaria el `outline` del foco de los enlaces
+ * y el halo `--glow-suave` del propio panel.
+ */
+.menu .menuPanel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: var(--z-menu);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--espacio-1);
+  padding: var(--espacio-4) var(--espacio-4) var(--espacio-6);
+  border-radius: 0 0 var(--radio-barra) var(--radio-barra);
+  box-shadow: var(--sombra-4), var(--glow-suave);
+}
+
+.menuLuz {
+  border-radius: inherit;
+}
+
+/*
+ * Dentro del panel cada enlace es una FILA redondeada con area tactil completa
+ * y luz propia en hover: se corre 4px hacia la derecha (`translate`, aparte de
+ * `transform`) y gana un fondo de papel al 6% —sobre el peor punto de la
+ * escena, #234b37, el papel sigue en 7.91 y Cambio en 7.03—.
+ * `:global` no hace falta: son las mismas clases de este modulo.
+ */
+.menuPanel .enlace,
+.menuPanel .enlaceBoton,
+.menuPanel .enlaceDestacado {
+  display: flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio);
+  font-size: var(--texto-base);
+  width: 100%;
+  translate: 0 0;
+  transition:
+    color var(--dur-hover) var(--curva),
+    background-color var(--dur-hover) var(--curva),
+    box-shadow var(--dur-hover) var(--curva),
+    translate var(--dur-hover) var(--curva-viva);
+}
+
+.menuPanel .enlace:hover,
+.menuPanel .enlace:focus-visible,
+.menuPanel .enlaceBoton:hover,
+.menuPanel .enlaceBoton:focus-visible {
+  background-color: rgb(var(--luz-papel) / 0.06);
+  translate: 4px 0;
+  text-shadow: none;
+}
+
+/* En una fila de ancho completo el subrayado del hover no aporta: sobra. */
+.menuPanel .enlace::after,
+.menuPanel .enlaceBoton::after {
+  display: none;
+}
+
+/**
+ * La seccion activa en el panel: un filete de Cambio a la izquierda (inset, asi
+ * sigue el radio) y un lavado amarillo al 8%, que no baja el contraste de un
+ * texto amarillo por debajo de 7.
+ */
+.menuPanel .enlace[aria-current] {
+  background-color: rgb(var(--luz-cambio) / 0.08);
+  box-shadow: inset 3px 0 0 var(--color-cambio);
+}
+
+.menuPanel .enlaceDestacado {
+  justify-content: center;
+  margin-top: var(--espacio-3);
+  border: 1px solid rgb(var(--luz-cambio) / 0.75);
+  border-radius: var(--radio-pastilla);
+}
+
+.menuPanel .enlaceDestacado:hover,
+.menuPanel .enlaceDestacado:focus-visible {
+  translate: 0 -1px;
+}
+
+.menuPanel form {
+  width: 100%;
+}
+
+/**
+ * APERTURA DE VERDAD: EL PANEL CAE EN SU LUGAR Y LOS ENLACES ENTRAN EN ESCALON.
+ *
+ * ⚠️ NO SE USA LA GLOBAL `.desplegable`. Esa anima `block-size` de
+ * `::details-content`, y aca el panel es `position: absolute`: el pseudo mide 0
+ * SIEMPRE, asi que no habria nada que revelar.
+ *
+ * ⚠️ EL PANEL ENTERO ENTRA CON `menuAbre` (opacidad + 10px + escala 0.98, curva
+ * viva) y no con un telon: un telon opaco necesitaba holguras negativas que en
+ * una caja redondeada asoman por las esquinas. Compositor puro, y termina en
+ * `transform: none`, asi que el `translate` de los hijos convive.
+ *
+ * ⚠️ EL ESCALONADO CUELGA DE `[open]`, NO DE LA GLOBAL `.escalona`. Con la
+ * clase suelta, la animacion corre una sola vez al montar y en la segunda
+ * apertura el panel aparece ya armado. Los blobs van ULTIMOS en el marcado para
+ * no correr la cuenta de `--i` de los enlaces.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .menu[open] .menuPanel {
+    animation: menuAbre var(--dur-media) var(--curva-viva) both;
+  }
+
+  .menu[open] .menuPanel > * {
+    animation: menuEntra var(--transicion-lenta) var(--curva-viva) both;
+    animation-delay: calc(var(--paso-escalon) * var(--i, 0) + 60ms);
+  }
+
+  .menuPanel > *:nth-child(1) {
+    --i: 0;
+  }
+  .menuPanel > *:nth-child(2) {
+    --i: 1;
+  }
+  .menuPanel > *:nth-child(3) {
+    --i: 2;
+  }
+  .menuPanel > *:nth-child(4) {
+    --i: 3;
+  }
+  .menuPanel > *:nth-child(n + 5) {
+    --i: 4;
+  }
+}
+
+/*
+ * ⚠️ EL CIERRE TAMBIEN TIENE QUE VERSE. Sin esto, al sacar `[open]` el navegador
+ * pone `content-visibility: hidden` en el acto y el panel desaparece de golpe.
+ * `allow-discrete` le da a la salida los 180ms que necesita. Sin soporte de
+ * `::details-content` no pasa nada malo: cierra instantaneo.
+ */
+@supports selector(::details-content) {
+  @media (prefers-reduced-motion: no-preference) {
+    .menu::details-content {
+      opacity: 0;
+      transition:
+        opacity var(--transicion) var(--curva-salida),
+        content-visibility var(--transicion) allow-discrete;
+    }
+
+    .menu[open]::details-content {
+      opacity: 1;
+    }
+  }
+}
+
+@keyframes menuAbre {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes menuEntra {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+/* --------------------------------------------------------------- telefono */
+
+@media (max-width: 900px) {
+  .acciones {
+    display: none;
+  }
+
+  .menu {
+    display: block;
+  }
+
+  /*
+   * El buscador pasa a su propia fila, a lo ancho. En un marketplace es el
+   * control mas usado: esconderlo dentro del menu seria enterrarlo.
+   *
+   * ⚠️ SIN `margin-top`. La separacion la da el `row-gap` de `.contenido`: un
+   * margen sumaria encima y entraria directo en el alto de la barra adherida.
+   */
+  .buscadorForm {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .contenido {
+    column-gap: var(--espacio-4);
+  }
+}
+
+/* ---------------------------------------------------- alto contraste forzado */
+
+/**
+ * ⚠️ EN `forced-colors` LOS FONDOS DE IMAGEN Y LAS SOMBRAS SE SUPRIMEN: el
+ * indicador de seccion (un `background-image` de 2px) se evapora, el vidrio y
+ * la capsula blanca del buscador quedan del mismo Canvas que la barra, y los
+ * halos no existen. Se devuelve cada señal con colores del sistema.
+ *
+ * El cruce hamburguesa ↔ cruz no necesita nada: depende de `opacity`.
+ */
+@media (forced-colors: active) {
+  .enlace::after,
+  .enlaceBoton::after {
+    background: CanvasText;
+  }
+
+  .enlace[aria-current] {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .buscadorForm,
+  .menuPanel {
+    border: 1px solid CanvasText;
+  }
+
+  .barra .cinta {
+    border-bottom: 1px solid CanvasText;
+  }
+}

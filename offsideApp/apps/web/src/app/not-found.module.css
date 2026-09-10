@@ -1,0 +1,71 @@
+/**
+ * SALIDAS DEL 404.
+ *
+ * ⚠️ LA ESCENA VIVE EN `components/pantalla-de-servicio.module.css`, QUE NO ES
+ * DE ESTA PANTALLA. Acá solo estan las fichas de la tira de recuperacion, que
+ * son propias del 404: el error de la raiz no las lleva —si lo que fallo fue el
+ * servidor, cuatro enlaces mas al mismo servidor no son una salida—.
+ *
+ * ⚠️ NINGUNA APUNTA A UNA PANTALLA QUE NO EXISTA. Es la tentacion obvia de un
+ * 404: llenarlo de "Ayuda", "Contacto", "Preguntas frecuentes". Cada uno de
+ * esos seria otro 404 con aspecto de promesa, que es peor que el 404 original
+ * porque ya venias de uno.
+ */
+
+/**
+ * ⚠️ ES UN `<a>` Y POR ESO SI PUEDE ELEVARSE. La regla del sistema es que el
+ * hover no promete lo que no existe: acá la ficha entera navega, asi que
+ * `eleva destello` —las dos globales, aplicadas desde el JSX— dicen la verdad.
+ *
+ * ⚠️ EL COLOR NO SE HEREDA DEL ENLACE. Sin `color`, un `<a>` toma
+ * `--color-cancha` de la regla global y los tres textos de la ficha saldrian
+ * verdes, incluido el detalle en 13px.
+ */
+.salida {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  height: 100%;
+  /* Area tactil holgada: la ficha entera es el destino, no solo el titulo. */
+  min-height: calc(var(--alto-control) * 2);
+  padding: var(--espacio-5);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background-color: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  color: var(--color-tinta);
+}
+
+.salida:hover {
+  color: var(--color-tinta);
+}
+
+/**
+ * ⚠️ EL ROMBO ES FORMA, NO INFORMACION, y por eso puede ir en `--verde-500`
+ * (3.12:1 sobre blanco, que es el minimo de WCAG 1.4.11 para un grafico). El
+ * dato lo dice el texto de abajo.
+ */
+.marcador {
+  width: 10px;
+  height: 10px;
+  margin-bottom: var(--espacio-2);
+  transform: rotate(45deg);
+  background-color: var(--verde-500);
+}
+
+.salidaTitulo {
+  font-family: var(--fuente-titulo);
+  font-weight: var(--peso-normal);
+  font-size: var(--texto-xl);
+  line-height: var(--interlineado-titulo);
+  letter-spacing: var(--tracking-titulo);
+  text-transform: uppercase;
+  /* La regla dura de 320px: un nombre largo no puede empujar la pagina. */
+  overflow-wrap: anywhere;
+}
+
+.salidaDetalle {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}

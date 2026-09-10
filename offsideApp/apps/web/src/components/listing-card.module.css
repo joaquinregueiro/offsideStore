@@ -1,0 +1,942 @@
+/**
+ * Ficha de producto del catalogo — version LUMINOSA (2026-09-10).
+ *
+ * Es el objeto mas repetido del sitio, asi que es donde mas se nota la
+ * direccion nueva: redondeada (20px), blanca y flotante sobre un lavado que SI
+ * aclara, con un anillo de luz en el canto, glow verde al levantarse, tilt hacia
+ * el mouse, la foto que se acerca, y entrada escalonada al primer pintado.
+ *
+ * ⚠️⚠️ DEPENDENCIA DURA CON LA FUNDACION (`app/tokens.css` + `app/movimiento.css`).
+ * Una variable CSS inexistente NO tira error: invalida la declaracion entera al
+ * calcular el valor, y un `box-shadow` invalido no es "una sombra menos", es una
+ * ficha sin contorno sobre papel. Por eso las declaraciones cuyo faltante deja
+ * algo INVISIBLE —fondo, aro de contorno y los patrones— llevan
+ * `var(…, fallback)`. El resto degrada a "no se anima", que es aceptable.
+ *
+ * ⚠️⚠️ REPARTO DE PROPIEDADES DE TRANSFORMACION, Y ES LO QUE HACE QUE EL HOVER
+ * FUNCIONE. La entrada al cargar (`llegaFicha`) rellena con `both`, y una
+ * propiedad bajo control de una animacion que rellena NO se puede pisar desde
+ * una regla comun: si la entrada animara `transform`, el hover quedaria mudo
+ * sin ningun error (es la trampa que `movimiento.css` documenta en `.eleva`).
+ * Entonces:
+ *
+ *   entrada   `opacity` + `translate` + `scale`  (individuales; terminan neutras)
+ *   hover     `transform`  (perspectiva + tilt + elevacion)
+ *   foto      `transform` en `.foto`, que es otro elemento
+ *
+ * ⚠️ ESTA FICHA NO USA `.eleva` NI `.tilt`, Y ES UNA DECISION:
+ *   1. El contorno viaja en la MISMA lista de `box-shadow` que la elevacion y
+ *      el glow, y esa lista no se puede repartir entre dos archivos sin
+ *      depender del orden de inyeccion de Next, que no es estable entre `dev`
+ *      y `build`.
+ *   2. `.eleva` y `.tilt` reaccionan a `:focus-within`, que matchea tambien el
+ *      foco POR CLICK: al volver con el boton atras la ficha quedaria levantada
+ *      e inclinada sin razon aparente. Aca todo usa `:hover, :focus-visible`.
+ *   3. `.tilt` necesita `.tilt-escena` en la grilla, que no es de este modulo.
+ *      La perspectiva va adentro del propio `transform`.
+ *
+ * ⚠️ EL HOVER NUNCA ES LA UNICA SEÑAL. En un telefono no existe, y ahi vive la
+ * mayoria del trafico: el anillo de luz, el marcador del precio, la marca de ir
+ * y la insignia estan PUESTOS en reposo. Lo que el mouse agrega es enfasis.
+ *
+ * ⚠️ PERFORMANCE EN UNA GRILLA DE 24. Nada corre en bucle en reposo: el glow es
+ * `box-shadow` en hover (una transicion), el anillo gira SOLO en hover (una
+ * ficha a la vez), la chispa de "Ultima unidad" hace tres vueltas y para, y no
+ * hay `backdrop-filter` ni `filter` permanente en la ficha. `tokens.css` lo
+ * dice con estas palabras: una grilla de 24 fichas NO es de vidrio.
+ */
+
+/* ------------------------------------------------------------------ ficha */
+
+.ficha {
+  /* Es un <a>: se neutraliza el color de enlace global para no tenir el titulo. */
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  /* Condicion para el `z-index: -1` del rombo del cuerpo y para el anillo. */
+  isolation: isolate;
+
+  /*
+   * ⚠️ `clip` Y NO `hidden`: `hidden` crea un contenedor de scroll y le cambia
+   * el timeline a cualquier `view()` que mida contra el, ademas de ser lo que
+   * `tokens.css` prohibe en `html` por el mismo motivo. `clip` recorta igual
+   * —la foto toma las esquinas de 20px— y no es un scroller. Donde no exista
+   * (Safari viejo) queda `hidden`, que recorta igual.
+   *
+   * ⚠️ EL GLOW NO SE RECORTA: `overflow` recorta descendientes, no la sombra
+   * propia del elemento. Es lo que permite tener esquinas limpias y halo.
+   */
+  overflow: hidden;
+  overflow: clip;
+
+  /* 20px: el radio de ficha del sistema. El 4px se fue. */
+  border-radius: var(--radio-ficha, 20px);
+
+  /*
+   * ⚠️ EL FONDO ACLARA Y SATURA, Y EL PRESUPUESTO ESTA MEDIDO. Blanco con dos
+   * luces: verde-400 al 10% arriba a la derecha y Amarillo Cambio al 34% abajo
+   * a la izquierda, que es donde termina el nombre del vendedor. Calculado con
+   * la formula WCAG sobre los hex reales, en el PEOR punto (las dos luces
+   * superpuestas, #e9f4d9):
+   *
+   *   --color-neutro-texto  5.37 ✅   tinta 14.35 ✅   --color-neutro-tenue 4.28 ❌
+   *
+   * O sea que el remapeo del tenue de mas abajo no es precaucion: sin el, talle,
+   * condicion y vendedor quedan debajo de AA en la esquina del lavado. Al 12% /
+   * 40% el texto sigue en 5.24 pero el margen ya no compra nada visible.
+   */
+  background-color: var(--superficie-1, #ffffff);
+  background-image:
+    radial-gradient(
+      70% 55% at 100% 0%,
+      rgb(var(--luz-verde-clara, 63 189 119) / 0.1),
+      transparent 62%
+    ),
+    radial-gradient(75% 60% at 0% 100%, rgb(var(--luz-cambio, 245 239 174) / 0.34), transparent 60%);
+
+  /*
+   * ⚠️ EL CONTORNO ES LA PRIMERA CAPA DE LA SOMBRA, NO UN `border`. Un `border`
+   * correria 1px el anillo de luz (los `inset` de un absoluto se miden contra
+   * el padding box) y ademas ocupa layout. Cuatro capas: contorno, filo de luz
+   * arriba, la sombra apoyada del sistema y un halo verde DEBAJO, corto y al
+   * 22%, que es lo que hace que la ficha se vea iluminada tambien en reposo —o
+   * sea en el telefono, donde el hover no existe—. Es `box-shadow` estatico:
+   * se pinta una vez y no le cuesta nada al scroll.
+   */
+  box-shadow:
+    0 0 0 1px var(--linea-tenue, #e4e6de),
+    var(--luz-superior, inset 0 1px 0 rgb(255 255 255 / 0.9)),
+    var(--sombra-1),
+    0 20px 44px -26px rgb(var(--luz-marca, 22 163 92) / 0.22);
+
+  transition:
+    transform var(--dur-hover, 320ms) var(--curva-viva, cubic-bezier(0.22, 1.28, 0.36, 1)),
+    box-shadow var(--dur-hover, 320ms) var(--curva);
+
+  /* Ver el numero de arriba: sobre el lavado el tenue no llega a AA. */
+  --color-neutro-tenue: var(--color-neutro-texto);
+
+  /*
+   * ⚠️ SE RESETEA EL INDICE DEL ESCALON: `--i` es el mismo nombre que usa
+   * `.escalona > *` y se HEREDA. Si la grilla viviera adentro de un bloque
+   * escalonado, la primera ficha arrancaria con el retraso de ese bloque en vez
+   * de a 0ms. Los `:nth-child(k) > .ficha` de abajo (0,1,1) le ganan a esto.
+   */
+  --i: 0;
+}
+
+/**
+ * ENTRADA AL PRIMER PINTADO, ESCALONADA POR EL ORDEN DEL `<li>`.
+ *
+ * ⚠️ LA GRILLA YA REVELA POR SCROLL (`revela-grilla-materia` en el `<ul>`), pero
+ * eso no toca lo que ya esta en pantalla al cargar: un `view()` cuyo elemento
+ * ya paso su rango arranca en el estado final. Esta entrada es para la primera
+ * fila y media —lo que se ve sin scrollear— y va en el `<a>`, no en el `<li>`,
+ * para no pelearse con el `animation` de la grilla (dos shorthands sobre el
+ * mismo elemento se pisan).
+ *
+ * ⚠️ EL ESCALON SALE DEL INDICE DEL `<li>` (`:nth-child(k) > .ficha`): no hay
+ * `style` inline ni JavaScript. Paso rapido (40ms) porque es una grilla; corta
+ * en el doce como `.escalona`, y del trece en adelante entran juntos —abajo del
+ * pliegue ya los revela el scroll—.
+ *
+ * ⚠️ `to` EXPLICITO: el valor subyacente de `translate` y `scale` es neutro, pero
+ * escribirlo saca de la ecuacion cualquier regla futura que los toque. Y con
+ * `prefers-reduced-motion` la regla global aplasta la duracion: la animacion
+ * termina en `to`, o sea VISIBLE. Nunca `opacity: 0` clavado.
+ */
+@keyframes llegaFicha {
+  from {
+    opacity: 0;
+    translate: 0 26px;
+    scale: 0.94;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ficha {
+    animation: llegaFicha var(--dur-entrada, 560ms)
+      var(--curva-viva, cubic-bezier(0.22, 1.28, 0.36, 1)) both;
+    animation-delay: calc(var(--paso-escalon-rapido, 40ms) * var(--i, 0));
+  }
+
+  :nth-child(2) > .ficha {
+    --i: 1;
+  }
+  :nth-child(3) > .ficha {
+    --i: 2;
+  }
+  :nth-child(4) > .ficha {
+    --i: 3;
+  }
+  :nth-child(5) > .ficha {
+    --i: 4;
+  }
+  :nth-child(6) > .ficha {
+    --i: 5;
+  }
+  :nth-child(7) > .ficha {
+    --i: 6;
+  }
+  :nth-child(8) > .ficha {
+    --i: 7;
+  }
+  :nth-child(9) > .ficha {
+    --i: 8;
+  }
+  :nth-child(10) > .ficha {
+    --i: 9;
+  }
+  :nth-child(11) > .ficha {
+    --i: 10;
+  }
+  :nth-child(n + 12) > .ficha {
+    --i: 11;
+  }
+}
+
+/**
+ * HOVER: SE LEVANTA 6px CON GLOW VERDE.
+ *
+ * ⚠️ `a:hover` GLOBAL LE GANA A `.ficha` (0,1,1 contra 0,1,0): sin el `color:
+ * inherit` cualquier texto que no declare color se tiñe de Tiempo Extra.
+ *
+ * ⚠️ 6px Y NO 8. Con 8 la grilla entera parece temblorosa al pasar el mouse en
+ * diagonal, porque cada ficha empuja a la siguiente fuera del puntero. La
+ * sombra sube a nivel 3 y se le suma `--glow-marca` —contorno de luz, halo
+ * corto y halo largo de 56px, todos del color de `--luz-marca` (verde luminoso
+ * sobre claro)—. ⚠️ NO `--glow-suave`: probado en el navegador, el suave se
+ * confunde con la sombra y la ficha levantada se ve gris; el de marca es el
+ * que se lee como LUZ, que es lo que pidio el dueño. Corre en una ficha a la
+ * vez, asi que el costo es el de un solo `box-shadow` en transicion. El
+ * contorno pasa a `--borde-luz`.
+ */
+.ficha:hover,
+.ficha:focus-visible {
+  color: inherit;
+  transform: translateY(-6px);
+  box-shadow:
+    0 0 0 1px var(--borde-luz, rgb(22 163 92 / 0.45)),
+    var(--luz-superior, inset 0 1px 0 rgb(255 255 255 / 0.9)),
+    var(--sombra-3),
+    var(--glow-marca);
+}
+
+/**
+ * TILT FINGIDO, SOLO CON PUNTERO FINO. Sin JavaScript no se puede seguir el
+ * cursor; lo que se puede es inclinar la ficha hacia el en perspectiva, y a 3
+ * grados el ojo lo registra como "reacciona a mi". Las fichas en posicion par
+ * se inclinan al reves para que la fila no se vea torcida toda hacia un lado.
+ *
+ * ⚠️ `perspective()` VA ADENTRO DEL `transform` porque la grilla no es de este
+ * modulo y no se le puede pedir `.tilt-escena`. Un `rotate3d` sin perspectiva
+ * se proyecta ortografico y se ve como un achique, no como una inclinacion.
+ *
+ * ⚠️ SOLO CON PUNTERO FINO: en un telefono el `:hover` queda pegado tras un
+ * toque y la ficha se quedaria torcida.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .ficha:hover,
+  .ficha:focus-visible {
+    transform: perspective(1100px) translateY(-6px) rotate3d(-0.6, 1, 0, 3deg);
+  }
+
+  :nth-child(even) > .ficha:hover,
+  :nth-child(even) > .ficha:focus-visible {
+    transform: perspective(1100px) translateY(-6px) rotate3d(-0.6, -1, 0, 3deg);
+  }
+}
+
+/**
+ * ⚠️ EL FOCO VA DESPUES DEL HOVER Y POR ESO NINGUN HOVER LO PISA: misma
+ * especificidad, declarada mas abajo, gana. El `outline` de 3px lo pone la regla
+ * global y `overflow` no lo recorta; el halo de foco (`--glow-foco`) se vuelve
+ * a poner aca porque la lista de `box-shadow` del hover lo taparia.
+ */
+.ficha:focus-visible {
+  box-shadow:
+    0 0 0 1px var(--color-foco, #0f7a45),
+    var(--luz-superior, inset 0 1px 0 rgb(255 255 255 / 0.9)),
+    var(--sombra-3),
+    var(--glow-foco);
+}
+
+/**
+ * ⚠️ AL APRETAR, LA COSA BAJA Y EL GLOW SE APAGA. Es la mitad que casi siempre
+ * falta: un objeto que se levanta con el mouse y no reacciona al clic se siente
+ * roto. Y es la unica respuesta que tiene quien usa el sitio con el dedo.
+ */
+.ficha:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow:
+    0 0 0 1px var(--borde-luz, rgb(22 163 92 / 0.45)),
+    var(--sombra-1);
+  transition-duration: var(--dur-instante, 90ms);
+}
+
+/* ------------------------------------------------------- anillo de luz */
+
+/**
+ * ANILLO DE LUZ EN EL CANTO — el borde que brilla, PUESTO EN REPOSO.
+ *
+ * Un anillo conico de 1px con dos chispas —verde y Amarillo Cambio— dibujado
+ * con mascara para que solo pinte el borde, siguiendo la esquina de 20px. En
+ * reposo va al 70%: es la unica marca permanente del canto en el telefono,
+ * donde no hay hover, y al 55% —medido en el navegador— apenas se adivinaba en
+ * las esquinas. El hover lo lleva a 1 y lo hace GIRAR: la luz da la vuelta a
+ * la ficha. Es decorativo (1px de canto), sin requisito de contraste.
+ *
+ * ⚠️ EL CONIC ES `--degradado-borde`, del bloque universal de `tokens.css`, y
+ * lee `--giro`, registrada con `@property` e `inherits: false`: el pseudo tiene
+ * la suya y la receta se resuelve con ella. Por eso `giraAnillo` anima `--giro`
+ * EN EL PSEUDO, y por eso interpola en vez de saltar.
+ *
+ * ⚠️ EL KEYFRAME SE DECLARA ACA CON NOMBRE PROPIO. En un CSS Module los nombres
+ * son LOCALES: referenciar el `girar-angulo` global desde un modulo no es
+ * confiable, y volver a declararlo con el mismo nombre es una trampa silenciosa
+ * que `scripts/chequeo-css.mjs` rechaza.
+ *
+ * ⚠️ GIRA SOLO EN HOVER Y ADENTRO DE LA MEDIA QUERY: es un bucle de pintura y en
+ * una grilla de 24 solo puede correr en la ficha apuntada. Sin movimiento el
+ * anillo queda quieto y visible.
+ */
+.ficha::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Por encima del marco y del cuerpo, que van en z-index automatico. */
+  z-index: 4;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--degradado-borde);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
+  transition: opacity var(--dur-hover, 320ms) var(--curva);
+}
+
+.ficha:hover::before,
+.ficha:focus-visible::before {
+  opacity: 1;
+}
+
+@keyframes giraAnillo {
+  from {
+    --giro: 112deg;
+  }
+  to {
+    --giro: 472deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ficha:hover::before,
+  .ficha:focus-visible::before {
+    animation: giraAnillo var(--dur-giro, 6s) linear infinite;
+  }
+}
+
+/* ------------------------------------------------------------------ marco */
+
+/**
+ * Marco de la imagen. Es un CONTENEDOR, no la imagen: sin el no hay forma de
+ * recortar un acercamiento sin recortar la ficha entera.
+ *
+ * `isolation` ordena las capas de adentro:
+ *   auto  la foto (o el patron)
+ *   2     el destello
+ *   3     la insignia y la marca de ir
+ *
+ * ⚠️ LLEVA SU PROPIO RADIO ARRIBA aunque la ficha ya recorte: una foto con
+ * `transform` adentro de un contenedor redondeado puede asomar las esquinas
+ * cuadradas durante el zoom en Safari. Con el radio propio no hay que confiar
+ * en el recorte del padre.
+ */
+.marco {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: var(--radio-ficha, 20px) var(--radio-ficha, 20px) 0 0;
+  background-color: var(--superficie-2, #f2f3ea);
+
+  /*
+   * El destello se tiñe de Amarillo Cambio, no de blanco: sobre una camiseta
+   * fotografiada contra fondo blanco —el caso mas comun del catalogo— un
+   * barrido blanco no existe. Es el mismo mecanismo de contexto que
+   * `--color-foco`.
+   */
+  --destello: var(--destello-oscuro);
+}
+
+/**
+ * DESTELLO QUE CRUZA, en el eje del sistema.
+ *
+ * ⚠️ ACA VA POR ENCIMA DE LA FOTO Y NO EN `z-index: -1`, al reves que la utilidad
+ * global `.destello`: vive dentro de `.marco`, donde no hay ni titulo ni precio,
+ * y las dos unicas cosas con texto que estan encima de la foto —la insignia y
+ * la marca de ir— viajan en `z-index: 3`, por arriba. Un destello por DEBAJO de
+ * una foto opaca no existiria.
+ *
+ * ⚠️ `pointer-events: none` NO ES OPCIONAL: la ficha entera es un <a> y un
+ * pseudo que capture el puntero la vuelve inutil sin dar ningun error.
+ */
+.marco::after {
+  content: '';
+  position: absolute;
+  inset: -45% -25%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background-image: var(--destello);
+}
+
+@keyframes cruzaDestello {
+  0% {
+    opacity: 0;
+    transform: translate3d(-160%, 0, 0) skewX(-14deg);
+  }
+  14% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(160%, 0, 0) skewX(-14deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ficha:hover .marco::after,
+  .ficha:focus-visible .marco::after {
+    animation: cruzaDestello var(--dur-destello, 900ms)
+      var(--curva-corte, cubic-bezier(0.83, 0, 0.17, 1));
+  }
+}
+
+/* ------------------------------------------------------------------- foto */
+
+.foto {
+  width: 100%;
+  height: 100%;
+  /* `cover` recorta sin deformar: las fotos vienen con proporciones distintas
+     y una grilla despareja se lee como un error. */
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transicion-lenta, 420ms)
+    var(--curva-viva, cubic-bezier(0.22, 1.28, 0.36, 1));
+}
+
+/**
+ * ⚠️ EL ACERCAMIENTO ES DE 6%, NO DE 15%. Mas que eso y en una camiseta se pierde
+ * el cuello o el escudo, que es exactamente lo que la persona esta mirando.
+ * 420ms con la curva viva: se pasa un pelo y se acomoda, que es lo que hace que
+ * se sienta materia y no un tic.
+ *
+ * ⚠️ `:focus-visible` ESTA A LA PAR: quien navega con teclado ve lo mismo que
+ * quien navega con mouse.
+ */
+.ficha:hover .foto,
+.ficha:focus-visible .foto {
+  transform: scale(1.06);
+}
+
+/** El apreton devuelve la foto a su escala: la ficha entera responde al dedo. */
+.ficha:active .foto {
+  transform: none;
+  transition-duration: var(--dur-instante, 90ms);
+}
+
+/**
+ * Sin foto: el rombo de la bandera en su escala de TEXTURA FINA (identidad §05).
+ *
+ * ⚠️ EL COLOR DEL PATRON TIENE QUE SER OPACO. `--patron-rombos` son CUATRO
+ * `linear-gradient` apilados que se SOLAPAN: con un color translucido el damero
+ * se parte en tres tonos con bandas diagonales. Por eso se mezcla contra el
+ * FONDO y nunca contra `transparent`.
+ *
+ * ⚠️ NO DERIVA. Esto es un marcador de AUSENCIA: una animacion perpetua por cada
+ * publicacion sin foto es gastar compositor en subrayar lo que falta.
+ */
+.patron {
+  width: 100%;
+  height: 100%;
+  background-color: var(--superficie-2, #f2f3ea);
+  /* El rombo es FORMA: no lleva texto encima y no tiene minimo de contraste. */
+  --patron-color: color-mix(
+    in oklab,
+    var(--color-neutro-apagado) 40%,
+    var(--superficie-2, #f2f3ea)
+  );
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-fino, 12px 12px);
+  background-position: var(--patron-posicion-fino, 0 0, 0 6px, 6px -6px, -6px 0);
+}
+
+/* -------------------------------------------------- capas sobre la foto */
+
+/**
+ * INSIGNIA — "Última unidad", sobre la foto, CON CHISPA AMARILLA.
+ *
+ * ⚠️ EL SELECTOR ES `.marco > .insignia` Y NO `.insignia`: la utilidad global
+ * `.pulso-atencion` declara `position: relative` con especificidad (0,1,0). Si
+ * el orden de inyeccion pusiera el CSS global despues del chunk del modulo, la
+ * insignia caeria al FLUJO dentro de `.marco` —que tiene un <img> de `height:
+ * 100%` y `overflow: hidden`— y desapareceria sin error. Con (0,2,0) gana
+ * siempre.
+ *
+ * ⚠️ ADENTRO VA EL COMPONENTE `Etiqueta`, NO UNA COPIA: dos definiciones del
+ * mismo objeto significan que arreglar el contraste en una deja rota la otra.
+ * Este contenedor POSICIONA y le pone la luz alrededor.
+ *
+ * ⚠️ LA CHISPA ES GLOW FUERA DEL TEXTO: `--glow-cambio` es `box-shadow` alrededor
+ * de la etiqueta, que conserva su fondo blanco solido. Naranja de alerta sobre
+ * blanco sigue en **4.88:1** en cualquier foto. Un chip translucido sobre una
+ * camiseta blanca no se leeria.
+ *
+ * ⚠️ EL RADIO COINCIDE CON EL DE LA ETIQUETA (`--radio-chico`): el anillo de
+ * `.pulso-atencion::after` usa `border-radius: inherit` y el glow toma la forma
+ * de la caja. Con radios distintos el halo se ve corrido del chip.
+ */
+.marco > .insignia {
+  position: absolute;
+  top: var(--espacio-3);
+  left: var(--espacio-3);
+  z-index: 3;
+  display: inline-flex;
+  /* A 320px la columna es angosta: la etiqueta no puede empujar el marco. */
+  max-width: calc(100% - var(--espacio-3) * 2);
+  border-radius: var(--radio-chico, 8px);
+  box-shadow: var(--sombra-1), var(--glow-cambio);
+}
+
+/**
+ * LA CHISPA: una estrella de cuatro puntas en la esquina de la etiqueta, que
+ * titila TRES VECES y para. Es un `::before` porque el `::after` lo ocupa el
+ * anillo de `.pulso-atencion`.
+ *
+ * ⚠️ LA ESTRELLA ES NARANJA Y EL HALO ES AMARILLO CAMBIO, y no al reves: la
+ * primera version la pintaba entera de Cambio y en el navegador NO SE VEIA —una
+ * camiseta fotografiada contra blanco es el caso mas comun del catalogo, y
+ * Cambio sobre blanco es 1.1:1—. El naranja es el color que la etiqueta de
+ * alerta ya usa para su rombo y su borde, asi que la chispa es del mismo objeto;
+ * el `drop-shadow` amarillo alrededor es el glow, fuera de la forma.
+ *
+ * ⚠️ TRES VUELTAS Y PARA, como el anillo: no es `infinite` y no puede serlo. Un
+ * elemento que titila para siempre al lado de un precio es una alarma, y WCAG
+ * 2.2.2 exige poder detener cualquier movimiento de mas de cinco segundos. Con
+ * tres iteraciones de 1.6s termina sola en 4.8s.
+ *
+ * ⚠️ EL ESTADO DE REPOSO ES VISIBLE (opacity 0.9): quien no ve la animacion ve
+ * la chispa quieta. Y el 0% y el 100% son el reposo, asi que con
+ * `prefers-reduced-motion` —duracion aplastada, una sola vuelta— termina donde
+ * empezo.
+ *
+ * ⚠️ `drop-shadow` ESTATICO sobre 12px: cuesta nada y sigue la silueta de la
+ * estrella, que un `box-shadow` no sabe hacer.
+ */
+.marco > .insignia::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  z-index: 1;
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+  background: var(--color-naranja, #ff902d);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  filter: drop-shadow(0 0 3px rgb(var(--luz-cambio, 245 239 174) / 1))
+    drop-shadow(0 0 7px rgb(var(--luz-cambio, 245 239 174) / 0.8));
+  opacity: 0.9;
+}
+
+@keyframes chispea {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35) rotate(90deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .marco > .insignia::before {
+    animation: chispea 1.6s var(--curva-flotar, ease-in-out) 3;
+    animation-delay: 600ms;
+  }
+}
+
+/**
+ * ⚠️ A 360px "ÚLTIMA UNIDAD" SE CORTABA. Medido: la etiqueta compone ~142px, y a
+ * 360px de viewport la grilla entra en DOS columnas de 156px, asi que con 12px
+ * de inset a cada lado el ancho util era de 132. Se le devuelven 12px.
+ */
+@media (max-width: 600px) {
+  .marco > .insignia {
+    top: var(--espacio-2);
+    left: var(--espacio-2);
+    max-width: calc(100% - var(--espacio-2) * 2);
+  }
+}
+
+/**
+ * ⚠️ PISO DURO CONTRA EL RECORTE. `Etiqueta` trae `white-space: nowrap`, y en un
+ * ancho que no alcanza eso es una palabra cortada al medio. Partida en dos
+ * lineas se sigue leyendo entera. Solo POSICIONA: color, fondo y tipografia
+ * siguen siendo de `ui.module.css`.
+ */
+.marco > .insignia > * {
+  white-space: normal;
+}
+
+/**
+ * MARCA DE IR — la flecha, en una pastilla sobre la esquina de la foto.
+ *
+ * ⚠️ ESTA PUESTA SIEMPRE, NO EN HOVER: en un telefono no existe el hover, asi
+ * que una llamada a la accion que aparece con el mouse es una llamada que la
+ * mayoria del trafico no ve nunca.
+ *
+ * ⚠️ TRAE SU PROPIO FONDO SOLIDO Y NO DEPENDE DE UN VELO SOBRE LA FOTO ni de
+ * vidrio: un `backdrop-filter` por ficha son 24 recomposiciones por cuadro de
+ * scroll. Un chip opaco resuelve el contraste sobre CUALQUIER foto —Verde
+ * Tiempo Extra sobre blanco, **8.31:1**— sin tocar el producto.
+ *
+ * ⚠️ `pointer-events: none`: la ficha entera es un <a> y esto es decorado.
+ */
+.marcaIr {
+  position: absolute;
+  right: var(--espacio-3);
+  bottom: var(--espacio-3);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radio-pastilla, 999px);
+  background-color: var(--superficie-1, #ffffff);
+  color: var(--color-tiempo-extra);
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px var(--linea-tenue, #e4e6de),
+    var(--luz-superior, inset 0 1px 0 rgb(255 255 255 / 0.9)),
+    var(--sombra-1);
+  transition:
+    transform var(--dur-hover, 320ms) var(--curva-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+    background-color var(--dur-hover, 320ms) var(--curva),
+    box-shadow var(--dur-hover, 320ms) var(--curva),
+    color var(--dur-hover, 320ms) var(--curva);
+}
+
+/** El trazo del icono es el del sistema (1.5px), como la linea del logo. */
+.marcaIr svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--trazo-icono, 1.5px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--dur-hover, 320ms) var(--curva-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+/**
+ * ⚠️ EL RELLENO DE HOVER ES `--degradado-boton`, LA UNICA MALLA DE MARCA QUE
+ * ACLARA, y se puede porque encima va SOLO papel: su peor parada es verde-600,
+ * papel encima **4.66:1**, muy por encima del 3:1 que WCAG 1.4.11 pide para una
+ * forma. La pastilla se enciende con `--glow-marca` y la flecha avanza con un
+ * pelo de giro, como pide `.icono-vivo`.
+ */
+.ficha:hover .marcaIr,
+.ficha:focus-visible .marcaIr {
+  transform: translate(2px, -2px) scale(1.08);
+  background-color: var(--color-cancha);
+  background-image: var(--degradado-boton, var(--degradado-cancha));
+  color: var(--color-papel);
+  box-shadow:
+    var(--luz-superior-oscura, inset 0 1px 0 rgb(250 250 247 / 0.12)), var(--sombra-2),
+    var(--glow-marca);
+}
+
+.ficha:hover .marcaIr svg,
+.ficha:focus-visible .marcaIr svg {
+  transform: translateX(2px) rotate(-8deg);
+}
+
+/* ----------------------------------------------------------------- cuerpo */
+
+.cuerpo {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: var(--espacio-4) var(--espacio-4) var(--espacio-5);
+  /* Empuja el nombre del vendedor al pie aunque el titulo ocupe una sola linea. */
+  flex: 1;
+}
+
+@media (min-width: 601px) {
+  .cuerpo {
+    padding: var(--espacio-5) var(--espacio-5) var(--espacio-6);
+  }
+}
+
+/**
+ * EL ROMBO DE LA BANDERA, EN LA FICHA QUE **SI** TIENE FOTO.
+ *
+ * Es donde el motivo grafico central de la marca se ve siempre: la esquina
+ * inferior derecha del cuerpo, la unica zona de la ficha sin texto. Ahora ademas
+ * DERIVA hacia arriba y a la izquierda al pasar el mouse —una transicion de
+ * `translate`, compositor puro—: el patron flota, como pide la direccion, sin
+ * un bucle por cada ficha de la grilla.
+ *
+ * ⚠️ COLOR OPACO POR LA MISMA RAZON QUE `.patron`: cuatro gradientes que se
+ * solapan. El desvanecido lo hace la MASCARA, no el alfa del color.
+ *
+ * ⚠️ CONTRASTE VERIFICADO EN EL PEOR CASO: si el mosaico llegara hasta debajo del
+ * nombre del vendedor, el compuesto seria `#cfe5da` y `--color-neutro-texto` da
+ * **4.65:1** — AA igual. La mascara lo apaga mucho antes; el numero esta para
+ * que nadie tenga que confiar en la mascara.
+ *
+ * ⚠️ EL PSEUDO ES MAS GRANDE QUE EL CUERPO (inset negativo) para que la deriva
+ * no deje un hueco en el borde.
+ */
+.cuerpo::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  z-index: var(--z-fondo, -1);
+  pointer-events: none;
+  --patron-color: color-mix(in oklab, var(--color-cancha) 14%, var(--superficie-1, #ffffff));
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-fino, 12px 12px);
+  background-position: var(--patron-posicion-fino, 0 0, 0 6px, 6px -6px, -6px 0);
+  -webkit-mask-image: radial-gradient(78% 118% at 118% 128%, #000 0%, transparent 62%);
+  mask-image: radial-gradient(78% 118% at 118% 128%, #000 0%, transparent 62%);
+  transition: translate var(--transicion-lenta, 420ms) var(--curva-seca);
+}
+
+.ficha:hover .cuerpo::after,
+.ficha:focus-visible .cuerpo::after {
+  translate: -6px -6px;
+}
+
+/**
+ * PRECIO — primero, grande y con luz.
+ *
+ * ⚠️ VA ANTES DEL TITULO: en una grilla de marketplace el barrido es foto →
+ * precio → titulo. El precio es el segundo dato de la decision.
+ *
+ * ⚠️ EL GLOW ES `text-shadow` DIFUSO Y ESTATICO (`--glow-texto`): a 16px de
+ * desenfoque y alfa 0.3 lo que se compone junto al glifo no mueve el contraste
+ * medido, y NUNCA se anima. Un importe puede entrar con su ficha; despues no
+ * late, no cuenta, no respira.
+ *
+ * ⚠️ 28px EN TELEFONO Y 36px DESDE 601px, Y EL CORTE NO ES DECORATIVO: a 600px o
+ * menos la grilla baja el `minmax` a 150px, o sea ~118px utiles. Big Noodle
+ * avanza ~0.42em por caracter: "$145.000" a 36px son ~121px y DESBORDA; a 28px
+ * son ~94px y entra.
+ */
+.precio {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 0.95;
+  color: var(--color-tinta);
+  text-shadow: var(--glow-texto);
+  /* Los precios de la grilla se leen en columna: tienen que alinear. */
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 601px) {
+  .precio {
+    font-size: var(--texto-3xl);
+  }
+}
+
+/**
+ * MARCADOR DE AMARILLO CAMBIO SOBRE EL PRECIO — PUESTO EN REPOSO.
+ *
+ * ⚠️ EL NUMERO NO SE MUEVE Y NO CUENTA: esta escrito y quieto desde el primer
+ * cuadro. Lo que cambia es la ALTURA de una marca de resaltador detras del texto,
+ * que es el rol que la identidad le da al Amarillo Cambio. Tinta sobre Amarillo
+ * Cambio da **13.97:1**, asi que el resaltado no puede empeorar la lectura en
+ * ningun punto del recorrido.
+ *
+ * ⚠️ EN REPOSO 36% Y NO 0%: con 0% el color de marca del precio viviria
+ * exclusivamente en el hover, o sea que en un telefono no existiria.
+ *
+ * ⚠️ SE HACE CON `background-size` Y NO CON UN `::after`: un pseudo subraya el
+ * RECTANGULO del elemento; un gradiente de fondo sigue al texto linea por linea.
+ * Lleva las puntas redondeadas via `border-radius`, que recorta el fondo del
+ * span sin tocar el texto.
+ */
+.cifra {
+  padding: 0 3px;
+  margin: 0 -3px;
+  border-radius: 4px;
+  background-image: linear-gradient(var(--color-cambio) 0 100%);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 36%;
+  transition: background-size var(--dur-hover, 320ms)
+    var(--curva-corte, cubic-bezier(0.83, 0, 0.17, 1));
+}
+
+.ficha:hover .cifra,
+.ficha:focus-visible .cifra {
+  background-size: 100% 64%;
+}
+
+/**
+ * TITULO.
+ *
+ * ⚠️ SIGUE EN TINTA Y EN PESO SEMI, aunque el precio lo preceda: en esta ficha el
+ * titulo es lo UNICO que dice que camiseta es. La jerarquia la da el tamaño del
+ * precio, no el apagado del titulo. Sube a 16px: tipografia grande, aire.
+ */
+.titulo {
+  margin: 0;
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semi);
+  line-height: 1.35;
+  letter-spacing: normal;
+  color: var(--color-tinta);
+  /* Dos lineas como maximo: la grilla se desalinea si un titulo se dispara. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* `balance` es para titulares cortos; en dos lineas recortadas estorba. */
+  text-wrap: initial;
+  /* Un nombre de club larguisimo no puede empujar la ficha a 320px. */
+  overflow-wrap: anywhere;
+}
+
+/**
+ * METADATOS — talle y condicion, SIN CAJA.
+ *
+ * Son FILTROS, no señales: se pueden leer, no hay que encontrarlos. La unica
+ * etiqueta con caja que queda en la ficha es la insignia sobre la foto.
+ *
+ * ⚠️ EL SEPARADOR ES CSS, NO UN CARACTER EN EL MARCADO: un "·" en el HTML lo lee
+ * el lector de pantalla. Es un rombo chiquito, el motivo de la bandera.
+ */
+.metadatos {
+  margin: var(--espacio-1) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  line-height: 1.4;
+  /* Remapeado en `.ficha` a `--color-neutro-texto`: 5.37:1 en el peor punto del lavado. */
+  color: var(--color-neutro-tenue);
+  overflow-wrap: anywhere;
+}
+
+.metadatos > span + span::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 0.6em;
+  vertical-align: middle;
+  transform: rotate(45deg);
+  background-color: var(--verde-500, #16a35c);
+  border-radius: 1px;
+}
+
+/**
+ * VENDEDOR.
+ *
+ * Separado por un TICK DE LUZ de 28px en el degradado de acento, redondeado y
+ * con halo: dice de quien es el sitio sin dibujar una linea gris de lado a lado.
+ * En hover se estira con `scaleX` —nunca `width`, que rehace layout—.
+ */
+.vendedor {
+  position: relative;
+  margin: 0;
+  /* Al fondo de la ficha, alineado con el de las fichas vecinas. */
+  margin-top: auto;
+  padding-top: var(--espacio-3);
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+  /* Un nombre largo no empuja el ancho de la ficha. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendedor::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 28px;
+  height: 3px;
+  border-radius: var(--radio-pastilla, 999px);
+  transform-origin: 0 50%;
+  background-image: var(
+    --degradado-acento,
+    linear-gradient(96deg, #0f7a45 0%, #16a35c 55%, #f5efae 100%)
+  );
+  box-shadow: 0 0 10px -2px rgb(var(--luz-marca, 22 163 92) / 0.55);
+  transition: transform var(--dur-hover, 320ms) var(--curva-viva, cubic-bezier(0.22, 1.28, 0.36, 1));
+}
+
+.ficha:hover .vendedor::before,
+.ficha:focus-visible .vendedor::before {
+  transform: scaleX(1.6);
+}
+
+/* ------------------------------------------------------- alto contraste */
+
+/**
+ * ⚠️ EN MODO DE ALTO CONTRASTE DE WINDOWS SE DESCARTAN LOS FONDOS, INCLUIDAS LAS
+ * SOMBRAS. Sin esto la ficha se queda literalmente sin contorno —porque su
+ * contorno ES una sombra— y las fichas de la grilla se funden en una sola
+ * mancha. Se le devuelve un borde de sistema y se apagan los decorados que ahi
+ * no significan nada.
+ *
+ * ⚠️ LA MARCA DE IR TAMBIEN PIERDE SU FONDO, asi que se le dan colores de
+ * sistema: `Canvas` y `CanvasText` sobreviven al modo forzado.
+ */
+@media (forced-colors: active) {
+  .ficha {
+    border: 1px solid CanvasText;
+  }
+
+  .ficha::before,
+  .cuerpo::after,
+  .marco::after,
+  .marco > .insignia::before {
+    display: none;
+  }
+
+  .marcaIr {
+    border: 1px solid CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+}

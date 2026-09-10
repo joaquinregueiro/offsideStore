@@ -1,0 +1,1202 @@
+/**
+ * FICHA DE PRODUCTO — la pantalla donde se decide una compra.
+ *
+ * ⚠️ EL ORDEN VISUAL LO DECIDE EL CSS Y CAMBIA SEGUN LA PANTALLA. Se conserva
+ * la decision que ya estaba tomada en el archivo anterior, porque era correcta:
+ *
+ *   escritorio   fotos | encabezado      la imagen manda en el ancho y los
+ *                fotos | detalle          datos acompanan a la derecha
+ *
+ *   telefono     encabezado              se ve QUE es y CUANTO sale antes de
+ *                fotos                    empezar a mirar fotos
+ *                detalle
+ *
+ * ⚠️ CINCO PLANOS, NO UNO. El archivo anterior tenia una sola superficie
+ * —blanco o gris con borde de 1px— repetida en sus tres objetos, asi que nada
+ * estaba delante ni detras de nada. Ahora hay papel (la pagina), escenario de
+ * fosa (la portada), ficha levantada (el panel de confianza), plancha de noche
+ * a sangre (la ficha tecnica) y tarjeta flotante (la compra).
+ *
+ * ⚠️ LA FICHA TECNICA SALIO DE LA COLUMNA Y ES UNA BANDA A SANGRE. Es lo que
+ * hace posible el resto: con la tecnica adentro, la columna de datos medía
+ * ~900px y no podia pegarse; sacandola entra en pantalla. Y de paso la pagina
+ * deja de ser una caja de 1200px con cajas adentro.
+ *
+ * ⚠️ LA BANDA VA A SANGRE POR ESTRUCTURA, NO CON `calc(50% - 50vw)`. `.pagina`
+ * no lleva `max-width`: el ancho lo pone `.contenedor` para lo que va en caja.
+ * Un margen negativo en `vw` cuenta la barra de scroll —y `html` lleva
+ * `scrollbar-gutter: stable`—, asi que desplaza el bloque medio scrollbar.
+ *
+ * ⚠️ HAY UN SOLO ENLACE DE COMPRA EN TODA LA PANTALLA, y es un solo nodo del
+ * DOM en todos los anchos: la tarjeta pegada abajo. Repetirlo en el panel de
+ * confianza dejaria dos enlaces al mismo destino, con el mismo texto, uno al
+ * lado del otro al llegar al final.
+ */
+
+/* ------------------------------------------------------------- estructura */
+
+/**
+ * ⚠️ `.pagina` NO LLEVA `max-width` Y ESO ES DELIBERADO: es el `<main>`, y la
+ * banda tecnica tiene que poder llegar a los dos bordes de la pantalla.
+ *
+ * ⚠️ TAMBIEN ES EL BLOQUE CONTENEDOR DE LA TARJETA DE COMPRA, y de ahi sale que
+ * la tarjeta quede clavada al fondo del viewport durante TODA la pagina: un
+ * `sticky bottom` se corre hacia ARRIBA hasta donde llegue su contenedor, no
+ * solo hasta donde llegue su hermano.
+ */
+.pagina {
+  display: flow-root;
+}
+
+.contenedor {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-6) var(--canal) var(--espacio-bloque);
+}
+
+/* ---------------------------------------------------------------- grilla */
+
+.grilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-areas:
+    'fotos encabezado'
+    'fotos detalle';
+  /* La fila del encabezado mide lo que necesita; el detalle se lleva el resto. */
+  grid-template-rows: auto 1fr;
+  column-gap: var(--espacio-8);
+  row-gap: var(--espacio-6);
+  /* Sin esto los items se estiran y no hay contra que pegarse. */
+  align-items: start;
+}
+
+.columnaFotos {
+  grid-area: fotos;
+  min-width: 0;
+}
+
+.encabezado {
+  grid-area: encabezado;
+  min-width: 0;
+}
+
+.detalle {
+  grid-area: detalle;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-6);
+}
+
+/**
+ * ⚠️ LA COLUMNA DE DATOS ACOMPANA EL SCROLL EN ESCRITORIO. Es la regla que el
+ * archivo anterior YA TENIA y que hay que conservar: la columna de fotos mide
+ * ~1950px con ocho fotos y la de datos ~520px, asi que sin esto quedan ~1400px
+ * de columna derecha vacia mientras se recorren las fotos.
+ *
+ * ⚠️ `top` SALE DE `--alto-barra`, NO DE UNA SUMA DE ESPACIOS. La barra
+ * superior es `sticky`: un `top` mas chico mete el panel debajo de ella.
+ *
+ * ⚠️ LA GUARDA DE ALTURA NO ES OPCIONAL. La columna mide ~520px y la tarjeta de
+ * compra flotante se come otros ~92px del fondo: en un viewport de 640px de
+ * alto se pisarian. Debajo de 720px el panel scrollea normal.
+ */
+@media (min-width: 901px) and (min-height: 720px) {
+  .detalle {
+    position: sticky;
+    top: calc(var(--alto-barra) + var(--espacio-4));
+  }
+}
+
+@media (max-width: 900px) {
+  .grilla {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'encabezado'
+      'fotos'
+      'detalle';
+    grid-template-rows: auto;
+    gap: var(--espacio-6);
+  }
+}
+
+/* ------------------------------------------------------------- encabezado */
+
+/**
+ * ⚠️ EL TAMANIO SALE DE LA ESCALA DE DISPLAY, NO DE UN `clamp()` A MANO. Antes
+ * eran dos clamps sueltos —`5vw` para el titulo y `6vw` para el precio— que no
+ * se correspondian con ningun otro tamanio del sitio.
+ *
+ * El titulo lleva ademas las clases globales `display display-3`, que traen
+ * `overflow-wrap: anywhere`: a 320px una sola palabra larga —el nombre de un
+ * club— empujaba la pagina entera.
+ */
+.titulo {
+  margin: 0;
+}
+
+/**
+ * FILETE BAJO EL TITULO, EN EL EJE DEL SISTEMA.
+ *
+ * ⚠️ EL KEYFRAME SE DECLARA EN ESTE ARCHIVO Y SU NOMBRE NO EXISTE EN NINGUN
+ * OTRO. En un CSS Module los nombres de `@keyframes` son LOCALES: referenciar
+ * desde aca uno declarado en `movimiento.css` es una trampa silenciosa —el
+ * bundler hashea el nombre, no encuentra nada y el elemento se queda en su
+ * estado inicial—. Todo lo que anima este modulo usa keyframes propios; todo lo
+ * que viene de la capa global se aplica como CLASE desde el `.tsx`.
+ */
+.filete {
+  height: 6px;
+  margin: var(--espacio-4) 0 0;
+  border: 0;
+  background-image: var(--degradado-acento);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filete {
+    animation: fichaFilete var(--dur-escena) var(--curva-corte) both;
+    animation-delay: 60ms;
+  }
+}
+
+@keyframes fichaFilete {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/**
+ * ⚠️ EL PRECIO ES MAS GRANDE QUE EL TITULO Y ES A PROPOSITO: en una ficha de
+ * producto el titular es el importe. Big Noodle es muy condensada, asi que
+ * '$1.250.000' a 84px mide ~350px y entra en una columna de ~520px.
+ *
+ * ⚠️ EL SELECTOR ES (0,2,0) Y NO ES CAPRICHO. La primitiva `Precio` ya declara
+ * `.precioDisplay { font-size: clamp(38px … 56px) }` con (0,1,0) desde
+ * `ui.module.css`: con la misma especificidad ganaria el que el bundler ponga
+ * ultimo, que no es algo que se pueda predecir desde aca. Lo demas —familia,
+ * `tabular-nums`, `overflow-wrap` y la entrada de `.cifra-entra`— lo pone la
+ * primitiva y NO se reescribe.
+ */
+.encabezado .precio {
+  margin: var(--espacio-4) 0;
+  font-size: var(--display-2);
+}
+
+.atributos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+/**
+ * ⚠️ ESTA LINEA SUBE AL ENCABEZADO POR UNA RAZON DE PRODUCTO, NO DE DISENIO.
+ * Con la compra pegada al fondo del viewport se puede apretar "Comprar" desde
+ * la primera pantalla sin haber pasado nunca por el panel de confianza, que es
+ * donde vive la advertencia de autenticidad. En el archivo anterior el boton
+ * estaba al final de todo y esa advertencia era inevitable; aca viaja al unico
+ * bloque que se ve siempre antes que el boton.
+ *
+ * #5b6459 sobre papel #fafaf7 = 5.89:1.
+ */
+.aclaracion {
+  margin: var(--espacio-4) 0 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-texto);
+  color: var(--color-neutro-texto);
+  max-width: 46ch;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-4);
+  margin-top: var(--espacio-2);
+}
+
+/**
+ * ⚠️ 44px DE ALTO. Es un enlace de bloque, no uno embebido en una oracion, asi
+ * que no le aplica la excepcion de WCAG 2.5.8.
+ * #0f7a45 sobre papel #fafaf7 = 5.16:1 (lo pinta la regla global de `a`).
+ */
+.enlaceSecundario {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-control);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+/* ---------------------------------------------------------------- fotos */
+
+/**
+ * PISTA: el envoltorio que scrollea en telefono.
+ *
+ * ⚠️ EL `overflow` VIVE ACA Y NO EN EL `<ul>`, Y ESO ARREGLA UN FALLO DE WCAG
+ * 2.1.1. Una region con scroll tiene que poder recorrerse con teclado; Chrome
+ * 127+ enfoca los scrollers solo, pero Safari y Firefox NO, y adentro de la
+ * pista no hay ningun elemento enfocable al que tabular. El envoltorio lleva
+ * `tabIndex={0}` y `role="region"` desde el `.tsx`, y con eso las flechas
+ * recorren la pista de forma nativa, sin una linea de JavaScript.
+ *
+ * ⚠️ ES TAMBIEN DONDE TIENE QUE VIVIR EL `scroll-timeline` del riel.
+ */
+.pista {
+  min-width: 0;
+}
+
+/**
+ * ⚠️ UN `overflow` RECORTA A LOS DESCENDIENTES, NO A SI MISMO: el anillo de
+ * foco de la pista se ve entero aunque la pista sea un contenedor de scroll.
+ */
+.pista:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 3px;
+}
+
+/**
+ * MOSAICO EDITORIAL EN ESCRITORIO: la portada a ancho completo y el resto de a
+ * dos.
+ *
+ * ⚠️ NO ES UN CARRUSEL Y SIGUE SIN SERLO. La decision documentada era mostrar
+ * TODAS las fotos, porque quien compra una camiseta usada vino a mirar la
+ * etiqueta, el dorso y los defectos, y sin lightbox el tamanio del mosaico ES
+ * el unico tamanio disponible. Lo que cambia es la altura: ocho fotos apiladas
+ * a ancho de columna eran ~3000px de scroll; en mosaico son ~1950px.
+ */
+.galeria {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 901px) {
+  .galeria {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /** La portada manda: ancho completo de la columna. */
+  .galeria > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  /**
+   * ⚠️ SIN ESTO EL MOSAICO QUEDA RENGO CON UN NUMERO PAR DE FOTOS. Las
+   * secundarias son `n - 1`: cuando `n` es par quedan impares y la ultima se
+   * queda sola en la fila con un hueco al lado. Puesta a ancho completo cierra
+   * el mosaico como una plancha final.
+   */
+  .galeria > :last-child:nth-child(even) {
+    grid-column: 1 / -1;
+  }
+}
+
+/**
+ * ESCENARIO DE LA PORTADA — el unico plano oscuro de la columna izquierda.
+ *
+ * ⚠️ CON `object-fit: contain` SIEMPRE SOBRA SUPERFICIE A LOS COSTADOS, y hasta
+ * hoy esa superficie era gris liso: se leia como espacio desperdiciado. Sobre
+ * fosa deja de ser un hueco y pasa a ser el fondo de una vitrina. Es tambien lo
+ * unico que le da ritmo al 60% izquierdo de la pantalla, que antes era blanco
+ * sobre papel de punta a punta.
+ *
+ * ⚠️ NO ESCRIBE COLORES A MANO: la clase global `.sup-fosa` (aplicada desde el
+ * `.tsx`) trae el filo de luz, el remapeo de neutros, el color de foco y
+ * `--destello: var(--destello-oscuro)`. Papel sobre `--sup-fosa` #071a12 =
+ * 17.23:1.
+ *
+ * ⚠️ SUS DOS PSEUDOS ESTAN OCUPADOS: `::before` es el filo de luz de
+ * `.sup-fosa` y `::after` es el destello de `.destello`. POR ESO EL PATRON DE
+ * ROMBOS ES UN ELEMENTO REAL y no la clase `.patron-vivo` aplicada acá: esa
+ * clase tambien usa `::before`, y en el mismo nodo una pisa a la otra sin que
+ * nada avise. Es la misma correccion que ya lleva `<Pliego>` en `ui.tsx`.
+ */
+.escenario {
+  /*
+   * ⚠️ LOS TRES PRIMEROS LOS DECLARA TAMBIEN `.destello`, Y SE REPITEN A
+   * PROPOSITO: de ellos dependen el galon absoluto y la capa de rombos, y no
+   * puede quedar colgando de que una clase global este presente y llegue en el
+   * orden correcto. Son valores identicos, asi que no hay pelea posible.
+   */
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-2);
+}
+
+/**
+ * CAPA DE ROMBOS. Vacia, hermana de la foto, nunca envolviendola.
+ *
+ * ⚠️ ES UNA COPIA DELIBERADA DE `.pliegoPatron`: `.patron-vivo` necesita su
+ * propio `overflow: hidden` —esconde el mosaico de mas que hace que la deriva
+ * no salte— y un `overflow` sobre el envoltorio del contenido tijeretea el
+ * anillo de foco, mata cualquier `sticky` de adentro y deja sin correr toda
+ * animacion con `animation-timeline: view()` de sus hijos.
+ *
+ * El color del rombo es papel al 8% sobre el fondo oscuro: es forma, no lleva
+ * texto encima.
+ */
+.escenario .capaRombos {
+  /*
+   * ⚠️ SELECTOR (0,2,0) A PROPOSITO. `.patron-vivo` declara `position:
+   * relative` con (0,1,0); con la misma especificidad ganaria el archivo que el
+   * bundler emita ultimo, y una capa de fondo que se vuelve `relative` deja de
+   * cubrir nada y encima empuja el layout.
+   */
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  --patron-color: rgb(250 250 247 / 0.08);
+}
+
+/**
+ * ⚠️ CADA FOTO SECUNDARIA SE APOYA SOBRE UN PASSEPARTOUT DE ROMBOS, NO SOBRE
+ * GRIS PLANO. Mismo motivo que el escenario, en la escala fina.
+ *
+ * ⚠️ EL PATRON DE LAS SECUNDARIAS ES ESTATICO Y SOLO DERIVA EL DE LA PORTADA.
+ * `.patron-vivo` es una animacion infinita con `will-change: transform`: ocho
+ * de ellas son ocho capas de compositor promovidas para siempre en la pantalla
+ * mas pesada del sitio. Una superficie en deriva se lee como ambiente; ocho,
+ * como ruido.
+ */
+.diapositiva {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radio);
+  background-color: var(--superficie-2);
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+  box-shadow: var(--sombra-0), var(--sombra-1);
+  --patron-color: color-mix(in oklab, var(--color-cancha) 8%, transparent);
+}
+
+/**
+ * ⚠️ LA PROPORCION SE RESERVA ANTES DE QUE LLEGUE LA FOTO. El `<img>` no lleva
+ * `width`/`height` —`listing_images` no guarda las dimensiones—, asi que sin
+ * esto la pagina daba un salto por cada foto y el boton de comprar se movia
+ * bajo el dedo.
+ *
+ * ⚠️ `contain` Y NO `cover`. En el catalogo se recorta para que la grilla quede
+ * pareja; aca no: el comprador vino a mirar la etiqueta, el dorso y los
+ * defectos, y recortarlos seria esconder justo lo que decide la compra.
+ */
+.foto {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  /* El fondo lo pone el paspartu de la diapositiva o el escenario. */
+  background: transparent;
+}
+
+.galeria > :first-child .foto,
+.galeria > :last-child:nth-child(even) .foto {
+  aspect-ratio: 4 / 5;
+}
+
+/**
+ * ACERCAMIENTO DE FOTO.
+ *
+ * ⚠️ SE ESCRIBE EN EL MODULO EN VEZ DE USAR `.zoom-marco`/`.zoom-foto`
+ * GLOBALES, Y NO ES DUPLICACION GRATUITA: la clase global crece un 6% sobre una
+ * foto con `object-fit: cover`, donde el crecimiento RECORTA. Aca es `contain`,
+ * asi que la foto crece AVANZANDO SOBRE EL PASPARTU y no se pierde ni el cuello
+ * ni el escudo. Es la unica geometria asi del sitio.
+ *
+ * ⚠️ SOLO CON PUNTERO FINO: en un telefono el `:hover` queda pegado despues de
+ * un toque y ademas la pista ya tiene su propia interaccion.
+ *
+ * ⚠️⚠️ EL SELECTOR ES `.galeria .foto` (0,2,0) Y ESO ES UN ARREGLO, NO UN
+ * ADORNO. `movimiento.css` declara `.enfoca-hermanos img { transition: filter … }`
+ * con (0,1,1) DENTRO DE ESTA MISMA MEDIA QUERY, y `<ul>` lleva la clase
+ * `enfoca-hermanos`: con `.foto` pelado (0,1,0) la regla global GANABA, y como
+ * `transition` es una sola propiedad —no se suman entre reglas—, el
+ * acercamiento quedaba SIN transicion y saltaba de golpe. Por eso hay que
+ * ganarle en especificidad y, al ganarle, volver a declarar el `filter` que la
+ * global aportaba: si no, la desaturacion de las hermanas es la que salta.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .galeria .foto {
+    transition:
+      transform var(--dur-media) var(--curva-seca),
+      filter var(--dur-media) var(--curva);
+  }
+
+  .escenario:hover .foto,
+  .escenario:focus-within .foto,
+  .diapositiva:hover .foto,
+  .diapositiva:focus-within .foto {
+    transform: scale(1.06);
+  }
+}
+
+/**
+ * ⚠️ EL NUMERO DE LAMINA ES `aria-hidden`. Es orientacion visual: el lector de
+ * pantalla ya anuncia "lista de 8 elementos" y despues el `alt` de cada foto,
+ * que dice lo mismo mejor.
+ */
+.numero {
+  position: absolute;
+  right: var(--espacio-3);
+  bottom: var(--espacio-3);
+  z-index: var(--z-contenido);
+  padding: 2px var(--espacio-2);
+  border-radius: var(--radio-chico);
+  background: var(--sup-noche);
+  /* Papel #fafaf7 sobre tinta #10231a = 15.72:1. */
+  color: var(--color-papel);
+  font-size: var(--texto-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-etiqueta);
+  line-height: 1.4;
+}
+
+/** Sobre el escenario, el mismo galon con el contraste del fondo: 17.23:1. */
+.escenario .numero {
+  background: rgb(7 26 18 / 0.82);
+}
+
+/**
+ * Sin fotos: el rombo en escala de bloque, hundido.
+ *
+ * ⚠️ ES CASI CODIGO MUERTO Y SE CONSERVA IGUAL. Desde PS-010 (2026-09-08) no se
+ * puede publicar sin al menos una foto, asi que solo lo alcanzan las
+ * publicaciones creadas antes, que no se tocaron retroactivamente. Se deja
+ * porque la alternativa —que la pagina se rompa— es peor, no porque haga falta
+ * invertir en ella.
+ */
+.marco {
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radio);
+  background-color: var(--superficie-2);
+  background-image: var(--patron-rombos);
+  background-size: var(--patron-tamanio-bloque);
+  background-position: var(--patron-posicion-bloque);
+  box-shadow: var(--sombra-hundida);
+  --patron-color: color-mix(in oklab, var(--color-cancha) 12%, transparent);
+}
+
+.pieDeGaleria {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+  /* #6b736a sobre papel #fafaf7 = 4.69:1. */
+  color: var(--color-neutro-tenue);
+}
+
+.pistaTelefono {
+  display: none;
+}
+
+/* ------------------------------------------ galeria en telefono: una pista */
+
+/**
+ * ⚠️ EN TELEFONO LAS FOTOS DEJAN DE APILARSE. Ocho fotos a 4/5 en una pantalla
+ * de 375px son ocho pantallas completas de scroll ANTES de llegar a los datos.
+ * La pista horizontal con `scroll-snap` las pone todas en una sola pantalla,
+ * sin una linea de JavaScript.
+ *
+ * ⚠️ LA SIGUIENTE FOTO ASOMA (86% de ancho) Y ESO ES LA MITAD DEL DISENIO: es
+ * lo que dice que hay mas, sin un texto ni flechas.
+ *
+ * ⚠️ `overscroll-behavior-x: contain` NO ES ADORNO: sin el, arrastrar la ultima
+ * foto hacia la izquierda lo toma el navegador como "volver atras" y se sale de
+ * la ficha.
+ *
+ * ⚠️ LA PISTA SE SALE DEL CANAL con margen negativo y lo devuelve como padding.
+ * Asi la foto llega al borde de la pantalla —que es lo que la hace leer como
+ * galeria y no como caja— y la primera igual arranca alineada con el titulo. El
+ * margen negativo es exactamente `--canal`, asi que a 320px la pista mide 320px
+ * y NO desborda: ademas es un contenedor de scroll, o sea que su contenido no
+ * puede agrandar el documento.
+ */
+@media (max-width: 900px) {
+  .pista {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    margin-inline: calc(var(--canal) * -1);
+    padding-inline: var(--canal);
+    /*
+     * ⚠️ EL PADDING VERTICAL ES EL LUGAR DE LA SOMBRA, NO AIRE. Un scroller
+     * horizontal NO PUEDE tener `overflow-y: visible` —con `overflow-x: auto`
+     * el otro eje computa a `auto`—, asi que lo que sobresalga por arriba o por
+     * abajo se recorta. Con los 4px que habia, `--sombra-2` (que llega a ~28px
+     * por debajo) quedaba cortada al ras y las fotos se veian apoyadas sobre un
+     * filo, justo en la pantalla donde la galeria ES la pagina.
+     */
+    padding-block: var(--espacio-3);
+  }
+
+  .galeria {
+    grid-auto-flow: column;
+    grid-auto-columns: 86%;
+  }
+
+  .escenario,
+  .diapositiva {
+    scroll-snap-align: center;
+  }
+
+  /*
+   * ⚠️ EN LA PISTA LA ELEVACION BAJA UN ESCALON. Es lo que permite que la
+   * sombra entre entera en los 12px de padding sin abrir un hueco visible entre
+   * la galeria y el riel.
+   *
+   * ⚠️ EL HAIRLINE (`--sombra-0`) SE CONSERVA. Es un `spread` de 1px sin
+   * desplazamiento: no se sale de la caja, asi que no lo recorta nada, y es lo
+   * unico que le da contorno a una diapositiva clara sobre papel claro. Bajar
+   * la elevacion no es lo mismo que borrar el borde.
+   */
+  .escenario,
+  .diapositiva {
+    box-shadow: var(--sombra-0), var(--sombra-1);
+  }
+
+  .galeria .foto {
+    aspect-ratio: 4 / 5;
+  }
+
+  /**
+   * ⚠️ ACA SE APAGA EL REVELADO POR SCROLL DE LAS SECUNDARIAS, Y ES UN ARREGLO,
+   * NO UN CAPRICHO. `.revela-acerca` corre con `animation-timeline: view()`, y
+   * `view()` resuelve contra el CONTENEDOR DE SCROLL MAS CERCANO — que en
+   * telefono es la pista, no la pagina. Adentro de una pista que solo scrollea
+   * en horizontal, un timeline de eje de bloque no avanza nunca y la foto se
+   * puede quedar clavada en su estado inicial: `opacity: 0`. En una galeria de
+   * producto eso no es "sin animacion", es una foto que falta.
+   *
+   * El selector es (0,2,0) para ganarle a la clase global sin depender del
+   * orden en que el bundler emita los archivos.
+   */
+  .pista .diapositiva {
+    animation: none;
+  }
+
+  .pistaEscritorio {
+    display: none;
+  }
+
+  .pistaTelefono {
+    display: inline;
+  }
+}
+
+/**
+ * ⚠️ LA BARRA DE SCROLL SE ESCONDE SOLO EN TELEFONO DE VERDAD. Debajo de 480px
+ * las barras son overlay y no ocupan lugar; entre 480 y 900px —una ventana de
+ * escritorio angosta, una tablet con mouse— la barra es la unica senal visible
+ * de que la pista se puede arrastrar, y sacarla deja a esa persona sin nada.
+ */
+@media (max-width: 480px) {
+  .pista {
+    scrollbar-width: none;
+  }
+
+  .pista::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------ indicador de la pista */
+
+/**
+ * ⚠️ EL RIEL DICE DOS COSAS DISTINTAS Y CADA UNA TIENE SU MECANISMO:
+ *
+ *   CUANTAS fotos hay   n segmentos pintados con un `repeating-linear-gradient`
+ *                       que se repite `--fotos` veces. Es informacion estatica:
+ *                       no depende de animacion ni del soporte de nada.
+ *   EN CUAL estas       un pulgar que viaja, dirigido por el scroll de la pista.
+ *
+ * ⚠️ POR ESO LOS SEGMENTOS NO DESAPARECEN CON `prefers-reduced-motion`. "Son
+ * ocho fotos" es INFORMACION, no movimiento, y esconderlo dejaria a quien pidio
+ * menos animacion con menos orientacion que al resto.
+ *
+ * ⚠️⚠️ EL PULGAR, EN CAMBIO, SI DESAPARECE ENTERO — Y ES UN ARREGLO. Estaba
+ * pintado afuera de `prefers-reduced-motion` "para que quede algo": con
+ * movimiento reducido no quedaba quieto en la foto 1, quedaba en la ULTIMA.
+ * `movimiento.css` tiene una red de seguridad que fuerza
+ * `animation-timeline: none !important` sobre `*::after`, asi que el pulgar
+ * volvia al reloj, la duracion aplastada de `tokens.css` lo saltaba al ultimo
+ * cuadro y `both` lo dejaba ahi. Un indicador de posicion mintiendo es peor que
+ * ninguno: quien mire el riel en la foto 2 lee "estas al final" y deja de
+ * deslizar. Sin pulgar sigue habiendo tres senales de posicion —el numero de
+ * lamina en cada foto, el conteo en texto y la foto siguiente asomando—.
+ *
+ * ⚠️ `timeline-scope` ES LO QUE HACE POSIBLE EL PULGAR SIN JAVASCRIPT. El riel
+ * es HERMANO de la pista, no descendiente, asi que no puede usar
+ * `scroll(nearest)`: la columna publica el nombre de la linea de tiempo y la
+ * pista la define.
+ *
+ * ⚠️ NO ES UNA BARRA QUE SE LLENA, ES UN PULGAR QUE VIAJA: mide `1/n` del riel
+ * y se corre `(n - 1)` veces su propio ancho. Una barra que se llena se ve
+ * vacia en la primera foto.
+ */
+.progreso {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  /**
+   * ⚠️ EL SEGMENTO ES `--color-neutro-tenue` Y NO `--color-neutro-apagado`, Y ES
+   * UN ARREGLO DE CONTRASTE MEDIDO, NO UN CAMBIO DE GUSTO. #9aa396 sobre la
+   * pista #f2f3ea da **2.33:1**: por debajo del 3:1 que pide 1.4.11 para una
+   * forma que lleva informacion, y en la practica un riel que no se ve. #6b736a
+   * da **4.38:1**. `--color-neutro-apagado` no es un color de forma legible
+   * —igual que no es borde de control—; para eso estan los neutros de texto.
+   *
+   * ⚠️ 6px Y NO 4px: es el mismo alto que el filete del titulo, y con ocho
+   * segmentos de ~2px de ancho util cada uno hace falta la altura para que se
+   * lean como ocho cosas y no como una linea punteada.
+   */
+  .progreso {
+    display: block;
+    position: relative;
+    height: 6px;
+    margin-top: var(--espacio-3);
+    overflow: hidden;
+    border-radius: var(--radio-chico);
+    background-color: var(--superficie-2);
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-neutro-tenue) 0 calc(100% / var(--fotos, 1) - 4px),
+      transparent calc(100% / var(--fotos, 1) - 4px) calc(100% / var(--fotos, 1))
+    );
+    box-shadow: var(--sombra-hundida);
+  }
+}
+
+@supports (timeline-scope: --pista-fotos) {
+  /**
+   * ⚠️ TODO EL PULGAR VIVE ADENTRO DE `no-preference`, INCLUIDA SU CAJA. Pintar
+   * el `::after` afuera y animarlo adentro deja un pulgar estatico —y, por la
+   * red de seguridad global, MAL UBICADO— para quien pidio menos movimiento.
+   */
+  @media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
+    .columnaFotos {
+      timeline-scope: --pista-fotos;
+    }
+
+    .pista {
+      scroll-timeline: --pista-fotos inline;
+    }
+
+    .progreso::after {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: calc(100% / var(--fotos, 1));
+      background-image: var(--degradado-acento);
+      animation: fichaPulgar auto linear both;
+      animation-timeline: --pista-fotos;
+    }
+  }
+}
+
+/** Keyframe LOCAL de este modulo. No existe con este nombre en ningun otro lado. */
+@keyframes fichaPulgar {
+  to {
+    transform: translateX(calc((var(--fotos, 1) - 1) * 100%));
+  }
+}
+
+/* ------------------------------------------------------ panel de confianza */
+
+/**
+ * ⚠️ ES EL UNICO OBJETO LEVANTADO DE LA COLUMNA DE DATOS. Antes era una caja
+ * blanca con borde de 1px y `--sombra-1`, que sobre papel calido no se veia: el
+ * panel que sostiene la confianza de la compra se dibujaba igual que un
+ * parrafo.
+ *
+ * ⚠️ NO LLEVA BOTON. La accion vive en la tarjeta pegada abajo, siempre
+ * alcanzable; aca vive lo que hay que LEER antes de apretarla.
+ */
+.confianza {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: var(--espacio-6) var(--espacio-5) var(--espacio-5);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-2);
+}
+
+/**
+ * Filo de marca. Es forma: no lleva texto encima.
+ *
+ * ⚠️ EL RADIO DEL FILO ES 2px, NO `--radio`. Un elemento de 4px de alto con 4px
+ * de radio superior queda con las esquinas casi semicirculares peleandose con
+ * las esquinas de 4px del panel: se ven dos radios distintos en el mismo
+ * vertice. Y no se resuelve con `overflow: hidden` en el panel, porque adentro
+ * hay un enlace enfocable cuyo anillo quedaria recortado.
+ */
+.confianza::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  border-radius: 2px 2px 0 0;
+  background-image: var(--degradado-acento);
+}
+
+/**
+ * ⚠️ LA COLUMNA DEL ICONO ES DE ANCHO FIJO, NO `auto`. Con `auto`, un sello sin
+ * icono deja una celda de 0px y su texto arranca 32px a la izquierda de los
+ * demas: en un panel de cuatro filas alineadas, una que no alinea se lee como
+ * un error de render.
+ */
+.sello {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: var(--espacio-3);
+  align-items: start;
+  margin: 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-texto);
+  /* #5b6459 sobre blanco #ffffff = 6.15:1. */
+  color: var(--color-neutro-texto);
+}
+
+.sello + .sello {
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+/** El icono es forma, no informacion: el texto de al lado dice lo mismo. */
+.sello svg {
+  margin-top: 2px;
+  color: var(--color-cancha);
+}
+
+.sello strong {
+  /* #10231a sobre blanco #ffffff = 16.44:1. */
+  color: var(--color-tinta);
+  font-weight: var(--peso-semi);
+}
+
+/**
+ * ⚠️ 44px DE ALTO: es un enlace de bloque al pie de un panel, no uno embebido.
+ * #0f7a45 sobre blanco #ffffff = 5.40:1.
+ */
+.enlaceComoFunciona {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+}
+
+/* ------------------------------------------------------------ descripcion */
+
+/**
+ * ⚠️ ESTE BLOQUE ES LA VOZ DEL VENDEDOR Y ANTES NO SE DISTINGUIA DE NADA. Era
+ * un parrafo gris sin borde ni rotulo, apoyado sobre el mismo papel, justo
+ * debajo del unico panel elevado de la columna: se leia como una nota al pie de
+ * lo que afirma Offside cuando es la mitad de la decision de compra.
+ *
+ * ⚠️ EL FILETE ES DE 3px Y DE TINTA MACIZA, NO DE `--linea-tenue`. Un hilo de
+ * 1px gris separa items de una misma lista; lo que hace falta aca es marcar un
+ * CAMBIO DE VOZ, y para eso la identidad tiene el filete editorial (`.regla`).
+ * No se compone la clase global porque el bloque necesita ademas el
+ * `padding-top`, y media clase suelta seria peor que ninguna.
+ */
+.bloqueDescripcion {
+  padding-top: var(--espacio-5);
+  border-top: 3px solid var(--color-tinta);
+}
+
+/**
+ * ⚠️ ES UN `h2` PERO NO PESA COMO UN TITULO DE SECCION. La `<h2>` de la banda
+ * tecnica es un titular de display a sangre; esta vive dentro de una columna de
+ * 500px y compite con el precio si crece. Tipografia de titulares, tamaño de
+ * rotulo: jerarquia por caja, no por cuerpo.
+ *
+ * #5b6459 sobre papel #fafaf7 = 5.89:1.
+ */
+.rotuloDescripcion {
+  margin: 0 0 var(--espacio-3);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  line-height: 1.2;
+  color: var(--color-neutro-texto);
+}
+
+.descripcion {
+  margin: 0;
+  font-size: var(--texto-md);
+  line-height: var(--interlineado-lectura);
+  /* #5b6459 sobre papel #fafaf7 = 5.89:1. */
+  color: var(--color-neutro-texto);
+  /* Respeta los saltos de linea que escribio el vendedor. */
+  white-space: pre-line;
+  max-width: var(--ancho-lectura);
+}
+
+/* ------------------------------------------------------ banda de la ficha */
+
+/**
+ * ⚠️ ES A SANGRE Y ESA ES LA MITAD DE SU VALOR. Antes la ficha tecnica no
+ * existia: `kitType`, `sleeve` y `stock` eran cuatro `Etiqueta` sueltas del
+ * mismo tono mezcladas con el talle, asi que la pantalla nunca decia
+ * ordenadamente que se esta comprando. Una banda que toca los dos bordes es lo
+ * que corta el scroll y le da ritmo vertical a la pagina.
+ *
+ * ⚠️ LA SUPERFICIE LA PONE `<Pliego>`, NO ESTE ARCHIVO. La primitiva trae
+ * `.sup-noche`, `.con-grano`, el `padding-block` de seccion y —lo que mas
+ * importa— la capa del patron como HERMANA del contenido y no envolviendolo.
+ * Papel sobre `--sup-noche` #10231a = 15.72:1; `--color-neutro-tenue` remapeado
+ * a #8fa79a = 6.39:1.
+ *
+ * ⚠️ NO SE USA `corte` (el `clip-path` diagonal) AUNQUE SEA LA HERRAMIENTA
+ * OBVIA. `.sup-noche::before` es el filo de luz y ocupa el borde superior
+ * entero: un corte diagonal lo dejaria cortado al medio, visible solo en la
+ * mitad derecha. Ademas `clip-path` recorta la sombra. El eje del sistema se
+ * consigue con la cinta de rayas a 112 grados, que es un elemento real y no
+ * pelea con ningun pseudo.
+ */
+.bandaTecnica {
+  margin-top: var(--espacio-bloque);
+}
+
+/**
+ * ⚠️ EL ANCHO ES `--ancho-contenido` (1200) Y NO `--ancho-editorial` (1360).
+ * LA BANDA VA A SANGRE; SU CONTENIDO NO. Con 1360 el borde izquierdo del "Ficha
+ * técnica" y de la primera columna del `<dl>` quedaban 80px a la izquierda de
+ * la miga, del titulo y de la galeria: la unica seccion fuera de la grilla
+ * pasaba a ser el bloque mas grande de la pagina. Es exactamente el mismo error
+ * que `app/page.module.css` ya documenta y ya corrigio en el titular de la
+ * portada —"no se nombra pero se lee como descuido"—, y no hay razon para que
+ * esta pantalla lo repita.
+ *
+ * Lo que va a sangre es la SUPERFICIE, que la pone `<Pliego>`; esto solo alinea
+ * el texto con el resto de la ficha.
+ */
+.bandaInterior {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+
+.tituloTecnica {
+  margin: 0;
+  color: var(--color-sobre-oscuro);
+}
+
+/**
+ * CINTA DIAGONAL: el motivo de la bandera del juez, en el eje del sistema. Es
+ * un elemento real y `aria-hidden`.
+ */
+.cintaDiagonal {
+  height: 14px;
+  margin: var(--espacio-5) 0 var(--espacio-bloque);
+  background-image: var(--patron-diagonales-anchas);
+  --patron-color: rgb(250 250 247 / 0.14);
+}
+
+/**
+ * ⚠️ LA FICHA TECNICA SE COMPONE EN COLUMNAS, NO EN UNA LISTA VERTICAL. Con
+ * `auto-fit` pasa sola de una columna en telefono a cuatro en un monitor, sin
+ * un solo breakpoint. Y NO se usa `columns: 2` de CSS multicolumna: ahi un par
+ * `dt`/`dd` se puede partir entre dos columnas.
+ */
+.fichaTecnica {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0 var(--espacio-7);
+  margin: 0;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-4) 0;
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.dato dt {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* Remapeado por `.sup-noche` a #8fa79a: sobre tinta #10231a = 6.39:1. */
+  color: var(--color-neutro-tenue);
+}
+
+.dato dd {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1.1;
+  /* Papel #fafaf7 sobre tinta #10231a = 15.72:1. */
+  color: var(--color-sobre-oscuro);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------- tarjeta de compra */
+
+/**
+ * ⚠️ `sticky bottom` Y NO `fixed`. Una barra fija tapa el fondo del viewport
+ * para siempre y obliga a compensar con padding a mano. Esta esta EN FLUJO: un
+ * `sticky` con `bottom: 0` se corre hacia ARRIBA hasta el tope de su bloque
+ * contenedor, asi que queda clavada al fondo desde la PRIMERA pantalla y
+ * aterriza sola al final de `<main>`, arriba del pie. Cero JavaScript, cero
+ * compensacion.
+ *
+ * ⚠️ SU BLOQUE CONTENEDOR ES `.pagina`, o sea el `<main>` entero, y de ahi sale
+ * ese recorrido. Mientras esta clavada SE PINTA POR ENCIMA de la banda tecnica:
+ * es deliberado —la accion no puede desaparecer en la mitad mas larga de la
+ * pagina— y por eso la banda es lo unico que queda debajo.
+ *
+ * ⚠️ `--z-pegado` (50) Y NO `--z-barra` (100): la barra superior tiene que
+ * poder pasarle por encima.
+ *
+ * ⚠️ LA FRANJA NO CAPTURA EL PUNTERO, SOLO LA TARJETA DE ADENTRO. En escritorio
+ * la tarjeta ocupa 460px de un ancho de 1200: sin esto, una franja invisible de
+ * ~92px se comeria los clics en el ~60% restante del fondo del viewport.
+ */
+.barraAccion {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-pegado);
+  pointer-events: none;
+}
+
+.barraInterior {
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-4);
+  padding: var(--espacio-3) var(--canal);
+  /*
+   * ⚠️ ESTE `env()` YA VALE. `app/layout.tsx` declara `viewportFit: 'cover'`,
+   * que es lo unico que enciende los `env(safe-area-inset-*)` de todo el sitio:
+   * sin el resuelven a cero en todos lados. Con la barra de gestos del iPhone
+   * el boton de pagar se levanta lo que haga falta en vez de quedar debajo.
+   * El lado izquierdo y el derecho los cubre `--canal`, que hace su propio
+   * `max()` con los insets laterales — la otra contracara de `cover`.
+   */
+  padding-bottom: max(var(--espacio-3), env(safe-area-inset-bottom, 0px));
+  border-radius: var(--radio) var(--radio) 0 0;
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-3);
+}
+
+/** Mismo criterio de radio que `.confianza::before`: la mitad del alto. */
+.barraInterior::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  border-radius: 2px 2px 0 0;
+  background-image: var(--degradado-acento);
+}
+
+/**
+ * ⚠️ EN ESCRITORIO DEJA DE SER UNA FRANJA Y PASA A SER UNA TARJETA FLOTANTE.
+ * Una barra inferior a todo lo ancho es un patron de telefono: llevado a 1200px
+ * deja el boton a un metro del precio que supuestamente lo acompana y se come
+ * ~92px de alto en una pantalla que ya tiene lugar de sobra. Acotada a 460px y
+ * alineada a la derecha, queda debajo de la columna de datos —que arriba esta
+ * pegada— y precio y boton vuelven a estar juntos.
+ */
+@media (min-width: 901px) {
+  .barraAccion {
+    max-width: var(--ancho-contenido);
+    margin: 0 auto;
+    padding: 0 var(--canal) var(--espacio-6);
+  }
+
+  .barraInterior {
+    max-width: 460px;
+    margin-left: auto;
+    padding: var(--espacio-4) var(--espacio-5);
+    border-radius: var(--radio);
+  }
+}
+
+.barraPrecio {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.1;
+  overflow: hidden;
+}
+
+/**
+ * ⚠️ LA URGENCIA LLEGA A LA TARJETA, QUE ES LO UNICO QUE SE VE CUANDO ALGUIEN
+ * DECIDE. "Última unidad" vive tambien en los chips del encabezado, que en
+ * telefono quedan arriba de ocho fotos.
+ *
+ * ⚠️ ACA NO PULSA. El pulso del encabezado sirve para ENCONTRAR la etiqueta en
+ * la pantalla; a un centimetro del boton de pagar seria una alarma.
+ *
+ * #b85400 sobre blanco #ffffff = 4.88:1.
+ */
+.barraAlerta {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-alerta);
+}
+
+.barraRotulo {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  /* #6b736a sobre blanco #ffffff = 4.90:1. */
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * ⚠️ EL IMPORTE DE LA TARJETA NO SE ANIMA. El del encabezado entra una vez con
+ * `.cifra-entra`; este esta a un centimetro del boton de pagar y tiene que
+ * estar quieto desde el primer cuadro.
+ *
+ * ⚠️ SE RECORTA CON PUNTOS SUSPENSIVOS Y NO SE DESBORDA. `.barraPrecio` tiene
+ * `min-width: 0`, asi que el item flex se encoge; sin este bloque el TEXTO se
+ * pinta encima del boton en vez de recortarse, porque un importe no tiene
+ * ningun punto de corte. El importe completo ya esta en grande en el
+ * encabezado.
+ */
+.barraImporte {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  font-variant-numeric: tabular-nums;
+  /* #10231a sobre blanco #ffffff = 16.44:1. */
+  color: var(--color-tinta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
+ * ⚠️ `flex: 0 0 auto` MAS `margin-left: auto`: el boton tiene `white-space:
+ * nowrap`, asi que si se le permitiera encoger el texto se saldria de la caja.
+ */
+.cta {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/**
+ * ⚠️ LA ESPECIFICIDAD (0,2,0) NO ES CAPRICHO. `.botonPrimario` de
+ * `ui.module.css` ya declara `box-shadow` con (0,1,0): con la misma
+ * especificidad ganaria el que el bundler ponga ultimo, que no es algo que se
+ * pueda predecir desde aca.
+ *
+ * El resplandor de marca es solo para la accion principal: si brilla todo, no
+ * brilla nada.
+ */
+.barraInterior .cta {
+  box-shadow: var(--sombra-marca);
+}
+
+.barraInterior .cta:hover {
+  box-shadow: var(--sombra-marca), var(--sombra-2);
+}
+
+/**
+ * ⚠️ A 320px EL IMPORTE SE VA A SU PROPIA FILA. Cuenta: 320 - 32 de canal = 288
+ * utiles; menos 32 de padding de la tarjeta = 256. `BotonEnlace tamanio=
+ * "grande"` es `padding: var(--espacio-4) var(--espacio-7)` —64px
+ * horizontales— mas "COMPRAR" a 16px semi con tracking ≈ 160px, mas 16 de gap.
+ * Al importe le quedaban ~80px y "$1.250.000" a 22px en Big Noodle mide ~92px.
+ * En su propia fila entra cualquier importe de ocho cifras.
+ *
+ * ⚠️ EL ROTULO "PRECIO" DESAPARECE: le come ancho al boton y no dice nada que
+ * el importe no diga.
+ */
+@media (max-width: 420px) {
+  .barraPrecio {
+    flex: 1 0 100%;
+  }
+
+  .barraRotulo {
+    display: none;
+  }
+
+  .cta {
+    flex: 1 1 auto;
+    margin-left: 0;
+  }
+}
+
+/* ------------------------------------------------- esqueleto (loading.tsx) */
+
+/**
+ * ⚠️ LAS ALTURAS SON LAS DEL CONTENIDO REAL, NO NUMEROS ELEGIDOS. Se escriben
+ * con los MISMOS tokens que usa el encabezado de arriba en este archivo, asi
+ * que si la escala cambia el esqueleto cambia con ella y no hay salto.
+ *
+ * ⚠️ NO LLEVAN `background` PROPIO: se lo pone la clase global `.esqueleto`,
+ * que ademas trae el shimmer y su apagado por `prefers-reduced-motion`.
+ */
+.fantasmaTitulo {
+  height: calc(var(--display-3) * 2);
+  border-radius: var(--radio);
+}
+
+.fantasmaFilete {
+  height: 6px;
+  margin-top: var(--espacio-4);
+}
+
+.fantasmaPrecio {
+  height: var(--display-2);
+  width: 62%;
+  margin: var(--espacio-4) 0;
+  border-radius: var(--radio);
+}
+
+/** Alto de una fila de `Etiqueta`: 3px + 3px de padding sobre 12px a 1.4. */
+.fantasmaChips {
+  height: 24px;
+  width: 78%;
+  border-radius: var(--radio-chico);
+}
+
+/** Alto del panel de confianza con cuatro sellos. */
+.fantasmaPanel {
+  height: 300px;
+  border-radius: var(--radio);
+}
+
+/**
+ * ⚠️ LA PROPORCION DE LAS FOTOS FANTASMA TIENE QUE ESTAR EN EL `<li>`, NO EN LA
+ * FOTO. En la ficha real la altura la pone el `<img>` con su `aspect-ratio`; en
+ * el esqueleto no hay `<img>`, asi que sin esto los recuadros miden CERO y el
+ * esqueleto de la galeria no existe — el defecto mas facil de no ver, porque
+ * "no se rompe nada", simplemente no hay nada.
+ */
+.fantasmaPortada {
+  aspect-ratio: 4 / 5;
+}
+
+.fantasmaFoto {
+  aspect-ratio: 1 / 1;
+}
+
+@media (max-width: 900px) {
+  .fantasmaFoto {
+    aspect-ratio: 4 / 5;
+  }
+}

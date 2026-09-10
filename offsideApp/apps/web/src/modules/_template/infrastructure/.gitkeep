@@ -1,0 +1,2 @@
+# Infrastructure: adaptadores de proveedores externos (MP, Correo, S3).
+# Aislados detras de una interfaz definida por el dominio.
