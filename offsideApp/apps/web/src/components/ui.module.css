@@ -1021,16 +1021,32 @@
  * ⚠️ LA PLACA ROTA, EL ICONO NO: rotar el contenedor rotaria tambien el dibujo.
  * El icono lleva `--glow-drop-marca`, un `filter` estatico que sigue su silueta.
  *
- * ⚠️ 78px, Y ES GEOMETRIA: un cuadrado de lado L rotado 45° inscribe un
- * rectangulo de L/√2. Con 78 e `inset: 0` son 55.2px para un icono de 40.
+ * ⚠️ ES GEOMETRIA, Y HAY QUE HACERLA DE LOS DOS LADOS. Para ADENTRO: un
+ * cuadrado de lado L rotado 45° inscribe un rectangulo de L/√2, o sea que con
+ * 66px quedan 46.7 para un icono de 40. Eso ya estaba.
+ *
+ * ⚠️ PARA AFUERA NO LO HACIA NADIE, Y POR ESO LA PUNTA TOCABA EL TITULO. La
+ * placa rota SOBRESALE de su propia caja: la diagonal mide L·√2, asi que cada
+ * punta se va (√2−1)/2 = 0.2071 del lado por arriba y por abajo. El elemento
+ * ocupaba 78px en el flujo y pintaba 110.3, o sea 16.2 de mas por punta contra
+ * un `gap` de 16 del contenedor. Medido en el navegador: el hueco real entre la
+ * punta y el titulo era **-0.2px**. No lo ve ningun chequeo —la caja del
+ * elemento respeta el gap perfectamente—, se ve mirando.
+ *
+ * Se arregla en los dos frentes: el rombo baja a 66px, y el margen vertical
+ * reserva en el flujo lo que la rotacion pinta de mas. Con eso el `gap` del
+ * contenedor vuelve a significar lo que dice. Va escrito como cuenta y no como
+ * numero para que siga siendo correcto si cambia el lado.
  */
 .vacioIcono {
   position: relative;
   isolation: isolate;
   display: grid;
   place-items: center;
-  width: 78px;
-  height: 78px;
+  --lado-rombo: 66px;
+  width: var(--lado-rombo);
+  height: var(--lado-rombo);
+  margin-block: calc(var(--lado-rombo) * 0.2071);
   color: var(--color-cancha);
   line-height: 0;
   filter: var(--glow-drop-marca);
