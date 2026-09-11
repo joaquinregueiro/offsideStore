@@ -108,6 +108,24 @@
   --superficie-1: rgb(7 26 18 / 0.42);
   --superficie-2: rgb(7 26 18 / 0.42);
   --color-neutro-suave: rgb(7 26 18 / 0.42);
+
+  /**
+   * ⚠️ Y ESTOS TRES SON LA OTRA MITAD DEL MISMO ARREGLO, QUE FALTABA. Dar vuelta
+   * `--superficie-1` sin dar vuelta `--texto-fuerte` deja el contrato partido al
+   * medio: `ui.module.css` los define en PAREJA —superficie oscura ⇒ texto
+   * claro— y remapear uno solo produce exactamente lo que se veia, la insignia
+   * de nivel con "NUEVO" en Tinta sobre el pozo oscuro. Medido en el navegador:
+   * `rgb(16 35 26)` sobre `rgb(7 26 18 / 0.42)`, o sea texto negro sobre verde
+   * oscuro. No falla ningun chequeo: el token existe, el `var()` resuelve, y lo
+   * que resuelve es el valor para la superficie contraria.
+   *
+   * ⚠️ `--marca-borde` VA CON LOS OTROS DOS y no es decorativo: su default es
+   * Verde Cancha, que ES el fondo de esta chapa, asi que el contorno de la
+   * insignia destacada se dibujaba de su mismo color y no existia.
+   */
+  --texto-fuerte: var(--color-sobre-oscuro);
+  --marca-texto: var(--verde-400);
+  --marca-borde: var(--verde-400);
 }
 
 /* A partir de aca el chip y la accion se van abajo en vez de aplastar al titulo. */
@@ -297,6 +315,35 @@
   border-radius: inherit;
   -webkit-mask-image: linear-gradient(270deg, #000 0%, transparent 100%);
   mask-image: linear-gradient(270deg, #000 0%, transparent 100%);
+
+  /**
+   * ⚠️ EL PATRON ESTABA AL 100% DE OPACIDAD Y POR ESO SE LEIA COMO UN DAMERO
+   * DIBUJADO ENCIMA, no como una textura. `.sup-cancha` declara
+   * `--patron-color: var(--color-tiempo-extra)`, que es un verde PLANO: medido
+   * en el navegador, Tiempo Extra sobre Verde Cancha da **1.54:1**, y a esa
+   * fuerza los rombos de 88px con borde duro se cuentan uno por uno.
+   *
+   * ⚠️ Y ES LO QUE PRODUCIA EL TITILEO QUE REPORTO EL DUEÑO. La capa deriva 88px
+   * en 26s, asi que cada cuadro cae en una fraccion de pixel distinta y los
+   * bordes DUROS de los cuatro gradientes se re-rasterizan en cada uno. Con
+   * 1.54:1 ese temblor de medio pixel se ve; al bajar el contraste, el mismo
+   * temblor deja de percibirse. Subir la escala de 28 a 88px —el intento
+   * anterior— bajo la FRECUENCIA del parpadeo pero no su AMPLITUD, que es lo
+   * que se mira.
+   *
+   * ⚠️ LA RECETA NO ES NUEVA: es la que ya usan las tres capas de patron de
+   * `page.module.css`, que pintan con `color-mix` al 8/9/10% y ademas
+   * desvanecen con mascara. Una textura de marca se insinua; si se puede
+   * contar, es un defecto de render.
+   */
+  /*
+   * ⚠️ MAS BAJO QUE EN LA CHAPA DE CUENTA (34%) Y NO ES INCONSISTENCIA: alla la
+   * mascara apaga el patron hacia ABAJO, asi que su punto mas fuerte queda
+   * arriba y lejos; aca apaga hacia la IZQUIERDA y deja el borde derecho a
+   * plena fuerza, justo donde el ojo lo cuenta. Mirado en el navegador a 800px:
+   * al 34% los cuadrados se distinguian uno por uno.
+   */
+  --patron-color: color-mix(in oklab, var(--color-tiempo-extra) 20%, transparent);
 }
 
 /**
@@ -1172,6 +1219,22 @@
   margin: 0;
   font-weight: var(--peso-semi);
   line-height: 1.3;
+}
+
+/**
+ * ⚠️ EL ENLACE DEL TITULO NECESITA ALTO APUNTABLE. Medido en la tabla de
+ * ventas: 250x18. WCAG 2.5.8 excepta a los enlaces que van DENTRO de una
+ * frase, y este no es uno —es el unico contenido de su parrafo, o sea el
+ * destino de la fila—, asi que le corresponden los 24px.
+ *
+ * ⚠️ VA COMO `padding-block` SOBRE UN ELEMENTO EN LINEA, y eso es exactamente
+ * lo que se quiere: en linea, el padding vertical NO empuja el renglon —la
+ * tabla no se mueve ni un pixel— pero SI agranda la caja que recibe el clic.
+ * Es la propiedad contraria al margen vertical, que en linea no hace nada.
+ */
+.celdaTitulo a {
+  /* 4px dejaba la caja en 23.6: redondea a 24 y sigue fallando el minimo. */
+  padding-block: 5px;
 }
 
 .celdaOtros {

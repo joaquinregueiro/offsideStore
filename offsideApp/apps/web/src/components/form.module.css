@@ -1135,9 +1135,16 @@
   appearance: none;
   -webkit-appearance: none;
   flex: none;
-  width: 22px;
-  height: 22px;
-  margin: 1px 0 0;
+  /**
+   * ⚠️ 24 Y NO 22: WCAG 2.5.8 (AA) pide 24x24 como minimo para un blanco
+   * apuntable, y 22 fallaba por dos pixeles en cada casilla del sitio. La
+   * etiqueta que lo envuelve tambien conmuta, asi que el blanco real era mas
+   * grande —pero la norma mide el control—. Dos pixeles no cambian el dibujo y
+   * sacan el tema de la lista.
+   */
+  width: 24px;
+  height: 24px;
+  margin: 0;
   border: 1px solid var(--borde-campo, var(--linea-control));
   border-radius: var(--radio-chico);
   background-color: var(--superficie-1);

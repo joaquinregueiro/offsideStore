@@ -141,7 +141,18 @@
 .itemDetalle {
   font-size: var(--texto-xs);
   line-height: 1.3;
-  color: var(--color-neutro-tenue);
+  /**
+   * ⚠️ EL NEUTRO DE TEXTO Y NO EL TENUE, Y ES UN ARREGLO MEDIDO. `--color-neutro-tenue`
+   * esta calibrado contra PAPEL, donde da 4.69:1; pero el riel de la barra es
+   * una superficie TEÑIDA (#f2f3ea) y ahi el mismo gris cae a **4.38:1**, abajo
+   * del 4.5 que pide AA para texto normal —y esto son 12px—. Medido en el
+   * navegador, en las cinco pantallas del panel a la vez.
+   *
+   * Con `--color-neutro-texto` da 5.51:1 sobre el riel. Y corresponde por lo
+   * que dice el comentario de arriba: si el detalle es lo que hace entender la
+   * seccion sin entrar, entonces es texto, no un susurro.
+   */
+  color: var(--color-neutro-texto);
   overflow-wrap: anywhere;
 }
 

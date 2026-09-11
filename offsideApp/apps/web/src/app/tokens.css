@@ -744,9 +744,15 @@ a:hover {
   /**
    * Lavado naranja para el RELLENO de una etiqueta de alerta ("Última unidad").
    *
-   * ⚠️ ES MUY CLARO A PROPOSITO: `--color-alerta` (#b85400) encima da 4.93:1,
-   * por encima de AA. Un naranja mas saturado obligaria a poner el texto en
-   * blanco, y blanco sobre naranja de marca da 2.26:1.
+   * ⚠️ ES MUY CLARO A PROPOSITO: un naranja mas saturado obligaria a poner el
+   * texto en blanco, y blanco sobre naranja de marca da 2.26:1.
+   *
+   * ⚠️ ESTE COMENTARIO DECIA 4.93:1 Y ERA FALSO. Medido despues en el navegador
+   * sobre la etiqueta de verdad, `--color-alerta` (#b85400) encima da **4.50**:
+   * el limite exacto de AA, sin un punto de aire. La cuenta original nunca se
+   * hizo contra el pixel, y el numero escrito con confianza hizo que nadie la
+   * revisara. Por eso `.etiquetaAlerta` pinta su texto con `#ad4e00` (5.01) en
+   * vez de con el token.
    */
   --alerta-lavado: #fff4e8;
 

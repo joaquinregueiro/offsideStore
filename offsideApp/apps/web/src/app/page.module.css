@@ -87,9 +87,46 @@
   overflow: clip;
   display: grid;
   align-content: center;
-  min-height: min(86svh, 780px);
+  /**
+   * ⚠️ EL ALTO CRECE JUNTO CON LA ALZADA, y no es un ajuste fino: sin esto el
+   * titular se mete ABAJO DE LA BARRA. `align-content: center` centra dentro de
+   * la caja de contenido, y con `box-sizing: border-box` el `padding-top` nuevo
+   * se la come por dentro: el contenido pasa a ser mas alto que su caja y un
+   * centrado que desborda se derrama para los DOS lados, asi que la primera
+   * linea del titular sube por detras de la barra. Verificado a 622px: se leia
+   * "CON HISTORIA" con "CAMISETAS" tapado.
+   */
+  min-height: calc(min(86svh, 780px) + var(--alzada-barra));
   padding: var(--espacio-seccion) var(--canal)
     calc(var(--espacio-seccion) + var(--corte-compensacion));
+
+  /**
+   * ⚠️ LA PORTADA SUBE POR DETRAS DE LA BARRA, Y ESO ARREGLA EL MARCO BLANCO.
+   * La barra es una isla flotante: se despega 12px de los tres bordes para que
+   * el papel se vea alrededor. Sobre una pantalla de papel eso se lee como lo
+   * que es, un objeto apoyado. Sobre la portada NO: medido en el navegador, la
+   * barra ocupaba de y=0 a y=102 con papel a los costados y arriba, y el verde
+   * empezaba EXACTO en 102 — o sea una U invertida blanca de 12px metida entre
+   * dos verdes, que es lo que se veia como un error de maquetado.
+   *
+   * Ahora el verde arranca en el techo de la pagina y la isla queda apoyada
+   * SOBRE la portada, que es lo que la isla siempre quiso ser. El resto del
+   * sitio no cambia: ahi abajo hay papel y el marco corresponde.
+   *
+   * ⚠️ SE PASA DE LARGO A PROPOSITO. `--alto-barra` dice 84px y la barra mide
+   * 90 mas 12 de margen: 102 reales. El token viene de una medicion vieja y
+   * quedarse corto deja una astilla de papel asomando arriba, que es peor que
+   * el problema original porque parece una linea. Los 24px de sobra cubren la
+   * diferencia en los tres altos de barra (84 / 140 / 132) y no se ven: lo que
+   * sobra queda tapado por la barra y, mas alla, es mas portada.
+   *
+   * ⚠️ EL `padding-top` DEVUELVE LO MISMO QUE SE RESTO, si no el titular se
+   * mete abajo de la barra. Y el apilado ya estaba resuelto: la barra declara
+   * `z-index: 100` y la portada `auto`, asi que subirla no la pone por encima.
+   */
+  --alzada-barra: calc(var(--alto-barra) + var(--espacio-6));
+  margin-top: calc(var(--alzada-barra) * -1);
+  padding-top: calc(var(--espacio-seccion) + var(--alzada-barra));
 }
 
 /**
@@ -525,7 +562,18 @@
    */
   .portada {
     min-height: auto;
-    padding-block: var(--espacio-8) calc(var(--espacio-8) + var(--corte-compensacion));
+
+    /**
+     * ⚠️ EL `padding-block` VUELVE A SUMAR LA ALZADA, y olvidarlo es exactamente
+     * lo que paso la primera vez: la regla de arriba sube la portada 164px por
+     * detras de la barra y devuelve ese espacio con `padding-top`, pero ESTA
+     * pisa el `padding-block` entero y se lo lleva puesto. Medido a 622px: el
+     * padding quedaba en 48px contra una barra que termina en 158, asi que
+     * "CAMISETAS" —la primera linea del titular— se leia tapada por la barra.
+     * En telefono la barra mide mas, no menos, asi que es el caso peor.
+     */
+    padding-block: calc(var(--espacio-8) + var(--alzada-barra))
+      calc(var(--espacio-8) + var(--corte-compensacion));
   }
 
   .bajada {

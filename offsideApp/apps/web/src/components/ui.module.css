@@ -202,7 +202,14 @@
    * etiqueta neutra: `--color-neutro-texto` es ahi `--color-sobre-cancha`, que
    * sobre `--superficie-2` (#f2f3ea, tampoco remapeada) daba 1.05.
    */
-  --alerta-texto: #b85400;
+  /**
+   * ⚠️ EL HEX ES EL MISMO QUE USA `.etiquetaAlerta` MAS ABAJO, no el de `:root`,
+   * y por la misma razon: sobre el lavado naranja claro —que `.sup-cancha` NO
+   * remapea— el `#b85400` de `:root` da 4.50:1, justo en el limite. `#ad4e00`
+   * da 5.01 ahi y 5.24 sobre el blanco de `--superficie-1`, que es el otro
+   * fondo que le toca adentro de la portada.
+   */
+  --alerta-texto: #ad4e00;
   --peligro-texto-relleno: var(--color-tinta);
   --etiqueta-texto: #5b6459;
 }
@@ -750,7 +757,23 @@
 .etiquetaAlerta {
   --etiqueta-rombo: var(--color-naranja);
   border-color: var(--color-naranja);
-  color: var(--alerta-texto, var(--color-alerta));
+  /**
+   * ⚠️ EL TEXTO ES MAS OSCURO QUE `--color-alerta`, Y LO PAGA ESTE MISMO
+   * BLOQUE. El comentario de arriba decia 4.93:1 y era optimista: medido en el
+   * navegador, `#b85400` sobre `#fff4e8` da **4.50:1** — o sea justo en el
+   * limite de AA, sin un punto de aire, en "Ultima unidad", "Borrador" y
+   * "Pausada", que aparecen en cuatro pantallas.
+   *
+   * La causa es el lavado que agrego este bloque: `--color-alerta` esta
+   * calibrado contra papel (4.66) y blanco (4.88), y el relleno naranja claro
+   * le come 0.16. Por eso se oscurece ACA y no en `tokens.css`: en el resto
+   * del sitio el token esta bien y bajarlo seria arrastrar un ajuste local a
+   * todo. `#ad4e00` sobre el lavado da **5.01:1**.
+   *
+   * ⚠️ SOLO APLICA AL LAVADO CLARO. Cuando una superficie oscura pisa
+   * `--alerta-lavado`, tambien pisa `--alerta-texto`, y ahi manda esa pareja.
+   */
+  color: var(--alerta-texto, #ad4e00);
   background-color: var(--alerta-lavado, #fff4e8);
   box-shadow:
     var(--sombra-0),
