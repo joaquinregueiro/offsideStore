@@ -22,15 +22,18 @@ import { FORMATOS_SOPORTADOS } from './image-settings.service';
  * default en codigo seria una segunda fuente de verdad: el dia que alguien
  * cambie el setting nadie sabria cual rigio (`config.errors.ts`).
  *
- * ⚠️ LA UNICA EXCEPCION ES `defaultUntilSeeded`, y es TRANSITORIA. Cuatro
- * claves (`shipping_carriers`, `shipping_to_agree_allowed`,
- * `dispute_window_days`, `reconciliation_window_days`) se registraron el
- * 2026-09-11 ANTES de que exista la migracion que las siembra —la escribe otro
- * paquete—. Hasta que esa migracion corra, el lector devuelve el default del
- * registro, lo marca como `source: 'default'` y lo anota en el log. En cuanto
- * la fila exista, la fila manda: el default nunca pisa a la base. Cuando la
- * migracion este aplicada en produccion, el campo se borra de esas cuatro
- * claves y vuelven a la regla general (cambio MENOR).
+ * ⚠️ LA UNICA EXCEPCION ES `defaultUntilSeeded`, Y YA NO ES TRANSITORIA: PASO
+ * A SER UNA RED DE SEGURIDAD. Cuatro claves (`shipping_carriers`,
+ * `shipping_to_agree_allowed`, `dispute_window_days`,
+ * `reconciliation_window_days`) se registraron el 2026-09-11 antes de que
+ * existiera la migracion que las siembra; la migracion `0012` ya las siembra,
+ * asi que en una base migrada manda la fila —el default NUNCA pisa a la base—.
+ *
+ * Se deja el campo puesto a proposito: si alguien borra una de esas filas por
+ * SQL, el lector devuelve el default, lo marca como `source: 'default'` y lo
+ * anota en el log, en vez de tumbar el despacho o el alta de un reclamo. Lo
+ * que el Config Store gobierna es el VALOR; que la aplicacion se caiga porque
+ * falta una fila no es configurabilidad, es fragilidad.
  *
  * ⚠️ LOS RANGOS SON TECHOS DE CORDURA, NO REGLAS DE NEGOCIO. Que la ventana
  * de pago no supere 30 dias no es una politica comercial: es evitar que un

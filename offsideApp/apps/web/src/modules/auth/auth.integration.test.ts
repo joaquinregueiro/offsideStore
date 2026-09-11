@@ -203,9 +203,23 @@ describe('email de verificacion (BR-001)', () => {
     const cola = getQueue<EmailJobData>(QUEUE_NAMES.NOTIFICATIONS_SEND);
     await cola.drain();
 
-    expect(await authService.requestPasswordReset(email('no-existe-jamas'))).toBeNull();
+    const destino = email('no-existe-jamas');
 
-    expect(await cola.getJobs(['waiting', 'delayed', 'active'])).toHaveLength(0);
+    expect(await authService.requestPasswordReset(destino)).toBeNull();
+
+    /*
+     * ⚠️ SE FILTRA POR DESTINATARIO EN VEZ DE EXIGIR LA COLA VACIA, y no es
+     * aflojar el test: es lo que el test siempre quiso decir. `notifications-send`
+     * es UNA cola compartida por toda la aplicacion, y desde que existen los
+     * emails de orden hay otro archivo de tests que encola ahi. Vitest corre los
+     * archivos en PARALELO, asi que "la cola esta vacia" pasaba a depender de que
+     * el otro archivo no estuviera encolando en ese instante: el test fallaba
+     * cada tantas corridas sin que nada estuviera roto, que es peor que no
+     * tenerlo. Lo que importa es que ESTA peticion no dejo rastro.
+     */
+    const jobs = await cola.getJobs(['waiting', 'delayed', 'active']);
+
+    expect(jobs.filter((job) => job.data.to === destino)).toHaveLength(0);
   });
 });
 
