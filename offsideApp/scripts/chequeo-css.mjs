@@ -24,8 +24,18 @@
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const SRC = new URL('../apps/web/src/', import.meta.url).pathname;
+/**
+ * ⚠️ `fileURLToPath`, NO `.pathname`.
+ *
+ * En Windows `new URL(...).pathname` devuelve `/C:/Users/...` —con la barra de
+ * mas— y ademas deja los espacios percent-encoded (`Offside%20Store`). Al
+ * resolverlo quedaba `C:\C:\Users\...\Offside%20Store\...` y el script reventaba
+ * con ENOENT. En Linux funciona de casualidad, porque no hay letra de unidad; y
+ * la ruta de este repo ADEMAS tiene espacios (CLAUDE.md §18).
+ */
+const SRC = fileURLToPath(new URL('../apps/web/src/', import.meta.url));
 const GLOBALES = new Set(['app/tokens.css', 'app/movimiento.css']);
 
 /** `next/font` las inyecta en el `<html>` en tiempo de ejecucion: no viven en ningun .css. */
