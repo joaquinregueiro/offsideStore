@@ -9,7 +9,7 @@ import { requireVerifiedSessionUser } from '@/lib/session';
 import { listMyQuestions } from '@/modules/questions/services/question.service';
 
 import { ChapaDeCuenta } from '../../chapa';
-import { NavDeCuenta } from '../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mis preguntas' };
@@ -39,71 +39,76 @@ export default async function MisPreguntas() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo="Mis preguntas"
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {preguntas.length === 0
-                ? 'Todavía no preguntaste nada'
-                : sinResponder === 0
-                  ? 'Todas respondidas'
-                  : `${cantidad(sinResponder, 'sin responder', 'sin responder')}`}
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="preguntas">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo="Mis preguntas"
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {preguntas.length === 0
+                  ? 'Todavía no preguntaste nada'
+                  : sinResponder === 0
+                    ? 'Todas respondidas'
+                    : `${cantidad(sinResponder, 'sin responder', 'sin responder')}`}
+              </p>
+            }
+          />
 
-        <NavDeCuenta activo="preguntas" />
+          <SolapasDeCuenta user={user} seccion="preguntas" activa="hechas" />
 
-        {preguntas.length === 0 ? (
-          <EstadoVacio titulo="No hiciste ninguna pregunta" icono={<IconoPregunta tamanio={40} />}>
-            <p>
-              En cada publicación podés preguntarle al vendedor lo que no esté en la descripción.
-              Las respuestas las vas a ver acá.
-            </p>
-            <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
-          </EstadoVacio>
-        ) : (
-          <Seccion titulo="Preguntas" dato={cantidad(preguntas.length, 'pregunta')}>
-            <ul className={`${estilos.lista} ${estilos.revela}`}>
-              {preguntas.map((pregunta) => (
-                <li key={pregunta.id} className={`${estilos.tarjetaTexto} sup-ficha eleva`}>
-                  <div className={estilos.tarjetaCabecera}>
-                    <Link
-                      href={`/p/${pregunta.listingId}`}
-                      className={`${estilos.tarjetaEnlace} subraya`}
-                      transitionTypes={['avanza']}
-                    >
-                      {pregunta.listingTitle}
-                    </Link>
-                    <span className={estilos.tarjetaFecha}>{fecha(pregunta.createdAt)}</span>
-                  </div>
-
-                  <p className={estilos.texto}>{pregunta.question}</p>
-
-                  {pregunta.answer === null ? (
-                    <p className={estilos.pendiente}>
-                      El vendedor todavía no respondió.{' '}
-                      {pregunta.status === 'hidden' && (
-                        <Etiqueta tono="neutro">La pregunta se ocultó</Etiqueta>
-                      )}
-                    </p>
-                  ) : (
-                    <div className={estilos.respuesta}>
-                      <p className={estilos.respuestaRotulo}>
-                        Respuesta del vendedor
-                        {pregunta.answeredAt !== null && ` · ${fecha(pregunta.answeredAt)}`}
-                      </p>
-                      <p className={estilos.texto}>{pregunta.answer}</p>
+          {preguntas.length === 0 ? (
+            <EstadoVacio
+              titulo="No hiciste ninguna pregunta"
+              icono={<IconoPregunta tamanio={40} />}
+            >
+              <p>
+                En cada publicación podés preguntarle al vendedor lo que no esté en la descripción.
+                Las respuestas las vas a ver acá.
+              </p>
+              <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
+            </EstadoVacio>
+          ) : (
+            <Seccion titulo="Preguntas" dato={cantidad(preguntas.length, 'pregunta')}>
+              <ul className={`${estilos.lista} ${estilos.revela}`}>
+                {preguntas.map((pregunta) => (
+                  <li key={pregunta.id} className={`${estilos.tarjetaTexto} sup-ficha eleva`}>
+                    <div className={estilos.tarjetaCabecera}>
+                      <Link
+                        href={`/p/${pregunta.listingId}`}
+                        className={`${estilos.tarjetaEnlace} subraya`}
+                        transitionTypes={['avanza']}
+                      >
+                        {pregunta.listingTitle}
+                      </Link>
+                      <span className={estilos.tarjetaFecha}>{fecha(pregunta.createdAt)}</span>
                     </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Seccion>
-        )}
-      </main>
+
+                    <p className={estilos.texto}>{pregunta.question}</p>
+
+                    {pregunta.answer === null ? (
+                      <p className={estilos.pendiente}>
+                        El vendedor todavía no respondió.{' '}
+                        {pregunta.status === 'hidden' && (
+                          <Etiqueta tono="neutro">La pregunta se ocultó</Etiqueta>
+                        )}
+                      </p>
+                    ) : (
+                      <div className={estilos.respuesta}>
+                        <p className={estilos.respuestaRotulo}>
+                          Respuesta del vendedor
+                          {pregunta.answeredAt !== null && ` · ${fecha(pregunta.answeredAt)}`}
+                        </p>
+                        <p className={estilos.texto}>{pregunta.answer}</p>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Seccion>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

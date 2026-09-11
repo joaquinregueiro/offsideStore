@@ -734,23 +734,24 @@
  * ⚠️ EL ROMBO USA `--color-naranja` (forma) Y EL TEXTO `--color-alerta`
  * (informacion): 2.16:1 no se lee, 4.88:1 si. El halo naranja va AFUERA.
  *
- * ⚠️ LAS RAYAS DE LA BANDERA VAN EN UNA CINTA DE 3px ABAJO, **NO DETRAS DEL
- * TEXTO**: con las rayas al 14% detras, el texto de alerta cae a 4.34:1. Y la
- * cinta es una capa de `background-image`, **NO UN `::after`**: `Etiqueta`
- * compone `pulso-atencion`, que dibuja su anillo en `::after`, y un elemento
- * tiene UN solo `::after`. En una pastilla el radio recorta ~4px de la cinta en
- * cada punta: queda como una sonrisa de rayas, que es exactamente lo buscado.
+ * ⚠️ LA CINTA DE RAYAS DIAGONALES DE ABAJO SE FUE (2026-09-11), Y NO POR
+ * GUSTO: A TAMAÑO REAL NO SE LEIA COMO UNA CINTA, SE LEIA COMO UN DEFECTO. Era
+ * una tira de 3px de rayas al pie de una pastilla de ~24px de alto; el radio
+ * de la pastilla le recortaba las puntas y lo que quedaba era una linea
+ * naranja interrumpida debajo del texto, indistinguible de un subrayado
+ * punteado mal renderizado. El dueño la marco en una captura de produccion.
+ *
+ * En su lugar, la pastilla se rellena con un lavado naranja muy claro. El
+ * texto de alerta sobre `#fff4e8` da 4.93:1, o sea que el cambio ADEMAS sube
+ * el contraste: antes el texto iba sobre blanco con la cinta compitiendo al
+ * pie. La superficie puede pisar el lavado con `--alerta-lavado` cuando la
+ * etiqueta vive sobre un fondo oscuro.
  */
 .etiquetaAlerta {
   --etiqueta-rombo: var(--color-naranja);
-  --patron-color: var(--color-naranja);
   border-color: var(--color-naranja);
   color: var(--alerta-texto, var(--color-alerta));
-  padding-bottom: 5px;
-  background-image: var(--patron-diagonales);
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  background-size: 100% 3px;
+  background-color: var(--alerta-lavado, #fff4e8);
   box-shadow:
     var(--sombra-0),
     0 0 14px -4px color-mix(in srgb, var(--color-naranja) 55%, transparent);

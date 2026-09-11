@@ -15,11 +15,11 @@ import {
 } from '@/components/ui';
 import { cantidad, fecha, multiplicador } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../(cuenta)/panel';
 import { arePromotionsEnabled } from '@/modules/listings/services/listing-settings.service';
 import { listPromotions } from '@/modules/listings/services/promotion.service';
 
 import { Chapa } from '../../chapa';
-import { NavDelVendedor } from '../../nav';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mis promociones' };
@@ -62,130 +62,132 @@ export default async function MisPromociones() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Chapa rotulo="Visibilidad" titulo="Mis promociones" chica />
+      <PanelDeCuenta user={user} seccion="publicaciones">
+        <main id="contenido">
+          <Chapa rotulo="Visibilidad" titulo="Mis promociones" chica />
 
-        <NavDelVendedor activo="promociones" />
+          <SolapasDeCuenta user={user} seccion="publicaciones" activa="promociones" />
 
-        {!habilitadas && (
-          <Aviso tono="neutro">
-            Las promociones están apagadas en este momento. Las que ya activaste siguen su curso
-            hasta terminar.
-          </Aviso>
-        )}
+          {!habilitadas && (
+            <Aviso tono="neutro">
+              Las promociones están apagadas en este momento. Las que ya activaste siguen su curso
+              hasta terminar.
+            </Aviso>
+          )}
 
-        {promociones.length === 0 ? (
-          <EstadoVacio titulo="Todavía no promocionaste nada" icono={<IconoRayo tamanio={40} />}>
-            <p>
-              Promocionar hace que una publicación aparezca primero en la vitrina y en la búsqueda
-              durante unos días, a cambio de una comisión más alta en lo que vendas.{' '}
-              <Link href="/vendedor/publicaciones">Elegí una publicación</Link> para ver cuánto te
-              costaría la tuya.
-            </p>
-          </EstadoVacio>
-        ) : (
-          <>
-            <div className={`${estilos.tablero} sup-noche con-grano`}>
-              <Cifras
-                cifras={[
-                  { valor: String(promociones.length), etiqueta: 'Promociones hechas' },
-                  {
-                    valor: String(vigentes.length),
-                    etiqueta: 'Vigentes ahora',
-                    detalle: vigentes.length === 0 ? undefined : 'aparecen primero',
-                  },
-                  {
-                    valor: String(ventas),
-                    etiqueta: 'Ventas bajo promoción',
-                    detalle: 'con la comisión agravada',
-                  },
-                ]}
-              />
-            </div>
+          {promociones.length === 0 ? (
+            <EstadoVacio titulo="Todavía no promocionaste nada" icono={<IconoRayo tamanio={40} />}>
+              <p>
+                Promocionar hace que una publicación aparezca primero en la vitrina y en la búsqueda
+                durante unos días, a cambio de una comisión más alta en lo que vendas.{' '}
+                <Link href="/vendedor/publicaciones">Elegí una publicación</Link> para ver cuánto te
+                costaría la tuya.
+              </p>
+            </EstadoVacio>
+          ) : (
+            <>
+              <div className={`${estilos.tablero} sup-noche con-grano`}>
+                <Cifras
+                  cifras={[
+                    { valor: String(promociones.length), etiqueta: 'Promociones hechas' },
+                    {
+                      valor: String(vigentes.length),
+                      etiqueta: 'Vigentes ahora',
+                      detalle: vigentes.length === 0 ? undefined : 'aparecen primero',
+                    },
+                    {
+                      valor: String(ventas),
+                      etiqueta: 'Ventas bajo promoción',
+                      detalle: 'con la comisión agravada',
+                    },
+                  ]}
+                />
+              </div>
 
-            <Seccion
-              titulo="Historial"
-              dato={cantidad(promociones.length, 'promoción', 'promociones')}
-            >
-              <div className={estilos.marcoVentas}>
-                <Tabla titulo="Promociones">
-                  <thead>
-                    <tr>
-                      <th scope="col">Publicación</th>
-                      <th scope="col">Estado</th>
-                      <th scope="col">Cuándo</th>
-                      <EncabezadoNumero>Comisión</EncabezadoNumero>
-                      <EncabezadoNumero>Ventas</EncabezadoNumero>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {promociones.map((promocion) => (
-                      <tr key={promocion.id}>
-                        <td>
-                          <p className={estilos.celdaTitulo}>
-                            <Link href={`/p/${promocion.listingId}`} className="subraya">
-                              {promocion.listingTitle}
-                            </Link>
-                          </p>
-                        </td>
-                        <td>
-                          {/*
+              <Seccion
+                titulo="Historial"
+                dato={cantidad(promociones.length, 'promoción', 'promociones')}
+              >
+                <div className={estilos.marcoVentas}>
+                  <Tabla titulo="Promociones">
+                    <thead>
+                      <tr>
+                        <th scope="col">Publicación</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Cuándo</th>
+                        <EncabezadoNumero>Comisión</EncabezadoNumero>
+                        <EncabezadoNumero>Ventas</EncabezadoNumero>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {promociones.map((promocion) => (
+                        <tr key={promocion.id}>
+                          <td>
+                            <p className={estilos.celdaTitulo}>
+                              <Link href={`/p/${promocion.listingId}`} className="subraya">
+                                {promocion.listingTitle}
+                              </Link>
+                            </p>
+                          </td>
+                          <td>
+                            {/*
                             ⚠️ TRES ESTADOS DISTINTOS Y CADA UNO DICE ALGO. Vigente
                             es lo único que está costando comisión agravada ahora;
                             "terminada" es normal y "terminada por Offside" no, así
                             que no se pueden mostrar iguales.
                           */}
-                          <Etiqueta
-                            tono={
-                              promocion.vigente
-                                ? 'marca'
+                            <Etiqueta
+                              tono={
+                                promocion.vigente
+                                  ? 'marca'
+                                  : promocion.cancelledAt === null
+                                    ? 'neutro'
+                                    : 'alerta'
+                              }
+                            >
+                              {promocion.vigente
+                                ? 'Vigente'
                                 : promocion.cancelledAt === null
-                                  ? 'neutro'
-                                  : 'alerta'
-                            }
-                          >
-                            {promocion.vigente
-                              ? 'Vigente'
-                              : promocion.cancelledAt === null
-                                ? 'Terminada'
-                                : 'Terminada por Offside'}
-                          </Etiqueta>
-                        </td>
-                        <td>
-                          <p className={estilos.celdaMeta}>
-                            {fecha(promocion.startsAt)} → {fecha(promocion.endsAt)}
-                          </p>
-                          <p className={estilos.celdaMeta}>
-                            {(() => {
-                              const dias = duracionEnDias(promocion.startsAt, promocion.endsAt);
+                                  ? 'Terminada'
+                                  : 'Terminada por Offside'}
+                            </Etiqueta>
+                          </td>
+                          <td>
+                            <p className={estilos.celdaMeta}>
+                              {fecha(promocion.startsAt)} → {fecha(promocion.endsAt)}
+                            </p>
+                            <p className={estilos.celdaMeta}>
+                              {(() => {
+                                const dias = duracionEnDias(promocion.startsAt, promocion.endsAt);
 
-                              return promocion.vigente
-                                ? `Dura ${dias === 1 ? '1 día' : `${dias} días`}`
-                                : `Duró ${dias === 1 ? '1 día' : `${dias} días`}`;
-                            })()}
-                          </p>
-                        </td>
-                        <CeldaNumero>{multiplicador(promocion.multiplier)}</CeldaNumero>
-                        <CeldaNumero>
-                          <strong>{promocion.ventas}</strong>
-                        </CeldaNumero>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Tabla>
-              </div>
-            </Seccion>
-          </>
-        )}
+                                return promocion.vigente
+                                  ? `Dura ${dias === 1 ? '1 día' : `${dias} días`}`
+                                  : `Duró ${dias === 1 ? '1 día' : `${dias} días`}`;
+                              })()}
+                            </p>
+                          </td>
+                          <CeldaNumero>{multiplicador(promocion.multiplier)}</CeldaNumero>
+                          <CeldaNumero>
+                            <strong>{promocion.ventas}</strong>
+                          </CeldaNumero>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Tabla>
+                </div>
+              </Seccion>
+            </>
+          )}
 
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
-          <p className={estilos.nota}>
-            Una promoción no se puede cortar antes de tiempo. La comisión agravada se aplica a las
-            órdenes creadas mientras estuvo vigente, y cada orden la congela al crearse: lo vendido
-            antes no cambia.
-          </p>
-        </div>
-      </main>
+          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+            <p className={estilos.nota}>
+              Una promoción no se puede cortar antes de tiempo. La comisión agravada se aplica a las
+              órdenes creadas mientras estuvo vigente, y cada orden la congela al crearse: lo
+              vendido antes no cambia.
+            </p>
+          </div>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

@@ -10,7 +10,7 @@ import { coverUrls } from '@/modules/listings/services/listing.service';
 import { listMyOrders, type OrderStatus } from '@/modules/orders/services/order.service';
 
 import { ChapaDeCuenta } from '../../chapa';
-import { NavDeCuenta } from '../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mis compras' };
@@ -87,158 +87,164 @@ export default async function MisCompras({
 
   return (
     <Pantalla>
-      <main id="contenido" className={`${estilos.pagina} ${estilos.paginaAncha}`}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo="Mis compras"
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {todas.length === 0
-                ? 'Todavía no compraste nada'
-                : `${cantidad(todas.length, 'compra')} en total`}
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="compras">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo="Mis compras"
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {todas.length === 0
+                  ? 'Todavía no compraste nada'
+                  : `${cantidad(todas.length, 'compra')} en total`}
+              </p>
+            }
+          />
 
-        <NavDeCuenta activo="compras" compras={todas.length} />
+          <SolapasDeCuenta user={user} seccion="compras" activa="historial" />
 
-        {todas.length > 0 && (
-          <nav className={estilos.filtros} aria-label="Filtrar por estado">
-            <Link
-              href="/cuenta/compras"
-              className={
-                estado === undefined ? `${estilos.filtro} ${estilos.filtroActivo}` : estilos.filtro
-              }
-              aria-current={estado === undefined ? 'page' : undefined}
+          {todas.length > 0 && (
+            <nav className={estilos.filtros} aria-label="Filtrar por estado">
+              <Link
+                href="/cuenta/compras"
+                className={
+                  estado === undefined
+                    ? `${estilos.filtro} ${estilos.filtroActivo}`
+                    : estilos.filtro
+                }
+                aria-current={estado === undefined ? 'page' : undefined}
+              >
+                Todas
+              </Link>
+              {FILTROS.map((filtro) => {
+                const activo = estado === filtro.estado;
+
+                return (
+                  <Link
+                    key={filtro.estado}
+                    href={`/cuenta/compras?estado=${filtro.estado}`}
+                    className={
+                      activo ? `${estilos.filtro} ${estilos.filtroActivo}` : estilos.filtro
+                    }
+                    aria-current={activo ? 'page' : undefined}
+                  >
+                    {filtro.texto}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+
+          {ordenes.length === 0 ? (
+            <EstadoVacio
+              titulo={estado === undefined ? 'Todavía no compraste nada' : 'Ninguna compra acá'}
+              icono={<IconoCamiseta tamanio={40} />}
             >
-              Todas
-            </Link>
-            {FILTROS.map((filtro) => {
-              const activo = estado === filtro.estado;
-
-              return (
-                <Link
-                  key={filtro.estado}
-                  href={`/cuenta/compras?estado=${filtro.estado}`}
-                  className={activo ? `${estilos.filtro} ${estilos.filtroActivo}` : estilos.filtro}
-                  aria-current={activo ? 'page' : undefined}
-                >
-                  {filtro.texto}
-                </Link>
-              );
-            })}
-          </nav>
-        )}
-
-        {ordenes.length === 0 ? (
-          <EstadoVacio
-            titulo={estado === undefined ? 'Todavía no compraste nada' : 'Ninguna compra acá'}
-            icono={<IconoCamiseta tamanio={40} />}
-          >
-            {/*
+              {/*
               ⚠️ NO DICE "Y SU SEGUIMIENTO". No hay integración con ningún
               transportista: el seguimiento es lo que el vendedor declara a mano.
               Prometerlo en un estado vacío es el tipo de promesa sin nada detrás
               que `/como-funciona` existe para no hacer.
             */}
-            {estado === undefined ? (
-              <>
-                <p>Cuando compres una camiseta, la vas a ver acá con su estado.</p>
-                <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
-              </>
-            ) : (
-              <>
-                <p>No tenés compras en ese estado.</p>
-                <BotonEnlace href="/cuenta/compras" variante="secundario">
-                  Ver todas
-                </BotonEnlace>
-              </>
-            )}
-          </EstadoVacio>
-        ) : (
-          <Seccion
-            titulo="Historial"
-            dato={
-              estado === undefined
-                ? cantidad(ordenes.length, 'orden', 'órdenes')
-                : `${cantidad(ordenes.length, 'orden', 'órdenes')} · ${estadoDeOrden(estado)}`
-            }
-          >
-            <ul className={`${estilos.lista} ${estilos.revela}`}>
-              {ordenes.map((orden) => {
-                /*
+              {estado === undefined ? (
+                <>
+                  <p>Cuando compres una camiseta, la vas a ver acá con su estado.</p>
+                  <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
+                </>
+              ) : (
+                <>
+                  <p>No tenés compras en ese estado.</p>
+                  <BotonEnlace href="/cuenta/compras" variante="secundario">
+                    Ver todas
+                  </BotonEnlace>
+                </>
+              )}
+            </EstadoVacio>
+          ) : (
+            <Seccion
+              titulo="Historial"
+              dato={
+                estado === undefined
+                  ? cantidad(ordenes.length, 'orden', 'órdenes')
+                  : `${cantidad(ordenes.length, 'orden', 'órdenes')} · ${estadoDeOrden(estado)}`
+              }
+            >
+              <ul className={`${estilos.lista} ${estilos.revela}`}>
+                {ordenes.map((orden) => {
+                  /*
                   ⚠️ EL TÍTULO SALE DEL SNAPSHOT CONGELADO EN LA ORDEN (DEC-030),
                   no de la publicación actual: sigue diciendo lo que se compró
                   aunque el vendedor la haya renombrado o eliminado después.
                   Nadie recuerda una compra por su número de orden.
                 */
-                const principal = orden.items[0];
-                const portada =
-                  principal === undefined ? undefined : portadas.get(principal.listingId);
-                const otros = orden.items.length - 1;
+                  const principal = orden.items[0];
+                  const portada =
+                    principal === undefined ? undefined : portadas.get(principal.listingId);
+                  const otros = orden.items.length - 1;
 
-                return (
-                  <li key={orden.id}>
-                    <Link
-                      href={`/cuenta/compras/${orden.id}`}
-                      className={`${estilos.compra} sup-ficha eleva destello presiona`}
-                      data-tono={tonoDeOrden(orden.status)}
-                      transitionTypes={['avanza']}
-                    >
-                      <span className={`${estilos.compraMarco} zoom-marco`}>
-                        {portada === undefined ? (
-                          <span
-                            className={`${estilos.compraPatron} ${estilos.rombos}`}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            className={`${estilos.compraFoto} zoom-foto`}
-                            src={portada}
-                            alt=""
-                            width={96}
-                            height={120}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        )}
-                      </span>
-
-                      <div className={estilos.compraCuerpo}>
-                        <p className={estilos.compraTitulo}>
-                          {principal?.title ?? `Orden ${orden.orderNumber}`}
-                          {otros > 0 && (
-                            <span className={estilos.compraOtros}>
-                              {otros === 1 ? ' y 1 artículo más' : ` y ${otros} artículos más`}
-                            </span>
+                  return (
+                    <li key={orden.id}>
+                      <Link
+                        href={`/cuenta/compras/${orden.id}`}
+                        className={`${estilos.compra} sup-ficha eleva destello presiona`}
+                        data-tono={tonoDeOrden(orden.status)}
+                        transitionTypes={['avanza']}
+                      >
+                        <span className={`${estilos.compraMarco} zoom-marco`}>
+                          {portada === undefined ? (
+                            <span
+                              className={`${estilos.compraPatron} ${estilos.rombos}`}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              className={`${estilos.compraFoto} zoom-foto`}
+                              src={portada}
+                              alt=""
+                              width={96}
+                              height={120}
+                              loading="lazy"
+                              decoding="async"
+                            />
                           )}
-                        </p>
-                        <p className={estilos.compraMeta}>
-                          {fecha(orden.createdAt)} · Orden {orden.orderNumber}
-                        </p>
-                        <div className={estilos.compraPie}>
-                          {/*
+                        </span>
+
+                        <div className={estilos.compraCuerpo}>
+                          <p className={estilos.compraTitulo}>
+                            {principal?.title ?? `Orden ${orden.orderNumber}`}
+                            {otros > 0 && (
+                              <span className={estilos.compraOtros}>
+                                {otros === 1 ? ' y 1 artículo más' : ` y ${otros} artículos más`}
+                              </span>
+                            )}
+                          </p>
+                          <p className={estilos.compraMeta}>
+                            {fecha(orden.createdAt)} · Orden {orden.orderNumber}
+                          </p>
+                          <div className={estilos.compraPie}>
+                            {/*
                             ⚠️ LA ETIQUETA NO LATE Y NO ENTRA ANIMADA. El estado de
                             una orden que se mueve se lee como un estado que
                             todavía no está decidido.
                           */}
-                          <Etiqueta tono={tonoDeOrden(orden.status)}>
-                            {estadoDeOrden(orden.status)}
-                          </Etiqueta>
-                          <span className={estilos.compraTotal}>
-                            {precio(orden.totalAmount, orden.currency)}
-                          </span>
+                            <Etiqueta tono={tonoDeOrden(orden.status)}>
+                              {estadoDeOrden(orden.status)}
+                            </Etiqueta>
+                            <span className={estilos.compraTotal}>
+                              {precio(orden.totalAmount, orden.currency)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </Seccion>
-        )}
-      </main>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Seccion>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

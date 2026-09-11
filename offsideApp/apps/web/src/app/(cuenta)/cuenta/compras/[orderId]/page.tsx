@@ -45,7 +45,7 @@ import { isWithinReviewWindow } from '@/modules/reviews/services/review-rules';
 
 import { cancelarCompra, confirmarRecepcion } from '../../../acciones';
 import { ChapaDeCuenta } from '../../../chapa';
-import { NavDeCuenta } from '../../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../panel';
 import estilos from '../../../cuenta.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -279,333 +279,340 @@ export default async function FichaDeCompra({ params }: { params: Promise<{ orde
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo={`Orden ${detalle.orderNumber}`}
-          titulo={detalle.items[0]?.title ?? 'Tu compra'}
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              Comprada el {fecha(detalle.createdAt)}
-              {detalle.sellerDisplayName !== null && ` · ${detalle.sellerDisplayName}`}
-            </p>
-          }
-          lateral={
-            <Etiqueta tono={tonoDeOrden(detalle.status)}>{estadoDeOrden(detalle.status)}</Etiqueta>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="compras">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo={`Orden ${detalle.orderNumber}`}
+            titulo={detalle.items[0]?.title ?? 'Tu compra'}
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                Comprada el {fecha(detalle.createdAt)}
+                {detalle.sellerDisplayName !== null && ` · ${detalle.sellerDisplayName}`}
+              </p>
+            }
+            lateral={
+              <Etiqueta tono={tonoDeOrden(detalle.status)}>
+                {estadoDeOrden(detalle.status)}
+              </Etiqueta>
+            }
+          />
 
-        <NavDeCuenta activo="compras" />
+          <SolapasDeCuenta user={user} seccion="compras" activa="historial" />
 
-        <Migas
-          items={[
-            { texto: 'Mi cuenta', href: '/cuenta' },
-            { texto: 'Mis compras', href: '/cuenta/compras' },
-            { texto: `Orden ${detalle.orderNumber}` },
-          ]}
-        />
+          <Migas
+            items={[
+              { texto: 'Mi cuenta', href: '/cuenta' },
+              { texto: 'Mis compras', href: '/cuenta/compras' },
+              { texto: `Orden ${detalle.orderNumber}` },
+            ]}
+          />
 
-        <div className={estilos.ficha}>
-          <div className={estilos.columna}>
-            <section className={`${estilos.bloque} sup-ficha entraBloque`}>
-              <h2 className={estilos.bloqueTitulo}>Seguimiento</h2>
-              <Cronologia
-                etiqueta={`Estado de la orden ${detalle.orderNumber}`}
-                hitos={hitosDe(detalle.timeline, detalle.status, detalle.sellerDisplayName)}
-              />
-            </section>
+          <div className={estilos.ficha}>
+            <div className={estilos.columna}>
+              <section className={`${estilos.bloque} sup-ficha entraBloque`}>
+                <h2 className={estilos.bloqueTitulo}>Seguimiento</h2>
+                <Cronologia
+                  etiqueta={`Estado de la orden ${detalle.orderNumber}`}
+                  hitos={hitosDe(detalle.timeline, detalle.status, detalle.sellerDisplayName)}
+                />
+              </section>
 
-            <section className={`${estilos.bloque} sup-ficha`}>
-              <h2 className={estilos.bloqueTitulo}>Qué compraste</h2>
-              <ul className={estilos.items}>
-                {detalle.items.map((item) => {
-                  const portada = portadas.get(item.listingId);
+              <section className={`${estilos.bloque} sup-ficha`}>
+                <h2 className={estilos.bloqueTitulo}>Qué compraste</h2>
+                <ul className={estilos.items}>
+                  {detalle.items.map((item) => {
+                    const portada = portadas.get(item.listingId);
 
-                  return (
-                    <li key={item.id} className={estilos.item}>
-                      <span className={estilos.itemMarco}>
-                        {portada === undefined ? (
-                          <span
-                            className={`${estilos.itemPatron} ${estilos.rombos}`}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            className={estilos.itemFoto}
-                            src={portada}
-                            alt=""
-                            width={64}
-                            height={80}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        )}
-                      </span>
-                      <div>
-                        {/*
+                    return (
+                      <li key={item.id} className={estilos.item}>
+                        <span className={estilos.itemMarco}>
+                          {portada === undefined ? (
+                            <span
+                              className={`${estilos.itemPatron} ${estilos.rombos}`}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              className={estilos.itemFoto}
+                              src={portada}
+                              alt=""
+                              width={64}
+                              height={80}
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          )}
+                        </span>
+                        <div>
+                          {/*
                           ⚠️ EL TÍTULO ES EL SNAPSHOT (DEC-030) Y EL ENLACE VA A LA
                           PUBLICACIÓN ACTUAL: son dos cosas distintas a propósito.
                           El enlace puede terminar en 404 si el vendedor la
                           eliminó, y eso está bien; lo que NO puede pasar es que
                           el título cambie después de comprar.
                         */}
-                        <p className={estilos.itemTitulo}>
-                          <Link href={`/p/${item.listingId}`}>{item.title}</Link>
-                        </p>
-                        <p className={estilos.itemMeta}>
-                          {cantidad(item.quantity, 'unidad', 'unidades')} ·{' '}
-                          {precio(item.unitPriceAmount, detalle.currency)} c/u
-                        </p>
-                      </div>
-                      <span className={estilos.itemPrecio}>
-                        {precio(item.unitPriceAmount, detalle.currency)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
+                          <p className={estilos.itemTitulo}>
+                            <Link href={`/p/${item.listingId}`}>{item.title}</Link>
+                          </p>
+                          <p className={estilos.itemMeta}>
+                            {cantidad(item.quantity, 'unidad', 'unidades')} ·{' '}
+                            {precio(item.unitPriceAmount, detalle.currency)} c/u
+                          </p>
+                        </div>
+                        <span className={estilos.itemPrecio}>
+                          {precio(item.unitPriceAmount, detalle.currency)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
 
-            <section className={`${estilos.bloque} sup-ficha`}>
-              <h2 className={estilos.bloqueTitulo}>Envío</h2>
-              {detalle.shipment === null ? (
-                <p className={estilos.nota}>
-                  {detalle.status === 'PENDING_PAYMENT'
-                    ? `Cuando se acredite el pago, ${tienda} prepara el paquete y carga acá el transportista y el número de seguimiento.`
-                    : `Todavía no lo despacharon. Cuando ${tienda} lo despache vas a ver acá el transportista y el número de seguimiento que declare.`}
-                </p>
-              ) : (
-                <>
-                  <FilaDeDatos concepto="Estado">
-                    {estadoDeEnvio(detalle.shipment.status)}
-                  </FilaDeDatos>
-                  <FilaDeDatos concepto="Transportista">
-                    {detalle.shipment.carrierName ?? 'Sin declarar'}
-                  </FilaDeDatos>
-                  <FilaDeDatos concepto="Número de seguimiento">
-                    {/*
+              <section className={`${estilos.bloque} sup-ficha`}>
+                <h2 className={estilos.bloqueTitulo}>Envío</h2>
+                {detalle.shipment === null ? (
+                  <p className={estilos.nota}>
+                    {detalle.status === 'PENDING_PAYMENT'
+                      ? `Cuando se acredite el pago, ${tienda} prepara el paquete y carga acá el transportista y el número de seguimiento.`
+                      : `Todavía no lo despacharon. Cuando ${tienda} lo despache vas a ver acá el transportista y el número de seguimiento que declare.`}
+                  </p>
+                ) : (
+                  <>
+                    <FilaDeDatos concepto="Estado">
+                      {estadoDeEnvio(detalle.shipment.status)}
+                    </FilaDeDatos>
+                    <FilaDeDatos concepto="Transportista">
+                      {detalle.shipment.carrierName ?? 'Sin declarar'}
+                    </FilaDeDatos>
+                    <FilaDeDatos concepto="Número de seguimiento">
+                      {/*
                       ⚠️ EL NÚMERO SE MUESTRA SIEMPRE QUE EXISTA, aunque no haya
                       enlace: el transportista puede no tener una página de
                       seguimiento cargada, y esconder el número por eso deja a la
                       persona sin el único dato con el que puede reclamar.
                     */}
-                    {detalle.shipment.trackingNumber === null ? (
-                      'Sin número'
-                    ) : detalle.shipment.trackingUrl === null ? (
-                      detalle.shipment.trackingNumber
-                    ) : (
-                      <a
-                        href={detalle.shipment.trackingUrl}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        {detalle.shipment.trackingNumber}
-                      </a>
-                    )}
-                  </FilaDeDatos>
-                  {detalle.shipment.dispatchedAt !== null && (
-                    <FilaDeDatos concepto="Despachado">
-                      {fechaYHora(detalle.shipment.dispatchedAt)}
+                      {detalle.shipment.trackingNumber === null ? (
+                        'Sin número'
+                      ) : detalle.shipment.trackingUrl === null ? (
+                        detalle.shipment.trackingNumber
+                      ) : (
+                        <a
+                          href={detalle.shipment.trackingUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          {detalle.shipment.trackingNumber}
+                        </a>
+                      )}
                     </FilaDeDatos>
-                  )}
-                  {/*
+                    {detalle.shipment.dispatchedAt !== null && (
+                      <FilaDeDatos concepto="Despachado">
+                        {fechaYHora(detalle.shipment.dispatchedAt)}
+                      </FilaDeDatos>
+                    )}
+                    {/*
                     ⚠️ ESTO NO ES SEGUIMIENTO AUTOMÁTICO Y LA PANTALLA LO DICE. No
                     hay integración con ningún transportista: lo de arriba es lo
                     que el vendedor declaró a mano. Presentarlo como tracking en
                     vivo sería prometer algo que no existe.
                   */}
-                  <p className={estilos.nota}>
-                    Estos datos los carga {tienda}. Offside todavía no se conecta con el
-                    transportista, así que el seguimiento hay que hacerlo en la página de ellos.
-                  </p>
-                </>
-              )}
-            </section>
+                    <p className={estilos.nota}>
+                      Estos datos los carga {tienda}. Offside todavía no se conecta con el
+                      transportista, así que el seguimiento hay que hacerlo en la página de ellos.
+                    </p>
+                  </>
+                )}
+              </section>
 
-            <section className={`${estilos.bloque} sup-ficha`}>
-              <h2 className={estilos.bloqueTitulo}>A dónde va</h2>
-              <Domicilio snapshot={detalle.shippingAddress} />
-              {/*
+              <section className={`${estilos.bloque} sup-ficha`}>
+                <h2 className={estilos.bloqueTitulo}>A dónde va</h2>
+                <Domicilio snapshot={detalle.shippingAddress} />
+                {/*
                 ⚠️ SE DICE QUE ES LA DIRECCIÓN DE ESE DÍA Y NO LA DE LA LIBRETA.
                 La orden congeló su `shipping_address` al crearse (DEC-030): si
                 alguien se mudó o editó la libreta después, esto sigue diciendo a
                 dónde viajó el paquete. Sin esa línea, ver una dirección vieja se
                 lee como un bug.
               */}
-              <p className={estilos.nota}>
-                Es la dirección que cargaste al comprar. Cambiarla en tus direcciones no cambia esta
-                compra.
-              </p>
-            </section>
-          </div>
+                <p className={estilos.nota}>
+                  Es la dirección que cargaste al comprar. Cambiarla en tus direcciones no cambia
+                  esta compra.
+                </p>
+              </section>
+            </div>
 
-          <div className={estilos.columna}>
-            <section className={`${estilos.bloque} sup-ficha entraBloque`}>
-              <h2 className={estilos.bloqueTitulo}>Importes</h2>
-              <FilaDeDatos concepto="Productos">
-                {precio(detalle.productAmount, detalle.currency)}
-              </FilaDeDatos>
-              <FilaDeDatos concepto="Envío">
-                {/*
+            <div className={estilos.columna}>
+              <section className={`${estilos.bloque} sup-ficha entraBloque`}>
+                <h2 className={estilos.bloqueTitulo}>Importes</h2>
+                <FilaDeDatos concepto="Productos">
+                  {precio(detalle.productAmount, detalle.currency)}
+                </FilaDeDatos>
+                <FilaDeDatos concepto="Envío">
+                  {/*
                   ⚠️ CERO NO ES "GRATIS". Con el envío incluido en el precio el
                   costo está adentro del producto; no hay envío sin costo en
                   ningún lado y prometerlo sería la primera queja.
                 */}
-                {detalle.shippingAmount === '0'
-                  ? 'Sin costo aparte'
-                  : precio(detalle.shippingAmount, detalle.currency)}
-              </FilaDeDatos>
-              <FilaDeDatos concepto="Total" destacada>
-                {precio(detalle.totalAmount, detalle.currency)}
-              </FilaDeDatos>
-            </section>
+                  {detalle.shippingAmount === '0'
+                    ? 'Sin costo aparte'
+                    : precio(detalle.shippingAmount, detalle.currency)}
+                </FilaDeDatos>
+                <FilaDeDatos concepto="Total" destacada>
+                  {precio(detalle.totalAmount, detalle.currency)}
+                </FilaDeDatos>
+              </section>
 
-            <section className={`${estilos.bloque} sup-ficha`}>
-              <h2 className={estilos.bloqueTitulo}>Qué podés hacer</h2>
+              <section className={`${estilos.bloque} sup-ficha`}>
+                <h2 className={estilos.bloqueTitulo}>Qué podés hacer</h2>
 
-              {detalle.actions.canPay && detalle.windows.paymentDeadline !== null && (
-                <Aviso tono="neutro">
-                  Tenés tiempo de pagar hasta el {fechaYHora(detalle.windows.paymentDeadline)}.
-                </Aviso>
-              )}
+                {detalle.actions.canPay && detalle.windows.paymentDeadline !== null && (
+                  <Aviso tono="neutro">
+                    Tenés tiempo de pagar hasta el {fechaYHora(detalle.windows.paymentDeadline)}.
+                  </Aviso>
+                )}
 
-              <div className={estilos.acciones}>
-                {/*
+                <div className={estilos.acciones}>
+                  {/*
                   ⚠️ "PAGAR" ES UN ENLACE AL CHECKOUT, NO UN FORMULARIO QUE LLAME
                   A MERCADO PAGO DESDE ACÁ. El checkout es la pantalla que sabe
                   mostrar la vuelta del proveedor (`?status=`), el "estamos
                   confirmando" y el vencimiento; duplicar el inicio de pago acá
                   sería una segunda puerta a la misma preferencia.
                 */}
-                {detalle.actions.canPay && (
-                  <BotonEnlace href={`/checkout/${detalle.id}`} flecha>
-                    Pagar
-                  </BotonEnlace>
-                )}
+                  {detalle.actions.canPay && (
+                    <BotonEnlace href={`/checkout/${detalle.id}`} flecha>
+                      Pagar
+                    </BotonEnlace>
+                  )}
 
-                {detalle.actions.canConfirmDelivery && (
-                  <Confirmar
-                    etiqueta="Lo recibí"
-                    pregunta="Al confirmar, la compra pasa a entregada y empieza a correr el plazo de protección. Confirmá sólo cuando tengas el paquete en la mano."
-                  >
-                    <Formulario
-                      accion={confirmarRecepcion}
-                      enviar="Sí, lo recibí"
-                      tamanio="medio"
-                      bloque={false}
+                  {detalle.actions.canConfirmDelivery && (
+                    <Confirmar
+                      etiqueta="Lo recibí"
+                      pregunta="Al confirmar, la compra pasa a entregada y empieza a correr el plazo de protección. Confirmá sólo cuando tengas el paquete en la mano."
                     >
-                      <CampoOculto nombre="orderId" valor={detalle.id} />
-                    </Formulario>
-                  </Confirmar>
-                )}
+                      <Formulario
+                        accion={confirmarRecepcion}
+                        enviar="Sí, lo recibí"
+                        tamanio="medio"
+                        bloque={false}
+                      >
+                        <CampoOculto nombre="orderId" valor={detalle.id} />
+                      </Formulario>
+                    </Confirmar>
+                  )}
 
-                {detalle.actions.canCancel && (
-                  <Confirmar
-                    etiqueta="Cancelar la compra"
-                    pregunta="Se cancela la orden y la unidad vuelve a estar disponible para otra persona. No se puede deshacer."
-                  >
-                    <Formulario
-                      accion={cancelarCompra}
-                      enviar="Cancelar la compra"
-                      variante="peligro"
-                      tamanio="medio"
-                      bloque={false}
+                  {detalle.actions.canCancel && (
+                    <Confirmar
+                      etiqueta="Cancelar la compra"
+                      pregunta="Se cancela la orden y la unidad vuelve a estar disponible para otra persona. No se puede deshacer."
                     >
-                      <CampoOculto nombre="orderId" valor={detalle.id} />
-                    </Formulario>
-                  </Confirmar>
-                )}
+                      <Formulario
+                        accion={cancelarCompra}
+                        enviar="Cancelar la compra"
+                        variante="peligro"
+                        tamanio="medio"
+                        bloque={false}
+                      >
+                        <CampoOculto nombre="orderId" valor={detalle.id} />
+                      </Formulario>
+                    </Confirmar>
+                  )}
 
-                {puedeCalificar && (
-                  <BotonEnlace
-                    href={`/cuenta/compras/${detalle.id}/calificar`}
-                    variante="secundario"
-                  >
-                    {/*
+                  {puedeCalificar && (
+                    <BotonEnlace
+                      href={`/cuenta/compras/${detalle.id}/calificar`}
+                      variante="secundario"
+                    >
+                      {/*
                       ⚠️ LA PREPOSICIÓN CAMBIA CON EL NOMBRE: "Calificar a Retro
                       Cancha" contra "Calificar al vendedor". Un `Calificar a
                       ${tienda}` con el genérico adentro daría "Calificar a el
                       vendedor".
                     */}
-                    {detalle.sellerDisplayName === null
-                      ? 'Calificar al vendedor'
-                      : `Calificar a ${detalle.sellerDisplayName}`}
-                  </BotonEnlace>
+                      {detalle.sellerDisplayName === null
+                        ? 'Calificar al vendedor'
+                        : `Calificar a ${detalle.sellerDisplayName}`}
+                    </BotonEnlace>
+                  )}
+
+                  {resena !== null && (
+                    <BotonEnlace
+                      href={`/cuenta/compras/${detalle.id}/calificar`}
+                      variante="fantasma"
+                    >
+                      Ver tu calificación
+                    </BotonEnlace>
+                  )}
+
+                  {puedeReclamar && (
+                    <BotonEnlace
+                      href={`/cuenta/compras/${detalle.id}/reclamar`}
+                      variante="secundario"
+                    >
+                      Abrir un reclamo
+                    </BotonEnlace>
+                  )}
+                </div>
+
+                {detalle.status === 'COMPLETED' && !puedeCalificar && resena === null && (
+                  <p className={estilos.nota}>
+                    El plazo para calificar esta compra ({cantidad(diasDeResena, 'día', 'días')}{' '}
+                    desde que se completó) ya pasó.
+                  </p>
                 )}
 
-                {resena !== null && (
-                  <BotonEnlace href={`/cuenta/compras/${detalle.id}/calificar`} variante="fantasma">
-                    Ver tu calificación
-                  </BotonEnlace>
-                )}
-
-                {puedeReclamar && (
-                  <BotonEnlace
-                    href={`/cuenta/compras/${detalle.id}/reclamar`}
-                    variante="secundario"
-                  >
-                    Abrir un reclamo
-                  </BotonEnlace>
-                )}
-              </div>
-
-              {detalle.status === 'COMPLETED' && !puedeCalificar && resena === null && (
-                <p className={estilos.nota}>
-                  El plazo para calificar esta compra ({cantidad(diasDeResena, 'día', 'días')} desde
-                  que se completó) ya pasó.
-                </p>
-              )}
-
-              {reclamo === null && !puedeReclamar && (
-                <p className={estilos.nota}>
-                  {/*
+                {reclamo === null && !puedeReclamar && (
+                  <p className={estilos.nota}>
+                    {/*
                     ⚠️ SE EXPLICA POR QUÉ NO SE PUEDE RECLAMAR, no se esconde el
                     botón y listo. `claimEligibility` distingue cuatro motivos y
                     cada uno se resuelve de una forma distinta: esperar el
                     despacho no es lo mismo que haberse quedado sin ventana.
                   */}
-                  {detalle.status === 'PENDING_PAYMENT' || detalle.status === 'CANCELLED'
-                    ? 'Los reclamos se abren sobre una compra que ya se pagó.'
-                    : !elegible.ok && elegible.motivo === 'despacho_en_plazo'
-                      ? /*
-                         * ⚠️ MAYÚSCULA INICIAL A MANO: `tienda` es el genérico
-                         * "el vendedor" en minúscula cuando no hay nombre, y
-                         * arranca la oración. Con el nombre de la tienda ya
-                         * viene capitalizado.
-                         */
-                        `${tienda === 'el vendedor' ? 'El vendedor' : tienda} todavía está dentro del plazo para despachar. Si se vence, vas a poder reclamar desde acá.`
-                      : !elegible.ok && elegible.motivo === 'ventana_vencida'
-                        ? `El plazo para reclamar (${cantidad(diasDeReclamo, 'día', 'días')}) ya pasó.`
-                        : 'Vas a poder abrir un reclamo cuando la compra esté despachada.'}
-                </p>
-              )}
-            </section>
-
-            {reclamo !== null && (
-              <section className={`${estilos.bloque} sup-ficha`}>
-                <h2 className={estilos.bloqueTitulo}>Tu reclamo</h2>
-                <FilaDeDatos concepto="Motivo">{motivoDeReclamo(reclamo.reason)}</FilaDeDatos>
-                <FilaDeDatos concepto="Estado">
-                  <Etiqueta tono={tonoDeDisputa(reclamo.status)}>
-                    {estadoDeDisputa(reclamo.status)}
-                  </Etiqueta>
-                </FilaDeDatos>
-                <FilaDeDatos concepto="Abierto">{fecha(reclamo.openedAt)}</FilaDeDatos>
-                <div className={estilos.acciones}>
-                  <BotonEnlace
-                    href={`/cuenta/reclamos/${reclamo.id}`}
-                    variante="secundario"
-                    tamanio="medio"
-                    flecha
-                  >
-                    Ver el reclamo
-                  </BotonEnlace>
-                </div>
+                    {detalle.status === 'PENDING_PAYMENT' || detalle.status === 'CANCELLED'
+                      ? 'Los reclamos se abren sobre una compra que ya se pagó.'
+                      : !elegible.ok && elegible.motivo === 'despacho_en_plazo'
+                        ? /*
+                           * ⚠️ MAYÚSCULA INICIAL A MANO: `tienda` es el genérico
+                           * "el vendedor" en minúscula cuando no hay nombre, y
+                           * arranca la oración. Con el nombre de la tienda ya
+                           * viene capitalizado.
+                           */
+                          `${tienda === 'el vendedor' ? 'El vendedor' : tienda} todavía está dentro del plazo para despachar. Si se vence, vas a poder reclamar desde acá.`
+                        : !elegible.ok && elegible.motivo === 'ventana_vencida'
+                          ? `El plazo para reclamar (${cantidad(diasDeReclamo, 'día', 'días')}) ya pasó.`
+                          : 'Vas a poder abrir un reclamo cuando la compra esté despachada.'}
+                  </p>
+                )}
               </section>
-            )}
+
+              {reclamo !== null && (
+                <section className={`${estilos.bloque} sup-ficha`}>
+                  <h2 className={estilos.bloqueTitulo}>Tu reclamo</h2>
+                  <FilaDeDatos concepto="Motivo">{motivoDeReclamo(reclamo.reason)}</FilaDeDatos>
+                  <FilaDeDatos concepto="Estado">
+                    <Etiqueta tono={tonoDeDisputa(reclamo.status)}>
+                      {estadoDeDisputa(reclamo.status)}
+                    </Etiqueta>
+                  </FilaDeDatos>
+                  <FilaDeDatos concepto="Abierto">{fecha(reclamo.openedAt)}</FilaDeDatos>
+                  <div className={estilos.acciones}>
+                    <BotonEnlace
+                      href={`/cuenta/reclamos/${reclamo.id}`}
+                      variante="secundario"
+                      tamanio="medio"
+                      flecha
+                    >
+                      Ver el reclamo
+                    </BotonEnlace>
+                  </div>
+                </section>
+              )}
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

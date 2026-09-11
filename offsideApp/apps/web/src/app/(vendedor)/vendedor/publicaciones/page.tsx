@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import { condicion, estadoDePublicacion, fecha, precio, tonoDePublicacion } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../(cuenta)/panel';
 import { arePromotionsEnabled } from '@/modules/listings/services/listing-settings.service';
 import { coverUrls, listMyListings } from '@/modules/listings/services/listing.service';
 import { listPromotions } from '@/modules/listings/services/promotion.service';
@@ -24,7 +25,6 @@ import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-conn
 
 import { eliminar, pausar, reactivar } from '../../acciones';
 import { Chapa } from '../../chapa';
-import { NavDelVendedor } from '../../nav';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mis publicaciones' };
@@ -145,334 +145,340 @@ export default async function MisPublicaciones({
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Chapa
-          rotulo="Inventario"
-          titulo="Mis publicaciones"
-          chica
-          accion={
-            conexion.canSell ? (
-              <BotonEnlace href="/vendedor/publicaciones/nueva" flecha>
-                Publicar
-              </BotonEnlace>
-            ) : undefined
-          }
-        />
+      <PanelDeCuenta user={user} seccion="publicaciones">
+        <main id="contenido">
+          <Chapa
+            rotulo="Inventario"
+            titulo="Mis publicaciones"
+            chica
+            accion={
+              conexion.canSell ? (
+                <BotonEnlace href="/vendedor/publicaciones/nueva" flecha>
+                  Publicar
+                </BotonEnlace>
+              ) : undefined
+            }
+          />
 
-        <NavDelVendedor activo="publicaciones" publicaciones={vivas.length} />
+          <SolapasDeCuenta user={user} seccion="publicaciones" activa="publicaciones" />
 
-        {!conexion.canSell && (
-          <Aviso tono="error">
-            {activas > 0 &&
-              (activas === 1 ? (
-                <>
-                  <strong>Tu publicación activa no se está mostrando.</strong> Mientras Mercado Pago
-                  no esté conectado nadie puede verla ni comprarla, porque no podríamos cobrarte la
-                  venta. <strong>Vuelve sola al reconectar</strong>: no hace falta que la
-                  republiques ni que toques nada.{' '}
-                </>
-              ) : (
-                <>
-                  <strong>Tus {activas} publicaciones activas no se están mostrando.</strong>{' '}
-                  Mientras Mercado Pago no esté conectado nadie puede verlas ni comprarlas, porque
-                  no podríamos cobrarte la venta. <strong>Vuelven solas al reconectar</strong>: no
-                  hace falta que las republiques ni que toques nada.{' '}
-                </>
-              ))}
-            Para publicar necesitás estar habilitado y tener Mercado Pago conectado.{' '}
-            <Link href="/vendedor">Ver qué te falta</Link>.
-          </Aviso>
-        )}
+          {!conexion.canSell && (
+            <Aviso tono="error">
+              {activas > 0 &&
+                (activas === 1 ? (
+                  <>
+                    <strong>Tu publicación activa no se está mostrando.</strong> Mientras Mercado
+                    Pago no esté conectado nadie puede verla ni comprarla, porque no podríamos
+                    cobrarte la venta. <strong>Vuelve sola al reconectar</strong>: no hace falta que
+                    la republiques ni que toques nada.{' '}
+                  </>
+                ) : (
+                  <>
+                    <strong>Tus {activas} publicaciones activas no se están mostrando.</strong>{' '}
+                    Mientras Mercado Pago no esté conectado nadie puede verlas ni comprarlas, porque
+                    no podríamos cobrarte la venta. <strong>Vuelven solas al reconectar</strong>: no
+                    hace falta que las republiques ni que toques nada.{' '}
+                  </>
+                ))}
+              Para publicar necesitás estar habilitado y tener Mercado Pago conectado.{' '}
+              <Link href="/vendedor">Ver qué te falta</Link>.
+            </Aviso>
+          )}
 
-        {vivas.length === 0 ? (
-          <EstadoVacio titulo="Todavía no publicaste nada" icono={<IconoCamiseta tamanio={40} />}>
-            <p>Cuando publiques una camiseta va a aparecer acá, con su stock y su estado.</p>
-            {conexion.canSell && (
-              <BotonEnlace href="/vendedor/publicaciones/nueva" flecha>
-                Publicar la primera
-              </BotonEnlace>
-            )}
-          </EstadoVacio>
-        ) : (
-          <>
-            {/*
+          {vivas.length === 0 ? (
+            <EstadoVacio titulo="Todavía no publicaste nada" icono={<IconoCamiseta tamanio={40} />}>
+              <p>Cuando publiques una camiseta va a aparecer acá, con su stock y su estado.</p>
+              {conexion.canSell && (
+                <BotonEnlace href="/vendedor/publicaciones/nueva" flecha>
+                  Publicar la primera
+                </BotonEnlace>
+              )}
+            </EstadoVacio>
+          ) : (
+            <>
+              {/*
               ⚠️ ES UN `<form method="get">` Y NO UN FILTRO EN VIVO. Sin
               JavaScript el navegador navega a la misma URL que se podría
               escribir a mano; con JavaScript se comporta igual. Un filtro en vivo
               exigiría estado de cliente para algo que una URL representa mejor.
             */}
-            <form className={estilos.buscadorInventario} method="get" role="search">
-              {filtro !== 'todas' && <input type="hidden" name="estado" value={filtro} />}
-              <label htmlFor="q" className="solo-lectores">
-                Buscar en tus publicaciones
-              </label>
-              <span className={estilos.buscadorIcono} aria-hidden="true">
-                <IconoBuscar tamanio={18} />
-              </span>
-              <input
-                id="q"
-                name="q"
-                type="search"
-                className={estilos.buscadorCampo}
-                placeholder="Buscar por título"
-                defaultValue={busqueda}
-                maxLength={120}
-              />
-              <button type="submit" className={estilos.buscadorBoton}>
-                Buscar
-              </button>
-            </form>
+              <form className={estilos.buscadorInventario} method="get" role="search">
+                {filtro !== 'todas' && <input type="hidden" name="estado" value={filtro} />}
+                <label htmlFor="q" className="solo-lectores">
+                  Buscar en tus publicaciones
+                </label>
+                <span className={estilos.buscadorIcono} aria-hidden="true">
+                  <IconoBuscar tamanio={18} />
+                </span>
+                <input
+                  id="q"
+                  name="q"
+                  type="search"
+                  className={estilos.buscadorCampo}
+                  placeholder="Buscar por título"
+                  defaultValue={busqueda}
+                  maxLength={120}
+                />
+                <button type="submit" className={estilos.buscadorBoton}>
+                  Buscar
+                </button>
+              </form>
 
-            <div className={estilos.navMarco}>
-              <NavDeSeccion
-                etiqueta="Publicaciones por estado"
-                activo={filtro}
-                items={FILTROS.map((f) => {
-                  const cuantas =
-                    f.clave === 'todas'
-                      ? vivas.length
-                      : vivas.filter((p) => p.status === f.clave).length;
+              <div className={estilos.navMarco}>
+                <NavDeSeccion
+                  etiqueta="Publicaciones por estado"
+                  activo={filtro}
+                  items={FILTROS.map((f) => {
+                    const cuantas =
+                      f.clave === 'todas'
+                        ? vivas.length
+                        : vivas.filter((p) => p.status === f.clave).length;
 
-                  return {
-                    clave: f.clave,
-                    texto: f.texto,
-                    href: urlDe(f.clave, busqueda),
-                    ...(cuantas > 0 ? { dato: cuantas } : {}),
-                  };
-                })}
-              />
-            </div>
+                    return {
+                      clave: f.clave,
+                      texto: f.texto,
+                      href: urlDe(f.clave, busqueda),
+                      ...(cuantas > 0 ? { dato: cuantas } : {}),
+                    };
+                  })}
+                />
+              </div>
 
-            {/*
+              {/*
               ⚠️ LA PASTILLA MUESTRA LO QUE ESTA FILTRANDO Y COMO SACARLO. Sin
               ella, alguien que buscó "boca" hace diez minutos ve un inventario
               incompleto y no tiene forma de saber por qué.
             */}
-            {busqueda !== '' && (
-              <div className={estilos.pastillas}>
-                <Pastilla href={urlDe(filtro, '')} descripcion="Quitar la búsqueda">
-                  «{busqueda}»
-                </Pastilla>
-              </div>
-            )}
+              {busqueda !== '' && (
+                <div className={estilos.pastillas}>
+                  <Pastilla href={urlDe(filtro, '')} descripcion="Quitar la búsqueda">
+                    «{busqueda}»
+                  </Pastilla>
+                </div>
+              )}
 
-            {visibles.length === 0 ? (
-              <EstadoVacio titulo="No encontramos nada con esos filtros">
-                <p>
-                  Probá con otro texto o mirá{' '}
-                  <Link href="/vendedor/publicaciones">todas tus publicaciones</Link>.
-                </p>
-              </EstadoVacio>
-            ) : (
-              <Seccion
-                titulo="Inventario"
-                dato={visibles.length === 1 ? '1 publicación' : `${visibles.length} publicaciones`}
-              >
-                <ul className={`${estilos.inventario} revela-grilla`}>
-                  {visibles.map((publicacion) => {
-                    const portada = portadas.get(publicacion.id);
-                    const promocion = promocionadas.get(publicacion.id);
+              {visibles.length === 0 ? (
+                <EstadoVacio titulo="No encontramos nada con esos filtros">
+                  <p>
+                    Probá con otro texto o mirá{' '}
+                    <Link href="/vendedor/publicaciones">todas tus publicaciones</Link>.
+                  </p>
+                </EstadoVacio>
+              ) : (
+                <Seccion
+                  titulo="Inventario"
+                  dato={
+                    visibles.length === 1 ? '1 publicación' : `${visibles.length} publicaciones`
+                  }
+                >
+                  <ul className={`${estilos.inventario} revela-grilla`}>
+                    {visibles.map((publicacion) => {
+                      const portada = portadas.get(publicacion.id);
+                      const promocion = promocionadas.get(publicacion.id);
 
-                    return (
-                      <li
-                        key={publicacion.id}
-                        className={estilos.fila}
-                        /*
+                      return (
+                        <li
+                          key={publicacion.id}
+                          className={estilos.fila}
+                          /*
                           ⚠️ EL ESTADO VIAJA COMO ATRIBUTO, NO COMO CLASE
                           CALCULADA. Así el CSS decide cómo se ve cada estado sin
                           que esta pantalla tenga que conocer la paleta.
                         */
-                        data-estado={publicacion.status}
-                      >
-                        <FotoCompartida id={publicacion.id}>
-                          <span className={estilos.filaMarco}>
-                            {portada === undefined ? (
-                              <span className={estilos.filaPatron} aria-hidden="true" />
-                            ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                className={estilos.filaFoto}
-                                src={portada}
-                                alt=""
-                                width={84}
-                                height={105}
-                                loading="lazy"
-                                decoding="async"
-                              />
-                            )}
-                          </span>
-                        </FotoCompartida>
+                          data-estado={publicacion.status}
+                        >
+                          <FotoCompartida id={publicacion.id}>
+                            <span className={estilos.filaMarco}>
+                              {portada === undefined ? (
+                                <span className={estilos.filaPatron} aria-hidden="true" />
+                              ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  className={estilos.filaFoto}
+                                  src={portada}
+                                  alt=""
+                                  width={84}
+                                  height={105}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              )}
+                            </span>
+                          </FotoCompartida>
 
-                        <div className={estilos.filaCuerpo}>
-                          <div className={estilos.filaTitulo}>
-                            <Link
-                              href={`/p/${publicacion.id}`}
-                              className="subraya"
-                              transitionTypes={['avanza']}
-                            >
-                              {publicacion.title}
-                            </Link>
-                            <Etiqueta tono={tonoDePublicacion(publicacion.status)}>
-                              {estadoDePublicacion(publicacion.status)}
-                            </Etiqueta>
-                            {/*
+                          <div className={estilos.filaCuerpo}>
+                            <div className={estilos.filaTitulo}>
+                              <Link
+                                href={`/p/${publicacion.id}`}
+                                className="subraya"
+                                transitionTypes={['avanza']}
+                              >
+                                {publicacion.title}
+                              </Link>
+                              <Etiqueta tono={tonoDePublicacion(publicacion.status)}>
+                                {estadoDePublicacion(publicacion.status)}
+                              </Etiqueta>
+                              {/*
                               ⚠️ SE LLAMA "PROMOCIONADA" Y NO "DESTACADA". La
                               eligió el vendedor y pagó por eso: decirlo con su
                               nombre es lo que mantiene honesta la grilla.
                             */}
-                            {promocion !== undefined && <Distintivo />}
-                          </div>
+                              {promocion !== undefined && <Distintivo />}
+                            </div>
 
-                          <p className={estilos.filaMeta}>
-                            Talle {publicacion.sizeValue} · {condicion(publicacion.condition)} ·{' '}
-                            {publicacion.stock === 1 ? '1 unidad' : `${publicacion.stock} unidades`}
-                          </p>
-
-                          {publicacion.stock === 1 && (
                             <p className={estilos.filaMeta}>
-                              <span
-                                className={[
-                                  estilos.chipUltima,
-                                  publicacion.status === 'active' ? 'pulso-atencion' : '',
-                                ]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                              >
-                                Última unidad
-                              </span>
+                              Talle {publicacion.sizeValue} · {condicion(publicacion.condition)} ·{' '}
+                              {publicacion.stock === 1
+                                ? '1 unidad'
+                                : `${publicacion.stock} unidades`}
                             </p>
-                          )}
 
-                          <p className={estilos.filaPrecio}>
-                            {precio(publicacion.priceAmount, publicacion.currency)}
-                          </p>
+                            {publicacion.stock === 1 && (
+                              <p className={estilos.filaMeta}>
+                                <span
+                                  className={[
+                                    estilos.chipUltima,
+                                    publicacion.status === 'active' ? 'pulso-atencion' : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' ')}
+                                >
+                                  Última unidad
+                                </span>
+                              </p>
+                            )}
 
-                          {publicacion.status === 'draft' && (
-                            <p className={estilos.filaAviso}>
-                              Sin fotos: no está a la venta hasta que subas al menos una.
+                            <p className={estilos.filaPrecio}>
+                              {precio(publicacion.priceAmount, publicacion.currency)}
                             </p>
-                          )}
 
-                          {/*
+                            {publicacion.status === 'draft' && (
+                              <p className={estilos.filaAviso}>
+                                Sin fotos: no está a la venta hasta que subas al menos una.
+                              </p>
+                            )}
+
+                            {/*
                             ⚠️ SE DICE HASTA CUANDO DURA Y QUE NO SE PUEDE
                             CORTAR. Una promoción que se ve como un adorno pero
                             cobra el triple de comisión es una trampa.
                           */}
-                          {promocion !== undefined && (
-                            <p className={estilos.filaAviso}>
-                              Promocionada hasta el {fecha(promocion.endsAt)}: mientras dure, tu
-                              comisión se multiplica. No se puede cortar antes.
-                            </p>
-                          )}
+                            {promocion !== undefined && (
+                              <p className={estilos.filaAviso}>
+                                Promocionada hasta el {fecha(promocion.endsAt)}: mientras dure, tu
+                                comisión se multiplica. No se puede cortar antes.
+                              </p>
+                            )}
 
-                          {/*
+                            {/*
                             SS-050. Cada acción es un formulario propio: son
                             mutaciones y van por POST, no por enlace —un GET que
                             cambia estado se dispara con el prefetch del navegador—.
                           */}
-                          <div className={estilos.filaAcciones}>
-                            <BotonEnlace
-                              href={`/vendedor/publicaciones/${publicacion.id}/editar`}
-                              variante="fantasma"
-                              tamanio="chico"
-                            >
-                              Editar
-                            </BotonEnlace>
-                            <BotonEnlace
-                              href={`/vendedor/publicaciones/${publicacion.id}/fotos`}
-                              variante="fantasma"
-                              tamanio="chico"
-                            >
-                              Fotos
-                            </BotonEnlace>
+                            <div className={estilos.filaAcciones}>
+                              <BotonEnlace
+                                href={`/vendedor/publicaciones/${publicacion.id}/editar`}
+                                variante="fantasma"
+                                tamanio="chico"
+                              >
+                                Editar
+                              </BotonEnlace>
+                              <BotonEnlace
+                                href={`/vendedor/publicaciones/${publicacion.id}/fotos`}
+                                variante="fantasma"
+                                tamanio="chico"
+                              >
+                                Fotos
+                              </BotonEnlace>
 
-                            {/*
+                              {/*
                               ⚠️ PROMOCIONAR ES UN ENLACE, NO UN BOTON QUE
                               PROMOCIONA. Cuesta plata —la comisión se
                               multiplica— y no se puede cancelar antes de tiempo:
                               lleva a una pantalla que lo explica con SU tasa y SU
                               precio antes de que apriete nada.
                             */}
-                            {promocionesActivas &&
-                              publicacion.status === 'active' &&
-                              promocion === undefined && (
-                                <BotonEnlace
-                                  href={`/vendedor/publicaciones/${publicacion.id}/promocionar`}
-                                  variante="secundario"
+                              {promocionesActivas &&
+                                publicacion.status === 'active' &&
+                                promocion === undefined && (
+                                  <BotonEnlace
+                                    href={`/vendedor/publicaciones/${publicacion.id}/promocionar`}
+                                    variante="secundario"
+                                    tamanio="chico"
+                                  >
+                                    Promocionar
+                                  </BotonEnlace>
+                                )}
+
+                              {(publicacion.status === 'active' ||
+                                publicacion.status === 'sold_out') && (
+                                <Formulario
+                                  accion={pausar}
+                                  enviar="Pausar"
+                                  variante="fantasma"
                                   tamanio="chico"
+                                  bloque={false}
                                 >
-                                  Promocionar
-                                </BotonEnlace>
+                                  <CampoOculto nombre="listingId" valor={publicacion.id} />
+                                </Formulario>
                               )}
 
-                            {(publicacion.status === 'active' ||
-                              publicacion.status === 'sold_out') && (
-                              <Formulario
-                                accion={pausar}
-                                enviar="Pausar"
-                                variante="fantasma"
-                                tamanio="chico"
-                                bloque={false}
-                              >
-                                <CampoOculto nombre="listingId" valor={publicacion.id} />
-                              </Formulario>
-                            )}
+                              {publicacion.status === 'paused' && (
+                                <Formulario
+                                  accion={reactivar}
+                                  enviar="Volver a la venta"
+                                  variante="secundario"
+                                  tamanio="chico"
+                                  bloque={false}
+                                >
+                                  <CampoOculto nombre="listingId" valor={publicacion.id} />
+                                </Formulario>
+                              )}
 
-                            {publicacion.status === 'paused' && (
-                              <Formulario
-                                accion={reactivar}
-                                enviar="Volver a la venta"
-                                variante="secundario"
-                                tamanio="chico"
-                                bloque={false}
-                              >
-                                <CampoOculto nombre="listingId" valor={publicacion.id} />
-                              </Formulario>
-                            )}
-
-                            {/*
+                              {/*
                               ⚠️ ELIMINAR VA EN DOS PASOS. Es irreversible y el
                               botón de al lado es "Pausar", que sí se deshace. El
                               aviso de consecuencia se lee ANTES de decidir.
                             */}
-                            <Confirmar
-                              etiqueta="Eliminar"
-                              pregunta="Se saca de la venta para siempre. El historial de quien ya la compró no se toca, pero vos no podés recuperarla."
-                            >
-                              <Formulario
-                                accion={eliminar}
-                                enviar="Sí, eliminar"
-                                variante="peligro"
-                                tamanio="chico"
-                                bloque={false}
+                              <Confirmar
+                                etiqueta="Eliminar"
+                                pregunta="Se saca de la venta para siempre. El historial de quien ya la compró no se toca, pero vos no podés recuperarla."
                               >
-                                <CampoOculto nombre="listingId" valor={publicacion.id} />
-                              </Formulario>
-                            </Confirmar>
+                                <Formulario
+                                  accion={eliminar}
+                                  enviar="Sí, eliminar"
+                                  variante="peligro"
+                                  tamanio="chico"
+                                  bloque={false}
+                                >
+                                  <CampoOculto nombre="listingId" valor={publicacion.id} />
+                                </Formulario>
+                              </Confirmar>
+                            </div>
                           </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Seccion>
-            )}
-          </>
-        )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Seccion>
+              )}
+            </>
+          )}
 
-        {/*
+          {/*
           ⚠️ LAS TRES REGLAS QUE MAS IMPORTAN DE ESTA PANTALLA ESTABAN EN GRIS DE
           13px AL PIE. Que eliminar sea definitivo y que cambiar el precio no
           toque las órdenes ya hechas (BR-023 / SS-041) son cosas que hay que
           leer, no que hay que encontrar.
         */}
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
-          <p className={estilos.nota}>
-            Pausar la saca de la vitrina y podés volver a activarla cuando quieras. Eliminar es
-            definitivo. Cambiar el precio no afecta a las órdenes ya hechas.
-          </p>
-        </div>
-      </main>
+          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+            <p className={estilos.nota}>
+              Pausar la saca de la vitrina y podés volver a activarla cuando quieras. Eliminar es
+              definitivo. Cambiar el precio no afecta a las órdenes ya hechas.
+            </p>
+          </div>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

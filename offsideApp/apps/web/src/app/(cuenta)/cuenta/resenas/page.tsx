@@ -9,7 +9,7 @@ import { requireVerifiedSessionUser } from '@/lib/session';
 import { listMyReviews } from '@/modules/reviews/services/review.service';
 
 import { ChapaDeCuenta } from '../../chapa';
-import { NavDeCuenta } from '../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mis reseñas' };
@@ -36,81 +36,83 @@ export default async function MisResenas() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo="Mis reseñas"
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {resenas.length === 0
-                ? 'Todavía no calificaste ninguna compra'
-                : cantidad(resenas.length, 'reseña')}
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="compras">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo="Mis reseñas"
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {resenas.length === 0
+                  ? 'Todavía no calificaste ninguna compra'
+                  : cantidad(resenas.length, 'reseña')}
+              </p>
+            }
+          />
 
-        <NavDeCuenta activo="resenas" />
+          <SolapasDeCuenta user={user} seccion="compras" activa="resenas" />
 
-        {resenas.length === 0 ? (
-          <EstadoVacio titulo="Todavía no calificaste" icono={<IconoEstrella tamanio={40} />}>
-            {/*
+          {resenas.length === 0 ? (
+            <EstadoVacio titulo="Todavía no calificaste" icono={<IconoEstrella tamanio={40} />}>
+              {/*
               ⚠️ SE DICE CUÁNDO SE PUEDE CALIFICAR, no sólo que todavía no se
               hizo. Calificar exige una orden COMPLETED: sin esa línea, alguien
               con una compra en curso busca un botón que no existe.
             */}
-            <p>
-              Cuando una compra se complete vas a poder calificar al vendedor desde la ficha de esa
-              compra.
-            </p>
-            <BotonEnlace href="/cuenta/compras" variante="secundario">
-              Ver mis compras
-            </BotonEnlace>
-          </EstadoVacio>
-        ) : (
-          <Seccion titulo="Lo que escribiste" dato={cantidad(resenas.length, 'reseña')}>
-            <ul className={`${estilos.lista} ${estilos.revela}`}>
-              {resenas.map((resena) => (
-                <li key={resena.id} className={`${estilos.tarjetaTexto} sup-ficha eleva`}>
-                  <div className={estilos.tarjetaCabecera}>
-                    <span className={estilos.tarjetaEnlace}>{resena.sellerDisplayName}</span>
-                    <span className={estilos.tarjetaFecha}>
-                      {fecha(resena.createdAt.toISOString())}
-                    </span>
-                  </div>
+              <p>
+                Cuando una compra se complete vas a poder calificar al vendedor desde la ficha de
+                esa compra.
+              </p>
+              <BotonEnlace href="/cuenta/compras" variante="secundario">
+                Ver mis compras
+              </BotonEnlace>
+            </EstadoVacio>
+          ) : (
+            <Seccion titulo="Lo que escribiste" dato={cantidad(resenas.length, 'reseña')}>
+              <ul className={`${estilos.lista} ${estilos.revela}`}>
+                {resenas.map((resena) => (
+                  <li key={resena.id} className={`${estilos.tarjetaTexto} sup-ficha eleva`}>
+                    <div className={estilos.tarjetaCabecera}>
+                      <span className={estilos.tarjetaEnlace}>{resena.sellerDisplayName}</span>
+                      <span className={estilos.tarjetaFecha}>
+                        {fecha(resena.createdAt.toISOString())}
+                      </span>
+                    </div>
 
-                  {/*
+                    {/*
                     ⚠️ `cantidad={1}` NO ES UN CONTEO DE RESEÑAS: `Estrellas` lo
                     usa para decidir si hay algo que dibujar y para el texto
                     accesible "4 de 5". Acá es una reseña, la de esta persona.
                   */}
-                  <Estrellas promedio={resena.rating} cantidad={1} />
+                    <Estrellas promedio={resena.rating} cantidad={1} />
 
-                  {resena.comment !== null && <p className={estilos.texto}>{resena.comment}</p>}
+                    {resena.comment !== null && <p className={estilos.texto}>{resena.comment}</p>}
 
-                  {resena.sellerReply === null ? (
-                    <p className={estilos.pendiente}>El vendedor todavía no respondió.</p>
-                  ) : (
-                    <div className={estilos.respuesta}>
-                      <p className={estilos.respuestaRotulo}>
-                        Respuesta de {resena.sellerDisplayName}
-                        {resena.sellerRepliedAt !== null &&
-                          ` · ${fecha(resena.sellerRepliedAt.toISOString())}`}
-                      </p>
-                      <p className={estilos.texto}>{resena.sellerReply}</p>
-                    </div>
-                  )}
+                    {resena.sellerReply === null ? (
+                      <p className={estilos.pendiente}>El vendedor todavía no respondió.</p>
+                    ) : (
+                      <div className={estilos.respuesta}>
+                        <p className={estilos.respuestaRotulo}>
+                          Respuesta de {resena.sellerDisplayName}
+                          {resena.sellerRepliedAt !== null &&
+                            ` · ${fecha(resena.sellerRepliedAt.toISOString())}`}
+                        </p>
+                        <p className={estilos.texto}>{resena.sellerReply}</p>
+                      </div>
+                    )}
 
-                  <p className={estilos.pendiente}>
-                    <Link href={`/cuenta/compras/${resena.orderId}`} className="subraya">
-                      Orden {resena.orderNumber}
-                    </Link>
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </Seccion>
-        )}
-      </main>
+                    <p className={estilos.pendiente}>
+                      <Link href={`/cuenta/compras/${resena.orderId}`} className="subraya">
+                        Orden {resena.orderNumber}
+                      </Link>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </Seccion>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

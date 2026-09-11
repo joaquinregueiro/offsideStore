@@ -1,5 +1,17 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, asc, count, desc, eq, exists, inArray, lte, notExists, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  inArray,
+  lte,
+  notExists,
+  notInArray,
+  sql,
+} from 'drizzle-orm';
 
 /**
  * Acceso a `orders` y `order_items` (ERD §11). Sin reglas de negocio.
@@ -86,6 +98,44 @@ export async function findByOrderNumber(
  * necesita las ordenes. Traerlas todas para hacer `.length` crece con el
  * historial del vendedor y se paga en cada visita.
  */
+/**
+ * Cuantas ordenes del comprador siguen ABIERTAS: todo lo que no esta cerrado
+ * ni cancelado.
+ *
+ * ⚠️ ES "EN CURSO", NO "TODAS". El numero de la barra lateral tiene que bajar a
+ * cero cuando la persona ya no tiene nada esperando; un contador que solo sube
+ * —el historial completo— deja de significar algo a la tercera compra.
+ */
+export async function countOpenByBuyerId(buyerId: string, db?: Database): Promise<number> {
+  const [fila] = await conn(db)
+    .select({ total: count() })
+    .from(schema.orders)
+    .where(
+      and(
+        eq(schema.orders.buyerId, buyerId),
+        notInArray(schema.orders.status, ['COMPLETED', 'CANCELLED']),
+      ),
+    );
+
+  return Number(fila?.total ?? 0);
+}
+
+/**
+ * Ventas que esperan que el vendedor despache: `PROCESSING`.
+ *
+ * ⚠️ NO INCLUYE `PAID`. Una orden que quedo en `PAID` es el caso "pagada sin
+ * stock" y no corre plazo de despacho: mostrarla como pendiente le pediria al
+ * vendedor que despache algo que no puede.
+ */
+export async function countToShipBySellerId(sellerId: string, db?: Database): Promise<number> {
+  const [fila] = await conn(db)
+    .select({ total: count() })
+    .from(schema.orders)
+    .where(and(eq(schema.orders.sellerId, sellerId), eq(schema.orders.status, 'PROCESSING')));
+
+  return Number(fila?.total ?? 0);
+}
+
 export async function countBySellerId(
   sellerId: string,
   db?: Database,

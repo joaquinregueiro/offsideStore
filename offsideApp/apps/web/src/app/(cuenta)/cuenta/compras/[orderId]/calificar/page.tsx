@@ -16,7 +16,7 @@ import { isWithinReviewWindow } from '@/modules/reviews/services/review-rules';
 
 import { calificar } from '../../../../acciones';
 import { ChapaDeCuenta } from '../../../../chapa';
-import { NavDeCuenta } from '../../../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../../panel';
 import estilos from '../../../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Calificar la compra' };
@@ -75,127 +75,131 @@ export default async function Calificar({ params }: { params: Promise<{ orderId:
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo={`Orden ${detalle.orderNumber}`}
-          titulo={resena === undefined ? 'Calificar' : 'Tu calificación'}
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {resena === undefined
-                ? (detalle.items[0]?.title ?? 'Tu compra')
-                : tienda === null
-                  ? 'A la tienda que te vendió'
-                  : `A ${tienda}`}
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="compras">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo={`Orden ${detalle.orderNumber}`}
+            titulo={resena === undefined ? 'Calificar' : 'Tu calificación'}
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {resena === undefined
+                  ? (detalle.items[0]?.title ?? 'Tu compra')
+                  : tienda === null
+                    ? 'A la tienda que te vendió'
+                    : `A ${tienda}`}
+              </p>
+            }
+          />
 
-        <NavDeCuenta activo="compras" />
+          <SolapasDeCuenta user={user} seccion="compras" activa="historial" />
 
-        <Migas
-          items={[
-            { texto: 'Mis compras', href: '/cuenta/compras' },
-            { texto: `Orden ${detalle.orderNumber}`, href: `/cuenta/compras/${orderId}` },
-            { texto: 'Calificar' },
-          ]}
-        />
+          <Migas
+            items={[
+              { texto: 'Mis compras', href: '/cuenta/compras' },
+              { texto: `Orden ${detalle.orderNumber}`, href: `/cuenta/compras/${orderId}` },
+              { texto: 'Calificar' },
+            ]}
+          />
 
-        {resena !== undefined ? (
-          <>
-            <section className={`${estilos.tarjetaTexto} sup-ficha entraBloque`}>
-              <div className={estilos.tarjetaCabecera}>
-                {/*
+          {resena !== undefined ? (
+            <>
+              <section className={`${estilos.tarjetaTexto} sup-ficha entraBloque`}>
+                <div className={estilos.tarjetaCabecera}>
+                  {/*
                   ⚠️ EL NÚMERO ES EL DATO Y LAS ESTRELLAS SON EL DIBUJO: las
                   estrellas van `aria-hidden` y lo que se lee es "5 de 5".
                 */}
-                <Estrellas promedio={resena.rating} cantidad={1} tamanio="grande" />
-                <span className={estilos.tarjetaFecha}>
-                  {fecha(resena.createdAt.toISOString())}
-                </span>
-              </div>
-
-              {resena.comment !== null && <p className={estilos.texto}>{resena.comment}</p>}
-
-              {resena.sellerReply === null ? (
-                <p className={estilos.pendiente}>{tienda ?? 'El vendedor'} todavía no respondió.</p>
-              ) : (
-                <div className={estilos.respuesta}>
-                  <p className={estilos.respuestaRotulo}>
-                    Respuesta de {tienda ?? 'la tienda'}
-                    {resena.sellerRepliedAt !== null &&
-                      ` · ${fecha(resena.sellerRepliedAt.toISOString())}`}
-                  </p>
-                  <p className={estilos.texto}>{resena.sellerReply}</p>
+                  <Estrellas promedio={resena.rating} cantidad={1} tamanio="grande" />
+                  <span className={estilos.tarjetaFecha}>
+                    {fecha(resena.createdAt.toISOString())}
+                  </span>
                 </div>
-              )}
-            </section>
 
-            {/*
+                {resena.comment !== null && <p className={estilos.texto}>{resena.comment}</p>}
+
+                {resena.sellerReply === null ? (
+                  <p className={estilos.pendiente}>
+                    {tienda ?? 'El vendedor'} todavía no respondió.
+                  </p>
+                ) : (
+                  <div className={estilos.respuesta}>
+                    <p className={estilos.respuestaRotulo}>
+                      Respuesta de {tienda ?? 'la tienda'}
+                      {resena.sellerRepliedAt !== null &&
+                        ` · ${fecha(resena.sellerRepliedAt.toISOString())}`}
+                    </p>
+                    <p className={estilos.texto}>{resena.sellerReply}</p>
+                  </div>
+                )}
+              </section>
+
+              {/*
               ⚠️ NO HAY "EDITAR" NI "BORRAR", y no es un faltante: una reseña que
               se puede reescribir después de que el vendedor respondió deja la
               respuesta hablando de algo que ya no está. El Service tampoco lo
               permite.
             */}
-            <p className={estilos.nota}>
-              La calificación es una sola por compra y no se puede cambiar. Si pasó algo con el
-              producto, lo que corresponde es abrir un reclamo.
-            </p>
+              <p className={estilos.nota}>
+                La calificación es una sola por compra y no se puede cambiar. Si pasó algo con el
+                producto, lo que corresponde es abrir un reclamo.
+              </p>
 
-            <div className={estilos.acciones}>
-              <BotonEnlace href={`/cuenta/compras/${orderId}`} variante="secundario">
-                Volver a la compra
-              </BotonEnlace>
-            </div>
-          </>
-        ) : puedeCalificar ? (
-          <section className={`${estilos.bloque} sup-ficha entraBloque`}>
-            {/*
+              <div className={estilos.acciones}>
+                <BotonEnlace href={`/cuenta/compras/${orderId}`} variante="secundario">
+                  Volver a la compra
+                </BotonEnlace>
+              </div>
+            </>
+          ) : puedeCalificar ? (
+            <section className={`${estilos.bloque} sup-ficha entraBloque`}>
+              {/*
               ⚠️ EL TÍTULO NOMBRA A QUIÉN SE CALIFICA. "Cómo estuvo la compra" no
               dice a quién le llega el puntaje; una reseña es SOBRE una tienda y
               se publica en su perfil, así que el nombre tiene que estar a la
               vista antes de elegir las estrellas.
             */}
-            <h2 className={estilos.bloqueTitulo}>
-              {tienda === null ? 'Cómo estuvo la compra' : `Cómo te trató ${tienda}`}
-            </h2>
+              <h2 className={estilos.bloqueTitulo}>
+                {tienda === null ? 'Cómo estuvo la compra' : `Cómo te trató ${tienda}`}
+              </h2>
 
-            <Formulario accion={calificar} enviar="Publicar la calificación">
-              <CampoOculto nombre="orderId" valor={orderId} />
-              {/*
+              <Formulario accion={calificar} enviar="Publicar la calificación">
+                <CampoOculto nombre="orderId" valor={orderId} />
+                {/*
                 ⚠️ SON RADIOS DE VERDAD DENTRO DE UN `<fieldset>`: se elige con el
                 teclado, cada uno tiene su etiqueta para lectores de pantalla y
                 funciona sin una línea de JavaScript.
               */}
-              <EstrellasEntrada nombre="rating" etiqueta="Tu puntaje" />
-              <AreaDeTexto
-                nombre="comment"
-                etiqueta="Comentario (opcional)"
-                ayuda="Contá cómo fue: el estado de la prenda, el tiempo de entrega, el trato."
-                filas={5}
-                maximo={COMMENT_MAX_LENGTH}
-              />
-            </Formulario>
+                <EstrellasEntrada nombre="rating" etiqueta="Tu puntaje" />
+                <AreaDeTexto
+                  nombre="comment"
+                  etiqueta="Comentario (opcional)"
+                  ayuda="Contá cómo fue: el estado de la prenda, el tiempo de entrega, el trato."
+                  filas={5}
+                  maximo={COMMENT_MAX_LENGTH}
+                />
+              </Formulario>
 
-            {/*
+              {/*
               ⚠️ SE AVISA QUE ES PÚBLICA ANTES DE ESCRIBIR, no después. La reseña
               se ve en el perfil del vendedor: enterarse al publicarla es tarde.
             */}
-            <p className={estilos.nota}>
-              Lo que escribas se va a ver en el perfil de {tienda ?? 'la tienda'} junto a tu
-              puntaje. Tenés {cantidad(diasDeResena, 'día', 'días')} desde que se completó la compra
-              para calificar, y se califica una sola vez.
-            </p>
-          </section>
-        ) : (
-          <Aviso tono="neutro">
-            {!habilitado
-              ? 'Las calificaciones están desactivadas por ahora.'
-              : detalle.status !== 'COMPLETED'
-                ? 'Vas a poder calificar cuando la compra esté completada.'
-                : `El plazo para calificar (${cantidad(diasDeResena, 'día', 'días')} desde que se completó la compra) ya pasó.`}
-          </Aviso>
-        )}
-      </main>
+              <p className={estilos.nota}>
+                Lo que escribas se va a ver en el perfil de {tienda ?? 'la tienda'} junto a tu
+                puntaje. Tenés {cantidad(diasDeResena, 'día', 'días')} desde que se completó la
+                compra para calificar, y se califica una sola vez.
+              </p>
+            </section>
+          ) : (
+            <Aviso tono="neutro">
+              {!habilitado
+                ? 'Las calificaciones están desactivadas por ahora.'
+                : detalle.status !== 'COMPLETED'
+                  ? 'Vas a poder calificar cuando la compra esté completada.'
+                  : `El plazo para calificar (${cantidad(diasDeResena, 'día', 'días')} desde que se completó la compra) ya pasó.`}
+            </Aviso>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

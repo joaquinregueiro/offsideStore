@@ -13,6 +13,7 @@ import {
 } from '@/components/form';
 import { Pantalla } from '@/components/movimiento';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta } from '../../../../(cuenta)/panel';
 import { getImageSettings } from '@/modules/config/services/image-settings.service';
 import { getShippingSettings } from '@/modules/listings/services/listing-settings.service';
 import { listActiveCategories, listCatalogs } from '@/modules/listings/services/listing.service';
@@ -77,17 +78,20 @@ export default async function NuevaPublicacion() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Chapa
-          rotulo="Inventario"
-          titulo="Publicar"
-          chica
-          detalle={
-            <p className={estilos.chapaDetalle}>Cuatro decisiones y tu camiseta está a la venta.</p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="vender">
+        <main id="contenido">
+          <Chapa
+            rotulo="Inventario"
+            titulo="Publicar"
+            chica
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                Cuatro decisiones y tu camiseta está a la venta.
+              </p>
+            }
+          />
 
-        {/*
+          {/*
           ⚠️ EL MARCO ES LO QUE NUMERA LOS GRUPOS, Y LO HACE CON UN `counter()` DE
           CSS. Sin JavaScript, sin tocar `GrupoDeCampos` —que es compartido con el
           alta y con la compra— y renumerándose solo el día que se agregue o se
@@ -99,9 +103,9 @@ export default async function NuevaPublicacion() {
           verdadera; una barra de "3 de 4 completos" sería una promesa que el CSS
           no puede cumplir.
         */}
-        <div className={estilos.formPublicar}>
-          <Formulario accion={publicar} enviar="Publicar">
-            {/*
+          <div className={estilos.formPublicar}>
+            <Formulario accion={publicar} enviar="Publicar">
+              {/*
               ⚠️ CUATRO GRUPOS, NO QUINCE CAMPOS SUELTOS. Eran quince controles
               uno atrás del otro: alguien que publica su primera camiseta veía
               una pared y no podía estimar cuánto faltaba. Agrupar no saca ni un
@@ -109,39 +113,39 @@ export default async function NuevaPublicacion() {
               `<fieldset>` hace que un lector de pantalla anuncie en qué parte
               del formulario está.
             */}
-            <GrupoDeCampos titulo="Qué estás publicando">
-              {/*
+              <GrupoDeCampos titulo="Qué estás publicando">
+                {/*
                 Camiseta va PRIMERA y preseleccionada. Las seis categorías se
                 ordenan alfabéticamente en el repositorio, y eso dejaba "Buzos"
                 como opción por defecto en un marketplace de camisetas: la
                 mayoría de las publicaciones habrían nacido en la categoría
                 equivocada por inercia.
               */}
-              <Seleccion
-                nombre="categoryId"
-                etiqueta="Categoría"
-                defaultValue={categoriaPorDefecto}
-                opciones={categorias.map((categoria) => ({
-                  valor: categoria.id,
-                  etiqueta: categoria.name,
-                }))}
-              />
+                <Seleccion
+                  nombre="categoryId"
+                  etiqueta="Categoría"
+                  defaultValue={categoriaPorDefecto}
+                  opciones={categorias.map((categoria) => ({
+                    valor: categoria.id,
+                    etiqueta: categoria.name,
+                  }))}
+                />
 
-              <Campo
-                nombre="title"
-                etiqueta="Título"
-                ayuda="Club, temporada y si es titular o suplente. Ej: River Plate 1996 titular."
-              />
+                <Campo
+                  nombre="title"
+                  etiqueta="Título"
+                  ayuda="Club, temporada y si es titular o suplente. Ej: River Plate 1996 titular."
+                />
 
-              <AreaDeTexto
-                nombre="description"
-                etiqueta="Descripción"
-                ayuda="Opcional. Estado real, detalles, marcas de uso. Ser preciso evita reclamos."
-              />
-            </GrupoDeCampos>
+                <AreaDeTexto
+                  nombre="description"
+                  etiqueta="Descripción"
+                  ayuda="Opcional. Estado real, detalles, marcas de uso. Ser preciso evita reclamos."
+                />
+              </GrupoDeCampos>
 
-            <GrupoDeCampos titulo="Precio y stock">
-              {/*
+              <GrupoDeCampos titulo="Precio y stock">
+                {/*
                 ⚠️ ES `CampoImporte` Y NO UN `Campo tipo="number"`, QUE ES LO QUE
                 HABIA. La primitiva de plata ya existe y es la unica que pone el
                 importe en Big Noodle con cifras tabulares, que es lo que la
@@ -158,45 +162,45 @@ export default async function NuevaPublicacion() {
                 puede ser cero. Es la misma regla que valida `publicarSchema`,
                 dicha en el borde donde la persona escribe.
               */}
-              <CampoImporte
-                nombre="precioPesos"
-                etiqueta="Precio en pesos"
-                min={1}
-                step={1}
-                ayuda="Lo que cobrás. Offside retiene su comisión de este importe."
-              />
-
-              <div className={estilos.par}>
-                <Campo
-                  nombre="stock"
-                  etiqueta="Unidades"
-                  tipo="number"
-                  defaultValue="1"
+                <CampoImporte
+                  nombre="precioPesos"
+                  etiqueta="Precio en pesos"
                   min={1}
                   step={1}
-                  inputMode="numeric"
+                  ayuda="Lo que cobrás. Offside retiene su comisión de este importe."
                 />
-                <Campo
-                  nombre="sizeValue"
-                  etiqueta="Talle"
-                  ayuda="Como figura en la prenda: S, M, L, XL."
+
+                <div className={estilos.par}>
+                  <Campo
+                    nombre="stock"
+                    etiqueta="Unidades"
+                    tipo="number"
+                    defaultValue="1"
+                    min={1}
+                    step={1}
+                    inputMode="numeric"
+                  />
+                  <Campo
+                    nombre="sizeValue"
+                    etiqueta="Talle"
+                    ayuda="Como figura en la prenda: S, M, L, XL."
+                  />
+                </div>
+
+                <Seleccion
+                  nombre="condition"
+                  etiqueta="Estado"
+                  opciones={[
+                    { valor: 'NUEVO', etiqueta: 'Nuevo' },
+                    { valor: 'COMO_NUEVO', etiqueta: 'Como nuevo' },
+                    { valor: 'EXCELENTE', etiqueta: 'Excelente' },
+                    { valor: 'MUY_BUENO', etiqueta: 'Muy bueno' },
+                    { valor: 'BUENO', etiqueta: 'Bueno' },
+                    { valor: 'ACEPTABLE', etiqueta: 'Aceptable' },
+                  ]}
                 />
-              </div>
 
-              <Seleccion
-                nombre="condition"
-                etiqueta="Estado"
-                opciones={[
-                  { valor: 'NUEVO', etiqueta: 'Nuevo' },
-                  { valor: 'COMO_NUEVO', etiqueta: 'Como nuevo' },
-                  { valor: 'EXCELENTE', etiqueta: 'Excelente' },
-                  { valor: 'MUY_BUENO', etiqueta: 'Muy bueno' },
-                  { valor: 'BUENO', etiqueta: 'Bueno' },
-                  { valor: 'ACEPTABLE', etiqueta: 'Aceptable' },
-                ]}
-              />
-
-              {/*
+                {/*
                 ⚠️ TODOS OPCIONALES. Son los que alimentan las facetas de la
                 búsqueda, pero exigirlos dejaría afuera cualquier camiseta cuyo
                 club o marca no esté en el catálogo, y el flujo para proponer
@@ -207,81 +211,81 @@ export default async function NuevaPublicacion() {
                 el mismo bloque existe en el formulario de editar y tiene que
                 verse igual en los dos.
               */}
-              <SubtituloDeGrupo>Para que te encuentren</SubtituloDeGrupo>
+                <SubtituloDeGrupo>Para que te encuentren</SubtituloDeGrupo>
 
-              <div className={estilos.par}>
+                <div className={estilos.par}>
+                  <Seleccion
+                    nombre="clubId"
+                    etiqueta="Club"
+                    vacio="No corresponde"
+                    ayuda="Si es de un club, elegílo: es el filtro que más se usa."
+                    opciones={catalogos.clubes.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                  />
+                  <Seleccion
+                    nombre="nationalTeamId"
+                    etiqueta="Selección"
+                    vacio="No corresponde"
+                    opciones={catalogos.selecciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                  />
+                </div>
+
+                <div className={estilos.par}>
+                  <Seleccion
+                    nombre="brandId"
+                    etiqueta="Marca"
+                    vacio="No la sé"
+                    opciones={catalogos.marcas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                  />
+                  <Seleccion
+                    nombre="seasonId"
+                    etiqueta="Temporada"
+                    vacio="No la sé"
+                    ayuda="El año o la temporada de la camiseta."
+                    opciones={catalogos.temporadas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                  />
+                </div>
+
                 <Seleccion
-                  nombre="clubId"
-                  etiqueta="Club"
+                  nombre="competitionId"
+                  etiqueta="Competencia"
                   vacio="No corresponde"
-                  ayuda="Si es de un club, elegílo: es el filtro que más se usa."
-                  opciones={catalogos.clubes.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                  ayuda="Si es una camiseta de una copa o torneo puntual."
+                  opciones={catalogos.competiciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
                 />
-                <Seleccion
-                  nombre="nationalTeamId"
-                  etiqueta="Selección"
-                  vacio="No corresponde"
-                  opciones={catalogos.selecciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-                />
-              </div>
+              </GrupoDeCampos>
 
-              <div className={estilos.par}>
-                <Seleccion
-                  nombre="brandId"
-                  etiqueta="Marca"
-                  vacio="No la sé"
-                  opciones={catalogos.marcas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-                />
-                <Seleccion
-                  nombre="seasonId"
-                  etiqueta="Temporada"
-                  vacio="No la sé"
-                  ayuda="El año o la temporada de la camiseta."
-                  opciones={catalogos.temporadas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-                />
-              </div>
+              <GrupoDeCampos
+                titulo="Detalles de la prenda"
+                detalle="El talle y el estado son obligatorios. Si es una camiseta, también el tipo y las mangas."
+              >
+                <div className={estilos.par}>
+                  <Seleccion
+                    nombre="kitType"
+                    etiqueta="Tipo de camiseta"
+                    vacio="No corresponde"
+                    ayuda="Obligatorio si publicás una camiseta."
+                    opciones={[
+                      { valor: 'home', etiqueta: 'Titular' },
+                      { valor: 'away', etiqueta: 'Suplente' },
+                      { valor: 'third', etiqueta: 'Tercera' },
+                      { valor: 'goalkeeper', etiqueta: 'Arquero' },
+                      { valor: 'special', etiqueta: 'Especial' },
+                    ]}
+                  />
+                  <Seleccion
+                    nombre="sleeve"
+                    etiqueta="Mangas"
+                    vacio="No corresponde"
+                    ayuda="Obligatorio si publicás una camiseta."
+                    opciones={[
+                      { valor: 'short', etiqueta: 'Cortas' },
+                      { valor: 'long', etiqueta: 'Largas' },
+                    ]}
+                  />
+                </div>
+              </GrupoDeCampos>
 
-              <Seleccion
-                nombre="competitionId"
-                etiqueta="Competencia"
-                vacio="No corresponde"
-                ayuda="Si es una camiseta de una copa o torneo puntual."
-                opciones={catalogos.competiciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-              />
-            </GrupoDeCampos>
-
-            <GrupoDeCampos
-              titulo="Detalles de la prenda"
-              detalle="El talle y el estado son obligatorios. Si es una camiseta, también el tipo y las mangas."
-            >
-              <div className={estilos.par}>
-                <Seleccion
-                  nombre="kitType"
-                  etiqueta="Tipo de camiseta"
-                  vacio="No corresponde"
-                  ayuda="Obligatorio si publicás una camiseta."
-                  opciones={[
-                    { valor: 'home', etiqueta: 'Titular' },
-                    { valor: 'away', etiqueta: 'Suplente' },
-                    { valor: 'third', etiqueta: 'Tercera' },
-                    { valor: 'goalkeeper', etiqueta: 'Arquero' },
-                    { valor: 'special', etiqueta: 'Especial' },
-                  ]}
-                />
-                <Seleccion
-                  nombre="sleeve"
-                  etiqueta="Mangas"
-                  vacio="No corresponde"
-                  ayuda="Obligatorio si publicás una camiseta."
-                  opciones={[
-                    { valor: 'short', etiqueta: 'Cortas' },
-                    { valor: 'long', etiqueta: 'Largas' },
-                  ]}
-                />
-              </div>
-            </GrupoDeCampos>
-
-            {/*
+              {/*
               ⚠️ EL ENVIO SE DECLARA, NO SE COTIZA. No hay integración con Correo
               Argentino (SH-011 sigue 🔵), así que lo único que puede saber el
               comprador es lo que quien vende declare. El importe se CONGELA en la
@@ -294,54 +298,55 @@ export default async function NuevaPublicacion() {
               importe mayor a cero, y con los otros tres modos rechaza que venga
               uno en vez de guardarlo en silencio.
             */}
-            <GrupoDeCampos
-              titulo="Envío"
-              detalle="Cómo se resuelve el envío de esta prenda. Lo cumplís vos: Offside no despacha ni cotiza."
-            >
-              <Seleccion
-                nombre="shippingMode"
-                etiqueta="Cómo lo enviás"
-                defaultValue={envios.defaultMode}
-                opciones={modosDeEnvio.map((modo) => ({
-                  valor: modo,
-                  etiqueta: shippingModeLabel(modo),
-                }))}
-              />
+              <GrupoDeCampos
+                titulo="Envío"
+                detalle="Cómo se resuelve el envío de esta prenda. Lo cumplís vos: Offside no despacha ni cotiza."
+              >
+                <Seleccion
+                  nombre="shippingMode"
+                  etiqueta="Cómo lo enviás"
+                  defaultValue={envios.defaultMode}
+                  opciones={modosDeEnvio.map((modo) => ({
+                    valor: modo,
+                    etiqueta: shippingModeLabel(modo),
+                  }))}
+                />
 
-              <CampoImporte
-                nombre="shippingCostPesos"
-                etiqueta="Costo del envío en pesos"
-                requerido={false}
-                min={0}
-                step={1}
-                ayuda="Sólo si elegiste «a cargo del comprador». Se suma al total que paga y no lleva comisión aparte."
-              />
-            </GrupoDeCampos>
+                <CampoImporte
+                  nombre="shippingCostPesos"
+                  etiqueta="Costo del envío en pesos"
+                  requerido={false}
+                  min={0}
+                  step={1}
+                  ayuda="Sólo si elegiste «a cargo del comprador». Se suma al total que paga y no lleva comisión aparte."
+                />
+              </GrupoDeCampos>
 
-            <GrupoDeCampos
-              titulo="Fotos"
-              detalle="Hace falta al menos una para que la publicación salga a la venta. Sin fotos queda en borrador y la completás después."
-            >
-              <CampoArchivos
-                nombre="fotos"
-                etiqueta="Fotos"
-                ayuda={`Hasta ${imagenes.maxImages} fotos, ${maxMb} MB cada una. La primera es la portada. Si es usada o retro, sumá una de la etiqueta: es la mejor señal de autenticidad.`}
-              />
-            </GrupoDeCampos>
-          </Formulario>
-        </div>
+              <GrupoDeCampos
+                titulo="Fotos"
+                detalle="Hace falta al menos una para que la publicación salga a la venta. Sin fotos queda en borrador y la completás después."
+              >
+                <CampoArchivos
+                  nombre="fotos"
+                  etiqueta="Fotos"
+                  ayuda={`Hasta ${imagenes.maxImages} fotos, ${maxMb} MB cada una. La primera es la portada. Si es usada o retro, sumá una de la etiqueta: es la mejor señal de autenticidad.`}
+                />
+              </GrupoDeCampos>
+            </Formulario>
+          </div>
 
-        {/*
+          {/*
           ⚠️ La publicación sale visible de inmediato porque la moderación previa
           todavía no está decidida. No se promete una revisión que no existe.
         */}
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
-          <p className={estilos.nota}>
-            Tu publicación queda visible apenas la publicás: no hay nadie revisando del otro lado.
-            El stock se descuenta cuando el pago del comprador se aprueba, no antes.
-          </p>
-        </div>
-      </main>
+          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+            <p className={estilos.nota}>
+              Tu publicación queda visible apenas la publicás: no hay nadie revisando del otro lado.
+              El stock se descuenta cuando el pago del comprador se aprueba, no antes.
+            </p>
+          </div>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

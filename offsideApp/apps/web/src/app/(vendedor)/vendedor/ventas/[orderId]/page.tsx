@@ -29,6 +29,7 @@ import {
   tonoDeOrden,
 } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../../(cuenta)/panel';
 import { getDisputeForOrder } from '@/modules/disputes/services/dispute.service';
 import { findById, getSaleDetail } from '@/modules/orders/services/order.service';
 import { listTiers } from '@/modules/sellers/services/seller-tier.service';
@@ -36,7 +37,6 @@ import { getCarriers } from '@/modules/shipments/services/carrier-catalog.servic
 
 import { cancelarVenta, despachar, responderReclamo } from '../../../acciones';
 import { Chapa } from '../../../chapa';
-import { NavDelVendedor } from '../../../nav';
 import estilos from '../../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Detalle de la venta' };
@@ -82,299 +82,305 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Migas
-          items={[
-            { texto: 'Panel', href: '/vendedor' },
-            { texto: 'Ventas', href: '/vendedor/ventas' },
-            { texto: venta.orderNumber },
-          ]}
-        />
+      <PanelDeCuenta user={user} seccion="publicaciones">
+        <main id="contenido">
+          <Migas
+            items={[
+              { texto: 'Panel', href: '/vendedor' },
+              { texto: 'Ventas', href: '/vendedor/ventas' },
+              { texto: venta.orderNumber },
+            ]}
+          />
 
-        <Chapa
-          rotulo="Venta"
-          titulo={venta.items[0]?.title ?? venta.orderNumber}
-          chica
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              Orden {venta.orderNumber} · {fechaYHora(venta.createdAt)}
-            </p>
-          }
-          estado={{ texto: estadoDeOrden(venta.status), tono: tonoDeOrden(venta.status) }}
-        />
+          <Chapa
+            rotulo="Venta"
+            titulo={venta.items[0]?.title ?? venta.orderNumber}
+            chica
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                Orden {venta.orderNumber} · {fechaYHora(venta.createdAt)}
+              </p>
+            }
+            estado={{ texto: estadoDeOrden(venta.status), tono: tonoDeOrden(venta.status) }}
+          />
 
-        <NavDelVendedor activo="ventas" />
+          <SolapasDeCuenta user={user} seccion="publicaciones" activa="ventas" />
 
-        {/*
+          {/*
           ⚠️ EL PLAZO VENCIDO ES LO PRIMERO QUE SE LEE. Es lo único de esta
           pantalla que tiene consecuencia sobre la reputación del vendedor
           (BR-032), y no se anima más allá de la entrada seca que traen los
           avisos: el estado de una orden no late.
         */}
-        {venta.windows.dispatchOverdue && (
-          <Aviso tono="error">
-            <strong>El plazo para despachar ya venció.</strong> Vencía el{' '}
-            {venta.windows.dispatchDeadline === null
-              ? 'plazo acordado'
-              : fechaYHora(venta.windows.dispatchDeadline)}
-            . Despachala cuanto antes: los despachos fuera de plazo cuentan en tu reputación.
-          </Aviso>
-        )}
-
-        {reclamo !== null && (
-          <>
-            <Aviso tono={reclamo.abierta ? 'error' : 'neutro'}>
-              <strong>Esta venta tiene un reclamo: {motivoDeReclamo(reclamo.reason)}.</strong>{' '}
-              <Etiqueta tono={tonoDeDisputa(reclamo.status)}>
-                {estadoDeDisputa(reclamo.status)}
-              </Etiqueta>{' '}
-              {reclamo.sellerResponseDueAt !== null && reclamo.sellerRespondedAt === null && (
-                <>Tenés tiempo de responder hasta el {fechaYHora(reclamo.sellerResponseDueAt)}. </>
-              )}
-              <Link href={`/cuenta/reclamos/${reclamo.id}`}>Ver el reclamo completo</Link>
+          {venta.windows.dispatchOverdue && (
+            <Aviso tono="error">
+              <strong>El plazo para despachar ya venció.</strong> Vencía el{' '}
+              {venta.windows.dispatchDeadline === null
+                ? 'plazo acordado'
+                : fechaYHora(venta.windows.dispatchDeadline)}
+              . Despachala cuanto antes: los despachos fuera de plazo cuentan en tu reputación.
             </Aviso>
+          )}
 
-            {/*
+          {reclamo !== null && (
+            <>
+              <Aviso tono={reclamo.abierta ? 'error' : 'neutro'}>
+                <strong>Esta venta tiene un reclamo: {motivoDeReclamo(reclamo.reason)}.</strong>{' '}
+                <Etiqueta tono={tonoDeDisputa(reclamo.status)}>
+                  {estadoDeDisputa(reclamo.status)}
+                </Etiqueta>{' '}
+                {reclamo.sellerResponseDueAt !== null && reclamo.sellerRespondedAt === null && (
+                  <>
+                    Tenés tiempo de responder hasta el {fechaYHora(reclamo.sellerResponseDueAt)}
+                    .{' '}
+                  </>
+                )}
+                <Link href={`/cuenta/reclamos/${reclamo.id}`}>Ver el reclamo completo</Link>
+              </Aviso>
+
+              {/*
               ⚠️ RESPONDER SE OFRECE ACA Y NO SOLO EN LA FICHA DEL RECLAMO. El
               vendedor entra por la venta, no por el reclamo, y el plazo corre:
               pasado `dispute_seller_response_days` el caso escala a revisión de
               Offside con lo que haya. Mandarlo a buscar otra pantalla es la
               forma más segura de que el plazo se venza.
             */}
-            {reclamo.abierta && reclamo.sellerRespondedAt === null && (
-              <Seccion titulo="Tu versión">
-                <div className={estilos.tarjeta}>
-                  <p className={estilos.bajada}>
-                    Contá qué pasó de tu lado. Lo lee quien resuelve el reclamo, junto con lo que
-                    dijo el comprador.
-                  </p>
-                  <Formulario accion={responderReclamo} enviar="Enviar mi respuesta">
-                    <CampoOculto nombre="disputeId" valor={reclamo.id} />
-                    <AreaDeTexto
-                      nombre="texto"
-                      etiqueta="Qué pasó"
-                      requerido
-                      filas={5}
-                      maximo={2000}
-                      ayuda="Datos concretos: cuándo lo despachaste, con qué número, qué acordaron."
-                    />
-                  </Formulario>
-                </div>
-              </Seccion>
-            )}
-          </>
-        )}
+              {reclamo.abierta && reclamo.sellerRespondedAt === null && (
+                <Seccion titulo="Tu versión">
+                  <div className={estilos.tarjeta}>
+                    <p className={estilos.bajada}>
+                      Contá qué pasó de tu lado. Lo lee quien resuelve el reclamo, junto con lo que
+                      dijo el comprador.
+                    </p>
+                    <Formulario accion={responderReclamo} enviar="Enviar mi respuesta">
+                      <CampoOculto nombre="disputeId" valor={reclamo.id} />
+                      <AreaDeTexto
+                        nombre="texto"
+                        etiqueta="Qué pasó"
+                        requerido
+                        filas={5}
+                        maximo={2000}
+                        ayuda="Datos concretos: cuándo lo despachaste, con qué número, qué acordaron."
+                      />
+                    </Formulario>
+                  </div>
+                </Seccion>
+              )}
+            </>
+          )}
 
-        <Seccion titulo="Qué se vendió">
-          <ul className={estilos.itemsVenta}>
-            {venta.items.map((item) => (
-              <li key={item.id} className={estilos.itemVenta}>
-                <div>
-                  {/*
+          <Seccion titulo="Qué se vendió">
+            <ul className={estilos.itemsVenta}>
+              {venta.items.map((item) => (
+                <li key={item.id} className={estilos.itemVenta}>
+                  <div>
+                    {/*
                     ⚠️ EL TITULO ES EL CONGELADO EN LA ORDEN (DEC-030) y el enlace
                     va a la publicación de hoy: son dos datos distintos y el que
                     manda es el snapshot. Si el vendedor le cambió el nombre o la
                     eliminó, la orden sigue diciendo qué se compró.
                   */}
-                  <p className={estilos.itemTitulo}>
-                    <Link href={`/p/${item.listingId}`} className="subraya">
-                      {item.title}
-                    </Link>
-                  </p>
-                  <p className={estilos.itemMeta}>
-                    {item.quantity === 1 ? '1 unidad' : `${item.quantity} unidades`} ·{' '}
-                    {precio(item.unitPriceAmount, venta.currency)} c/u
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Seccion>
+                    <p className={estilos.itemTitulo}>
+                      <Link href={`/p/${item.listingId}`} className="subraya">
+                        {item.title}
+                      </Link>
+                    </p>
+                    <p className={estilos.itemMeta}>
+                      {item.quantity === 1 ? '1 unidad' : `${item.quantity} unidades`} ·{' '}
+                      {precio(item.unitPriceAmount, venta.currency)} c/u
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Seccion>
 
-        <Seccion titulo="Lo que cobrás">
-          <div className={estilos.tarjeta}>
-            <FilaDeDatos concepto="Producto">
-              {precio(venta.productAmount, venta.currency)}
-            </FilaDeDatos>
-            <FilaDeDatos concepto="Envío declarado">
-              {precio(venta.shippingAmount, venta.currency)}
-            </FilaDeDatos>
-            <FilaDeDatos concepto="Total que pagó el comprador">
-              {precio(venta.totalAmount, venta.currency)}
-            </FilaDeDatos>
-            <FilaDeDatos concepto={`Comisión de Offside${comision.sufijo}`}>
-              −{precio(venta.commissionAmount, venta.currency)}
-            </FilaDeDatos>
-            <FilaDeDatos concepto="Te queda, antes del costo de Mercado Pago" destacada>
-              {precio(venta.sellerAmount, venta.currency)}
-            </FilaDeDatos>
-          </div>
+          <Seccion titulo="Lo que cobrás">
+            <div className={estilos.tarjeta}>
+              <FilaDeDatos concepto="Producto">
+                {precio(venta.productAmount, venta.currency)}
+              </FilaDeDatos>
+              <FilaDeDatos concepto="Envío declarado">
+                {precio(venta.shippingAmount, venta.currency)}
+              </FilaDeDatos>
+              <FilaDeDatos concepto="Total que pagó el comprador">
+                {precio(venta.totalAmount, venta.currency)}
+              </FilaDeDatos>
+              <FilaDeDatos concepto={`Comisión de Offside${comision.sufijo}`}>
+                −{precio(venta.commissionAmount, venta.currency)}
+              </FilaDeDatos>
+              <FilaDeDatos concepto="Te queda, antes del costo de Mercado Pago" destacada>
+                {precio(venta.sellerAmount, venta.currency)}
+              </FilaDeDatos>
+            </div>
 
-          {/*
+            {/*
             ⚠️ DE DONDE SALIO LA COMISION SE DICE CON TODAS LAS LETRAS. El
             snapshot guarda `commission_source` justamente para que dentro de seis
             meses se pueda explicar por qué esta orden pagó el triple que la de al
             lado, y esconderlo obligaría al vendedor a deducirlo dividiendo.
           */}
-          <p className={estilos.nota}>{comision.explicacion}</p>
+            <p className={estilos.nota}>{comision.explicacion}</p>
 
-          {/*
+            {/*
             ⚠️ "TE QUEDA" ES ANTES DEL COSTO DE MERCADO PAGO (DEC-043). MP
             descuenta su procesamiento del lado del vendedor y Offside no lo
             conoce al crear la orden: prometer un neto exacto sería mentir.
           */}
-          <p className={estilos.nota}>
-            Mercado Pago cobra además su propio costo de procesamiento, que se descuenta de tu parte
-            al acreditarse el pago. Offside no lo conoce y por eso no lo puede mostrar acá.
-          </p>
-        </Seccion>
+            <p className={estilos.nota}>
+              Mercado Pago cobra además su propio costo de procesamiento, que se descuenta de tu
+              parte al acreditarse el pago. Offside no lo conoce y por eso no lo puede mostrar acá.
+            </p>
+          </Seccion>
 
-        {direccion.length > 0 ? (
-          <Seccion titulo="A dónde lo mandás">
-            <div className={estilos.tarjeta}>
-              <Definiciones
-                columnas={2}
-                items={[
-                  {
-                    termino: 'Comprador',
-                    valor: venta.buyer.displayName ?? 'Sin nombre cargado',
-                  },
-                  ...direccion,
-                ]}
-              />
-            </div>
-            {/*
+          {direccion.length > 0 ? (
+            <Seccion titulo="A dónde lo mandás">
+              <div className={estilos.tarjeta}>
+                <Definiciones
+                  columnas={2}
+                  items={[
+                    {
+                      termino: 'Comprador',
+                      valor: venta.buyer.displayName ?? 'Sin nombre cargado',
+                    },
+                    ...direccion,
+                  ]}
+                />
+              </div>
+              {/*
               ⚠️ ES UN DATO PERSONAL DE OTRA PERSONA, y decirlo no es
               burocracia: quien despacha tiene que saber que esto no se comparte
               ni se usa para nada más.
             */}
-            <p className={estilos.nota}>
-              Estos datos son del comprador y están acá sólo para que puedas despachar.
-            </p>
-          </Seccion>
-        ) : (
-          <Seccion titulo="A dónde lo mandás">
-            <p className={estilos.nota}>
-              Los datos del comprador aparecen cuando la orden está paga. Todavía no hay nada que
-              despachar.
-            </p>
-          </Seccion>
-        )}
+              <p className={estilos.nota}>
+                Estos datos son del comprador y están acá sólo para que puedas despachar.
+              </p>
+            </Seccion>
+          ) : (
+            <Seccion titulo="A dónde lo mandás">
+              <p className={estilos.nota}>
+                Los datos del comprador aparecen cuando la orden está paga. Todavía no hay nada que
+                despachar.
+              </p>
+            </Seccion>
+          )}
 
-        {venta.shipment !== null && (
-          <Seccion titulo="El envío">
-            <div className={estilos.tarjeta}>
-              <FilaDeDatos concepto="Estado">{estadoDeEnvio(venta.shipment.status)}</FilaDeDatos>
-              <FilaDeDatos concepto="Transportista">
-                {venta.shipment.carrierName ?? venta.shipment.carrierCode ?? 'Sin declarar'}
-              </FilaDeDatos>
-              <FilaDeDatos concepto="Seguimiento">
-                {venta.shipment.trackingUrl === null ? (
-                  (venta.shipment.trackingNumber ?? 'Sin número')
-                ) : (
-                  <a href={venta.shipment.trackingUrl} rel="noreferrer" target="_blank">
-                    {venta.shipment.trackingNumber}
-                  </a>
-                )}
-              </FilaDeDatos>
-              {venta.shipment.dispatchedAt !== null && (
-                <FilaDeDatos concepto="Despachado">
-                  {fechaYHora(venta.shipment.dispatchedAt)}
+          {venta.shipment !== null && (
+            <Seccion titulo="El envío">
+              <div className={estilos.tarjeta}>
+                <FilaDeDatos concepto="Estado">{estadoDeEnvio(venta.shipment.status)}</FilaDeDatos>
+                <FilaDeDatos concepto="Transportista">
+                  {venta.shipment.carrierName ?? venta.shipment.carrierCode ?? 'Sin declarar'}
                 </FilaDeDatos>
-              )}
-            </div>
-            {/*
+                <FilaDeDatos concepto="Seguimiento">
+                  {venta.shipment.trackingUrl === null ? (
+                    (venta.shipment.trackingNumber ?? 'Sin número')
+                  ) : (
+                    <a href={venta.shipment.trackingUrl} rel="noreferrer" target="_blank">
+                      {venta.shipment.trackingNumber}
+                    </a>
+                  )}
+                </FilaDeDatos>
+                {venta.shipment.dispatchedAt !== null && (
+                  <FilaDeDatos concepto="Despachado">
+                    {fechaYHora(venta.shipment.dispatchedAt)}
+                  </FilaDeDatos>
+                )}
+              </div>
+              {/*
               ⚠️ OFFSIDE NO HACE SEGUIMIENTO AUTOMATICO. No hay integración con
               Correo Argentino: lo que se ve acá es lo que el vendedor declaró.
               Prometer tracking en vivo sería prometer algo que no existe.
             */}
-            <p className={estilos.nota}>
-              El seguimiento lo actualiza el transportista en su propio sitio. Offside no lo
-              consulta solo.
-            </p>
+              <p className={estilos.nota}>
+                El seguimiento lo actualiza el transportista en su propio sitio. Offside no lo
+                consulta solo.
+              </p>
+            </Seccion>
+          )}
+
+          <Seccion titulo="Cómo viene">
+            <Cronologia etiqueta="Estados de la orden" hitos={hitosDeLaVenta(venta)} />
           </Seccion>
-        )}
 
-        <Seccion titulo="Cómo viene">
-          <Cronologia etiqueta="Estados de la orden" hitos={hitosDeLaVenta(venta)} />
-        </Seccion>
-
-        {(venta.actions.canShip || venta.actions.canCancel) && (
-          <Seccion titulo="Qué podés hacer">
-            <div className={estilos.accionesVenta}>
-              {venta.actions.canShip && (
-                <div className={estilos.tarjeta}>
-                  <p className={estilos.bajada}>
-                    Marcala como despachada cuando la lleves. Transportista y número de seguimiento
-                    son obligatorios: sin ellos el comprador no puede saber dónde está su paquete.
-                  </p>
-                  <Formulario accion={despachar} enviar="Marcar como despachada">
-                    <CampoOculto nombre="orderId" valor={venta.id} />
-                    {/*
+          {(venta.actions.canShip || venta.actions.canCancel) && (
+            <Seccion titulo="Qué podés hacer">
+              <div className={estilos.accionesVenta}>
+                {venta.actions.canShip && (
+                  <div className={estilos.tarjeta}>
+                    <p className={estilos.bajada}>
+                      Marcala como despachada cuando la lleves. Transportista y número de
+                      seguimiento son obligatorios: sin ellos el comprador no puede saber dónde está
+                      su paquete.
+                    </p>
+                    <Formulario accion={despachar} enviar="Marcar como despachada">
+                      <CampoOculto nombre="orderId" valor={venta.id} />
+                      {/*
                       ⚠️ LA LISTA SALE DE `shipping_carriers` (⚙️ Config Store),
                       no de una constante en esta pantalla: agregar un
                       transportista no puede exigir un redeploy.
                     */}
-                    <Seleccion
-                      nombre="carrier"
-                      etiqueta="Transportista"
-                      opciones={transportistas.map((c) => ({ valor: c.code, etiqueta: c.name }))}
-                    />
-                    <Campo
-                      nombre="trackingNumber"
-                      etiqueta="Número de seguimiento"
-                      ayuda="Tal cual te lo dio el transportista. Se lo mostramos al comprador."
-                    />
-                  </Formulario>
-                </div>
-              )}
+                      <Seleccion
+                        nombre="carrier"
+                        etiqueta="Transportista"
+                        opciones={transportistas.map((c) => ({ valor: c.code, etiqueta: c.name }))}
+                      />
+                      <Campo
+                        nombre="trackingNumber"
+                        etiqueta="Número de seguimiento"
+                        ayuda="Tal cual te lo dio el transportista. Se lo mostramos al comprador."
+                      />
+                    </Formulario>
+                  </div>
+                )}
 
-              {venta.actions.canCancel && (
-                <div className={estilos.tarjeta}>
-                  <p className={estilos.bajada}>
-                    Cancelar devuelve el stock y deja la orden cerrada. El comprador ya pagó: el
-                    reembolso lo gestiona Offside y la cancelación queda en tu historial.
-                  </p>
-                  {/*
+                {venta.actions.canCancel && (
+                  <div className={estilos.tarjeta}>
+                    <p className={estilos.bajada}>
+                      Cancelar devuelve el stock y deja la orden cerrada. El comprador ya pagó: el
+                      reembolso lo gestiona Offside y la cancelación queda en tu historial.
+                    </p>
+                    {/*
                     ⚠️ VA EN DOS PASOS Y CON `<details>`, no con `window.confirm`
                     —que directamente no existe sin JavaScript—. El primer clic
                     abre; el que ejecuta vive adentro.
                   */}
-                  <Confirmar
-                    etiqueta="Cancelar la venta"
-                    pregunta="Le cancelás la compra a alguien que ya pagó. No se puede deshacer."
-                  >
-                    <Formulario
-                      accion={cancelarVenta}
-                      enviar="Sí, cancelar la venta"
-                      variante="peligro"
+                    <Confirmar
+                      etiqueta="Cancelar la venta"
+                      pregunta="Le cancelás la compra a alguien que ya pagó. No se puede deshacer."
                     >
-                      <CampoOculto nombre="orderId" valor={venta.id} />
-                      <AreaDeTexto
-                        nombre="motivo"
-                        etiqueta="Por qué la cancelás"
-                        requerido
-                        filas={3}
-                        maximo={500}
-                        ayuda="Lo lee el comprador y queda en el historial de la orden."
-                      />
-                    </Formulario>
-                  </Confirmar>
-                </div>
-              )}
-            </div>
-          </Seccion>
-        )}
+                      <Formulario
+                        accion={cancelarVenta}
+                        enviar="Sí, cancelar la venta"
+                        variante="peligro"
+                      >
+                        <CampoOculto nombre="orderId" valor={venta.id} />
+                        <AreaDeTexto
+                          nombre="motivo"
+                          etiqueta="Por qué la cancelás"
+                          requerido
+                          filas={3}
+                          maximo={500}
+                          ayuda="Lo lee el comprador y queda en el historial de la orden."
+                        />
+                      </Formulario>
+                    </Confirmar>
+                  </div>
+                )}
+              </div>
+            </Seccion>
+          )}
 
-        {!venta.actions.canShip && !venta.actions.canCancel && venta.status !== 'CANCELLED' && (
-          <Panel titulo="No hay nada pendiente de tu lado" tono="exito">
-            <p>
-              Esta orden ya siguió su curso. Si el comprador abre un reclamo, lo vas a ver acá y en
-              tu bandeja.
-            </p>
-          </Panel>
-        )}
-      </main>
+          {!venta.actions.canShip && !venta.actions.canCancel && venta.status !== 'CANCELLED' && (
+            <Panel titulo="No hay nada pendiente de tu lado" tono="exito">
+              <p>
+                Esta orden ya siguió su curso. Si el comprador abre un reclamo, lo vas a ver acá y
+                en tu bandeja.
+              </p>
+            </Panel>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

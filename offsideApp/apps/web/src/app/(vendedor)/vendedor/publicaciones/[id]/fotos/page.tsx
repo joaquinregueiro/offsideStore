@@ -6,6 +6,7 @@ import { IconoCamiseta } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
 import { Aviso, BotonEnlace, EstadoVacio, Seccion } from '@/components/ui';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta } from '../../../../../(cuenta)/panel';
 import { getImageSettings } from '@/modules/config/services/image-settings.service';
 import { listMyListings } from '@/modules/listings/services/listing.service';
 import { listImages } from '@/modules/listings/services/listing-image.service';
@@ -98,87 +99,88 @@ export default async function FotosDeLaPublicacion({
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Chapa
-          rotulo="Inventario"
-          titulo="Fotos"
-          chica
-          detalle={<p className={estilos.chapaDetalle}>{publicacion.title}</p>}
-          estado={{
-            texto:
-              imagenes.length === 0
-                ? 'Sin fotos'
-                : imagenes.length === 1
-                  ? '1 foto'
-                  : `${imagenes.length} fotos`,
-            tono: imagenes.length === 0 ? 'alerta' : 'marca',
-          }}
-          accion={
-            <BotonEnlace
-              href={`/vendedor/publicaciones/${publicacion.id}/editar`}
-              variante="secundario"
-            >
-              Editar datos
-            </BotonEnlace>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="publicaciones">
+        <main id="contenido">
+          <Chapa
+            rotulo="Inventario"
+            titulo="Fotos"
+            chica
+            detalle={<p className={estilos.chapaDetalle}>{publicacion.title}</p>}
+            estado={{
+              texto:
+                imagenes.length === 0
+                  ? 'Sin fotos'
+                  : imagenes.length === 1
+                    ? '1 foto'
+                    : `${imagenes.length} fotos`,
+              tono: imagenes.length === 0 ? 'alerta' : 'marca',
+            }}
+            accion={
+              <BotonEnlace
+                href={`/vendedor/publicaciones/${publicacion.id}/editar`}
+                variante="secundario"
+              >
+                Editar datos
+              </BotonEnlace>
+            }
+          />
 
-        {imagenes.length === 0 ? (
-          <>
-            {/*
+          {imagenes.length === 0 ? (
+            <>
+              {/*
               ⚠️ PS-010 CON RIEL DE ALERTA Y CON LA CONSECUENCIA ESCRITA. Antes
               decía "prácticamente nadie la va a comprar", que es una estimación;
               lo que corresponde decir es el hecho: sin una foto la publicación
               queda en borrador y no sale a la vitrina.
             */}
-            <Aviso tono="error">
-              {enBorrador ? (
-                <>
-                  Esta publicación está <strong>en borrador</strong> y no se muestra en la vitrina.
-                  Sale a la venta sola en cuanto subas la primera foto.
-                </>
-              ) : (
-                <>Esta publicación no tiene fotos. Sin al menos una no puede volver a la venta.</>
-              )}
-            </Aviso>
+              <Aviso tono="error">
+                {enBorrador ? (
+                  <>
+                    Esta publicación está <strong>en borrador</strong> y no se muestra en la
+                    vitrina. Sale a la venta sola en cuanto subas la primera foto.
+                  </>
+                ) : (
+                  <>Esta publicación no tiene fotos. Sin al menos una no puede volver a la venta.</>
+                )}
+              </Aviso>
 
-            <EstadoVacio
-              titulo="Todavía no subiste ninguna foto"
-              icono={<IconoCamiseta tamanio={40} />}
+              <EstadoVacio
+                titulo="Todavía no subiste ninguna foto"
+                icono={<IconoCamiseta tamanio={40} />}
+              >
+                <p>
+                  La primera que subas queda de portada: es la que se ve en la vitrina y en la
+                  búsqueda. Si es usada o retro, sumá una de la etiqueta.
+                </p>
+              </EstadoVacio>
+            </>
+          ) : (
+            <Seccion
+              titulo="Fotos de la publicación"
+              dato={
+                quedan === 0
+                  ? `${imagenes.length} de ${settings.maxImages} · completo`
+                  : `${imagenes.length} de ${settings.maxImages}`
+              }
             >
-              <p>
-                La primera que subas queda de portada: es la que se ve en la vitrina y en la
-                búsqueda. Si es usada o retro, sumá una de la etiqueta.
-              </p>
-            </EstadoVacio>
-          </>
-        ) : (
-          <Seccion
-            titulo="Fotos de la publicación"
-            dato={
-              quedan === 0
-                ? `${imagenes.length} de ${settings.maxImages} · completo`
-                : `${imagenes.length} de ${settings.maxImages}`
-            }
-          >
-            {/*
+              {/*
               ⚠️ `revela-grilla` ESCALONA LA ENTRADA CON EL SCROLL Y ES CSS PURO
               (`animation-timeline: view()`). Sin soporte, o con
               `prefers-reduced-motion`, las fotos ya están: la clase global se
               apaga entera, no deja nada en `opacity: 0`.
             */}
-            <ul className={`${estilos.galeria} revela-grilla`}>
-              {imagenes.map((imagen, indice) => (
-                <li key={imagen.id}>
-                  <figure className={estilos.miniatura}>
-                    {/*
+              <ul className={`${estilos.galeria} revela-grilla`}>
+                {imagenes.map((imagen, indice) => (
+                  <li key={imagen.id}>
+                    <figure className={estilos.miniatura}>
+                      {/*
                       ⚠️ LA PORTADA SE MARCA SOBRE LA FOTO Y NO DEBAJO. Es el
                       único dato de esta pantalla que cambia lo que ve un
                       comprador, y en el pie competía con el botón de borrar.
                     */}
-                    {indice === 0 && <span className={estilos.portada}>Portada</span>}
+                      {indice === 0 && <span className={estilos.portada}>Portada</span>}
 
-                    {/*
+                      {/*
                       ⚠️ EL RECORTE VIVE EN EL MARCO, NO EN LA `<figure>`: el pie
                       lleva el botón de borrar, y un ancestro con overflow oculto
                       le recorta el anillo de foco.
@@ -187,8 +189,8 @@ export default async function FotosDeLaPublicacion({
                       `scale` escrito a mano. Es el mismo acercamiento que usan
                       la vitrina y el inventario.
                     */}
-                    <span className={`${estilos.miniaturaMarco} zoom-marco`}>
-                      {/*
+                      <span className={`${estilos.miniaturaMarco} zoom-marco`}>
+                        {/*
                         ⚠️ `<img>` y no `next/image`: las fotos se sirven ya
                         redimensionadas desde el CDN del bucket, en tres
                         variantes que genera el procesador. Pasarlas otra vez por
@@ -196,72 +198,72 @@ export default async function FotosDeLaPublicacion({
                         que el servidor intervenga en cada imagen de cada visita,
                         que es justamente lo que un CDN viene a evitar.
                       */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        className="zoom-foto"
-                        src={imagen.variants.thumb ?? imagen.url}
-                        {...srcSet(imagen.variants)}
-                        sizes="(max-width: 420px) 92vw, 220px"
-                        alt={imagen.alt ?? `Foto ${indice + 1} de ${publicacion.title}`}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </span>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          className="zoom-foto"
+                          src={imagen.variants.thumb ?? imagen.url}
+                          {...srcSet(imagen.variants)}
+                          sizes="(max-width: 420px) 92vw, 220px"
+                          alt={imagen.alt ?? `Foto ${indice + 1} de ${publicacion.title}`}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </span>
 
-                    <figcaption>
-                      {/*
+                      <figcaption>
+                        {/*
                         ⚠️ EL NUMERO DE ORDEN ES INFORMACION, NO ADORNO: la
                         portada es la primera POR POSICION y no se puede
                         reordenar todavía, así que saber en qué lugar está cada
                         foto es lo que permite decidir cuál borrar.
                       */}
-                      <span className={estilos.miniaturaOrden}>
-                        {String(indice + 1).padStart(2, '0')}
-                      </span>
+                        <span className={estilos.miniaturaOrden}>
+                          {String(indice + 1).padStart(2, '0')}
+                        </span>
 
-                      <Formulario
-                        accion={borrarFoto}
-                        enviar="Borrar"
-                        variante="peligro"
-                        tamanio="chico"
-                        bloque={false}
-                      >
-                        <CampoOculto nombre="listingId" valor={publicacion.id} />
-                        <CampoOculto nombre="imageId" valor={imagen.id} />
-                      </Formulario>
-                    </figcaption>
-                  </figure>
-                </li>
-              ))}
-            </ul>
-          </Seccion>
-        )}
+                        <Formulario
+                          accion={borrarFoto}
+                          enviar="Borrar"
+                          variante="peligro"
+                          tamanio="chico"
+                          bloque={false}
+                        >
+                          <CampoOculto nombre="listingId" valor={publicacion.id} />
+                          <CampoOculto nombre="imageId" valor={imagen.id} />
+                        </Formulario>
+                      </figcaption>
+                    </figure>
+                  </li>
+                ))}
+              </ul>
+            </Seccion>
+          )}
 
-        {quedan > 0 ? (
-          <Formulario
-            accion={agregarFotos}
-            enviar={imagenes.length === 0 ? 'Subir fotos' : 'Subir'}
-          >
-            <CampoOculto nombre="listingId" valor={publicacion.id} />
-            <CampoArchivos
-              nombre="fotos"
-              etiqueta="Agregar fotos"
-              ayuda={`Te quedan ${quedan} de ${settings.maxImages}. Máximo ${maxMb} MB cada una. JPEG, PNG o WebP.`}
-            />
-          </Formulario>
-        ) : (
-          <Aviso>
-            Llegaste al máximo de {settings.maxImages} fotos. Borrá alguna para subir otra.
-          </Aviso>
-        )}
+          {quedan > 0 ? (
+            <Formulario
+              accion={agregarFotos}
+              enviar={imagenes.length === 0 ? 'Subir fotos' : 'Subir'}
+            >
+              <CampoOculto nombre="listingId" valor={publicacion.id} />
+              <CampoArchivos
+                nombre="fotos"
+                etiqueta="Agregar fotos"
+                ayuda={`Te quedan ${quedan} de ${settings.maxImages}. Máximo ${maxMb} MB cada una. JPEG, PNG o WebP.`}
+              />
+            </Formulario>
+          ) : (
+            <Aviso>
+              Llegaste al máximo de {settings.maxImages} fotos. Borrá alguna para subir otra.
+            </Aviso>
+          )}
 
-        <div className={estilos.acciones}>
-          <BotonEnlace href="/vendedor/publicaciones" variante="secundario">
-            Volver a mis publicaciones
-          </BotonEnlace>
-        </div>
+          <div className={estilos.acciones}>
+            <BotonEnlace href="/vendedor/publicaciones" variante="secundario">
+              Volver a mis publicaciones
+            </BotonEnlace>
+          </div>
 
-        {/*
+          {/*
           ⚠️ TODAVIA NO SE PUEDE REORDENAR. La portada es la primera por posición,
           y borrar deja huecos que no se renumeran. Cambiar el orden necesita una
           interfaz de arrastrar —o botones de subir/bajar— y no entra en esta
@@ -270,14 +272,15 @@ export default async function FotosDeLaPublicacion({
           ⚠️ Y SE DICE QUE BORRAR LA ULTIMA DE UNA ACTIVA SE RECHAZA: bajarla en
           silencio sería dejar de vender sin enterarse.
         */}
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
-          <p className={estilos.nota}>
-            La portada es la primera foto y por ahora no se puede reordenar: si querés otra portada,
-            borrá las que sobran y subilas en el orden que quieras. Si la publicación está a la
-            venta, borrar su única foto se rechaza — antes hay que pausarla.
-          </p>
-        </div>
-      </main>
+          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+            <p className={estilos.nota}>
+              La portada es la primera foto y por ahora no se puede reordenar: si querés otra
+              portada, borrá las que sobran y subilas en el orden que quieras. Si la publicación
+              está a la venta, borrar su única foto se rechaza — antes hay que pausarla.
+            </p>
+          </div>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

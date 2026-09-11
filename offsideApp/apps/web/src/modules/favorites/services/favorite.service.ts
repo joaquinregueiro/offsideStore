@@ -98,6 +98,11 @@ export async function isFavorite(user: PublicUser, listingId: string): Promise<b
 }
 
 /** Cuanta gente guardo la publicacion. Para la ficha ("N personas la guardaron"). */
+/** Cuantas publicaciones guardo esta persona. Para la barra lateral. */
+export async function countFavoritesOf(user: PublicUser): Promise<number> {
+  return favoriteRepo.countByUserId(user.id);
+}
+
 export async function countFavorites(listingId: string): Promise<number> {
   return favoriteRepo.countByListingId(listingId);
 }

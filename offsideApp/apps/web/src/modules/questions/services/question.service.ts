@@ -5,6 +5,7 @@ import { parseSettingValue } from '../../config/services/settings-registry';
 import * as inapp from '../../notifications/services/inapp-notification.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../questions.errors';
+import { detectarContacto, mensajeDeContacto } from './contacto-fuera-de-offside';
 import * as questionRepo from '../repositories/question.repository';
 
 /**
@@ -31,7 +32,10 @@ export const MAX_LENGTH_KEY = 'questions_max_length';
 export const MAX_OPEN_KEY = 'questions_max_open_per_user';
 
 /** `payload.kind` del aviso in-app que recibe quien pregunto. */
-export const QUESTION_ANSWERED_KIND = 'question_answered';
+export /** Clave del payload: la pantalla de avisos decide con esto a donde lleva. */
+const QUESTION_ASKED_KIND = 'question_asked';
+
+const QUESTION_ANSWERED_KIND = 'question_answered';
 
 /** Una pregunta tal como se ve en la ficha. NUNCA identifica a quien pregunto. */
 export interface PublicQuestion {
@@ -79,6 +83,17 @@ export function validateQuestionText(texto: string, maxLength: number, que: stri
   if (limpio.length > maxLength) {
     throw errors.questionInvalid(`${que} no puede superar los ${maxLength} caracteres`);
   }
+
+  /*
+   * ⚠️ SE CHEQUEA EN LAS DOS PUNTAS, pregunta Y respuesta, y no solo en la
+   * pregunta. El vendedor es quien mas motivo tiene para escribir "pasame tu
+   * WhatsApp y te lo dejo sin comision": sacar la venta de Offside le ahorra la
+   * comision a el y le saca al comprador el pago por Mercado Pago, el reclamo y
+   * el reembolso. Chequear un solo lado seria dejar abierta justo la puerta
+   * grande.
+   */
+  const contacto = detectarContacto(limpio);
+  if (contacto.hay) throw errors.questionInvalid(mensajeDeContacto(contacto));
 
   return limpio;
 }
@@ -130,7 +145,38 @@ export async function askQuestion(
     throw errors.tooManyOpenQuestions(maximoAbiertas);
   }
 
-  const row = await questionRepo.insert({ listingId: listing.id, askerId: user.id, question });
+  const row = await getDatabase().transaction(async (tx) => {
+    const creada = await questionRepo.insert(
+      { listingId: listing.id, askerId: user.id, question },
+      tx,
+    );
+
+    /*
+     * ⚠️ EL AVISO AL VENDEDOR FALTABA, Y ERA EL AGUJERO DEL FLUJO. La respuesta
+     * si avisaba a quien pregunto, pero la pregunta no avisaba a quien tiene
+     * que contestarla: el vendedor solo se enteraba si entraba por su cuenta a
+     * la bandeja. O sea que la funcionalidad existia y en la practica no
+     * funcionaba —las preguntas se quedaban sin responder hasta que alguien se
+     * acordaba de mirar—, y el tiempo de respuesta es una de las metricas que
+     * su reputacion publica muestra.
+     *
+     * ⚠️ VA EN LA MISMA TRANSACCION QUE LA FILA, igual que la respuesta: una
+     * pregunta escrita sin aviso es una pregunta que nadie ve.
+     *
+     * ⚠️ `notification_type` ES UN ENUM CERRADO y no tiene 'question': va como
+     * 'system' con el detalle en el payload, igual que la respuesta.
+     */
+    await inapp.notify(
+      listing.sellerUserId,
+      'system',
+      `Te preguntaron: ${listing.title}`,
+      question,
+      { kind: QUESTION_ASKED_KIND, listingId: listing.id, questionId: creada.id },
+      tx,
+    );
+
+    return creada;
+  });
 
   return toPublicQuestion(row);
 }

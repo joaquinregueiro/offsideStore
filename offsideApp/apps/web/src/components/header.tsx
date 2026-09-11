@@ -146,26 +146,33 @@ export async function Header({
     ) : (
       <>
         {/*
-          ⚠️ APUNTA A `/cuenta/compras`, NO A `/mis-compras`. La vieja sigue
-          existiendo y redirige con 308, pero mandar a la barra por una
-          redireccion en CADA pantalla del sitio es un salto de mas que se
-          paga en cada navegacion.
+          ⚠️ LA BARRA YA NO REPITE LAS SECCIONES DEL PANEL (2026-09-11). Antes
+          decia "Mis compras" y "Vender", que ahora son dos de las seis
+          secciones de la barra LATERAL del area privada: tenerlas en los dos
+          lados hacia que la misma persona viera dos navegaciones distintas
+          para lo mismo y no supiera cual manda. La barra superior queda con lo
+          que es global —buscar, vender, tu cuenta— y el panel se encarga del
+          resto.
+
+          ⚠️ "VENDER" SE QUEDA, y no es una excepcion arbitraria: es el unico
+          camino para descubrir que se puede vender desde la home, la busqueda
+          o una ficha, que es donde no hay barra lateral.
         */}
         <Link
-          href="/cuenta/compras"
-          className={estilos.enlace}
-          transitionTypes={['barrido']}
-          {...actual('compras')}
-        >
-          Mis compras
-        </Link>
-        <Link
-          href="/vendedor"
+          href="/vendedor/publicaciones/nueva"
           className={estilos.enlace}
           transitionTypes={['barrido']}
           {...actual('vender')}
         >
           Vender
+        </Link>
+        <Link
+          href="/cuenta"
+          className={estilos.enlace}
+          transitionTypes={['barrido']}
+          {...actual('compras')}
+        >
+          Mi cuenta
         </Link>
         {/*
           El acceso al back-office aparece SOLO para quien tiene alguna

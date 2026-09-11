@@ -10,6 +10,7 @@ import { activePromotionFor } from '../../listings/services/promotion.service';
 import { shippingAmountFor } from '../../listings/services/shipping-declaration';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
 import { resolveCommissionBasisPoints } from '../../sellers/services/seller-tier.service';
+import * as sellerRepo from '../../sellers/repositories/seller.repository';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import { requireCarrier } from '../../shipments/services/carrier-catalog.service';
 import * as manualShipment from '../../shipments/services/manual-shipment.service';
@@ -1037,6 +1038,22 @@ export async function countMySales(user: PublicUser): Promise<ResumenDeVentas> {
 }
 
 /** Ventas del vendedor autenticado por estado, con los siete siempre presentes. */
+/** Compras abiertas de esta persona, para la barra lateral. */
+export async function countMyOpenOrders(user: PublicUser): Promise<number> {
+  return orderRepo.countOpenByBuyerId(user.id);
+}
+
+/**
+ * Ventas por despachar. `0` si la persona no es vendedora: la barra lateral
+ * pregunta por todos, y un usuario sin perfil no es un error.
+ */
+export async function countSalesToShip(user: PublicUser): Promise<number> {
+  const seller = await sellerRepo.findByUserId(user.id);
+  if (seller === undefined || seller === null) return 0;
+
+  return orderRepo.countToShipBySellerId(seller.id);
+}
+
 export async function countSalesByStatus(user: PublicUser): Promise<Record<OrderStatus, number>> {
   const seller = await requireOwnSellerProfile(user);
   const filas = await orderRepo.countBySellerId(seller.id);

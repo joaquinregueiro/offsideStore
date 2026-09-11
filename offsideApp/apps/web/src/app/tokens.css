@@ -741,6 +741,14 @@ a:hover {
    * escrita a mano tiene que hacerlo tambien.
    */
   --color-alerta-hondo: #a94c00;
+  /**
+   * Lavado naranja para el RELLENO de una etiqueta de alerta ("Última unidad").
+   *
+   * ⚠️ ES MUY CLARO A PROPOSITO: `--color-alerta` (#b85400) encima da 4.93:1,
+   * por encima de AA. Un naranja mas saturado obligaria a poner el texto en
+   * blanco, y blanco sobre naranja de marca da 2.26:1.
+   */
+  --alerta-lavado: #fff4e8;
 
   /* ------------------------------------------------- los tres planos oscuros */
   /**
@@ -1577,6 +1585,8 @@ dd {
   --color-foco: var(--color-cambio);
   /** Sobre oscuro el naranja SI es texto (7.26:1). No hace falta el hondo. */
   --color-alerta: var(--color-naranja);
+  /* Sobre un fondo oscuro el lavado claro seria un parche blanco: se apaga. */
+  --alerta-lavado: rgb(255 144 45 / 0.16);
   /** Verde Cancha sobre fosa da 3.34:1: los enlaces suben a --verde-400. */
   --enlace: var(--verde-400);
 
@@ -2285,6 +2295,8 @@ dd {
 .sup-fosa.escena-luz {
   --color-neutro-tenue: var(--color-sobre-oscuro-2);
   --color-alerta: var(--color-naranja);
+  /* Sobre un fondo oscuro el lavado claro seria un parche blanco: se apaga. */
+  --alerta-lavado: rgb(255 144 45 / 0.16);
   --linea-control: var(--linea-control-oscura);
   --enlace: var(--verde-400);
 }
@@ -2397,6 +2409,8 @@ dd {
   --destello: var(--destello-oscuro);
   --color-foco: var(--color-cambio);
   --color-alerta: var(--color-naranja);
+  /* Sobre un fondo oscuro el lavado claro seria un parche blanco: se apaga. */
+  --alerta-lavado: rgb(255 144 45 / 0.16);
   --enlace: var(--verde-400);
   --enlace-activo: var(--color-cambio);
   --luz-marca: var(--luz-verde-clara);

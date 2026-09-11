@@ -11,7 +11,7 @@ import { listNotifications } from '@/modules/notifications/services/inapp-notifi
 
 import { marcarLeida, marcarTodasLeidas } from '../../acciones';
 import { ChapaDeCuenta } from '../../chapa';
-import { NavDeCuenta } from '../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mis avisos' };
@@ -96,135 +96,141 @@ export default async function MisAvisos({
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo="Avisos"
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {pagina.total === 0
-                ? 'No tenés avisos'
-                : soloNoLeidas
-                  ? cantidad(pagina.total, 'sin leer', 'sin leer')
-                  : cantidad(pagina.total, 'aviso')}
-            </p>
-          }
-        />
-
-        <NavDeCuenta activo="notificaciones" />
-
-        <nav className={estilos.filtros} aria-label="Filtrar avisos">
-          <Link
-            href="/cuenta/notificaciones"
-            className={soloNoLeidas ? estilos.filtro : `${estilos.filtro} ${estilos.filtroActivo}`}
-            aria-current={soloNoLeidas ? undefined : 'page'}
-          >
-            Todos
-          </Link>
-          <Link
-            href="/cuenta/notificaciones?filtro=sin-leer"
-            className={soloNoLeidas ? `${estilos.filtro} ${estilos.filtroActivo}` : estilos.filtro}
-            aria-current={soloNoLeidas ? 'page' : undefined}
-          >
-            Sin leer
-          </Link>
-        </nav>
-
-        {pagina.notificaciones.length === 0 ? (
-          <EstadoVacio
-            titulo={soloNoLeidas ? 'Estás al día' : 'Todavía no hay avisos'}
-            icono={<IconoCampana tamanio={40} />}
-          >
-            <p>
-              Acá te avisamos cuando pasa algo con una compra, con un reclamo o con algo que
-              guardaste.
-            </p>
-            {soloNoLeidas && (
-              <BotonEnlace href="/cuenta/notificaciones" variante="secundario">
-                Ver todos
-              </BotonEnlace>
-            )}
-          </EstadoVacio>
-        ) : (
-          <Seccion
-            titulo={soloNoLeidas ? 'Sin leer' : 'Todos'}
-            dato={cantidad(pagina.total, 'aviso')}
-            accion={
-              sinLeerEnLaPagina > 0 ? (
-                <Formulario
-                  accion={marcarTodasLeidas}
-                  enviar="Marcar todas como leídas"
-                  variante="secundario"
-                  tamanio="chico"
-                  bloque={false}
-                />
-              ) : undefined
+      <PanelDeCuenta user={user} seccion="cuenta">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo="Avisos"
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {pagina.total === 0
+                  ? 'No tenés avisos'
+                  : soloNoLeidas
+                    ? cantidad(pagina.total, 'sin leer', 'sin leer')
+                    : cantidad(pagina.total, 'aviso')}
+              </p>
             }
-          >
-            <ul className={`${estilos.lista} ${estilos.revela}`}>
-              {pagina.notificaciones.map((aviso) => {
-                const destino = destinoDe(aviso.payload);
+          />
 
-                return (
-                  <li
-                    key={aviso.id}
-                    className={
-                      aviso.leida
-                        ? `${estilos.notificacion} sup-ficha`
-                        : `${estilos.notificacion} ${estilos.noLeida} sup-ficha`
-                    }
-                  >
-                    {/*
+          <SolapasDeCuenta user={user} seccion="cuenta" activa="avisos" />
+
+          <nav className={estilos.filtros} aria-label="Filtrar avisos">
+            <Link
+              href="/cuenta/notificaciones"
+              className={
+                soloNoLeidas ? estilos.filtro : `${estilos.filtro} ${estilos.filtroActivo}`
+              }
+              aria-current={soloNoLeidas ? undefined : 'page'}
+            >
+              Todos
+            </Link>
+            <Link
+              href="/cuenta/notificaciones?filtro=sin-leer"
+              className={
+                soloNoLeidas ? `${estilos.filtro} ${estilos.filtroActivo}` : estilos.filtro
+              }
+              aria-current={soloNoLeidas ? 'page' : undefined}
+            >
+              Sin leer
+            </Link>
+          </nav>
+
+          {pagina.notificaciones.length === 0 ? (
+            <EstadoVacio
+              titulo={soloNoLeidas ? 'Estás al día' : 'Todavía no hay avisos'}
+              icono={<IconoCampana tamanio={40} />}
+            >
+              <p>
+                Acá te avisamos cuando pasa algo con una compra, con un reclamo o con algo que
+                guardaste.
+              </p>
+              {soloNoLeidas && (
+                <BotonEnlace href="/cuenta/notificaciones" variante="secundario">
+                  Ver todos
+                </BotonEnlace>
+              )}
+            </EstadoVacio>
+          ) : (
+            <Seccion
+              titulo={soloNoLeidas ? 'Sin leer' : 'Todos'}
+              dato={cantidad(pagina.total, 'aviso')}
+              accion={
+                sinLeerEnLaPagina > 0 ? (
+                  <Formulario
+                    accion={marcarTodasLeidas}
+                    enviar="Marcar todas como leídas"
+                    variante="secundario"
+                    tamanio="chico"
+                    bloque={false}
+                  />
+                ) : undefined
+              }
+            >
+              <ul className={`${estilos.lista} ${estilos.revela}`}>
+                {pagina.notificaciones.map((aviso) => {
+                  const destino = destinoDe(aviso.payload);
+
+                  return (
+                    <li
+                      key={aviso.id}
+                      className={
+                        aviso.leida
+                          ? `${estilos.notificacion} sup-ficha`
+                          : `${estilos.notificacion} ${estilos.noLeida} sup-ficha`
+                      }
+                    >
+                      {/*
                       ⚠️ EL PUNTO ES DECORATIVO Y EL ESTADO SE DICE CON TEXTO. Un
                       color distinto no lo distingue nadie con un lector de
                       pantalla, y un punto verde tampoco se ve en un teléfono al
                       sol.
                     */}
-                    <span className={estilos.notificacionMarca} aria-hidden="true" />
+                      <span className={estilos.notificacionMarca} aria-hidden="true" />
 
-                    <div>
-                      <p className={estilos.notificacionTitulo}>
-                        {aviso.title}
-                        {!aviso.leida && <span className="solo-lectores"> (sin leer)</span>}
-                      </p>
+                      <div>
+                        <p className={estilos.notificacionTitulo}>
+                          {aviso.title}
+                          {!aviso.leida && <span className="solo-lectores"> (sin leer)</span>}
+                        </p>
 
-                      {aviso.body !== null && (
-                        <p className={estilos.notificacionTexto}>{aviso.body}</p>
-                      )}
-
-                      <div className={estilos.notificacionPie}>
-                        <span className={estilos.notificacionFecha}>
-                          {fechaRelativa(aviso.createdAt, ahora)}
-                        </span>
-
-                        {destino !== null && destino !== '' && (
-                          <Link href={destino} transitionTypes={['avanza']}>
-                            Ver
-                          </Link>
+                        {aviso.body !== null && (
+                          <p className={estilos.notificacionTexto}>{aviso.body}</p>
                         )}
 
-                        {!aviso.leida && (
-                          <Formulario
-                            accion={marcarLeida}
-                            enviar="Marcar leída"
-                            variante="fantasma"
-                            tamanio="chico"
-                            bloque={false}
-                          >
-                            <CampoOculto nombre="notificationId" valor={aviso.id} />
-                          </Formulario>
-                        )}
+                        <div className={estilos.notificacionPie}>
+                          <span className={estilos.notificacionFecha}>
+                            {fechaRelativa(aviso.createdAt, ahora)}
+                          </span>
+
+                          {destino !== null && destino !== '' && (
+                            <Link href={destino} transitionTypes={['avanza']}>
+                              Ver
+                            </Link>
+                          )}
+
+                          {!aviso.leida && (
+                            <Formulario
+                              accion={marcarLeida}
+                              enviar="Marcar leída"
+                              variante="fantasma"
+                              tamanio="chico"
+                              bloque={false}
+                            >
+                              <CampoOculto nombre="notificationId" valor={aviso.id} />
+                            </Formulario>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
 
-            <Paginacion actual={pagina.pagina} total={totalPaginas} hrefDe={hrefDe} />
-          </Seccion>
-        )}
-      </main>
+              <Paginacion actual={pagina.pagina} total={totalPaginas} hrefDe={hrefDe} />
+            </Seccion>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

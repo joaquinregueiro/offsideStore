@@ -6,11 +6,11 @@ import { Pantalla } from '@/components/movimiento';
 import { Aviso, Confirmar, FilaDeDatos, Seccion } from '@/components/ui';
 import { fecha } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../(cuenta)/panel';
 import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
 
 import { conectarMercadoPago, desconectarMercadoPago } from '../../acciones';
 import { Chapa, type TonoChapa } from '../../chapa';
-import { NavDelVendedor } from '../../nav';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mercado Pago' };
@@ -110,45 +110,46 @@ export default async function ConexionConMercadoPago({
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Chapa
-          rotulo="Conexión"
-          titulo="Mercado Pago"
-          chica
-          estado={{ texto: estado.etiqueta, tono: estado.tono }}
-        />
+      <PanelDeCuenta user={user} seccion="cuenta">
+        <main id="contenido">
+          <Chapa
+            rotulo="Conexión"
+            titulo="Mercado Pago"
+            chica
+            estado={{ texto: estado.etiqueta, tono: estado.tono }}
+          />
 
-        <NavDelVendedor activo="mercadopago" />
+          <SolapasDeCuenta user={user} seccion="cuenta" activa="vender" />
 
-        {status === 'connected' && conectada && (
-          <Aviso tono="exito">Listo. Tu cuenta de Mercado Pago quedó conectada.</Aviso>
-        )}
+          {status === 'connected' && conectada && (
+            <Aviso tono="exito">Listo. Tu cuenta de Mercado Pago quedó conectada.</Aviso>
+          )}
 
-        {status === 'cancelled' && (
-          <Aviso tono="error">
-            Cancelaste la autorización en Mercado Pago. No se conectó nada.
-          </Aviso>
-        )}
+          {status === 'cancelled' && (
+            <Aviso tono="error">
+              Cancelaste la autorización en Mercado Pago. No se conectó nada.
+            </Aviso>
+          )}
 
-        {status === 'error' && (
-          <Aviso tono="error">
-            {reason !== undefined && MOTIVOS[reason] !== undefined
-              ? MOTIVOS[reason]
-              : 'No pudimos completar la conexión. Probá de nuevo en un momento.'}
-          </Aviso>
-        )}
+          {status === 'error' && (
+            <Aviso tono="error">
+              {reason !== undefined && MOTIVOS[reason] !== undefined
+                ? MOTIVOS[reason]
+                : 'No pudimos completar la conexión. Probá de nuevo en un momento.'}
+            </Aviso>
+          )}
 
-        {status === 'disconnected' && !conectada && (
-          <Aviso>Desvinculamos tu cuenta. Podés volver a conectarla cuando quieras.</Aviso>
-        )}
+          {status === 'disconnected' && !conectada && (
+            <Aviso>Desvinculamos tu cuenta. Podés volver a conectarla cuando quieras.</Aviso>
+          )}
 
-        <p className={estilos.bajada}>
-          Cobrás en tu propia cuenta: el dinero de cada venta entra directo, y Offside retiene su
-          comisión del mismo pago. Nunca vemos tu contraseña de Mercado Pago.
-        </p>
+          <p className={estilos.bajada}>
+            Cobrás en tu propia cuenta: el dinero de cada venta entra directo, y Offside retiene su
+            comisión del mismo pago. Nunca vemos tu contraseña de Mercado Pago.
+          </p>
 
-        <Seccion titulo="Estado de la conexión">
-          {/*
+          <Seccion titulo="Estado de la conexión">
+            {/*
             ⚠️ EL ESTADO ES UNA SUPERFICIE, NO UNA PALABRA. Los cuatro se veían
             igual: la misma caja blanca con la misma etiqueta de 12px. Y son
             cuatro situaciones con cuatro cosas distintas para hacer, justo en la
@@ -162,119 +163,120 @@ export default async function ConexionConMercadoPago({
             forma de traer una superficie GLOBAL (`sup-cancha`), que un módulo no
             puede escribir.
           */}
-          <div
-            className={[estilos.tarjetaConexion, estado.clase, 'entra-acerca']
-              .filter(Boolean)
-              .join(' ')}
-            data-estado={claveEstado}
-          >
-            <div className={estilos.estadoConexion}>
-              {/*
+            <div
+              className={[estilos.tarjetaConexion, estado.clase, 'entra-acerca']
+                .filter(Boolean)
+                .join(' ')}
+              data-estado={claveEstado}
+            >
+              <div className={estilos.estadoConexion}>
+                {/*
                 ⚠️ LA PALABRA DEL ESTADO ES EL TITULAR DE LA TARJETA, en Big
                 Noodle oblicua. El chip de 12px subió a la chapa: repetirlo acá
                 era decir dos veces lo mismo con la misma voz.
               */}
-              <p className={estilos.estadoPalabra}>{estado.etiqueta}</p>
-              <p className={estilos.estadoTexto}>{estado.que}</p>
-            </div>
+                <p className={estilos.estadoPalabra}>{estado.etiqueta}</p>
+                <p className={estilos.estadoTexto}>{estado.que}</p>
+              </div>
 
-            {conexion.connectedAt !== null && (
-              <FilaDeDatos concepto="Conectada el">{fecha(conexion.connectedAt)}</FilaDeDatos>
-            )}
+              {conexion.connectedAt !== null && (
+                <FilaDeDatos concepto="Conectada el">{fecha(conexion.connectedAt)}</FilaDeDatos>
+              )}
 
-            {/*
+              {/*
               ⚠️ `mpUserId` ES EL UNICO DATO QUE PERMITE SABER *CUAL* CUENTA SE
               VINCULO. Quien tiene una cuenta personal y una de su negocio no
               tenía forma de verificar cuál quedó atada a Offside, y el error
               recién aparecía cuando el dinero entraba en la cuenta equivocada.
               Va en monoespaciada para poder cotejarlo dígito a dígito.
             */}
-            {conexion.mpUserId !== null && (
-              <FilaDeDatos concepto="Cuenta de Mercado Pago">
-                <code className={estilos.dato}>{conexion.mpUserId}</code>
-              </FilaDeDatos>
-            )}
+              {conexion.mpUserId !== null && (
+                <FilaDeDatos concepto="Cuenta de Mercado Pago">
+                  <code className={estilos.dato}>{conexion.mpUserId}</code>
+                </FilaDeDatos>
+              )}
 
-            {/*
+              {/*
               ⚠️ SE MUESTRA CUANDO VENCE Y QUE SE RENUEVA SOLA. Sin eso, una
               fecha de vencimiento parece una cuenta regresiva hacia un problema.
               El barrido diario renueva las conexiones que vencen dentro de 30
               días; el vendedor no tiene que hacer nada.
             */}
-            {conexion.expiresAt !== null && conectada && (
-              <FilaDeDatos concepto="Permiso vigente hasta">
-                {fecha(conexion.expiresAt)} · se renueva sola
-              </FilaDeDatos>
-            )}
+              {conexion.expiresAt !== null && conectada && (
+                <FilaDeDatos concepto="Permiso vigente hasta">
+                  {fecha(conexion.expiresAt)} · se renueva sola
+                </FilaDeDatos>
+              )}
 
-            {/*
+              {/*
               ⚠️ `canSell` es un PREDICADO DERIVADO, no una columna: cruza el
               estado del vendedor con el de la conexión. Puede haber conexión sin
               poder vender —si el vendedor todavía no está aprobado— y por eso se
               muestran las dos cosas por separado en vez de una sola.
             */}
-            <FilaDeDatos concepto="Podés vender">
-              {conexion.canSell ? 'Sí' : 'Todavía no'}
-            </FilaDeDatos>
-          </div>
-        </Seccion>
+              <FilaDeDatos concepto="Podés vender">
+                {conexion.canSell ? 'Sí' : 'Todavía no'}
+              </FilaDeDatos>
+            </div>
+          </Seccion>
 
-        {conectada ? (
-          /*
+          {conectada ? (
+            /*
             ⚠️ DESVINCULAR VA EN DOS PASOS. Apaga la venta de todas las
             publicaciones del vendedor de una sola vez; que eso pase con un clic
             en una pantalla que se visita para mirar el estado es demasiado
             fácil. No usa `window.confirm`: sin JavaScript no existe.
           */
-          <Confirmar
-            etiqueta="Desvincular cuenta"
-            pregunta="Tus publicaciones dejan de mostrarse hasta que vuelvas a conectar. No se borra ninguna y vuelven solas al reconectar."
-          >
-            <Formulario
-              accion={desconectarMercadoPago}
-              enviar="Sí, desvincular"
-              variante="peligro"
-              tamanio="chico"
-              bloque={false}
-            />
-          </Confirmar>
-        ) : (
-          <>
-            {/*
+            <Confirmar
+              etiqueta="Desvincular cuenta"
+              pregunta="Tus publicaciones dejan de mostrarse hasta que vuelvas a conectar. No se borra ninguna y vuelven solas al reconectar."
+            >
+              <Formulario
+                accion={desconectarMercadoPago}
+                enviar="Sí, desvincular"
+                variante="peligro"
+                tamanio="chico"
+                bloque={false}
+              />
+            </Confirmar>
+          ) : (
+            <>
+              {/*
               ⚠️ NO INVENTA NADA: describe lo que el botón de abajo hace. "Te
               llevamos a Mercado Pago" en una línea de texto chico no alcanza
               para que alguien entienda que va a salir del sitio y volver — y
               salir del sitio para autorizar un cobro es el momento donde más
               gente abandona.
             */}
-            <ol className={estilos.tresPasos}>
-              <li>Te llevamos a Mercado Pago para que autorices la conexión.</li>
-              <li>Nunca vemos tu contraseña: la autorización la das en su sitio.</li>
-              <li>Volvés acá y ya podés cobrar en tu propia cuenta.</li>
-            </ol>
+              <ol className={estilos.tresPasos}>
+                <li>Te llevamos a Mercado Pago para que autorices la conexión.</li>
+                <li>Nunca vemos tu contraseña: la autorización la das en su sitio.</li>
+                <li>Volvés acá y ya podés cobrar en tu propia cuenta.</li>
+              </ol>
 
-            <Formulario accion={conectarMercadoPago} enviar="Conectar con Mercado Pago">
-              <p className={estilos.pasoDetalle}>
-                <IconoAutenticado tamanio={16} /> Offside retiene su comisión del mismo pago. El
-                resto entra directo a tu cuenta.
-              </p>
-            </Formulario>
-          </>
-        )}
+              <Formulario accion={conectarMercadoPago} enviar="Conectar con Mercado Pago">
+                <p className={estilos.pasoDetalle}>
+                  <IconoAutenticado tamanio={16} /> Offside retiene su comisión del mismo pago. El
+                  resto entra directo a tu cuenta.
+                </p>
+              </Formulario>
+            </>
+          )}
 
-        {/*
+          {/*
           ⚠️ BR-003 / SS-012 AL FINAL Y EN UN BLOQUE QUE SE LEE. Conectar Mercado
           Pago es un requisito para cobrar, no un sello de confianza, y decirlo
           en gris de 13px al pie es no decirlo.
         */}
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
-          <p className={estilos.nota}>
-            Conectar Mercado Pago no es un distintivo de confianza: es lo que hace posible que te
-            paguen. Podés desvincular cuando quieras y tus publicaciones vuelven solas al
-            reconectar.
-          </p>
-        </div>
-      </main>
+          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+            <p className={estilos.nota}>
+              Conectar Mercado Pago no es un distintivo de confianza: es lo que hace posible que te
+              paguen. Podés desvincular cuando quieras y tus publicaciones vuelven solas al
+              reconectar.
+            </p>
+          </div>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

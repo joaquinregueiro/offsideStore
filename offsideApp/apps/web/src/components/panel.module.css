@@ -1,0 +1,329 @@
+/**
+ * BARRA LATERAL DEL AREA PRIVADA.
+ *
+ * ⚠️ NO HAY UNA SOLA SOMBRA EN LOS ITEMS, Y ES DELIBERADO. Lo anterior eran
+ * pestañas con marco, sombra y un halo verde en la activa: seis objetos
+ * flotando compitiendo entre si, que es exactamente lo que hacia que no se
+ * entendiera cual estaba elegida. Acá la seleccion la dice UNA cosa —una barra
+ * de acento a la izquierda y el fondo apenas encendido— y el resto es texto.
+ */
+
+.armazon {
+  display: grid;
+  grid-template-columns: minmax(0, 15.5rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--espacio-6);
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-5) var(--canal) var(--espacio-seccion);
+}
+
+/**
+ * ⚠️ LA BARRA ACOMPAÑA EL SCROLL EN ESCRITORIO. Las secciones tienen listas
+ * largas —el historial de compras, el inventario— y volver arriba para cambiar
+ * de seccion es el gesto que mas se repite en un panel.
+ *
+ * ⚠️ `--alto-barra` MAS AIRE: la barra superior es ADHERIDA y flota. Sin
+ * contarla, el primer item queda debajo de ella al scrollear.
+ */
+.barra {
+  position: sticky;
+  top: calc(var(--alto-barra) + var(--espacio-4));
+}
+
+.lista {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item,
+.itemActivo {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control);
+  padding: var(--espacio-3) var(--espacio-3) var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio);
+  color: var(--color-neutro-texto);
+  transition:
+    background-color var(--transicion) var(--curva),
+    color var(--transicion) var(--curva);
+}
+
+/**
+ * La barra de acento de la izquierda: se dibuja de arriba hacia abajo.
+ *
+ * ⚠️ ES `scaleY` Y NO `height`: la altura rehace layout en cada cuadro, la
+ * escala corre en el compositor. Y es lo UNICO que se mueve al pasar el mouse.
+ */
+.item::before,
+.itemActivo::before {
+  content: '';
+  position: absolute;
+  inset: var(--espacio-2) auto var(--espacio-2) 0;
+  width: 3px;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--degradado-acento);
+  transform: scaleY(0);
+  transform-origin: 50% 50%;
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.item:hover,
+.item:focus-visible {
+  background-color: var(--color-neutro-suave);
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+.item:hover::before,
+.item:focus-visible::before {
+  transform: scaleY(0.6);
+}
+
+/**
+ * ⚠️ LA ACTIVA NO LLEVA GLOW NI SOMBRA. Encender seis pestañas hacia que
+ * ninguna se leyera como elegida. Acá el contraste lo da el peso del texto, el
+ * fondo tenue y la barra de acento entera.
+ */
+.itemActivo {
+  background-color: var(--color-neutro-suave);
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+.itemActivo::before {
+  transform: scaleY(1);
+}
+
+.itemIcono {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radio-chico);
+  color: var(--color-cancha);
+  background-color: var(--superficie-2);
+  transition:
+    background-color var(--transicion) var(--curva),
+    color var(--transicion) var(--curva);
+}
+
+.itemActivo .itemIcono {
+  color: var(--color-papel);
+  background-image: var(--degradado-cancha);
+}
+
+.itemTexto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.itemNombre {
+  font-weight: var(--peso-semi);
+  line-height: 1.2;
+}
+
+.itemActivo .itemNombre {
+  font-weight: var(--peso-semi);
+}
+
+/**
+ * ⚠️ EL DETALLE NO ES DECORACION: ES LO QUE HACE QUE UNA SECCION SE ENTIENDA
+ * SIN ENTRAR. "Publicaciones" solo no dice que ahi tambien estan las ventas.
+ * Se esconde en teléfono, donde la barra es una fila y no hay lugar.
+ */
+.itemDetalle {
+  font-size: var(--texto-xs);
+  line-height: 1.3;
+  color: var(--color-neutro-tenue);
+  overflow-wrap: anywhere;
+}
+
+/**
+ * El numero de lo pendiente. Amarillo Cambio con texto Tinta (12.6:1): el mismo
+ * globo que la campanita de la barra superior, para que se lea como lo mismo.
+ */
+.itemDato {
+  min-width: 22px;
+  padding: 1px var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  line-height: 1.5;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.barraNota {
+  margin: var(--espacio-4) 0 0;
+  padding: var(--espacio-4);
+  border: 1px dashed var(--linea-tenue);
+  border-radius: var(--radio);
+  font-size: var(--texto-xs);
+  line-height: var(--interlineado-texto);
+  color: var(--color-neutro-tenue);
+}
+
+.contenido {
+  min-width: 0;
+}
+
+/* ================================================================== solapas */
+
+/**
+ * ⚠️ LAS SOLAPAS SON EL SEGUNDO NIVEL Y SE VEN COMO TAL: texto con un filete
+ * abajo, sin marco, sin sombra y sin halo. La barra lateral ya dice en que
+ * seccion estas; que las dos cosas se vieran igual de importantes era el motivo
+ * de que la pantalla anterior no se entendiera.
+ */
+.solapas {
+  margin-bottom: var(--espacio-6);
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.solapasLista {
+  display: flex;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* En telefono se desliza de costado en vez de romperse en dos filas. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.solapasLista::-webkit-scrollbar {
+  display: none;
+}
+
+.solapa,
+.solapaActiva {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-3);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+  transition: color var(--transicion) var(--curva);
+}
+
+.solapa::after,
+.solapaActiva::after {
+  content: '';
+  position: absolute;
+  inset: auto var(--espacio-2) -1px;
+  height: 2px;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cancha);
+  transform: scaleX(0);
+  transition: transform var(--dur-media) var(--curva-corte);
+}
+
+.solapa:hover,
+.solapa:focus-visible {
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+.solapa:hover::after,
+.solapa:focus-visible::after {
+  transform: scaleX(1);
+  background-color: var(--linea-control);
+}
+
+.solapaActiva {
+  color: var(--marca-texto, var(--color-tiempo-extra));
+  font-weight: var(--peso-semi);
+}
+
+.solapaActiva::after {
+  transform: scaleX(1);
+}
+
+.solapaDato {
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  background-color: var(--superficie-2);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.solapaActiva .solapaDato {
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+}
+
+/* ================================================================= teléfono */
+
+/**
+ * ⚠️ ABAJO DE 900px LA BARRA DEJA DE SER LATERAL Y PASA A SER UNA FILA. Una
+ * columna de 15rem al costado de una pantalla de 375px deja 120px para el
+ * contenido, que no es una pantalla angosta: es una pantalla rota. Se reordena
+ * con la grilla, sin duplicar el marcado.
+ *
+ * ⚠️ DEJA DE SER ADHERIDA: una barra pegada arriba que ademas se desliza de
+ * costado se come media pantalla en un telefono.
+ */
+@media (max-width: 900px) {
+  .armazon {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--espacio-5);
+  }
+
+  .barra {
+    position: static;
+    /* Se despega de los bordes para que el ultimo item no quede cortado al ras. */
+    margin-inline: calc(var(--canal) * -1);
+    padding-inline: var(--canal);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .barra::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lista {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    gap: var(--espacio-2);
+  }
+
+  .item,
+  .itemActivo {
+    grid-template-columns: auto auto auto;
+    padding: var(--espacio-2) var(--espacio-4);
+    border: 1px solid var(--linea-tenue);
+    border-radius: var(--radio-pastilla);
+  }
+
+  .itemActivo {
+    border-color: var(--marca-borde, var(--color-cancha));
+  }
+
+  /* La barra de acento no tiene sentido en una pastilla: el borde ya la marca. */
+  .item::before,
+  .itemActivo::before {
+    display: none;
+  }
+
+  .itemDetalle {
+    display: none;
+  }
+
+  .barraNota {
+    margin-top: var(--espacio-3);
+  }
+}

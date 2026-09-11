@@ -17,7 +17,7 @@ import { requireVerifiedSessionUser } from '@/lib/session';
 import { listMyDisputes } from '@/modules/disputes/services/dispute.service';
 
 import { ChapaDeCuenta } from '../../chapa';
-import { NavDeCuenta } from '../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mis reclamos' };
@@ -45,86 +45,90 @@ export default async function MisReclamos() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo="Mis reclamos"
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {reclamos.length === 0
-                ? 'No abriste ningún reclamo'
-                : abiertos.length === 0
-                  ? 'Ninguno abierto'
-                  : `${cantidad(abiertos.length, 'abierto')}`}
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="compras">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo="Mis reclamos"
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {reclamos.length === 0
+                  ? 'No abriste ningún reclamo'
+                  : abiertos.length === 0
+                    ? 'Ninguno abierto'
+                    : `${cantidad(abiertos.length, 'abierto')}`}
+              </p>
+            }
+          />
 
-        <NavDeCuenta activo="reclamos" reclamos={abiertos.length} />
+          <SolapasDeCuenta user={user} seccion="compras" activa="reclamos" />
 
-        {ordenados.length === 0 ? (
-          <EstadoVacio titulo="No tenés reclamos" icono={<IconoBandera tamanio={40} />}>
-            {/*
+          {ordenados.length === 0 ? (
+            <EstadoVacio titulo="No tenés reclamos" icono={<IconoBandera tamanio={40} />}>
+              {/*
               ⚠️ EL ESTADO VACÍO DICE DÓNDE SE ABRE UNO, no promete protección.
               Offside no retiene los fondos (DEC-019): un reclamo abre una
               revisión, no una devolución automática, y decirlo de otra forma
               sería la garantía que este sitio no puede dar.
             */}
-            <p>Si algo sale mal con una compra, el reclamo se abre desde la ficha de esa compra.</p>
-            <BotonEnlace href="/cuenta/compras" variante="secundario">
-              Ver mis compras
-            </BotonEnlace>
-          </EstadoVacio>
-        ) : (
-          <Seccion titulo="Reclamos" dato={cantidad(reclamos.length, 'reclamo')}>
-            <ul className={`${estilos.lista} ${estilos.revela}`}>
-              {ordenados.map((reclamo) => (
-                <li key={reclamo.id}>
-                  <Link
-                    href={`/cuenta/reclamos/${reclamo.id}`}
-                    className={`${estilos.reclamo} sup-ficha eleva destello presiona`}
-                    transitionTypes={['avanza']}
-                  >
-                    <div className={estilos.reclamoCabecera}>
-                      <p className={estilos.reclamoTitulo}>{motivoDeReclamo(reclamo.reason)}</p>
-                      <Etiqueta tono={tonoDeDisputa(reclamo.status)}>
-                        {estadoDeDisputa(reclamo.status)}
-                      </Etiqueta>
-                    </div>
+              <p>
+                Si algo sale mal con una compra, el reclamo se abre desde la ficha de esa compra.
+              </p>
+              <BotonEnlace href="/cuenta/compras" variante="secundario">
+                Ver mis compras
+              </BotonEnlace>
+            </EstadoVacio>
+          ) : (
+            <Seccion titulo="Reclamos" dato={cantidad(reclamos.length, 'reclamo')}>
+              <ul className={`${estilos.lista} ${estilos.revela}`}>
+                {ordenados.map((reclamo) => (
+                  <li key={reclamo.id}>
+                    <Link
+                      href={`/cuenta/reclamos/${reclamo.id}`}
+                      className={`${estilos.reclamo} sup-ficha eleva destello presiona`}
+                      transitionTypes={['avanza']}
+                    >
+                      <div className={estilos.reclamoCabecera}>
+                        <p className={estilos.reclamoTitulo}>{motivoDeReclamo(reclamo.reason)}</p>
+                        <Etiqueta tono={tonoDeDisputa(reclamo.status)}>
+                          {estadoDeDisputa(reclamo.status)}
+                        </Etiqueta>
+                      </div>
 
-                    <p className={estilos.compraMeta}>
-                      Orden {reclamo.orderNumber} · abierto el {fecha(reclamo.openedAt)} ·{' '}
-                      {precio(reclamo.orderTotalAmount, reclamo.currency)}
-                    </p>
-
-                    {reclamo.resolution !== null && (
                       <p className={estilos.compraMeta}>
-                        Resultado: {resolucionDeDisputa(reclamo.resolution)}
-                        {/*
+                        Orden {reclamo.orderNumber} · abierto el {fecha(reclamo.openedAt)} ·{' '}
+                        {precio(reclamo.orderTotalAmount, reclamo.currency)}
+                      </p>
+
+                      {reclamo.resolution !== null && (
+                        <p className={estilos.compraMeta}>
+                          Resultado: {resolucionDeDisputa(reclamo.resolution)}
+                          {/*
                           ⚠️ `refundedAmount` DISTINGUE TRES COSAS Y NO DOS:
                           `null` es "todavía no se ejecutó", `0` es "Mercado Pago
                           lo rechazó" y mayor a cero es "se devolvió". Mostrar
                           `null` y `0` igual escondería el caso que más importa.
                         */}
-                        {reclamo.refundedAmount !== null &&
-                          reclamo.refundedAmount !== '0' &&
-                          ` · te devolvieron ${precio(reclamo.refundedAmount, reclamo.currency)}`}
-                      </p>
-                    )}
+                          {reclamo.refundedAmount !== null &&
+                            reclamo.refundedAmount !== '0' &&
+                            ` · te devolvieron ${precio(reclamo.refundedAmount, reclamo.currency)}`}
+                        </p>
+                      )}
 
-                    {reclamo.abierta && reclamo.sellerResponseDueAt !== null && (
-                      <p className={estilos.compraMeta}>
-                        El vendedor tiene tiempo de responder hasta el{' '}
-                        {fecha(reclamo.sellerResponseDueAt)}.
-                      </p>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Seccion>
-        )}
-      </main>
+                      {reclamo.abierta && reclamo.sellerResponseDueAt !== null && (
+                        <p className={estilos.compraMeta}>
+                          El vendedor tiene tiempo de responder hasta el{' '}
+                          {fecha(reclamo.sellerResponseDueAt)}.
+                        </p>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Seccion>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

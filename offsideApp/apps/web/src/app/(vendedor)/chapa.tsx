@@ -17,6 +17,16 @@ export type TonoChapa = 'neutro' | 'marca' | 'alerta' | 'exito';
  * patrón de rombos en deriva— y la segunda mata a la primera sin dar ningún
  * error. Por eso el patrón vive en su propio `<span>` decorativo.
  *
+ * ⚠️ EL PATRON VA EN ESCALA DE BLOQUE (88px), NO DE CINTA (28px), Y ESO
+ * ARREGLA UN TITILEO REAL. El mosaico de cinta se corre 28px en 26 segundos:
+ * poco mas de un pixel por segundo. A esa velocidad cada cuadro cae en una
+ * fraccion de pixel distinta, el navegador vuelve a rasterizar rombos de 28px
+ * y en una pantalla de alta densidad eso se ve como un parpadeo del fondo.
+ * Con el mosaico de 88px —el mismo que usa la portada, que nunca titilo— el
+ * paso por segundo es tres veces mayor y el borde de cada rombo cae siempre en
+ * el mismo lugar relativo. La escala de cinta se queda donde corresponde: en
+ * la tira de 6px del pie y de la barra.
+ *
  * ⚠️ NO LLEVA `overflow: hidden`. El anillo de foco no lo recorta el propio
  * elemento, pero SÍ lo recorta un ANCESTRO con overflow oculto — y la chapa lleva
  * un botón adentro. Lo que hay que recortar se recorta solo: el patrón con su
@@ -76,7 +86,7 @@ export function Chapa({
         .filter(Boolean)
         .join(' ')}
     >
-      <span className={`${estilos.chapaPatron} patron-vivo patron-vivo-cinta`} aria-hidden="true" />
+      <span className={`${estilos.chapaPatron} patron-vivo`} aria-hidden="true" />
 
       <div>
         <p className={estilos.chapaRotulo}>{rotulo}</p>

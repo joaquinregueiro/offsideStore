@@ -32,7 +32,7 @@ import { getMyOrderDetail } from '@/modules/orders/services/order.service';
 
 import { abrirReclamo } from '../../../../acciones';
 import { ChapaDeCuenta } from '../../../../chapa';
-import { NavDeCuenta } from '../../../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../../panel';
 import estilos from '../../../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Abrir un reclamo' };
@@ -79,74 +79,77 @@ export default async function Reclamar({ params }: { params: Promise<{ orderId: 
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo={`Orden ${detalle.orderNumber}`}
-          titulo="Abrir un reclamo"
-          detalle={<p className={estilos.chapaDetalle}>{detalle.items[0]?.title ?? 'Tu compra'}</p>}
-        />
+      <PanelDeCuenta user={user} seccion="compras">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo={`Orden ${detalle.orderNumber}`}
+            titulo="Abrir un reclamo"
+            detalle={
+              <p className={estilos.chapaDetalle}>{detalle.items[0]?.title ?? 'Tu compra'}</p>
+            }
+          />
 
-        <NavDeCuenta activo="reclamos" />
+          <SolapasDeCuenta user={user} seccion="compras" activa="reclamos" />
 
-        <Migas
-          items={[
-            { texto: 'Mis compras', href: '/cuenta/compras' },
-            { texto: `Orden ${detalle.orderNumber}`, href: `/cuenta/compras/${orderId}` },
-            { texto: 'Reclamo' },
-          ]}
-        />
+          <Migas
+            items={[
+              { texto: 'Mis compras', href: '/cuenta/compras' },
+              { texto: `Orden ${detalle.orderNumber}`, href: `/cuenta/compras/${orderId}` },
+              { texto: 'Reclamo' },
+            ]}
+          />
 
-        {reclamo !== null ? (
-          <>
-            <Aviso tono="neutro">Ya abriste un reclamo sobre esta compra.</Aviso>
-            <div className={estilos.acciones}>
-              <BotonEnlace href={`/cuenta/reclamos/${reclamo.id}`} flecha>
-                Ver el reclamo
-              </BotonEnlace>
-            </div>
-          </>
-        ) : !elegible.ok ? (
-          <>
-            <Aviso tono="neutro">
-              {elegible.motivo === 'despacho_en_plazo'
-                ? 'El vendedor todavía está dentro del plazo para despachar. Si se vence, vas a poder reclamar que no lo recibiste.'
-                : elegible.motivo === 'ventana_vencida'
-                  ? `El plazo para reclamar (${cantidad(diasDeReclamo, 'día', 'días')}) ya pasó.`
-                  : 'Todavía no se puede reclamar sobre esta compra.'}
-            </Aviso>
-            <div className={estilos.acciones}>
-              <BotonEnlace href={`/cuenta/compras/${orderId}`} variante="secundario">
-                Volver a la compra
-              </BotonEnlace>
-            </div>
-          </>
-        ) : (
-          <section className={`${estilos.bloque} sup-ficha entraBloque`}>
-            <h2 className={estilos.bloqueTitulo}>Contanos qué pasó</h2>
+          {reclamo !== null ? (
+            <>
+              <Aviso tono="neutro">Ya abriste un reclamo sobre esta compra.</Aviso>
+              <div className={estilos.acciones}>
+                <BotonEnlace href={`/cuenta/reclamos/${reclamo.id}`} flecha>
+                  Ver el reclamo
+                </BotonEnlace>
+              </div>
+            </>
+          ) : !elegible.ok ? (
+            <>
+              <Aviso tono="neutro">
+                {elegible.motivo === 'despacho_en_plazo'
+                  ? 'El vendedor todavía está dentro del plazo para despachar. Si se vence, vas a poder reclamar que no lo recibiste.'
+                  : elegible.motivo === 'ventana_vencida'
+                    ? `El plazo para reclamar (${cantidad(diasDeReclamo, 'día', 'días')}) ya pasó.`
+                    : 'Todavía no se puede reclamar sobre esta compra.'}
+              </Aviso>
+              <div className={estilos.acciones}>
+                <BotonEnlace href={`/cuenta/compras/${orderId}`} variante="secundario">
+                  Volver a la compra
+                </BotonEnlace>
+              </div>
+            </>
+          ) : (
+            <section className={`${estilos.bloque} sup-ficha entraBloque`}>
+              <h2 className={estilos.bloqueTitulo}>Contanos qué pasó</h2>
 
-            <Formulario accion={abrirReclamo} enviar="Abrir el reclamo">
-              <CampoOculto nombre="orderId" valor={orderId} />
+              <Formulario accion={abrirReclamo} enviar="Abrir el reclamo">
+                <CampoOculto nombre="orderId" valor={orderId} />
 
-              <Seleccion
-                nombre="reason"
-                etiqueta="Motivo"
-                vacio="Elegí un motivo"
-                opciones={DISPUTE_REASONS.map((motivo) => ({
-                  valor: motivo,
-                  etiqueta: motivoDeReclamo(motivo),
-                }))}
-              />
+                <Seleccion
+                  nombre="reason"
+                  etiqueta="Motivo"
+                  vacio="Elegí un motivo"
+                  opciones={DISPUTE_REASONS.map((motivo) => ({
+                    valor: motivo,
+                    etiqueta: motivoDeReclamo(motivo),
+                  }))}
+                />
 
-              <AreaDeTexto
-                nombre="description"
-                etiqueta="Qué pasó"
-                ayuda="Contalo con el detalle que puedas: qué esperabas, qué recibiste y cuándo."
-                requerido
-                filas={6}
-                maximo={DESCRIPTION_MAX_LENGTH}
-              />
+                <AreaDeTexto
+                  nombre="description"
+                  etiqueta="Qué pasó"
+                  ayuda="Contalo con el detalle que puedas: qué esperabas, qué recibiste y cuándo."
+                  requerido
+                  filas={6}
+                  maximo={DESCRIPTION_MAX_LENGTH}
+                />
 
-              {/*
+                {/*
                 ⚠️ LAS EVIDENCIAS SON TEXTO, UNA POR LÍNEA, y no archivos. Subir
                 imágenes exige un puerto de almacenamiento con su propio control
                 de tipo y de tamaño —la primera entrada binaria del sistema fue
@@ -155,29 +158,30 @@ export default async function Reclamar({ params }: { params: Promise<{ orderId: 
                 hoy sin inventar nada es dejar escribir y pegar enlaces. Queda
                 reportado como faltante, no simulado.
               */}
-              <AreaDeTexto
-                nombre="evidencias"
-                etiqueta="Evidencias (opcional)"
-                ayuda={`Una por línea: un enlace a una foto, el número de seguimiento, lo que tengas. Hasta ${EVIDENCE_MAX_ITEMS}.`}
-                filas={4}
-              />
-            </Formulario>
+                <AreaDeTexto
+                  nombre="evidencias"
+                  etiqueta="Evidencias (opcional)"
+                  ayuda={`Una por línea: un enlace a una foto, el número de seguimiento, lo que tengas. Hasta ${EVIDENCE_MAX_ITEMS}.`}
+                  filas={4}
+                />
+              </Formulario>
 
-            {/*
+              {/*
               ⚠️ SE DICE QUÉ PASA DESPUÉS, Y SE DICE LO QUE ES CIERTO. El reclamo
               le abre un plazo de respuesta al vendedor y, si no responde, escala
               solo a revisión de Offside. No se promete devolución del dinero:
               eso lo decide la resolución, y prometerlo acá sería exactamente el
               tipo de garantía que este sitio no da.
             */}
-            <p className={estilos.nota}>
-              Al abrirlo, el vendedor recibe el reclamo y tiene un plazo para responder. Si no
-              responde, pasa a revisión de Offside. Vas a poder seguir todo desde{' '}
-              <strong>Reclamos</strong>.
-            </p>
-          </section>
-        )}
-      </main>
+              <p className={estilos.nota}>
+                Al abrirlo, el vendedor recibe el reclamo y tiene un plazo para responder. Si no
+                responde, pasa a revisión de Offside. Vas a poder seguir todo desde{' '}
+                <strong>Reclamos</strong>.
+              </p>
+            </section>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

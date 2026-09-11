@@ -11,7 +11,7 @@ import { listFavorites } from '@/modules/favorites/services/favorite.service';
 
 import { quitarDeFavoritos } from '../../acciones';
 import { ChapaDeCuenta } from '../../chapa';
-import { NavDeCuenta } from '../../nav';
+import { PanelDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mis favoritos' };
@@ -52,133 +52,136 @@ export default async function MisFavoritos({
 
   return (
     <Pantalla>
-      <main id="contenido" className={`${estilos.pagina} ${estilos.paginaAncha}`}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo="Favoritos"
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {pagina.total === 0
-                ? 'Todavía no guardaste ninguna'
-                : cantidad(pagina.total, 'publicación', 'publicaciones')}
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="favoritos">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo="Favoritos"
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {pagina.total === 0
+                  ? 'Todavía no guardaste ninguna'
+                  : cantidad(pagina.total, 'publicación', 'publicaciones')}
+              </p>
+            }
+          />
 
-        <NavDeCuenta activo="favoritos" favoritos={pagina.total} />
-
-        {pagina.favoritos.length === 0 ? (
-          <EstadoVacio titulo="No guardaste nada todavía" icono={<IconoFavorito tamanio={40} />}>
-            <p>
-              Tocá el corazón en cualquier publicación y la vas a encontrar acá, con aviso si baja
-              de precio o si se vende.
-            </p>
-            <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
-          </EstadoVacio>
-        ) : (
-          <Seccion titulo="Guardadas" dato={cantidad(pagina.total, 'publicación', 'publicaciones')}>
-            <ul className={`${estilos.favoritos} ${estilos.revela}`}>
-              {pagina.favoritos.map((favorito) => (
-                <li key={favorito.listingId} className={`${estilos.favorito} sup-ficha eleva`}>
-                  {/*
+          {pagina.favoritos.length === 0 ? (
+            <EstadoVacio titulo="No guardaste nada todavía" icono={<IconoFavorito tamanio={40} />}>
+              <p>
+                Tocá el corazón en cualquier publicación y la vas a encontrar acá, con aviso si baja
+                de precio o si se vende.
+              </p>
+              <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
+            </EstadoVacio>
+          ) : (
+            <Seccion
+              titulo="Guardadas"
+              dato={cantidad(pagina.total, 'publicación', 'publicaciones')}
+            >
+              <ul className={`${estilos.favoritos} ${estilos.revela}`}>
+                {pagina.favoritos.map((favorito) => (
+                  <li key={favorito.listingId} className={`${estilos.favorito} sup-ficha eleva`}>
+                    {/*
                     ⚠️ `FotoCompartida` USA EL MISMO NOMBRE QUE LA VITRINA Y LA
                     FICHA (`foto-<id>`): la misma camiseta que se toca acá se
                     despega y aterriza en `/p/[id]`. El nombre es un contrato que
                     ya leen cuatro pantallas; no se cambia.
                   */}
-                  <Link
-                    href={`/p/${favorito.listingId}`}
-                    className={estilos.favoritoEnlace}
-                    transitionTypes={['avanza']}
-                  >
-                    <FotoCompartida id={favorito.listingId}>
-                      <span className={`${estilos.favoritoMarco} zoom-marco`}>
-                        {favorito.coverUrl === null ? (
-                          <span
-                            className={`${estilos.favoritoPatron} ${estilos.rombos}`}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            className={`${estilos.favoritoFoto} zoom-foto`}
-                            src={favorito.coverUrl}
-                            alt=""
-                            width={240}
-                            height={300}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        )}
-                      </span>
-                    </FotoCompartida>
+                    <Link
+                      href={`/p/${favorito.listingId}`}
+                      className={estilos.favoritoEnlace}
+                      transitionTypes={['avanza']}
+                    >
+                      <FotoCompartida id={favorito.listingId}>
+                        <span className={`${estilos.favoritoMarco} zoom-marco`}>
+                          {favorito.coverUrl === null ? (
+                            <span
+                              className={`${estilos.favoritoPatron} ${estilos.rombos}`}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              className={`${estilos.favoritoFoto} zoom-foto`}
+                              src={favorito.coverUrl}
+                              alt=""
+                              width={240}
+                              height={300}
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          )}
+                        </span>
+                      </FotoCompartida>
 
-                    <p className={estilos.favoritoTitulo}>{favorito.title}</p>
-                  </Link>
+                      <p className={estilos.favoritoTitulo}>{favorito.title}</p>
+                    </Link>
 
-                  <p className={estilos.favoritoMeta}>
-                    Talle {favorito.sizeValue} · {condicion(favorito.condition)} ·{' '}
-                    {favorito.sellerDisplayName}
-                  </p>
+                    <p className={estilos.favoritoMeta}>
+                      Talle {favorito.sizeValue} · {condicion(favorito.condition)} ·{' '}
+                      {favorito.sellerDisplayName}
+                    </p>
 
-                  {/*
+                    {/*
                     ⚠️ LOS DOS AVISOS SON HECHOS, NO ALARMAS. "Se vendió" y "bajó
                     de precio" son la razón por la que alguien guarda algo; que
                     latieran los convertiría en publicidad.
                   */}
-                  {!favorito.comprable && (
-                    <Etiqueta tono="alerta">
-                      {favorito.status === 'sold_out' || favorito.stock <= 0
-                        ? 'Se vendió'
-                        : favorito.status === 'paused'
-                          ? 'Pausada por el vendedor'
-                          : 'No disponible por ahora'}
-                    </Etiqueta>
-                  )}
+                    {!favorito.comprable && (
+                      <Etiqueta tono="alerta">
+                        {favorito.status === 'sold_out' || favorito.stock <= 0
+                          ? 'Se vendió'
+                          : favorito.status === 'paused'
+                            ? 'Pausada por el vendedor'
+                            : 'No disponible por ahora'}
+                      </Etiqueta>
+                    )}
 
-                  {favorito.bajoDePrecio && favorito.precioAlGuardar !== null && (
-                    <Etiqueta tono="exito">Bajó de precio</Etiqueta>
-                  )}
+                    {favorito.bajoDePrecio && favorito.precioAlGuardar !== null && (
+                      <Etiqueta tono="exito">Bajó de precio</Etiqueta>
+                    )}
 
-                  <div className={estilos.favoritoPie}>
-                    <span>
-                      <Precio valor={precio(favorito.priceAmount, favorito.currency)} />
-                      {favorito.bajoDePrecio && favorito.precioAlGuardar !== null && (
-                        <span className={estilos.favoritoAntes}>
-                          <span className="solo-lectores">Antes: </span>
-                          {precio(favorito.precioAlGuardar, favorito.currency)}
-                        </span>
-                      )}
-                    </span>
+                    <div className={estilos.favoritoPie}>
+                      <span>
+                        <Precio valor={precio(favorito.priceAmount, favorito.currency)} />
+                        {favorito.bajoDePrecio && favorito.precioAlGuardar !== null && (
+                          <span className={estilos.favoritoAntes}>
+                            <span className="solo-lectores">Antes: </span>
+                            {precio(favorito.precioAlGuardar, favorito.currency)}
+                          </span>
+                        )}
+                      </span>
 
-                    {/*
+                      {/*
                       ⚠️ QUITAR ES UN `<form>` POR POST, NO UN ENLACE. Muta, y un
                       GET que muta lo dispara solo cualquier prefetch o
                       prefetcher del navegador: alguien perdería sus favoritos
                       con sólo pasar por encima.
                     */}
-                    <Formulario
-                      accion={quitarDeFavoritos}
-                      enviar="Quitar"
-                      variante="fantasma"
-                      tamanio="chico"
-                      bloque={false}
-                    >
-                      <CampoOculto nombre="listingId" valor={favorito.listingId} />
-                    </Formulario>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                      <Formulario
+                        accion={quitarDeFavoritos}
+                        enviar="Quitar"
+                        variante="fantasma"
+                        tamanio="chico"
+                        bloque={false}
+                      >
+                        <CampoOculto nombre="listingId" valor={favorito.listingId} />
+                      </Formulario>
+                    </div>
+                  </li>
+                ))}
+              </ul>
 
-            <Paginacion
-              actual={pagina.pagina}
-              total={totalPaginas}
-              hrefDe={(numero) => `/cuenta/favoritos?pagina=${numero}`}
-            />
-          </Seccion>
-        )}
-      </main>
+              <Paginacion
+                actual={pagina.pagina}
+                total={totalPaginas}
+                hrefDe={(numero) => `/cuenta/favoritos?pagina=${numero}`}
+              />
+            </Seccion>
+          )}
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

@@ -6,7 +6,7 @@ import { nivelDeUsuario } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
 
 import { ChapaDeCuenta } from '../../chapa';
-import { NavDeCuenta } from '../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mis datos' };
@@ -38,67 +38,71 @@ export default async function MisDatos() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo="Mis datos"
-          detalle={<p className={`${estilos.chapaDetalle} ${estilos.chapaEmail}`}>{user.email}</p>}
-          lateral={<InsigniaDeNivel nombre={nivelDeUsuario(user.userLevel)} />}
-        />
+      <PanelDeCuenta user={user} seccion="cuenta">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo="Mis datos"
+            detalle={
+              <p className={`${estilos.chapaDetalle} ${estilos.chapaEmail}`}>{user.email}</p>
+            }
+            lateral={<InsigniaDeNivel nombre={nivelDeUsuario(user.userLevel)} />}
+          />
 
-        <NavDeCuenta activo="datos" />
+          <SolapasDeCuenta user={user} seccion="cuenta" activa="datos" />
 
-        <section className={`${estilos.bloque} sup-ficha entraBloque`}>
-          <h2 className={estilos.bloqueTitulo}>La cuenta</h2>
-          <Definiciones
-            columnas={2}
-            items={[
-              { termino: 'Nombre visible', valor: user.displayName ?? 'Sin nombre cargado' },
-              { termino: 'Email', valor: user.email },
-              {
-                /*
+          <section className={`${estilos.bloque} sup-ficha entraBloque`}>
+            <h2 className={estilos.bloqueTitulo}>La cuenta</h2>
+            <Definiciones
+              columnas={2}
+              items={[
+                { termino: 'Nombre visible', valor: user.displayName ?? 'Sin nombre cargado' },
+                { termino: 'Email', valor: user.email },
+                {
+                  /*
                   ⚠️ SIEMPRE DICE "Verificado" PORQUE ESTA PANTALLA EXIGE
                   `requireVerifiedSessionUser`: sin el email verificado no se
                   llega hasta acá (BR-001), se redirige a verificar. Se muestra
                   igual porque es el dato que la gente viene a comprobar.
                 */
-                termino: 'Email verificado',
-                valor: 'Sí',
-              },
-              { termino: 'Nivel', valor: nivelDeUsuario(user.userLevel) },
-            ]}
-          />
-        </section>
+                  termino: 'Email verificado',
+                  valor: 'Sí',
+                },
+                { termino: 'Nivel', valor: nivelDeUsuario(user.userLevel) },
+              ]}
+            />
+          </section>
 
-        <section className={`${estilos.bloque} sup-ficha`}>
-          <h2 className={estilos.bloqueTitulo}>Contraseña</h2>
-          <p className={estilos.nota}>
-            Para cambiarla te mandamos un enlace al correo de la cuenta. Es el mismo camino que si
-            te la olvidaste, y es a propósito: así el cambio siempre queda confirmado desde tu
-            email.
-          </p>
-          <div className={estilos.acciones}>
-            <BotonEnlace href="/olvide-password" variante="secundario">
-              Cambiar la contraseña
-            </BotonEnlace>
-          </div>
-        </section>
+          <section className={`${estilos.bloque} sup-ficha`}>
+            <h2 className={estilos.bloqueTitulo}>Contraseña</h2>
+            <p className={estilos.nota}>
+              Para cambiarla te mandamos un enlace al correo de la cuenta. Es el mismo camino que si
+              te la olvidaste, y es a propósito: así el cambio siempre queda confirmado desde tu
+              email.
+            </p>
+            <div className={estilos.acciones}>
+              <BotonEnlace href="/olvide-password" variante="secundario">
+                Cambiar la contraseña
+              </BotonEnlace>
+            </div>
+          </section>
 
-        <section className={`${estilos.bloque} sup-ficha`}>
-          <h2 className={estilos.bloqueTitulo}>Lo que todavía no se puede hacer acá</h2>
-          {/*
+          <section className={`${estilos.bloque} sup-ficha`}>
+            <h2 className={estilos.bloqueTitulo}>Lo que todavía no se puede hacer acá</h2>
+            {/*
             ⚠️ ESTA SECCIÓN EXISTE PARA NO MENTIR POR OMISIÓN. Una pantalla
             llamada "Mis datos" sin un solo campo editable se lee como una
             pantalla rota; decir qué falta y por qué es lo único honesto mientras
             los Services no existan.
           */}
-          <p className={estilos.nota}>
-            Todavía no se puede cambiar el nombre visible ni el email desde acá. Tampoco se puede
-            dar de baja la cuenta: eso toca obligaciones de conservación de las compras y los pagos
-            que están pendientes de definición.
-          </p>
-        </section>
-      </main>
+            <p className={estilos.nota}>
+              Todavía no se puede cambiar el nombre visible ni el email desde acá. Tampoco se puede
+              dar de baja la cuenta: eso toca obligaciones de conservación de las compras y los
+              pagos que están pendientes de definición.
+            </p>
+          </section>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

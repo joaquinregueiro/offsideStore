@@ -13,10 +13,10 @@ import {
 } from '@/components/ui';
 import { cantidad, precio } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../(cuenta)/panel';
 import { listMySales } from '@/modules/orders/services/order.service';
 
 import { Chapa } from '../../chapa';
-import { NavDelVendedor } from '../../nav';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mis métricas' };
@@ -144,143 +144,145 @@ export default async function MisMetricas() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Chapa
-          rotulo="Tu tienda"
-          titulo="Mis métricas"
-          chica
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              Sobre tus {cantidad(completadas.length, 'venta completada', 'ventas completadas')}.
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="publicaciones">
+        <main id="contenido">
+          <Chapa
+            rotulo="Tu tienda"
+            titulo="Mis métricas"
+            chica
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                Sobre tus {cantidad(completadas.length, 'venta completada', 'ventas completadas')}.
+              </p>
+            }
+          />
 
-        <NavDelVendedor activo="metricas" />
+          <SolapasDeCuenta user={user} seccion="publicaciones" activa="metricas" />
 
-        {completadas.length === 0 ? (
-          <EstadoVacio
-            titulo="Todavía no hay nada que medir"
-            icono={<IconoEtiqueta tamanio={40} />}
-          >
-            <p>
-              Acá van a aparecer tus ventas por mes, el ticket promedio y qué publicaciones se
-              venden más. Sólo cuentan las órdenes completadas: las que están en curso todavía
-              pueden cancelarse. <Link href="/vendedor/ventas">Ver tus ventas</Link>
-            </p>
-          </EstadoVacio>
-        ) : (
-          <>
-            <div className={`${estilos.tablero} sup-noche con-grano`}>
-              <Cifras
-                cifras={[
-                  {
-                    valor: precio(facturado.toString(), moneda),
-                    etiqueta: 'Facturado',
-                    detalle: 'lo que pagaron los compradores',
-                  },
-                  {
-                    valor: precio(neto.toString(), moneda),
-                    etiqueta: 'Te quedó',
-                    detalle: 'antes del costo de Mercado Pago',
-                  },
-                  {
-                    valor: precio(ticket.toString(), moneda),
-                    etiqueta: 'Ticket promedio',
-                    detalle: cantidad(completadas.length, 'orden', 'órdenes'),
-                  },
-                  {
-                    valor: precio(comision.toString(), moneda),
-                    etiqueta: 'Comisión de Offside',
-                  },
-                ]}
-              />
-            </div>
+          {completadas.length === 0 ? (
+            <EstadoVacio
+              titulo="Todavía no hay nada que medir"
+              icono={<IconoEtiqueta tamanio={40} />}
+            >
+              <p>
+                Acá van a aparecer tus ventas por mes, el ticket promedio y qué publicaciones se
+                venden más. Sólo cuentan las órdenes completadas: las que están en curso todavía
+                pueden cancelarse. <Link href="/vendedor/ventas">Ver tus ventas</Link>
+              </p>
+            </EstadoVacio>
+          ) : (
+            <>
+              <div className={`${estilos.tablero} sup-noche con-grano`}>
+                <Cifras
+                  cifras={[
+                    {
+                      valor: precio(facturado.toString(), moneda),
+                      etiqueta: 'Facturado',
+                      detalle: 'lo que pagaron los compradores',
+                    },
+                    {
+                      valor: precio(neto.toString(), moneda),
+                      etiqueta: 'Te quedó',
+                      detalle: 'antes del costo de Mercado Pago',
+                    },
+                    {
+                      valor: precio(ticket.toString(), moneda),
+                      etiqueta: 'Ticket promedio',
+                      detalle: cantidad(completadas.length, 'orden', 'órdenes'),
+                    },
+                    {
+                      valor: precio(comision.toString(), moneda),
+                      etiqueta: 'Comisión de Offside',
+                    },
+                  ]}
+                />
+              </div>
 
-            <Seccion titulo="Por mes">
-              <div className={estilos.marcoVentas}>
-                <Tabla titulo="Ventas por mes">
-                  <thead>
-                    <tr>
-                      <th scope="col">Mes</th>
-                      <EncabezadoNumero>Órdenes</EncabezadoNumero>
-                      <EncabezadoNumero>Facturado</EncabezadoNumero>
-                      <EncabezadoNumero>Te quedó</EncabezadoNumero>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {meses.map(([clave, dato]) => (
-                      <tr key={clave}>
-                        <td>
-                          <p className={estilos.celdaTitulo}>{nombreDelMes(clave)}</p>
-                          {/*
+              <Seccion titulo="Por mes">
+                <div className={estilos.marcoVentas}>
+                  <Tabla titulo="Ventas por mes">
+                    <thead>
+                      <tr>
+                        <th scope="col">Mes</th>
+                        <EncabezadoNumero>Órdenes</EncabezadoNumero>
+                        <EncabezadoNumero>Facturado</EncabezadoNumero>
+                        <EncabezadoNumero>Te quedó</EncabezadoNumero>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {meses.map(([clave, dato]) => (
+                        <tr key={clave}>
+                          <td>
+                            <p className={estilos.celdaTitulo}>{nombreDelMes(clave)}</p>
+                            {/*
                             ⚠️ LA BARRA ES FORMA Y VA `aria-hidden`: los tres
                             números de la fila son el dato. Sirve para comparar
                             doce meses de un vistazo sin dividir mentalmente, y la
                             escala es el mes más alto, no un máximo inventado.
                           */}
-                          <span
-                            className={estilos.barraMes}
-                            style={{
-                              width: `${Number((dato.facturado * 100n) / maximo)}%`,
-                            }}
-                            aria-hidden="true"
-                          />
-                        </td>
-                        <CeldaNumero>{dato.ordenes}</CeldaNumero>
-                        <CeldaNumero>{precio(dato.facturado.toString(), moneda)}</CeldaNumero>
-                        <CeldaNumero>
-                          <strong>{precio(dato.neto.toString(), moneda)}</strong>
-                        </CeldaNumero>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Tabla>
-              </div>
-            </Seccion>
+                            <span
+                              className={estilos.barraMes}
+                              style={{
+                                width: `${Number((dato.facturado * 100n) / maximo)}%`,
+                              }}
+                              aria-hidden="true"
+                            />
+                          </td>
+                          <CeldaNumero>{dato.ordenes}</CeldaNumero>
+                          <CeldaNumero>{precio(dato.facturado.toString(), moneda)}</CeldaNumero>
+                          <CeldaNumero>
+                            <strong>{precio(dato.neto.toString(), moneda)}</strong>
+                          </CeldaNumero>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Tabla>
+                </div>
+              </Seccion>
 
-            <Seccion titulo="Lo que más se vendió">
-              <div className={estilos.marcoVentas}>
-                <Tabla titulo="Publicaciones más vendidas">
-                  <thead>
-                    <tr>
-                      <th scope="col">Publicación</th>
-                      <EncabezadoNumero>Unidades</EncabezadoNumero>
-                      <EncabezadoNumero>Facturado</EncabezadoNumero>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {top.map(([listingId, dato]) => (
-                      <tr key={listingId}>
-                        <td>
-                          <p className={estilos.celdaTitulo}>
-                            <Link href={`/p/${listingId}`} className="subraya">
-                              {dato.titulo}
-                            </Link>
-                          </p>
-                        </td>
-                        <CeldaNumero>{dato.unidades}</CeldaNumero>
-                        <CeldaNumero>
-                          <strong>{precio(dato.facturado.toString(), moneda)}</strong>
-                        </CeldaNumero>
+              <Seccion titulo="Lo que más se vendió">
+                <div className={estilos.marcoVentas}>
+                  <Tabla titulo="Publicaciones más vendidas">
+                    <thead>
+                      <tr>
+                        <th scope="col">Publicación</th>
+                        <EncabezadoNumero>Unidades</EncabezadoNumero>
+                        <EncabezadoNumero>Facturado</EncabezadoNumero>
                       </tr>
-                    ))}
-                  </tbody>
-                </Tabla>
-              </div>
-            </Seccion>
-          </>
-        )}
+                    </thead>
+                    <tbody>
+                      {top.map(([listingId, dato]) => (
+                        <tr key={listingId}>
+                          <td>
+                            <p className={estilos.celdaTitulo}>
+                              <Link href={`/p/${listingId}`} className="subraya">
+                                {dato.titulo}
+                              </Link>
+                            </p>
+                          </td>
+                          <CeldaNumero>{dato.unidades}</CeldaNumero>
+                          <CeldaNumero>
+                            <strong>{precio(dato.facturado.toString(), moneda)}</strong>
+                          </CeldaNumero>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Tabla>
+                </div>
+              </Seccion>
+            </>
+          )}
 
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
-          <p className={estilos.nota}>
-            Sólo se cuentan las órdenes completadas, que son las mismas que miran tu nivel y tu
-            reputación. Las que están en curso no aparecen acá porque todavía pueden cancelarse. Los
-            importes son el snapshot de cada orden: cambiar un precio hoy no mueve ningún número de
-            esta pantalla.
-          </p>
-        </div>
-      </main>
+          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+            <p className={estilos.nota}>
+              Sólo se cuentan las órdenes completadas, que son las mismas que miran tu nivel y tu
+              reputación. Las que están en curso no aparecen acá porque todavía pueden cancelarse.
+              Los importes son el snapshot de cada orden: cambiar un precio hoy no mueve ningún
+              número de esta pantalla.
+            </p>
+          </div>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

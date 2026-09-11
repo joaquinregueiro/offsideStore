@@ -20,7 +20,7 @@ import { countUnread } from '@/modules/notifications/services/inapp-notification
 import { listMyOrders } from '@/modules/orders/services/order.service';
 
 import { ChapaDeCuenta } from '../chapa';
-import { NavDeCuenta } from '../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../panel';
 import estilos from '../cuenta.module.css';
 
 export const metadata: Metadata = { title: 'Mi cuenta' };
@@ -62,130 +62,128 @@ export default async function ResumenDeCuenta() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo="Mi cuenta"
-          titulo={user.displayName ?? 'Hola'}
-          detalle={<p className={`${estilos.chapaDetalle} ${estilos.chapaEmail}`}>{user.email}</p>}
-          lateral={
-            /*
+      <PanelDeCuenta user={user} seccion="cuenta">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Mi cuenta"
+            titulo={user.displayName ?? 'Hola'}
+            detalle={
+              <p className={`${estilos.chapaDetalle} ${estilos.chapaEmail}`}>{user.email}</p>
+            }
+            lateral={
+              /*
               ⚠️ EL NIVEL ES UN ESTATUS, NO UNA GARANTÍA (DEC-020), y por eso la
               insignia va SOLA, sin ningún texto que sugiera protección,
               prioridad ni respaldo. Lo que significa se explica abajo, en
               palabras, una vez.
             */
-            <InsigniaDeNivel nombre={nivelDeUsuario(user.userLevel)} destacada />
-          }
-        />
+              <InsigniaDeNivel nombre={nivelDeUsuario(user.userLevel)} destacada />
+            }
+          />
 
-        <NavDeCuenta
-          activo="resumen"
-          compras={ordenes.length}
-          favoritos={favoritos.total}
-          reclamos={abiertos.length}
-          sinLeer={sinLeer}
-        />
+          <SolapasDeCuenta user={user} seccion="cuenta" activa="resumen" />
 
-        {/*
+          {/*
           ⚠️ LOS NÚMEROS SOBRE UN PLANO OSCURO Y NO EN CUATRO CAJAS BLANCAS: el
           número es el contenido, y sobre papel pesa lo mismo que su borde.
         */}
-        <div className={`${estilos.tablero} sup-noche con-grano escena-luz`}>
-          <Blobs />
-          <Cifras
-            cifras={[
-              {
-                valor: String(enCurso.length),
-                etiqueta: 'Compras en curso',
-                detalle: enCurso.length === 0 ? 'Nada pendiente' : undefined,
-              },
-              { valor: String(favoritos.total), etiqueta: 'Favoritos' },
-              {
-                valor: String(sinLeer),
-                etiqueta: 'Avisos sin leer',
-                detalle: sinLeer === 0 ? 'Estás al día' : undefined,
-              },
-              {
-                valor: String(abiertos.length),
-                etiqueta: 'Reclamos abiertos',
-                detalle: abiertos.length === 0 ? 'Ninguno' : undefined,
-              },
-            ]}
-          />
-        </div>
+          <div className={`${estilos.tablero} sup-noche con-grano escena-luz`}>
+            <Blobs />
+            <Cifras
+              cifras={[
+                {
+                  valor: String(enCurso.length),
+                  etiqueta: 'Compras en curso',
+                  detalle: enCurso.length === 0 ? 'Nada pendiente' : undefined,
+                },
+                { valor: String(favoritos.total), etiqueta: 'Favoritos' },
+                {
+                  valor: String(sinLeer),
+                  etiqueta: 'Avisos sin leer',
+                  detalle: sinLeer === 0 ? 'Estás al día' : undefined,
+                },
+                {
+                  valor: String(abiertos.length),
+                  etiqueta: 'Reclamos abiertos',
+                  detalle: abiertos.length === 0 ? 'Ninguno' : undefined,
+                },
+              ]}
+            />
+          </div>
 
-        <Seccion titulo="Tu nivel">
-          {/*
+          <Seccion titulo="Tu nivel">
+            {/*
             ⚠️ ESTE PÁRRAFO ES EL QUE IMPIDE QUE LA INSIGNIA MIENTA. DEC-020 dice
             que el nivel es un ESTATUS derivado de la actividad, no una garantía:
             no da prioridad, no protege una compra y no es un seguro. Decirlo
             acá, donde la insignia se ve, es lo único que evita que alguien la
             lea como lo segundo.
           */}
-          <p className={estilos.nota}>
-            Sos <strong>{nivelDeUsuario(user.userLevel)}</strong>. El nivel sube solo con las
-            operaciones que completás en Offside y es un estatus dentro de la comunidad: no es una
-            garantía, no te da prioridad y no reemplaza a ninguna protección.
-          </p>
-        </Seccion>
+            <p className={estilos.nota}>
+              Sos <strong>{nivelDeUsuario(user.userLevel)}</strong>. El nivel sube solo con las
+              operaciones que completás en Offside y es un estatus dentro de la comunidad: no es una
+              garantía, no te da prioridad y no reemplaza a ninguna protección.
+            </p>
+          </Seccion>
 
-        <Seccion titulo="Accesos rápidos">
-          {/*
+          <Seccion titulo="Accesos rápidos">
+            {/*
             ⚠️ `.revela` ES REVELADO POR SCROLL Y ESTÁ BIEN ACÁ: esta grilla vive
             abajo del pliegue en un teléfono. Lo de arriba —chapa y tablero—
             entra con reloj, que es lo correcto para algo que ya está a la vista
             cuando la página pinta.
           */}
-          <ul className={`${estilos.atajos} ${estilos.revela}`}>
-            <Atajo
-              href="/cuenta/compras"
-              icono={<IconoCamiseta tamanio={22} />}
-              titulo="Mis compras"
-              dato={
-                enCurso.length === 0
-                  ? cantidad(ordenes.length, 'compra')
-                  : `${cantidad(enCurso.length, 'compra')} en curso`
-              }
-            />
-            <Atajo
-              href="/cuenta/favoritos"
-              icono={<IconoFavorito tamanio={22} />}
-              titulo="Favoritos"
-              dato={cantidad(favoritos.total, 'publicación', 'publicaciones')}
-            />
-            <Atajo
-              href="/cuenta/notificaciones"
-              icono={<IconoCampana tamanio={22} />}
-              titulo="Avisos"
-              dato={
-                sinLeer === 0 ? 'Sin novedades' : `${cantidad(sinLeer, 'sin leer', 'sin leer')}`
-              }
-            />
-            <Atajo
-              href="/cuenta/reclamos"
-              icono={<IconoBandera tamanio={22} />}
-              titulo="Reclamos"
-              dato={
-                abiertos.length === 0
-                  ? 'Ninguno abierto'
-                  : `${cantidad(abiertos.length, 'abierto')}`
-              }
-            />
-            <Atajo
-              href="/cuenta/preguntas"
-              icono={<IconoPregunta tamanio={22} />}
-              titulo="Mis preguntas"
-              dato="Lo que preguntaste y lo que te respondieron"
-            />
-            <Atajo
-              href="/cuenta/direcciones"
-              icono={<IconoUbicacion tamanio={22} />}
-              titulo="Direcciones"
-              dato="Dónde querés recibir tus compras"
-            />
-          </ul>
-        </Seccion>
-      </main>
+            <ul className={`${estilos.atajos} ${estilos.revela}`}>
+              <Atajo
+                href="/cuenta/compras"
+                icono={<IconoCamiseta tamanio={22} />}
+                titulo="Mis compras"
+                dato={
+                  enCurso.length === 0
+                    ? cantidad(ordenes.length, 'compra')
+                    : `${cantidad(enCurso.length, 'compra')} en curso`
+                }
+              />
+              <Atajo
+                href="/cuenta/favoritos"
+                icono={<IconoFavorito tamanio={22} />}
+                titulo="Favoritos"
+                dato={cantidad(favoritos.total, 'publicación', 'publicaciones')}
+              />
+              <Atajo
+                href="/cuenta/notificaciones"
+                icono={<IconoCampana tamanio={22} />}
+                titulo="Avisos"
+                dato={
+                  sinLeer === 0 ? 'Sin novedades' : `${cantidad(sinLeer, 'sin leer', 'sin leer')}`
+                }
+              />
+              <Atajo
+                href="/cuenta/reclamos"
+                icono={<IconoBandera tamanio={22} />}
+                titulo="Reclamos"
+                dato={
+                  abiertos.length === 0
+                    ? 'Ninguno abierto'
+                    : `${cantidad(abiertos.length, 'abierto')}`
+                }
+              />
+              <Atajo
+                href="/cuenta/preguntas"
+                icono={<IconoPregunta tamanio={22} />}
+                titulo="Mis preguntas"
+                dato="Lo que preguntaste y lo que te respondieron"
+              />
+              <Atajo
+                href="/cuenta/direcciones"
+                icono={<IconoUbicacion tamanio={22} />}
+                titulo="Direcciones"
+                dato="Dónde querés recibir tus compras"
+              />
+            </ul>
+          </Seccion>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

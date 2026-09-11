@@ -5,11 +5,12 @@ import { CampoOculto, Formulario } from '@/components/form';
 import { Pantalla } from '@/components/movimiento';
 import { Confirmar, Etiqueta, Migas } from '@/components/ui';
 import { requireVerifiedSessionUser } from '@/lib/session';
+import type { PublicUser } from '@/modules/auth/services/auth.service';
 import { listAddresses, type PublicAddress } from '@/modules/addresses/services/address.service';
 
 import { borrarDireccion, editarDireccion } from '../../../acciones';
 import { ChapaDeCuenta } from '../../../chapa';
-import { NavDeCuenta } from '../../../nav';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../panel';
 import estilos from '../../../cuenta.module.css';
 import { FormularioDeDireccion } from '../formulario';
 
@@ -32,13 +33,18 @@ export const dynamic = 'force-dynamic';
  * existe y permitiría enumerar las de otras personas probando ids. El cupo son
  * diez, así que traer la lista entera no es un costo.
  */
-async function leerDireccion(addressId: string, volverA: string): Promise<PublicAddress> {
+async function leerDireccion(
+  addressId: string,
+  volverA: string,
+): Promise<{ user: PublicUser; direccion: PublicAddress }> {
   const user = await requireVerifiedSessionUser(volverA);
 
   const direccion = (await listAddresses(user)).find((item) => item.id === addressId);
   if (direccion === undefined) notFound();
 
-  return direccion;
+  // Se devuelve tambien el usuario: el armazon del panel lo necesita, y
+  // volver a resolverlo seria leer la cookie y la sesion dos veces.
+  return { user, direccion };
 }
 
 /**
@@ -59,67 +65,69 @@ export default async function EditarDireccion({
   params: Promise<{ addressId: string }>;
 }) {
   const { addressId } = await params;
-  const direccion = await leerDireccion(addressId, `/cuenta/direcciones/${addressId}`);
+  const { user, direccion } = await leerDireccion(addressId, `/cuenta/direcciones/${addressId}`);
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <ChapaDeCuenta
-          rotulo="Direcciones"
-          titulo={direccion.etiqueta ?? direccion.nombre}
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              {direccion.calle}
-              {direccion.numero === null ? '' : ` ${direccion.numero}`}, {direccion.ciudad}
-            </p>
-          }
-          lateral={
-            direccion.esPredeterminada ? (
-              <Etiqueta tono="marca">Predeterminada</Etiqueta>
-            ) : undefined
-          }
-        />
-
-        <NavDeCuenta activo="direcciones" />
-
-        <Migas
-          items={[
-            { texto: 'Mi cuenta', href: '/cuenta' },
-            { texto: 'Direcciones', href: '/cuenta/direcciones' },
-            { texto: 'Editar' },
-          ]}
-        />
-
-        <section className={`${estilos.bloque} sup-ficha entraBloque`}>
-          <h2 className={estilos.bloqueTitulo}>Datos del envío</h2>
-          <FormularioDeDireccion
-            accion={editarDireccion}
-            enviar="Guardar los cambios"
-            direccion={direccion}
-          />
-        </section>
-
-        <div className={estilos.separador}>
-          <Confirmar
-            etiqueta="Borrar esta dirección"
-            pregunta={
-              direccion.esPredeterminada
-                ? 'Se borra de tu libreta y no se puede deshacer. Como era la predeterminada, pasa a serlo la más nueva de las que queden. Tus compras anteriores no cambian.'
-                : 'Se borra de tu libreta y no se puede deshacer. Tus compras anteriores no cambian: cada orden guarda por su cuenta a dónde se despachó.'
+      <PanelDeCuenta user={user} seccion="cuenta">
+        <main id="contenido">
+          <ChapaDeCuenta
+            rotulo="Direcciones"
+            titulo={direccion.etiqueta ?? direccion.nombre}
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                {direccion.calle}
+                {direccion.numero === null ? '' : ` ${direccion.numero}`}, {direccion.ciudad}
+              </p>
             }
-          >
-            <Formulario
-              accion={borrarDireccion}
-              enviar="Sí, borrarla"
-              variante="peligro"
-              tamanio="medio"
-              bloque={false}
+            lateral={
+              direccion.esPredeterminada ? (
+                <Etiqueta tono="marca">Predeterminada</Etiqueta>
+              ) : undefined
+            }
+          />
+
+          <SolapasDeCuenta user={user} seccion="cuenta" activa="direcciones" />
+
+          <Migas
+            items={[
+              { texto: 'Mi cuenta', href: '/cuenta' },
+              { texto: 'Direcciones', href: '/cuenta/direcciones' },
+              { texto: 'Editar' },
+            ]}
+          />
+
+          <section className={`${estilos.bloque} sup-ficha entraBloque`}>
+            <h2 className={estilos.bloqueTitulo}>Datos del envío</h2>
+            <FormularioDeDireccion
+              accion={editarDireccion}
+              enviar="Guardar los cambios"
+              direccion={direccion}
+            />
+          </section>
+
+          <div className={estilos.separador}>
+            <Confirmar
+              etiqueta="Borrar esta dirección"
+              pregunta={
+                direccion.esPredeterminada
+                  ? 'Se borra de tu libreta y no se puede deshacer. Como era la predeterminada, pasa a serlo la más nueva de las que queden. Tus compras anteriores no cambian.'
+                  : 'Se borra de tu libreta y no se puede deshacer. Tus compras anteriores no cambian: cada orden guarda por su cuenta a dónde se despachó.'
+              }
             >
-              <CampoOculto nombre="addressId" valor={direccion.id} />
-            </Formulario>
-          </Confirmar>
-        </div>
-      </main>
+              <Formulario
+                accion={borrarDireccion}
+                enviar="Sí, borrarla"
+                variante="peligro"
+                tamanio="medio"
+                bloque={false}
+              >
+                <CampoOculto nombre="addressId" valor={direccion.id} />
+              </Formulario>
+            </Confirmar>
+          </div>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }

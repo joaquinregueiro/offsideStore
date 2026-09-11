@@ -6,11 +6,11 @@ import { Pantalla } from '@/components/movimiento';
 import { Aviso, Seccion } from '@/components/ui';
 import { fecha } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
+import { PanelDeCuenta, SolapasDeCuenta } from '../../../(cuenta)/panel';
 import { getMySellerProfile } from '@/modules/sellers/services/seller.service';
 
 import { guardarTienda } from '../../acciones';
 import { Chapa } from '../../chapa';
-import { NavDelVendedor } from '../../nav';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mi tienda' };
@@ -39,78 +39,80 @@ export default async function MiTienda() {
 
   return (
     <Pantalla>
-      <main id="contenido" className={estilos.pagina}>
-        <Chapa
-          rotulo="Tu tienda"
-          titulo={perfil.displayName}
-          chica
-          detalle={
-            <p className={estilos.chapaDetalle}>
-              Vendés en Offside desde {fecha(perfil.createdAt)}
-            </p>
-          }
-        />
+      <PanelDeCuenta user={user} seccion="cuenta">
+        <main id="contenido">
+          <Chapa
+            rotulo="Tu tienda"
+            titulo={perfil.displayName}
+            chica
+            detalle={
+              <p className={estilos.chapaDetalle}>
+                Vendés en Offside desde {fecha(perfil.createdAt)}
+              </p>
+            }
+          />
 
-        <NavDelVendedor activo="tienda" />
+          <SolapasDeCuenta user={user} seccion="cuenta" activa="vender" />
 
-        {/*
+          {/*
           ⚠️ NO HAY ENLACE AL PERFIL PUBLICO, Y NO ES UN OLVIDO. El perfil
           público del vendedor se direcciona por `username` (`/tienda/…`), y ni
           `PublicSellerProfile` ni `PublicUser` lo exponen hoy: armar la URL sin
           ese dato daría un enlace roto. Queda reportado como faltante en vez de
           prometer una pantalla a la que no se puede llegar.
         */}
-        <Aviso tono="neutro">
-          Esto es lo que ve quien entra a una de tus publicaciones. Tu nombre visible aparece
-          también en las órdenes que ya hiciste.
-        </Aviso>
+          <Aviso tono="neutro">
+            Esto es lo que ve quien entra a una de tus publicaciones. Tu nombre visible aparece
+            también en las órdenes que ya hiciste.
+          </Aviso>
 
-        <Seccion titulo="Cómo te presentás">
-          <div className={estilos.formPublicar}>
-            <Formulario accion={guardarTienda} enviar="Guardar cambios">
-              <GrupoDeCampos titulo="Tu tienda">
-                <Campo
-                  nombre="displayName"
-                  etiqueta="Nombre visible"
-                  defaultValue={perfil.displayName}
-                  maximo={80}
-                  ayuda="Es el nombre con el que te ven los compradores, acá y en sus compras."
-                />
+          <Seccion titulo="Cómo te presentás">
+            <div className={estilos.formPublicar}>
+              <Formulario accion={guardarTienda} enviar="Guardar cambios">
+                <GrupoDeCampos titulo="Tu tienda">
+                  <Campo
+                    nombre="displayName"
+                    etiqueta="Nombre visible"
+                    defaultValue={perfil.displayName}
+                    maximo={80}
+                    ayuda="Es el nombre con el que te ven los compradores, acá y en sus compras."
+                  />
 
-                <AreaDeTexto
-                  nombre="bio"
-                  etiqueta="Sobre vos"
-                  defaultValue={perfil.bio ?? ''}
-                  filas={4}
-                  maximo={1000}
-                  ayuda="Opcional. Qué vendés, desde cuándo, cómo conseguís las camisetas."
-                />
-              </GrupoDeCampos>
+                  <AreaDeTexto
+                    nombre="bio"
+                    etiqueta="Sobre vos"
+                    defaultValue={perfil.bio ?? ''}
+                    filas={4}
+                    maximo={1000}
+                    ayuda="Opcional. Qué vendés, desde cuándo, cómo conseguís las camisetas."
+                  />
+                </GrupoDeCampos>
 
-              <GrupoDeCampos
-                titulo="Cómo enviás"
-                detalle="Lo que escribas acá lo cumplís vos: Offside no despacha ni hace seguimiento automático."
-              >
-                <AreaDeTexto
-                  nombre="shippingPolicy"
-                  etiqueta="Política de envíos"
-                  defaultValue={perfil.shippingPolicy ?? ''}
-                  filas={4}
-                  maximo={1000}
-                  ayuda="Opcional. En cuántos días despachás, con qué correo, si hacés retiro en persona."
-                />
-              </GrupoDeCampos>
-            </Formulario>
+                <GrupoDeCampos
+                  titulo="Cómo enviás"
+                  detalle="Lo que escribas acá lo cumplís vos: Offside no despacha ni hace seguimiento automático."
+                >
+                  <AreaDeTexto
+                    nombre="shippingPolicy"
+                    etiqueta="Política de envíos"
+                    defaultValue={perfil.shippingPolicy ?? ''}
+                    filas={4}
+                    maximo={1000}
+                    ayuda="Opcional. En cuántos días despachás, con qué correo, si hacés retiro en persona."
+                  />
+                </GrupoDeCampos>
+              </Formulario>
+            </div>
+          </Seccion>
+
+          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+            <p className={estilos.nota}>
+              No prometas plazos que no vas a poder cumplir: el plazo de despacho de cada orden lo
+              fija Offside y despachar tarde cuenta en tu reputación.
+            </p>
           </div>
-        </Seccion>
-
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
-          <p className={estilos.nota}>
-            No prometas plazos que no vas a poder cumplir: el plazo de despacho de cada orden lo
-            fija Offside y despachar tarde cuenta en tu reputación.
-          </p>
-        </div>
-      </main>
+        </main>
+      </PanelDeCuenta>
     </Pantalla>
   );
 }
