@@ -37,7 +37,7 @@ export default async function IdentificacionFiscal() {
       <PanelDeCuenta user={user} seccion="cuenta">
         <main id="contenido">
           <Chapa
-            rotulo="Identidad"
+            rotulo="Mi cuenta"
             titulo="Identificación fiscal"
             chica
             /*

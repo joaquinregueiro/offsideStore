@@ -81,7 +81,7 @@ export default async function MiReputacion({
       <PanelDeCuenta user={user} seccion="cuenta">
         <main id="contenido">
           <Chapa
-            rotulo="Confianza"
+            rotulo="Mi cuenta"
             titulo="Mi reputación"
             chica
             detalle={

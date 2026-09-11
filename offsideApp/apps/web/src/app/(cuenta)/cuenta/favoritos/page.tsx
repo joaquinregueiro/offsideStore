@@ -55,7 +55,7 @@ export default async function MisFavoritos({
       <PanelDeCuenta user={user} seccion="favoritos">
         <main id="contenido">
           <ChapaDeCuenta
-            rotulo="Mi cuenta"
+            rotulo="Favoritos"
             titulo="Favoritos"
             detalle={
               <p className={estilos.chapaDetalle}>

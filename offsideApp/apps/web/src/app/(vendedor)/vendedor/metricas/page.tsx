@@ -147,7 +147,7 @@ export default async function MisMetricas() {
       <PanelDeCuenta user={user} seccion="publicaciones">
         <main id="contenido">
           <Chapa
-            rotulo="Tu tienda"
+            rotulo="Publicaciones"
             titulo="Mis métricas"
             chica
             detalle={

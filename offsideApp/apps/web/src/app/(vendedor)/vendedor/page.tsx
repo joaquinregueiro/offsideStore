@@ -166,7 +166,7 @@ export default async function PanelDeVendedor() {
       <PanelDeCuenta user={user} seccion="cuenta">
         <main id="contenido">
           <Chapa
-            rotulo="Tu tienda"
+            rotulo="Mi cuenta"
             titulo={perfil.displayName}
             detalle={
               /*

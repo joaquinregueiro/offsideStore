@@ -54,7 +54,7 @@ export default async function MiNivel() {
       <PanelDeCuenta user={user} seccion="cuenta">
         <main id="contenido">
           <Chapa
-            rotulo="Comisión"
+            rotulo="Mi cuenta"
             titulo="Mi nivel"
             chica
             detalle={

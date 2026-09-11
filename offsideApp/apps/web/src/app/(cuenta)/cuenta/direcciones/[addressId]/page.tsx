@@ -72,7 +72,7 @@ export default async function EditarDireccion({
       <PanelDeCuenta user={user} seccion="cuenta">
         <main id="contenido">
           <ChapaDeCuenta
-            rotulo="Direcciones"
+            rotulo="Mi cuenta"
             titulo={direccion.etiqueta ?? direccion.nombre}
             detalle={
               <p className={estilos.chapaDetalle}>

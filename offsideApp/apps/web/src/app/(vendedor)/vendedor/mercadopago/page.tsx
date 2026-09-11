@@ -113,7 +113,7 @@ export default async function ConexionConMercadoPago({
       <PanelDeCuenta user={user} seccion="cuenta">
         <main id="contenido">
           <Chapa
-            rotulo="Conexión"
+            rotulo="Mi cuenta"
             titulo="Mercado Pago"
             chica
             estado={{ texto: estado.etiqueta, tono: estado.tono }}

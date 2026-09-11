@@ -42,7 +42,7 @@ export default async function MisPreguntas() {
       <PanelDeCuenta user={user} seccion="preguntas">
         <main id="contenido">
           <ChapaDeCuenta
-            rotulo="Mi cuenta"
+            rotulo="Preguntas"
             titulo="Mis preguntas"
             detalle={
               <p className={estilos.chapaDetalle}>

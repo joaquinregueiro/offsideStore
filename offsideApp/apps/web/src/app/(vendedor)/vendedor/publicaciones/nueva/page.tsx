@@ -81,7 +81,7 @@ export default async function NuevaPublicacion() {
       <PanelDeCuenta user={user} seccion="vender">
         <main id="contenido">
           <Chapa
-            rotulo="Inventario"
+            rotulo="Vender"
             titulo="Publicar"
             chica
             detalle={

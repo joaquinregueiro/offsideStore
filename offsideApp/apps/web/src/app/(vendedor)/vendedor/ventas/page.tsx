@@ -145,7 +145,7 @@ export default async function MisVentas({
     <Pantalla>
       <PanelDeCuenta user={user} seccion="publicaciones">
         <main id="contenido">
-          <Chapa rotulo="Cobros" titulo="Mis ventas" chica />
+          <Chapa rotulo="Publicaciones" titulo="Mis ventas" chica />
 
           <SolapasDeCuenta user={user} seccion="publicaciones" activa="ventas" />
 

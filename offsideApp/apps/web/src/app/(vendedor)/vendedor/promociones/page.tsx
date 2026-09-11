@@ -64,7 +64,7 @@ export default async function MisPromociones() {
     <Pantalla>
       <PanelDeCuenta user={user} seccion="publicaciones">
         <main id="contenido">
-          <Chapa rotulo="Visibilidad" titulo="Mis promociones" chica />
+          <Chapa rotulo="Publicaciones" titulo="Mis promociones" chica />
 
           <SolapasDeCuenta user={user} seccion="publicaciones" activa="promociones" />
 
