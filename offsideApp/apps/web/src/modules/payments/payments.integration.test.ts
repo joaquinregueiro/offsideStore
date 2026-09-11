@@ -530,7 +530,15 @@ describe('webhook', () => {
       .select()
       .from(schema.orders)
       .where(eq(schema.orders.id, orderId));
-    expect(order?.status).toBe('PAID');
+    /*
+     * ⚠️ LA ORDEN QUEDA EN `PROCESSING`, NO EN `PAID`, y el test cambio a
+     * proposito (2026-09-11): el ciclo de DEC-029 ya existe y el pago
+     * aprobado arranca la preparacion en la MISMA transaccion, siempre que el
+     * descuento de stock no haya dejado faltantes. `paid_at` se escribe igual
+     * —es el momento en que entro la plata— y es lo que el snapshot y la
+     * conciliacion miran.
+     */
+    expect(order?.status).toBe('PROCESSING');
     expect(order?.paidAt).not.toBeNull();
   });
 
@@ -580,7 +588,8 @@ describe('webhook', () => {
       .select()
       .from(schema.orders)
       .where(eq(schema.orders.id, orderId));
-    expect(order?.status).toBe('PAID');
+    // Mismo motivo que arriba: el pago aprobado deja la orden en preparacion.
+    expect(order?.status).toBe('PROCESSING');
 
     const splits = await getDatabase()
       .select()

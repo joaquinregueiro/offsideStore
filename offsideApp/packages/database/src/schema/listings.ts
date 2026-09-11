@@ -110,12 +110,71 @@ export const listings = pgTable(
     extraAttributes: jsonb('extra_attributes'),
 
     publishedAt: timestamp('published_at', { withTimezone: true }),
+
+    // --- Promocion (delta al ERD v1.3, autorizado por el owner 2026-09-10) ---
+    /**
+     * ⚠️ NO ESTA EN EL ERD v1.3. Publicaciones promocionadas con comision
+     * mayor: cambio ARQUITECTONICO autorizado por el owner. Delta documentado
+     * en `docs-implementation/erd-delta-2026-09-10.md` hasta que llegue al ERD.
+     *
+     * Una publicacion esta promocionada MIENTRAS `now() < promoted_until`. Es
+     * un PREDICADO DERIVADO, no un estado: no se toca `status`, y al vencer no
+     * hay que "despromocionar" nada —la fila queda como evidencia de que estuvo
+     * promocionada—. Mismo criterio que el vendedor desconectado (SS-013).
+     *
+     * ⚙️ La duracion y el multiplicador de comision salen del Config Store
+     * (`promotion_duration_days`, `promotion_commission_multiplier`); aca solo
+     * se guarda el instante ya calculado. La orden snapshotea el multiplicador
+     * aplicado (`orders.promotion_multiplier_at_transaction`, DEC-030).
+     */
+    promotedUntil: timestamp('promoted_until', { withTimezone: true }),
+    /** Cuando se promociono por ultima vez. Solo trazabilidad. */
+    promotedAt: timestamp('promoted_at', { withTimezone: true }),
+
+    // --- Envio declarado (segundo delta del 2026-09-10, autorizado por el owner) ---
+    /**
+     * ⚠️ NO ESTA EN EL ERD v1.3 (ver `docs-implementation/erd-delta-2026-09-10.md`).
+     *
+     * Como se resuelve el envio de ESTA publicacion, DECLARADO por el
+     * vendedor. `shipping.md` §5.b deja "quien paga" y "retiro presencial" 🟡
+     * y la cotizacion (SH-011) depende de Correo Argentino, que no existe: sin
+     * esto no hay ninguna forma de que el comprador sepa cuanto paga de envio.
+     *
+     *   included   → el precio ya lo incluye; `shipping_cost_amount` NULL
+     *   buyer_pays → lo paga el comprador; `shipping_cost_amount` OBLIGATORIO
+     *                (validado en app, no por CHECK: el modo puede cambiar
+     *                antes que el importe en un mismo formulario)
+     *   to_agree   → se arregla entre las partes; `shipping_cost_amount` NULL
+     *   pickup     → retiro en persona; `shipping_cost_amount` NULL
+     *
+     * ⚙️ El modo por defecto al publicar y si `pickup` esta habilitado salen
+     * del Config Store (`shipping_default_mode`, `shipping_pickup_allowed`); el
+     * DEFAULT de la columna solo cubre filas anteriores a esta migracion.
+     * `text` con CHECK y no enum, como los demas estados de este delta.
+     */
+    shippingMode: text('shipping_mode').notNull().default('to_agree'),
+    /**
+     * Costo de envio declarado, en CENTAVOS (ERD §1). Se CONGELA en
+     * `orders.shipping_amount` al crear la orden (DEC-030): cambiarlo despues
+     * no toca ordenes existentes, igual que el precio (BR-023).
+     */
+    shippingCostAmount: bigint('shipping_cost_amount', { mode: 'bigint' }),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     /** Soft delete (ERD §20.10). */
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => [
+    /**
+     * PARCIAL a proposito: la inmensa mayoria de las filas tendra
+     * `promoted_until` NULL y no aporta nada indexarlas. La vitrina y la
+     * busqueda consultan `promoted_until > now()`, que cae en el rango del
+     * indice.
+     */
+    index('listings_promoted_until_idx')
+      .on(t.promotedUntil)
+      .where(sql`${t.promotedUntil} IS NOT NULL`),
     uniqueIndex('listings_seller_id_sku_key')
       .on(t.sellerId, t.sku)
       .where(sql`${t.sku} IS NOT NULL`),
@@ -148,6 +207,15 @@ export const listings = pgTable(
     index('listings_status_price_idx').on(t.status, t.priceAmount),
     check('listings_stock_check', sql`${t.stock} >= 0`),
     check('listings_price_amount_check', sql`${t.priceAmount} > 0`),
+    check(
+      'listings_shipping_mode_check',
+      sql`${t.shippingMode} IN ('included', 'buyer_pays', 'to_agree', 'pickup')`,
+    ),
+    /** Null = no aplica; si esta, no puede ser negativo (es plata del comprador). */
+    check(
+      'listings_shipping_cost_amount_check',
+      sql`${t.shippingCostAmount} IS NULL OR ${t.shippingCostAmount} >= 0`,
+    ),
   ],
 );
 

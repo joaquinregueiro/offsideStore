@@ -6,31 +6,35 @@ Documentación **del código**, no del producto.
 > es de solo lectura. Si algo de acá contradice a `docs/`, gana `docs/` y hay que
 > reportar la discrepancia (CLAUDE.md §4 y §13).
 
-| Documento                                                            | Contenido                                                              |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [deployment-coolify.md](deployment-coolify.md)                       | Despliegue en un VPS con Coolify: Dockerfile, variables y verificacion |
-| [setup-local.md](setup-local.md)                                     | Cómo levantar el proyecto y qué comandos existen                       |
-| [architecture-implementation.md](architecture-implementation.md)     | Qué se construyó y cómo se mapea a la arquitectura documentada         |
-| [infra-validation.md](infra-validation.md)                           | Validación end-to-end de Docker, PostgreSQL y Redis                    |
-| [erd-to-drizzle.md](erd-to-drizzle.md)                               | Traducción del ERD v1.0 al schema de Drizzle + auditoría               |
-| [gaps-pre-migration.md](gaps-pre-migration.md)                       | Gaps a resolver antes de la primera migration (propuesta)              |
-| [post-migration-validation.md](post-migration-validation.md)         | Validación de PostgreSQL real contra el ERD                            |
-| [auth-module.md](auth-module.md)                                     | Módulo AUTH + USERS + SELLERS                                          |
-| [seller-tax-identity.md](seller-tax-identity.md)                     | Identidad fiscal del vendedor (CUIT/CUIL/CDI)                          |
-| [mercadopago-oauth-spec.md](mercadopago-oauth-spec.md)               | **Especificación** de OAuth de Mercado Pago (contrato de diseño)       |
-| [mercadopago-oauth-module.md](mercadopago-oauth-module.md)           | Conexión con Mercado Pago, **tal como quedó implementada**             |
-| [mercadopago-payments-spec.md](mercadopago-payments-spec.md)         | **Especificación** de Payments / Split 1:1                             |
-| [mercadopago-payments-module.md](mercadopago-payments-module.md)     | Checkout, webhooks y refunds, **tal como quedaron implementados**      |
-| [authorization-module.md](authorization-module.md)                   | Autorización por capacidad (DEC-023)                                   |
-| [seller-approval-module.md](seller-approval-module.md)               | Aprobación automática del vendedor (TS-001 / DEC-044)                  |
-| [notifications-email-module.md](notifications-email-module.md)       | Emails por SES, rebotes y quejas                                       |
-| [rate-limiting.md](rate-limiting.md)                                 | Límites por IP y por usuario                                           |
-| [frontend-design-system.md](frontend-design-system.md)               | **Sistema visual y de componentes del frontend**                       |
-| [auditoria-frontend-2026-09-09.md](auditoria-frontend-2026-09-09.md) | **Auditoría del frontend por fases: lo que falta y lo que no**         |
-| [frontend-movimiento.md](frontend-movimiento.md)                     | **Sistema de movimiento: entradas, scroll, View Transitions**          |
-| [frontend-2026-09-10.md](frontend-2026-09-10.md)                     | **Frontend completo: primitivas, pantallas y datos (2026-09-10)**      |
-| [frontend-rediseno-2026-09-10.md](frontend-rediseno-2026-09-10.md)   | **Rediseño visual: el eje de 112°, cuatro planos y el movimiento**     |
-| [adr/](adr/)                                                         | Decisiones técnicas de implementación                                  |
+| Documento                                                                | Contenido                                                                 |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| [deployment-coolify.md](deployment-coolify.md)                           | Despliegue en un VPS con Coolify: Dockerfile, variables y verificacion    |
+| [setup-local.md](setup-local.md)                                         | Cómo levantar el proyecto y qué comandos existen                          |
+| [architecture-implementation.md](architecture-implementation.md)         | Qué se construyó y cómo se mapea a la arquitectura documentada            |
+| [infra-validation.md](infra-validation.md)                               | Validación end-to-end de Docker, PostgreSQL y Redis                       |
+| [erd-to-drizzle.md](erd-to-drizzle.md)                                   | Traducción del ERD v1.0 al schema de Drizzle + auditoría                  |
+| [gaps-pre-migration.md](gaps-pre-migration.md)                           | Gaps a resolver antes de la primera migration (propuesta)                 |
+| [post-migration-validation.md](post-migration-validation.md)             | Validación de PostgreSQL real contra el ERD                               |
+| [auth-module.md](auth-module.md)                                         | Módulo AUTH + USERS + SELLERS                                             |
+| [seller-tax-identity.md](seller-tax-identity.md)                         | Identidad fiscal del vendedor (CUIT/CUIL/CDI)                             |
+| [mercadopago-oauth-spec.md](mercadopago-oauth-spec.md)                   | **Especificación** de OAuth de Mercado Pago (contrato de diseño)          |
+| [mercadopago-oauth-module.md](mercadopago-oauth-module.md)               | Conexión con Mercado Pago, **tal como quedó implementada**                |
+| [mercadopago-payments-spec.md](mercadopago-payments-spec.md)             | **Especificación** de Payments / Split 1:1                                |
+| [mercadopago-payments-module.md](mercadopago-payments-module.md)         | Checkout, webhooks y refunds, **tal como quedaron implementados**         |
+| [authorization-module.md](authorization-module.md)                       | Autorización por capacidad (DEC-023)                                      |
+| [seller-approval-module.md](seller-approval-module.md)                   | Aprobación automática del vendedor (TS-001 / DEC-044)                     |
+| [notifications-email-module.md](notifications-email-module.md)           | Emails por SES, rebotes y quejas                                          |
+| [rate-limiting.md](rate-limiting.md)                                     | Límites por IP y por usuario                                              |
+| [frontend-design-system.md](frontend-design-system.md)                   | **Sistema visual y de componentes del frontend**                          |
+| [auditoria-frontend-2026-09-09.md](auditoria-frontend-2026-09-09.md)     | **Auditoría del frontend por fases: lo que falta y lo que no**            |
+| [frontend-movimiento.md](frontend-movimiento.md)                         | **Sistema de movimiento: entradas, scroll, View Transitions**             |
+| [frontend-2026-09-10.md](frontend-2026-09-10.md)                         | **Frontend completo: primitivas, pantallas y datos (2026-09-10)**         |
+| [frontend-rediseno-2026-09-10.md](frontend-rediseno-2026-09-10.md)       | **Rediseño visual: el eje de 112°, cuatro planos y el movimiento**        |
+| [verificacion-real-2026-09-10.md](verificacion-real-2026-09-10.md)       | **Postgres y Redis sin Docker, 257 de integración, 22 pantallas reales**  |
+| [frontend-home-2026-09-11.md](frontend-home-2026-09-11.md)               | **Home que nunca queda vacía, buscador y primitivas del panel**           |
+| [marketplace-completo-2026-09-11.md](marketplace-completo-2026-09-11.md) | **Niveles, promociones, ciclo de la orden, reputación y reclamos**        |
+| [erd-delta-2026-09-10.md](erd-delta-2026-09-10.md)                       | **Delta al ERD v1.3: promociones, `listing_questions`, tiers y semillas** |
+| [adr/](adr/)                                                             | Decisiones técnicas de implementación                                     |
 
 ## Estado actual
 

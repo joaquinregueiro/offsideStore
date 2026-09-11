@@ -173,7 +173,34 @@ export type RateLimitScope =
   | 'listing-update'
   | 'seller-create'
   | 'tax-identity'
-  | 'system-config';
+  | 'system-config'
+  /*
+   * Familias del ciclo de la orden y del panel (2026-09-11). Cada una cuenta
+   * aparte por el mismo motivo que publicar y editar: si despachar y cancelar
+   * compartieran contador, un vendedor que despacha su lote del dia se quedaria
+   * sin poder cancelar la orden que necesita cancelar.
+   */
+  | 'order-ship'
+  | 'order-cancel'
+  | 'order-confirm'
+  | 'dispute-open'
+  | 'dispute-respond'
+  | 'dispute-resolve'
+  | 'review-create'
+  | 'review-reply'
+  | 'favorite-toggle'
+  | 'listing-promote'
+  | 'listing-report'
+  | 'question-ask'
+  | 'question-answer'
+  | 'address-write'
+  | 'notification-read'
+  | 'cart-write'
+  | 'seller-profile'
+  | 'seller-vacation'
+  | 'admin-moderate'
+  | 'admin-dispute'
+  | 'admin-tier';
 
 /**
  * Consume una unidad del limite POR IP para este scope.

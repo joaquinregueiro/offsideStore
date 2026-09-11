@@ -37,6 +37,20 @@ export const reviews = pgTable(
       .references(() => sellerProfiles.id, { onDelete: 'restrict' }),
     rating: integer('rating').notNull(),
     comment: text('comment'),
+    /**
+     * ⚠️ NO ESTA EN EL ERD v1.3 (segundo delta del 2026-09-10, autorizado por
+     * el owner; ver `docs-implementation/erd-delta-2026-09-10.md`).
+     *
+     * Respuesta PUBLICA del vendedor a la reseña. La reseña sigue siendo
+     * UNIDIRECCIONAL —solo el comprador califica y `rating` es suyo—; esto es
+     * un descargo que se muestra al lado, como en Mercado Libre. Va en la
+     * misma fila porque hay a lo sumo una respuesta y no es un hilo (BR-053:
+     * mensajeria in-app 🟡). NO emite `user_history_events` ni entra en
+     * `seller_reputations`: responder no cambia la nota.
+     */
+    sellerReply: text('seller_reply'),
+    /** Null mientras el vendedor no respondio. */
+    sellerRepliedAt: timestamp('seller_replied_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

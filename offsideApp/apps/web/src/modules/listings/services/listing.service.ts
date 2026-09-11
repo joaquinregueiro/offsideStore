@@ -8,10 +8,15 @@ import { createStorage } from '../infrastructure/storage/index';
 import * as catalogRepo from '../repositories/catalog.repository';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
+import { getShippingSettings } from './listing-settings.service';
 import { reindex } from './search.service';
+import {
+  shippingSummaryFor,
+  validateShippingDeclaration,
+  type ShippingSummary,
+} from './shipping-declaration';
 
 /**
-<<<<<<< HEAD
  * Publicaciones — alta, vitrina publica y ficha.
  *
  * ⚠️ ESTE COMENTARIO DECIA QUE FALTABAN EDITAR, PAUSAR, ELIMINAR, IMAGENES,
@@ -21,13 +26,6 @@ import { reindex } from './search.service';
  * equivocado a quien llegara nuevo. Lo que de verdad falta hoy es la
  * MODERACION: `moderation_status` se lee en el filtro del ERD §9.1 y no hay
  * ningun flujo que lo cambie.
-=======
- * Publicaciones — **alcance minimo**: publicar y listar las propias.
- *
- * ⚠️ TODAVIA NO ES EL MODULO COMPLETO. Faltan: editar, pausar, eliminar,
- * imagenes, moderacion, busqueda e indexado (`search_vector`). Lo que hay
- * alcanza para que un vendedor ponga algo a la venta y un comprador lo compre.
->>>>>>> origin/main
  */
 
 export type { ListingRow } from '../repositories/listing.repository';
@@ -96,6 +94,13 @@ export interface PublishListingInput {
   brandId?: string | null;
   competitionId?: string | null;
   seasonId?: string | null;
+  /**
+   * Envio DECLARADO por el vendedor (delta §11). Opcional: sin Correo
+   * Argentino no hay cotizacion, asi que quien no elige cae en
+   * `shipping_default_mode` del Config Store. `buyer_pays` exige costo.
+   */
+  shippingMode?: string | null;
+  shippingCostAmount?: bigint | null;
 }
 
 export interface PublicListing {
@@ -113,7 +118,6 @@ export interface PublicListing {
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
   categoryId: string;
-<<<<<<< HEAD
   /**
    * Referencias de catalogo (ERD §8).
    *
@@ -128,8 +132,16 @@ export interface PublicListing {
   brandId: string | null;
   competitionId: string | null;
   seasonId: string | null;
-=======
->>>>>>> origin/main
+  /**
+   * Envio DECLARADO por el vendedor (delta §11).
+   *
+   * ⚠️ SE EXPONE POR EL MISMO MOTIVO QUE LOS CATALOGOS: sin esto, el
+   * formulario de edicion no puede mostrar el modo actual, y el inventario no
+   * puede decir como se envia cada publicacion. `shippingCostAmount` viaja
+   * como string de centavos, igual que el precio.
+   */
+  shippingMode: string;
+  shippingCostAmount: string | null;
   createdAt: string;
 }
 
@@ -142,20 +154,19 @@ export function toPublicListing(row: listingRepo.ListingRow): PublicListing {
     moderationStatus: row.moderationStatus,
     priceAmount: row.priceAmount.toString(),
     currency: row.currency,
-<<<<<<< HEAD
     clubId: row.clubId,
     nationalTeamId: row.nationalTeamId,
     brandId: row.brandId,
     competitionId: row.competitionId,
     seasonId: row.seasonId,
-=======
->>>>>>> origin/main
     stock: row.stock,
     sizeValue: row.sizeValue,
     condition: row.condition,
     kitType: row.kitType,
     sleeve: row.sleeve,
     categoryId: row.categoryId,
+    shippingMode: row.shippingMode,
+    shippingCostAmount: row.shippingCostAmount?.toString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -195,8 +206,26 @@ export async function publishListing(
     throw errors.missingShirtAttributes();
   }
 
+  /*
+   * ⚠️ EL ENVIO SE VALIDA CONTRA EL CONFIG STORE, NO CONTRA UNA CONSTANTE. Que
+   * modos se pueden elegir (`pickup`, `to_agree`) son perillas ⚙️, y el modo
+   * por defecto tambien: exigir uno en el formulario dejaria afuera a quien
+   * publica sin pensar en el envio, que es la mayoria la primera vez.
+   */
+  const envio = validateShippingDeclaration(
+    {
+      ...(input.shippingMode === undefined ? {} : { shippingMode: input.shippingMode }),
+      ...(input.shippingCostAmount === undefined
+        ? {}
+        : { shippingCostAmount: input.shippingCostAmount }),
+    },
+    await getShippingSettings(),
+  );
+
   const creada = await listingRepo.insertListing({
     sellerId: seller.id,
+    shippingMode: envio.shippingMode,
+    shippingCostAmount: envio.shippingCostAmount,
     categoryId: input.categoryId,
     title: input.title,
     description: input.description,
@@ -315,7 +344,6 @@ export interface CatalogListing {
   currency: string;
   sizeValue: string;
   condition: listingRepo.ListingRow['condition'];
-<<<<<<< HEAD
   /**
    * Cuantas unidades quedan.
    *
@@ -326,8 +354,6 @@ export interface CatalogListing {
    * unicas, y estaba a un campo de distancia.
    */
   stock: number;
-=======
->>>>>>> origin/main
   sellerDisplayName: string;
   /**
    * Foto de portada, o `null` si la publicacion no tiene ninguna.
@@ -354,20 +380,29 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
   // pedirlas de a una seria el problema N+1.
   const portadas = await coverUrls(filas.map((row) => row.id));
 
-  return filas.map((row) => ({
+  return filas.map((row) => toCatalogListing(row, portadas.get(row.id) ?? null));
+}
+
+/**
+ * Fila de catalogo → ficha publica. Una sola definicion para la vitrina, la
+ * seccion de promocionadas y la tienda de un vendedor: si difirieran, la misma
+ * camiseta se veria distinta segun por donde se llegue.
+ */
+function toCatalogListing(
+  row: listingRepo.CatalogListingRow,
+  coverUrl: string | null,
+): CatalogListing {
+  return {
     id: row.id,
     title: row.title,
     priceAmount: row.priceAmount.toString(),
     currency: row.currency,
     sizeValue: row.sizeValue,
     condition: row.condition,
-<<<<<<< HEAD
     stock: row.stock,
-=======
->>>>>>> origin/main
     sellerDisplayName: row.sellerDisplayName,
-    coverUrl: portadas.get(row.id) ?? null,
-  }));
+    coverUrl,
+  };
 }
 
 /**
@@ -377,7 +412,6 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
  * ven a ~400px de ancho pero en pantallas de alta densidad eso son 800 fisicos,
  * y la miniatura se veria borrosa.
  */
-<<<<<<< HEAD
 /**
  * Portadas de varias publicaciones, en una sola consulta.
  *
@@ -391,9 +425,6 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
  * buscar por id; devolver una lista lo obligaria a recorrerla por cada fila.
  */
 export async function coverUrls(listingIds: string[]): Promise<Map<string, string>> {
-=======
-async function coverUrls(listingIds: string[]): Promise<Map<string, string>> {
->>>>>>> origin/main
   const imagenes = await imageRepo.findByListingIds(listingIds);
   const portadas = new Map<string, string>();
 
@@ -437,6 +468,27 @@ export interface PublicListingDetail extends CatalogListing {
   stock: number;
   /** Galeria completa, en orden. Vacia si la publicacion no tiene fotos. */
   images: { url: string; alt: string | null }[];
+  /**
+   * Quien vende.
+   *
+   * ⚠️ EL REPOSITORIO YA LOS TRAIA Y EL MAPPER LOS TIRABA. Sin `sellerId`, la
+   * ficha no puede mostrar la reputacion ni el nivel del vendedor, no puede
+   * decir en cuanto responde las preguntas, no puede esconderle el formulario
+   * de preguntas al propio dueño y —lo peor— nada enlaza a `/tienda/[sellerId]`:
+   * la tienda publica existia y era inalcanzable navegando.
+   */
+  sellerId: string;
+  /** `users.username`, si lo eligio. Hoy nadie lo tiene: no hay flujo que lo asigne. */
+  sellerUsername: string | null;
+  /**
+   * Como se resuelve el envio, YA RESUMIDO (modo + costo + etiqueta legible).
+   *
+   * ⚠️ SE RESUELVE ACA Y NO EN LA PANTALLA. Sin esto, `/comprar` y `/carrito`
+   * no podian decir "envío incluido" ni "a cargo del comprador" sin
+   * inventarlo, y una pantalla que interpreta `shipping_mode` a mano es una
+   * pantalla que el dia que el enum crezca dice algo que no es.
+   */
+  shipping: ShippingSummary;
 }
 
 /**
@@ -464,6 +516,9 @@ export async function findPublicListing(id: string): Promise<PublicListingDetail
     authenticity: row.authenticity,
     stock: row.stock,
     sellerDisplayName: row.sellerDisplayName,
+    sellerId: row.sellerId,
+    sellerUsername: row.sellerUsername,
+    shipping: shippingSummaryFor(row),
     // La ficha usa la variante grande; la portada del detalle es la primera.
     coverUrl: imagenes[0] === undefined ? null : urlDeVariante(imagenes[0], 'medium'),
     images: imagenes.flatMap((imagen) => {
@@ -473,7 +528,50 @@ export async function findPublicListing(id: string): Promise<PublicListingDetail
     }),
   };
 }
-<<<<<<< HEAD
+
+/** Una pagina del catalogo publico de un vendedor. */
+export interface SellerCatalogPage {
+  listings: CatalogListing[];
+  total: number;
+  pagina: number;
+  paginas: number;
+}
+
+/** Cuantas publicaciones entran en una pagina de la tienda publica. */
+const POR_PAGINA_DE_TIENDA = 24;
+
+/**
+ * El catalogo VISIBLE de un vendedor, paginado: la tienda publica (SS-020).
+ *
+ * ⚠️ USA EL MISMO FILTRO QUE LA VITRINA, asi que un vendedor desconectado de
+ * Mercado Pago, de vacaciones o sancionado tiene la tienda VACIA, no
+ * escondida: la pagina existe y explica por que no hay nada. Esconder la
+ * tienda entera dejaria un enlace roto en cada ficha que alguien compartio.
+ */
+export async function listPublicSellerCatalog(
+  sellerId: string,
+  opciones: { pagina?: number } = {},
+): Promise<SellerCatalogPage> {
+  const pagina = Math.max(1, Math.trunc(opciones.pagina ?? 1));
+
+  const [filas, total] = await Promise.all([
+    listingRepo.findPublicBySellerId(sellerId, {
+      limite: POR_PAGINA_DE_TIENDA,
+      offset: (pagina - 1) * POR_PAGINA_DE_TIENDA,
+      promotedFirst: true,
+    }),
+    listingRepo.countPublicBySellerId(sellerId),
+  ]);
+
+  const portadas = await coverUrls(filas.map((fila) => fila.id));
+
+  return {
+    listings: filas.map((fila) => toCatalogListing(fila, portadas.get(fila.id) ?? null)),
+    total,
+    pagina,
+    paginas: Math.max(1, Math.ceil(total / POR_PAGINA_DE_TIENDA)),
+  };
+}
 
 /** Cuantas publicaciones tiene el vendedor autenticado, por estado. */
 export interface ResumenDePublicaciones {
@@ -506,5 +604,54 @@ export async function countMyListings(user: PublicUser): Promise<ResumenDePublic
     total: filas.reduce((suma, fila) => suma + fila.cantidad, 0),
   };
 }
-=======
->>>>>>> origin/main
+
+/** Una entrada de catalogo tal como la vitrina la muestra: sin alias ni banderas internas. */
+export interface EntradaDeCatalogo {
+  id: string;
+  nombre: string;
+  slug: string;
+}
+
+/**
+ * El catalogo controlado completo, para la vitrina.
+ */
+export interface CatalogoDeLaVitrina {
+  clubes: EntradaDeCatalogo[];
+  marcas: EntradaDeCatalogo[];
+  temporadas: EntradaDeCatalogo[];
+  categorias: PublicCategory[];
+}
+
+/**
+ * Clubes, marcas, temporadas y categorias del catalogo controlado, en orden
+ * alfabetico.
+ *
+ * ⚠️ SON DATOS REALES Y SIEMPRE EXISTEN: las tablas las siembran las
+ * migraciones 0004 y 0007 (PS-023), asi que la home puede mostrar algo
+ * verdadero aunque la vitrina tenga una sola publicacion o ninguna. Antes cada
+ * seccion de la home dependia de las facetas de la busqueda —que se calculan
+ * sobre lo PUBLICADO— y un marketplace recien abierto quedaba con la portada y
+ * un hueco. El catalogo no dice cuantas camisetas hay de cada club: dice que
+ * clubes existen para buscar, que es lo que un atajo necesita.
+ */
+export async function catalogoDeLaVitrina(): Promise<CatalogoDeLaVitrina> {
+  const [clubes, marcas, temporadas, categorias] = await Promise.all([
+    catalogRepo.findActive('club'),
+    catalogRepo.findActive('brand'),
+    catalogRepo.findActive('season'),
+    listActiveCategories(),
+  ]);
+
+  const publica = (fila: catalogRepo.CatalogRow): EntradaDeCatalogo => ({
+    id: fila.id,
+    nombre: fila.name,
+    slug: fila.slug,
+  });
+
+  return {
+    clubes: clubes.map(publica),
+    marcas: marcas.map(publica),
+    temporadas: temporadas.map(publica),
+    categorias,
+  };
+}

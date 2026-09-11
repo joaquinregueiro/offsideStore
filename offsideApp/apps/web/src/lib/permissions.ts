@@ -24,6 +24,13 @@ import type { PublicUser } from '@/modules/auth/services/auth.service';
  * `MODERATOR`, `SUPPORT` y FINANCE-fuera-de-pagos quedan **declarados sin
  * capacidades**: el rol se puede asignar, pero hoy no habilita nada. Es
  * deliberado y no es un olvido.
+ *
+ * ⚠️ 2026-09-11: existen `disputes:resolve` y `trust:moderate`, y las tienen
+ * SOLO los dos roles generales. Que SUPPORT resuelva reclamos o que MODERATOR
+ * sancione suena natural por el nombre, pero "quien analiza" una disputa es
+ * TS-052 🟡 y la moderacion de vendedores no tiene politica escrita: darles la
+ * capacidad seria decidir eso desde el codigo. Cuando el owner lo cierre, es
+ * un cambio de una linea en el mapa y otra en el test.
  */
 
 export type AdminRole = NonNullable<PublicUser['adminRole']>;
@@ -48,6 +55,13 @@ export const CAPABILITIES = {
   PAYMENTS_REFUND: 'payments:refund',
   /** Leer y modificar el Config Store (`app_settings`, DEC-013/DEC-038). */
   SYSTEM_CONFIG_MANAGE: 'system_config:manage',
+  /**
+   * Revisar y resolver disputas (ERD §14, `trust-and-safety.md` §5), y leer
+   * cualquier disputa desde el back-office.
+   */
+  DISPUTES_RESOLVE: 'disputes:resolve',
+  /** Aplicar y levantar sanciones a vendedores (ERD §16.2). */
+  TRUST_MODERATE: 'trust:moderate',
 } as const;
 
 export type Capability = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];
@@ -66,6 +80,18 @@ const MAPA: Readonly<Record<Capability, readonly AdminRole[]>> = {
   // La configuracion cambia reglas de negocio para toda la plataforma —entre
   // ellas la comision—, asi que queda en los dos roles generales.
   'system_config:manage': ['SUPER_ADMIN', 'ADMIN'],
+  // ⚠️ Resolver con reembolso mueve dinero sin pasar por `payments:refund`;
+  // se acepta porque OR-001/OR-002 dicen que el refund SE ORIGINA en la
+  // resolucion y su importe LO FIJA la resolucion —la resolucion es la causa
+  // trazable, no un atajo—. SUPPORT no entra aunque el nombre lo sugiera:
+  // quien analiza sigue 🟡 en TS-052. FINANCE tampoco: su capacidad es el
+  // dinero, no el juicio sobre el reclamo.
+  'disputes:resolve': ['SUPER_ADMIN', 'ADMIN'],
+  // Sancionar a un vendedor es moderar (AR-006: "usuarios y suspensiones"),
+  // pero no hay politica escrita de moderacion: queda en los dos roles
+  // generales. Una sancion que nace de una disputa la aplica el flujo de
+  // resolucion con `disputes:resolve`, sin necesitar esta capacidad.
+  'trust:moderate': ['SUPER_ADMIN', 'ADMIN'],
 };
 
 /** Roles que tienen una capacidad. */

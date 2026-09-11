@@ -1,0 +1,550 @@
+/**
+ * EL CARRITO — lo que se guardo, agrupado por vendedor, y su checkout.
+ *
+ * ⚠️ ES LA ANTESALA DE UNA COMPRA Y SE MIDE CON LA MISMA VARA QUE `(compra)`:
+ * profundidad y direccion, pero el movimiento termina quieto y nunca ocurre
+ * encima de un importe que alguien esta leyendo. Un subtotal que late se lee
+ * como un subtotal que todavia no esta decidido.
+ *
+ * ⚠️ LAS SUPERFICIES NO SE ESCRIBEN A MANO. Elevacion, vidrio, grano y remapeo
+ * de tokens salen de `.sup-ficha`, `.sup-2` y `.sup-cancha` (tokens.css). Este
+ * archivo aporta unicamente lo que es propio del carrito.
+ *
+ * ⚠️ EL SELECTOR DE DIRECCION NO ESTA ACA. Lo pinta `(compra)/resumen.module.css`
+ * a traves de `<SelectorDeDireccion>`: es EL MISMO control en las dos pantallas,
+ * y duplicar su hoja es la forma de que dentro de seis meses la direccion se vea
+ * distinta segun por donde se entre.
+ *
+ * ⚠️ EL UNICO `@keyframes` LLEVA NOMBRE PROPIO. En un CSS Module los nombres son
+ * locales, asi que declarar aca uno que TAMBIEN exista en `movimiento.css`
+ * dejaria el global muerto sin que falle nada.
+ */
+
+/* ------------------------------------------------------------- la pagina */
+
+.pagina {
+  /* Mas ancha que `/comprar`: aca hay filas que comparar, no una sola decision. */
+  max-width: var(--ancho-medio);
+  /* `body > main` ya lo declara; se repite como defensa: el `margin: 0 auto`
+     cancela el `stretch` del body flex y el main se encoge a su contenido. */
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--espacio-7) var(--canal) var(--espacio-9);
+}
+
+@media (max-width: 480px) {
+  .pagina {
+    padding-top: var(--espacio-6);
+    padding-bottom: var(--espacio-8);
+  }
+}
+
+.cabecera {
+  margin-bottom: var(--espacio-6);
+}
+
+.titulo {
+  font-size: var(--texto-3xl);
+  text-transform: uppercase;
+  /* Garantia de 320px: una palabra mas larga que la columna empujaria la pagina. */
+  overflow-wrap: anywhere;
+}
+
+/** Filete de la identidad debajo del titulo. Es FORMA: no lleva texto encima. */
+.reglaTitulo {
+  display: block;
+  width: 96px;
+  height: 6px;
+  margin-top: var(--espacio-3);
+  transform-origin: left center;
+  background-image: var(--degradado-acento);
+}
+
+/**
+ * ⚠️ LA ANIMACION ES UNA CLASE APARTE Y NO VA PEGADA AL FILETE, igual que en
+ * `(compra)`: la pantalla decide si anima, el filete no.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .reglaTituloAnimada {
+    animation: trazarRielCarrito var(--dur-escena) var(--curva-corte) both;
+  }
+}
+
+.resumenCabecera {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+.subtitulo {
+  font-size: var(--texto-xl);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  margin: var(--espacio-8) 0 var(--espacio-5);
+}
+
+/* ---------------------------------------------------- grupos por vendedor */
+
+/**
+ * ⚠️ CADA VENDEDOR ES UNA TARJETA, Y ESO ES INFORMACION, NO DECORACION: DEC-026
+ * dice que una orden es de un solo vendedor, asi que cada tarjeta de esta
+ * pantalla es literalmente una orden futura y un pago aparte.
+ */
+.grupo {
+  margin-bottom: var(--espacio-5);
+  padding: var(--espacio-5);
+  border-radius: var(--radio-ficha);
+}
+
+.grupoCabecera {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  padding-bottom: var(--espacio-4);
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.grupoTitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  font-size: var(--texto-lg);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.grupoTitulo svg {
+  flex: none;
+  color: var(--color-cancha);
+}
+
+.lineas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------ una linea */
+
+.linea {
+  display: flex;
+  gap: var(--espacio-4);
+  padding: var(--espacio-4) 0;
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.linea:last-child {
+  border-bottom: 0;
+}
+
+/**
+ * ⚠️ LO QUE NO SE PUEDE COMPRAR SE MARCA, NO SE ESCONDE NI SE APAGA. Bajarle la
+ * opacidad al texto arruinaria el contraste del titulo y del precio; el asta
+ * naranja a la izquierda dice "esto frena la compra" sin tocar la legibilidad, y
+ * la linea de abajo lo dice ademas con palabras.
+ */
+.linea[data-problema='si'] {
+  border-left: 4px solid var(--color-alerta);
+  padding-left: var(--espacio-4);
+  margin-left: calc(var(--espacio-4) * -1);
+}
+
+.lineaMarco {
+  flex: none;
+  width: 84px;
+  height: 105px;
+  border-radius: var(--radio-chico);
+  overflow: hidden;
+  display: block;
+}
+
+.lineaMarco:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.lineaFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/** Hueco sin foto: el rombo de la identidad, no un cuadrado gris. */
+.lineaPatron {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(--superficie-marca);
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+  /*
+    ⚠️ LA RECETA SE ESCRIBE ACA Y NO SE USA `var(--patron-rombos)`: esa custom
+    property esta declarada en `:root` CONTENIENDO `var(--patron-color)`, y el
+    valor computado ya lleva sus `var()` sustituidos, asi que redefinir el color
+    en este elemento no cambiaria una sola pieza.
+  */
+  --patron-color: color-mix(in oklab, var(--color-cancha) 22%, transparent);
+  background-image:
+    linear-gradient(45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--patron-color) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--patron-color) 75%);
+}
+
+.lineaCuerpo {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.lineaTitulo {
+  margin: 0;
+  font-weight: var(--peso-semi);
+  overflow-wrap: anywhere;
+}
+
+.lineaTitulo a,
+.lineaTitulo a:hover {
+  color: inherit;
+}
+
+.lineaPrecio {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.lineaPorUnidad {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  letter-spacing: normal;
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * ⚠️ EL CAMBIO DE PRECIO ES UN DATO, NO UNA ALARMA: va en el naranja de texto
+ * (`--color-alerta`, 4.88:1 sobre blanco) y NO se anima. El precio del carrito
+ * no esta congelado —BR-023— y enterarse tarde es el peor momento.
+ */
+.lineaCambio {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-alerta);
+}
+
+.lineaProblema {
+  margin: 0;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  color: var(--color-alerta);
+}
+
+.lineaAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-2);
+}
+
+/**
+ * ⚠️ 44px DE ALTO Y 16px DE TEXTO. Abajo de 16px iOS hace zoom al enfocar un
+ * control y despues no lo deshace; abajo de 44px el area tactil queda por
+ * debajo del minimo.
+ */
+.cantidadSelect {
+  min-height: var(--alto-control);
+  min-width: 4.5rem;
+  padding: 0 var(--espacio-3);
+  font: inherit;
+  font-size: var(--texto-base);
+  color: var(--color-tinta);
+  background: var(--superficie-1);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio-chico);
+}
+
+.cantidadSelect:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.lineaSubtotal {
+  flex: none;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--espacio-1);
+  text-align: right;
+}
+
+.lineaSubtotalRotulo {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-tenue);
+}
+
+.lineaSubtotalValor {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/**
+ * ⚠️ EN TELEFONO EL SUBTOTAL BAJA, NO SE ACHICA. Con tres columnas a 375px la
+ * del medio queda en 90px y el titulo se parte en seis lineas.
+ */
+@media (max-width: 560px) {
+  .linea {
+    flex-wrap: wrap;
+  }
+
+  .lineaSubtotal {
+    width: 100%;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+
+/* ---------------------------------------------------------- pie del grupo */
+
+.grupoPie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.grupoEnvio {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  max-width: 46ch;
+}
+
+.grupoSubtotal {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--espacio-3);
+  font-size: var(--texto-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-tenue);
+}
+
+.grupoSubtotal strong {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-tinta);
+}
+
+/* ------------------------------------------------------------- el cierre */
+
+.cierre {
+  margin-top: var(--espacio-6);
+  padding: var(--espacio-5);
+  border-radius: var(--radio);
+}
+
+.totalFila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.totalRotulo {
+  font-size: var(--texto-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ EL TOTAL PUEDE ENTRAR, NUNCA PUEDE ESTAR EN MOVIMIENTO. `cifra-entra` lo
+ * levanta UNA VEZ detras de su mascara mostrando el valor FINAL desde el primer
+ * cuadro: es la plata que la persona esta por transferirle a un desconocido.
+ */
+.totalValor {
+  display: inline-block;
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.totalNota {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+/* --------------------------------------------------- barra pegada al pie */
+
+/**
+ * ⚠️ MISMA PIEZA QUE EN `/comprar`, Y VA COMO `pie` DEL FORMULARIO: un `sticky`
+ * con `bottom: 0` cerca del final de un contenedor largo queda clavado abajo
+ * desde el primer cuadro y se suelta al llegar al final. Sin esto, en un
+ * telefono se completa la direccion entera sin volver a ver cuanto se va a
+ * pagar.
+ */
+.barraCompra {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-pegado);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-4);
+  padding: var(--espacio-4) var(--espacio-5);
+  padding-bottom: max(var(--espacio-4), env(safe-area-inset-bottom, 0px));
+  border-radius: var(--radio);
+}
+
+.barraRotulo {
+  font-size: var(--texto-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-sobre-cancha);
+}
+
+.barraTotal {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-papel);
+}
+
+.nota {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-5);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  text-align: left;
+}
+
+.nota svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ------------------------------------------------------- ordenes creadas */
+
+.ordenes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.orden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5);
+  border-radius: var(--radio-ficha);
+}
+
+.ordenDatos {
+  flex: 1 1 14rem;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.ordenNumero {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  font-weight: var(--peso-semi);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.ordenNumero svg {
+  flex: none;
+  color: var(--color-cancha);
+}
+
+.ordenTotal {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------- el esqueleto */
+
+/**
+ * ⚠️ CALCA LA FORMA REAL DE UNA LINEA: foto de 84×105 a la izquierda y tres
+ * barras de texto. Un esqueleto con proporciones inventadas produce un salto
+ * cuando llega el contenido, que es peor que no poner nada.
+ */
+.fantasma {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.fantasmaLinea {
+  display: flex;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5);
+  border-radius: var(--radio-ficha);
+  background: var(--superficie-1);
+  border: 1px solid var(--linea-tenue);
+}
+
+.fantasmaTexto {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+/* ======================================================= keyframes locales */
+
+/** Sin `to`: el valor final es la escala 1 del elemento. */
+@keyframes trazarRielCarrito {
+  from {
+    transform: scaleX(0);
+  }
+}

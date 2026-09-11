@@ -731,3 +731,152 @@ span.cifra {
   line-height: var(--interlineado-lectura);
   color: var(--color-sobre-cancha);
 }
+
+/* ------------------------------------------- niveles y promoción (2026-09-11) */
+
+/**
+ * Los dos bloques nuevos de "La plata": niveles de vendedor y promocionadas.
+ *
+ * ⚠️ VIVEN DENTRO DE LA SUPERFICIE NOCHE, asi que todo lo que escriben tiene que
+ * usar los tokens PARA FONDO OSCURO. `--color-neutro-texto` acá sería gris sobre
+ * casi negro; los que valen son `--color-sobre-oscuro-2` y `--color-papel`, que
+ * es lo que ya usa `.plataTexto` al lado.
+ *
+ * ⚠️ EL SEPARADOR ES EL MISMO QUE ENTRE PARRAFOS (`.plataTexto + .plataTexto`),
+ * para que la sección se lea como una sola columna y no como tres cajas
+ * apiladas.
+ */
+.bloqueNiveles {
+  margin-top: var(--espacio-5);
+  padding-top: var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue-oscura);
+}
+
+.plataSubtitulo {
+  margin: 0 0 var(--espacio-4);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  color: var(--color-papel);
+}
+
+/**
+ * ⚠️ NO ES UNA TABLA. Son tres o cuatro niveles con una tasa y un umbral: una
+ * tabla obligaría a encabezados, scroll horizontal en teléfono y un `<caption>`
+ * para algo que se lee mejor como fichas. La `InsigniaDeNivel` ya trae el nombre
+ * y la tasa juntos, que es el par que importa.
+ */
+.niveles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: var(--espacio-4);
+}
+
+.nivel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  padding: var(--espacio-4);
+  border: 1px solid var(--linea-tenue-oscura);
+  border-radius: var(--radio);
+}
+
+.nivelDetalle {
+  margin: 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-sobre-oscuro-2);
+}
+
+/* ---------------------------------------------- confianza y envío (2026-09-11) */
+
+/**
+ * ⚠️ DOS COLUMNAS QUE SE VUELVEN UNA SIN BREAKPOINT ESCRITO A MANO. `auto-fit` +
+ * `minmax(min(100%, …))` es el mismo patrón que la grilla del catálogo: a 320px
+ * el `min(100%, …)` impide que una columna de 320 empuje el documento.
+ */
+.dobleColumna {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--espacio-bloque);
+}
+
+.bloqueTexto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.bloqueTitulo {
+  margin: 0;
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  color: var(--color-tinta);
+}
+
+.bloqueParrafo {
+  margin: 0;
+  max-width: var(--ancho-lectura);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.bloqueParrafo strong {
+  font-weight: var(--peso-semi);
+  color: var(--color-tinta);
+}
+
+/**
+ * LOS CUATRO MODOS DE ENVÍO.
+ *
+ * ⚠️ EL ROMBO ES LLENO Y NO HUECO, al revés que el de "lo que falta": estos
+ * cuatro modos SÍ existen y funcionan. Es el mismo vocabulario de forma que usa
+ * la primitiva `Pasos` —lleno = hecho, hueco = pendiente— y por eso no se puede
+ * elegir por estética.
+ */
+.modos {
+  list-style: none;
+  margin: var(--espacio-bloque) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.modo {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  align-items: baseline;
+  gap: var(--espacio-4);
+  padding-block: var(--espacio-4);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.modo:last-child {
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.modoMarca {
+  width: 10px;
+  height: 10px;
+  background-color: var(--color-cancha);
+  rotate: 45deg;
+}
+
+.modoNombre {
+  font-weight: var(--peso-semi);
+  color: var(--color-tinta);
+}
+
+/**
+ * ⚠️ ARRANCA EN LA SEGUNDA COLUMNA (`grid-column: 2`). Sin eso, el texto "es lo
+ * que rige" cae debajo del rombo y la lista pierde la alineación de la izquierda,
+ * que es lo único que la hace legible de un vistazo.
+ */
+.modoDefecto {
+  grid-column: 2;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}

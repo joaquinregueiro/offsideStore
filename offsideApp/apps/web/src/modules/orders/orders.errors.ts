@@ -8,17 +8,10 @@ import { AuthError } from '../auth/auth.errors';
  */
 
 export const listingNotAvailable = (): AuthError =>
-<<<<<<< HEAD
   new AuthError('LISTING_NOT_AVAILABLE', 'Esa publicación ya no está a la venta');
 
 export const listingOutOfStock = (): AuthError =>
   new AuthError('LISTING_OUT_OF_STOCK', 'No queda stock suficiente');
-=======
-  new AuthError('LISTING_NOT_AVAILABLE', 'La publicacion no esta disponible para comprar');
-
-export const listingOutOfStock = (): AuthError =>
-  new AuthError('LISTING_OUT_OF_STOCK', 'No hay stock suficiente para esa cantidad');
->>>>>>> origin/main
 
 /**
  * El vendedor no puede operar.
@@ -28,16 +21,35 @@ export const listingOutOfStock = (): AuthError =>
  * vendedor.
  */
 export const sellerNotOperational = (): AuthError =>
-<<<<<<< HEAD
   new AuthError('SELLER_NOT_OPERATIONAL', 'Este vendedor no puede recibir compras en este momento');
 
 /** Comprar la propia publicacion. */
 export const cannotBuyOwnListing = (): AuthError =>
   new AuthError('FORBIDDEN', 'No podés comprar tu propia publicación');
-=======
-  new AuthError('SELLER_NOT_OPERATIONAL', 'El vendedor no puede recibir compras en este momento');
 
-/** Comprar la propia publicacion. */
-export const cannotBuyOwnListing = (): AuthError =>
-  new AuthError('FORBIDDEN', 'No podes comprar tu propia publicacion');
->>>>>>> origin/main
+/**
+ * La orden no existe o no es de quien pregunta.
+ *
+ * ⚠️ UN SOLO ERROR PARA LOS DOS CASOS: distinguirlos permitiria enumerar
+ * ordenes ajenas. Mismo criterio que `payments.startCheckout` y `getMyOrder`.
+ */
+export const orderNotFound = (): AuthError =>
+  new AuthError('ORDER_NOT_FOUND', 'No encontramos esa orden');
+
+/**
+ * La orden esta en un estado desde el que esa accion no se puede hacer
+ * (DEC-029: la maquina de estados de `order-transitions.ts`).
+ *
+ * ⚠️ Reusa `ORDER_NOT_PAYABLE` (409) porque `AuthErrorCode` es una union
+ * cerrada en `auth.errors.ts` y no es de este paquete. Pedido: un codigo
+ * `ORDER_INVALID_TRANSITION` con 409 en `lib/http.ts`.
+ */
+export const orderInvalidTransition = (accion: string): AuthError =>
+  new AuthError('ORDER_NOT_PAYABLE', `Esta orden no se puede ${accion} en su estado actual`);
+
+/** El vendedor tiene que decir por que cancela: queda en el historial y en la auditoria. */
+export const cancelReasonRequired = (): AuthError =>
+  new AuthError(
+    'VALIDATION_FAILED',
+    'Contanos el motivo de la cancelación (entre 5 y 500 caracteres)',
+  );

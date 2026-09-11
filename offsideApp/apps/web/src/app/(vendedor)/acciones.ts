@@ -5,16 +5,10 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
-<<<<<<< HEAD
 import { respuestaDeError } from '@/lib/errores';
 import type { EstadoFormulario } from '@/lib/formulario';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import type { PublicUser } from '@/modules/auth/services/auth.service';
-=======
-import { requireVerifiedSessionUser } from '@/lib/session';
-import type { PublicUser } from '@/modules/auth/services/auth.service';
-import { AuthError } from '@/modules/auth/auth.errors';
->>>>>>> origin/main
 import { createSellerProfileSchema, submitTaxIdentitySchema } from '@/modules/auth/auth.schemas';
 import {
   deleteListing,
@@ -28,12 +22,21 @@ import {
   deleteImage,
   uploadImage,
 } from '@/modules/listings/services/listing-image.service';
+import { promoteListing } from '@/modules/listings/services/promotion.service';
+import { cancelBySeller, markShipped } from '@/modules/orders/services/order.service';
+import { answerQuestion, hideQuestion } from '@/modules/questions/services/question.service';
+import { REPLY_MAX_LENGTH, replyToReview } from '@/modules/reviews/services/review.service';
+import { respondAsSeller } from '@/modules/disputes/services/dispute.service';
 import {
   disconnect,
   startConnection,
 } from '@/modules/sellers/services/mercadopago-connection.service';
-import { createSellerProfile } from '@/modules/sellers/services/seller.service';
+import {
+  createSellerProfile,
+  updateMySellerProfile,
+} from '@/modules/sellers/services/seller.service';
 import { submitTaxIdentity } from '@/modules/sellers/services/seller-tax-profile.service';
+import { setVacation } from '@/modules/sellers/services/vacation.service';
 
 /**
  * Server Actions del vendedor.
@@ -61,19 +64,12 @@ import { submitTaxIdentity } from '@/modules/sellers/services/seller-tax-profile
  * poder publicar.
  */
 
-<<<<<<< HEAD
 /**
  * ⚠️ ES UN ALIAS DEL CONTRATO COMPARTIDO. Era un tipo propio con solo `error`,
  * asi que este grupo no podia devolver errores por campo ni conservar lo
  * tipeado aunque el formulario ya supiera mostrarlos.
  */
 export type EstadoVendedor = EstadoFormulario;
-=======
-export interface EstadoVendedor {
-  error?: string;
-  ok?: string;
-}
->>>>>>> origin/main
 
 /**
  * Lee un campo del formulario.
@@ -89,21 +85,6 @@ function texto(formData: FormData, nombre: string): string | undefined {
   return typeof valor === 'string' && valor !== '' ? valor : undefined;
 }
 
-<<<<<<< HEAD
-=======
-function mensajeDeError(error: unknown): string {
-  if (error instanceof z.ZodError) {
-    return error.issues[0]?.message ?? 'Revisá los datos ingresados.';
-  }
-
-  if (error instanceof AuthError) return error.message;
-
-  console.error('[vendedor] error inesperado en una accion:', error);
-
-  return 'Tuvimos un problema. Probá de nuevo en un momento.';
-}
-
->>>>>>> origin/main
 /* ------------------------------------------------------------------ alta -- */
 
 /**
@@ -131,7 +112,6 @@ export async function habilitarVendedor(
       displayName: texto(formData, 'displayName'),
       bio: texto(formData, 'bio'),
       shippingPolicy: texto(formData, 'shippingPolicy'),
-<<<<<<< HEAD
       /*
        * La casilla llega como `'on'` o no llega. El schema exige `true`.
        *
@@ -141,15 +121,10 @@ export async function habilitarVendedor(
        * encontraba ninguno: el alta sin tildar quedaba sin marca en el control.
        */
       acceptedSellerTerms: texto(formData, 'acceptedSellerTerms') !== undefined,
-=======
-      // La casilla llega como `'on'` o no llega. El schema exige `true`.
-      acceptedSellerTerms: texto(formData, 'terminos') !== undefined,
->>>>>>> origin/main
     });
 
     await createSellerProfile(user, input);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -165,9 +140,6 @@ export async function habilitarVendedor(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor');
@@ -197,7 +169,6 @@ export async function declararIdentidadFiscal(
 
     await submitTaxIdentity(user, input);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -213,9 +184,6 @@ export async function declararIdentidadFiscal(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor');
@@ -247,12 +215,8 @@ export async function conectarMercadoPago(
     const { authorizationUrl } = await startConnection(user);
     destino = authorizationUrl;
   } catch (error) {
-<<<<<<< HEAD
     // Esta accion no recibe campos: no hay nada que preservar.
     return respuestaDeError(error, { ambito: 'vendedor' });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect(destino);
@@ -275,11 +239,7 @@ export async function desconectarMercadoPago(
 
     await disconnect(user);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, { ambito: 'vendedor' });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor/mercadopago?status=disconnected');
@@ -326,6 +286,26 @@ const publicarSchema = z.object({
   brandId: z.string().uuid().optional(),
   competitionId: z.string().uuid().optional(),
   seasonId: z.string().uuid().optional(),
+  /**
+   * Envio DECLARADO por el vendedor (delta al ERD §11).
+   *
+   * ⚠️ ES `string` Y NO UN ENUM CERRADO, A PROPOSITO. Los modos permitidos
+   * dependen del Config Store (`shipping_pickup_allowed`,
+   * `shipping_to_agree_allowed`) y quien decide es
+   * `validateShippingDeclaration`, adentro del Service. Copiar la lista aca
+   * seria una segunda definicion de que envio es valido, y la que se olvida de
+   * actualizarse siempre es la copia.
+   */
+  shippingMode: z.string().trim().max(32).optional(),
+  /**
+   * ⚠️ EN PESOS, COMO EL PRECIO, y por el mismo motivo: no se le puede pedir a
+   * una persona que escriba centavos. La conversion a `bigint` es la misma.
+   */
+  shippingCostPesos: z.coerce
+    .number()
+    .nonnegative('El costo del envío no puede ser negativo')
+    .max(PRECIO_MAXIMO_PESOS, 'Ese costo de envío es demasiado alto')
+    .optional(),
 });
 
 /**
@@ -358,14 +338,13 @@ export async function publicar(
       brandId: texto(formData, 'brandId'),
       competitionId: texto(formData, 'competitionId'),
       seasonId: texto(formData, 'seasonId'),
+      shippingMode: texto(formData, 'shippingMode'),
+      shippingCostPesos: texto(formData, 'shippingCostPesos'),
     });
 
-<<<<<<< HEAD
     // Al publicar los cinco selectores de catalogo SI estan en el formulario,
     // asi que se mandan derecho: aca `null` significa "el vendedor no eligio
     // ninguno", que es un valor legitimo y no una perdida de dato.
-=======
->>>>>>> origin/main
     const listing = await publishListing(user, {
       categoryId: input.categoryId,
       title: input.title,
@@ -381,6 +360,16 @@ export async function publicar(
       brandId: input.brandId ?? null,
       competitionId: input.competitionId ?? null,
       seasonId: input.seasonId ?? null,
+      /*
+       * ⚠️ `undefined` Y `null` SIGNIFICAN COSAS DISTINTAS ACA. Ausente = "el
+       * vendedor no eligio", y el Service cae al `shipping_default_mode` del
+       * Config Store; mandar `null` explicito le pediria al validador que trate
+       * un campo vacio como una eleccion. Por eso van por spread y no con `??`.
+       */
+      ...(input.shippingMode === undefined ? {} : { shippingMode: input.shippingMode }),
+      ...(input.shippingCostPesos === undefined
+        ? {}
+        : { shippingCostAmount: BigInt(Math.round(input.shippingCostPesos * 100)) }),
     });
 
     /**
@@ -410,7 +399,6 @@ export async function publicar(
       };
     }
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -424,11 +412,10 @@ export async function publicar(
         'bio',
         'shippingPolicy',
         'taxId',
+        'shippingMode',
+        'shippingCostPesos',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/vendedor/publicaciones');
@@ -512,7 +499,6 @@ export async function agregarFotos(
       return { ok: 'Listo, subimos las fotos. Tu publicación ya está a la venta.' };
     }
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -528,9 +514,6 @@ export async function agregarFotos(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -559,7 +542,6 @@ export async function borrarFoto(
 
     await deleteImage(user, input.listingId, input.imageId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -575,9 +557,6 @@ export async function borrarFoto(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -620,7 +599,6 @@ const editarSchema = z.object({
   seasonId: z.string().uuid().optional(),
 });
 
-<<<<<<< HEAD
 /** Las cinco referencias de catalogo que puede llevar una publicacion. */
 const CLAVES_DE_CATALOGO = [
   'clubId',
@@ -671,8 +649,6 @@ function catalogoAEscribir(
   return salida;
 }
 
-=======
->>>>>>> origin/main
 export async function editar(_estado: EstadoVendedor, formData: FormData): Promise<EstadoVendedor> {
   try {
     const user = await requireVerifiedSessionUser();
@@ -704,7 +680,6 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
-<<<<<<< HEAD
       ...catalogoAEscribir(formData, input),
     });
   } catch (error) {
@@ -723,16 +698,6 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
         'taxId',
       ],
     });
-=======
-      clubId: input.clubId ?? null,
-      nationalTeamId: input.nationalTeamId ?? null,
-      brandId: input.brandId ?? null,
-      competitionId: input.competitionId ?? null,
-      seasonId: input.seasonId ?? null,
-    });
-  } catch (error) {
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -751,7 +716,6 @@ export async function pausar(_estado: EstadoVendedor, formData: FormData): Promi
 
     await pauseListing(user, listingId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -767,9 +731,6 @@ export async function pausar(_estado: EstadoVendedor, formData: FormData): Promi
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -789,7 +750,6 @@ export async function reactivar(
 
     await resumeListing(user, listingId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -805,9 +765,6 @@ export async function reactivar(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
@@ -834,7 +791,6 @@ export async function eliminar(
 
     await deleteListing(user, listingId);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, {
       ambito: 'vendedor',
       formData,
@@ -850,12 +806,465 @@ export async function eliminar(
         'taxId',
       ],
     });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   revalidatePath('/vendedor/publicaciones');
 
   return { ok: 'La eliminamos.' };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ciclo de la venta, promociones y tienda (2026-09-11)                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Campos que se devuelven cuando una de las acciones nuevas falla.
+ *
+ * ⚠️ ES UNA LISTA APARTE Y NO LA DE ARRIBA. La de publicar preserva precio,
+ * stock y talle; acá lo que se pierde al fallar es un numero de seguimiento
+ * tipeado a mano desde el celular, el motivo de una cancelacion o la respuesta
+ * a una reseña. Mezclarlas obligaria a mantener una lista de veinte claves que
+ * ninguna pantalla usa entera.
+ *
+ * ⚠️ NO LLEVA NINGUN CAMPO SENSIBLE, y ademas `valoresDelFormulario` filtra las
+ * claves prohibidas por su cuenta: dos redes, porque devolver un valor al
+ * cliente lo deja escrito en el HTML de la respuesta.
+ */
+const PRESERVAR_PANEL = [
+  'carrier',
+  'trackingNumber',
+  'motivo',
+  'texto',
+  'respuesta',
+  'displayName',
+  'bio',
+  'shippingPolicy',
+  'hasta',
+] as const;
+
+const ordenSchema = z.object({ orderId: z.string().uuid() });
+
+/**
+ * SS-080 — el vendedor despacha y declara CON QUIEN y CON QUE NUMERO.
+ *
+ * ⚠️ LOS DOS SON OBLIGATORIOS Y NO ES UNA FORMALIDAD. Sin transportista y sin
+ * seguimiento el comprador no tiene forma de saber donde esta su paquete, y una
+ * disputa de "no lo recibi" se queda sin la unica evidencia que SH-002 usa para
+ * resolverla. El Service los exige igual; el schema lo dice en el borde, donde
+ * la persona escribe.
+ *
+ * ⚠️ EL TRANSPORTISTA SALE DE `shipping_carriers` (⚙️ Config Store), asi que el
+ * schema solo comprueba que haya algo: la lista cerrada la valida
+ * `requireCarrier` contra la configuracion. Copiar los codigos acá seria fijar
+ * en el codigo un catalogo que existe para poder cambiarse sin redeploy.
+ */
+const despacharSchema = ordenSchema.extend({
+  carrier: z.string().trim().min(1, 'Elegí con qué transportista lo despachaste'),
+  trackingNumber: z
+    .string()
+    .trim()
+    .min(3, 'Ingresá el número de seguimiento que te dio el transportista')
+    .max(64, 'Ese número de seguimiento es demasiado largo'),
+});
+
+export async function despachar(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('order-ship', user.id);
+
+    const input = despacharSchema.parse({
+      orderId: texto(formData, 'orderId'),
+      carrier: texto(formData, 'carrier'),
+      trackingNumber: texto(formData, 'trackingNumber'),
+    });
+
+    /*
+     * ⚠️ LA PROPIEDAD DE LA ORDEN LA VERIFICA EL SERVICE, no esta accion:
+     * `markShipped` resuelve el perfil POR `user.id` y compara contra
+     * `order.sellerId`. Repetir la regla acá seria arriesgarse a que las dos
+     * copias se separen — el mismo criterio que ya usan `publicar` y `editar`.
+     */
+    await markShipped(user, input.orderId, {
+      carrier: input.carrier,
+      trackingNumber: input.trackingNumber,
+    });
+
+    revalidatePath(`/vendedor/ventas/${input.orderId}`);
+    revalidatePath('/vendedor/ventas');
+  } catch (error) {
+    return respuestaDeError(error, {
+      ambito: 'vendedor',
+      formData,
+      preservar: PRESERVAR_PANEL,
+    });
+  }
+
+  return { ok: 'Marcamos la venta como despachada. El comprador ya puede seguir el envío.' };
+}
+
+/**
+ * SS-081 — el vendedor cancela una venta que todavia no despacho.
+ *
+ * ⚠️ SOLO ANTES DE DESPACHAR, y eso NO lo decide esta accion: lo decide la
+ * maquina de estados (`canTransition`). Una orden ya despachada no se cancela,
+ * se reclama.
+ *
+ * ⚠️ EL MOTIVO ES OBLIGATORIO PORQUE QUEDA EN EL HISTORIAL DE LA ORDEN Y EN
+ * `audit_log`. Una cancelacion del vendedor le cuesta la compra a alguien que
+ * ya pago: "sin motivo" no es una respuesta aceptable para el comprador ni para
+ * quien despues tenga que resolver el reembolso.
+ */
+const cancelarVentaSchema = ordenSchema.extend({
+  motivo: z
+    .string()
+    .trim()
+    .min(5, 'Contá en una línea por qué la cancelás')
+    .max(500, 'El motivo es demasiado largo'),
+});
+
+export async function cancelarVenta(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('order-cancel', user.id);
+
+    const input = cancelarVentaSchema.parse({
+      orderId: texto(formData, 'orderId'),
+      motivo: texto(formData, 'motivo'),
+    });
+
+    await cancelBySeller(user, input.orderId, input.motivo);
+
+    revalidatePath(`/vendedor/ventas/${input.orderId}`);
+    revalidatePath('/vendedor/ventas');
+  } catch (error) {
+    return respuestaDeError(error, {
+      ambito: 'vendedor',
+      formData,
+      preservar: PRESERVAR_PANEL,
+    });
+  }
+
+  return {
+    ok: 'Cancelamos la venta y repusimos el stock. El reembolso lo gestiona Offside.',
+  };
+}
+
+/**
+ * El vendedor promociona una publicacion.
+ *
+ * ⚠️ NO SE PUEDE CANCELAR ANTES DE TIEMPO, y la pantalla lo dice ANTES de que
+ * se apriete. El motivo no es burocratico: sin eso, alguien promociona para
+ * figurar primero, se lleva las visitas y cancela justo antes de vender para no
+ * pagar la comision agravada. Terminarla es una accion de Admin, con motivo y
+ * auditoria.
+ */
+export async function promocionar(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  let listingId: string;
+
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-promote', user.id);
+
+    listingId = publicacionSchema.parse({ listingId: texto(formData, 'listingId') }).listingId;
+
+    await promoteListing(user, listingId);
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'vendedor', formData, preservar: PRESERVAR_PANEL });
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+  revalidatePath('/vendedor/promociones');
+
+  redirect('/vendedor/promociones');
+}
+
+/* ------------------------------------------------------------- preguntas -- */
+
+const preguntaSchema = z.object({ questionId: z.string().uuid() });
+
+/**
+ * Responder una pregunta (PS-031).
+ *
+ * ⚠️ LA RESPUESTA ES PUBLICA: queda en la ficha de la publicacion para todos,
+ * no es un mensaje privado. La pantalla lo dice; la accion no puede hacerlo
+ * cumplir de otra forma.
+ *
+ * ⚠️ EL LARGO MAXIMO REAL LO FIJA EL CONFIG STORE (`questions_max_length`) y lo
+ * valida el Service. Acá solo se exige que no venga vacia: escribir el numero
+ * en este schema seria hardcodear un valor ⚙️ que existe para poder cambiarse
+ * desde Admin.
+ */
+const responderPreguntaSchema = preguntaSchema.extend({
+  texto: z.string().trim().min(1, 'Escribí la respuesta'),
+});
+
+export async function responderPregunta(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('question-answer', user.id);
+
+    const input = responderPreguntaSchema.parse({
+      questionId: texto(formData, 'questionId'),
+      texto: texto(formData, 'texto'),
+    });
+
+    await answerQuestion(user, input.questionId, input.texto);
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'vendedor', formData, preservar: PRESERVAR_PANEL });
+  }
+
+  revalidatePath('/vendedor/preguntas');
+
+  return { ok: 'Respondida. Ya se ve en la publicación.' };
+}
+
+/**
+ * Ocultar una pregunta.
+ *
+ * ⚠️ OCULTAR NO ES RESPONDER: saca la pregunta de la ficha y de la bandeja sin
+ * contestarla. Es para lo que no es una pregunta —insultos, spam—, y por eso la
+ * pantalla la ofrece en segundo plano y en dos pasos.
+ */
+export async function ocultarPregunta(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('question-answer', user.id);
+
+    const { questionId } = preguntaSchema.parse({ questionId: texto(formData, 'questionId') });
+
+    await hideQuestion(user, questionId);
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'vendedor', formData, preservar: PRESERVAR_PANEL });
+  }
+
+  revalidatePath('/vendedor/preguntas');
+
+  return { ok: 'La ocultamos: ya no se ve en la publicación.' };
+}
+
+/* -------------------------------------------------------------- reseñas -- */
+
+/**
+ * Responder una reseña recibida (SS-022).
+ *
+ * ⚠️ SE RESPONDE UNA SOLA VEZ Y NO SE PUEDE EDITAR. Lo hace cumplir el Service
+ * —`replyAlreadyExists`— con un UPDATE condicionado, asi que dos envios
+ * simultaneos tampoco pisan la respuesta. La pantalla lo avisa antes.
+ *
+ * ⚠️ RESPONDER NO CAMBIA LA NOTA. Ni recalcula la reputacion ni emite ningun
+ * hecho: la calificacion es del comprador y la respuesta es contexto.
+ */
+const responderReseniaSchema = z.object({
+  reviewId: z.string().uuid(),
+  respuesta: z
+    .string()
+    .trim()
+    .min(1, 'Escribí tu respuesta')
+    .max(REPLY_MAX_LENGTH, 'La respuesta es demasiado larga'),
+});
+
+export async function responderResenia(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('review-reply', user.id);
+
+    const input = responderReseniaSchema.parse({
+      reviewId: texto(formData, 'reviewId'),
+      respuesta: texto(formData, 'respuesta'),
+    });
+
+    await replyToReview(user, input.reviewId, input.respuesta);
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'vendedor', formData, preservar: PRESERVAR_PANEL });
+  }
+
+  revalidatePath('/vendedor/reputacion');
+
+  return { ok: 'Publicamos tu respuesta.' };
+}
+
+/* -------------------------------------------------------------- reclamos -- */
+
+/**
+ * El vendedor responde un reclamo abierto en su contra.
+ *
+ * ⚠️ EL PLAZO CORRE Y NO RESPONDER TIENE CONSECUENCIA: pasado
+ * `dispute_seller_response_days` el reclamo escala a revision de Offside con lo
+ * que haya. La pantalla lo dice con la fecha exacta.
+ */
+const responderReclamoSchema = z.object({
+  disputeId: z.string().uuid(),
+  texto: z
+    .string()
+    .trim()
+    .min(10, 'Contá qué pasó: con una línea no alcanza para resolverlo')
+    .max(2_000, 'La respuesta es demasiado larga'),
+});
+
+export async function responderReclamo(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('dispute-respond', user.id);
+
+    const input = responderReclamoSchema.parse({
+      disputeId: texto(formData, 'disputeId'),
+      texto: texto(formData, 'texto'),
+    });
+
+    await respondAsSeller(user, input.disputeId, input.texto);
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'vendedor', formData, preservar: PRESERVAR_PANEL });
+  }
+
+  revalidatePath('/vendedor/ventas');
+
+  return { ok: 'Mandamos tu respuesta. Offside la revisa junto con la del comprador.' };
+}
+
+/* ---------------------------------------------------------------- tienda -- */
+
+/**
+ * Datos visibles de la tienda (SS-020).
+ *
+ * ⚠️ `updateMySellerProfile` NO TOCA `status` NI `seller_tier_id`: el estado de
+ * habilitacion y el nivel no se editan desde un formulario del vendedor. Esto
+ * cambia el nombre visible, la bio y la politica de envios y nada mas.
+ *
+ * ⚠️ LA POLITICA DE ENVIOS ES TEXTO LIBRE Y NO UNA PROMESA DEL SISTEMA. Offside
+ * no despacha ni hace seguimiento automatico: lo que se escriba acá lo cumple
+ * quien vende.
+ */
+const tiendaSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(3, 'El nombre de tu tienda es muy corto')
+    .max(80, 'El nombre de tu tienda es demasiado largo'),
+  bio: z.string().trim().max(1_000, 'La descripción es demasiado larga').optional(),
+  shippingPolicy: z.string().trim().max(1_000, 'El texto es demasiado largo').optional(),
+});
+
+export async function guardarTienda(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('seller-profile', user.id);
+
+    const input = tiendaSchema.parse({
+      displayName: texto(formData, 'displayName'),
+      bio: texto(formData, 'bio'),
+      shippingPolicy: texto(formData, 'shippingPolicy'),
+    });
+
+    /*
+     * ⚠️ LAS CLAVES AUSENTES NO SE MANDAN. `updateMySellerProfile` recibe un
+     * objeto parcial y el repositorio escribe lo que le llegue: pasar
+     * `bio: undefined` explicito con `exactOptionalPropertyTypes` ni siquiera
+     * compila, y pasar `null` borraria la bio de quien solo cambio el nombre.
+     */
+    await updateMySellerProfile(user.id, {
+      displayName: input.displayName,
+      ...(input.bio === undefined ? {} : { bio: input.bio }),
+      ...(input.shippingPolicy === undefined ? {} : { shippingPolicy: input.shippingPolicy }),
+    });
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'vendedor', formData, preservar: PRESERVAR_PANEL });
+  }
+
+  revalidatePath('/vendedor/tienda');
+  revalidatePath('/vendedor');
+
+  return { ok: 'Guardamos los datos de tu tienda.' };
+}
+
+/* ------------------------------------------------------------ vacaciones -- */
+
+/**
+ * Modo vacaciones: las publicaciones dejan de mostrarse y vuelven solas.
+ *
+ * ⚠️ ES UN PREDICADO DERIVADO, NO UN CAMBIO DE ESTADO DE LAS PUBLICACIONES, y
+ * es la misma decision de diseño que SS-013. Si activar vacaciones las pasara a
+ * `paused`, al volver seria imposible distinguir las que el vendedor habia
+ * pausado a mano de las que apago el modo vacaciones, y se reactivarian
+ * publicaciones que su dueño queria abajo.
+ *
+ * ⚠️ LA FECHA ES OBLIGATORIA Y SE MANDA COMO `date` NATIVO. Un `<input
+ * type="date">` manda `YYYY-MM-DD`; se interpreta al FINAL de ese dia para que
+ * "vuelvo el 20" signifique que el 20 todavia estas afuera, que es como lo lee
+ * cualquiera.
+ */
+const vacacionesSchema = z.object({
+  hasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Elegí hasta qué día'),
+});
+
+export async function activarVacaciones(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('seller-vacation', user.id);
+
+    const { hasta } = vacacionesSchema.parse({ hasta: texto(formData, 'hasta') });
+
+    // Fin del dia elegido, en la zona del servidor. `new Date('YYYY-MM-DD')`
+    // pelado se interpreta como UTC medianoche, o sea el dia anterior a la
+    // tarde en Argentina: el vendedor volveria un dia antes de lo que pidio.
+    const [anio, mes, dia] = hasta.split('-').map(Number) as [number, number, number];
+    const limite = new Date(anio, mes - 1, dia, 23, 59, 59, 999);
+
+    if (Number.isNaN(limite.getTime())) throw new z.ZodError([]);
+
+    await setVacation(user, limite);
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'vendedor', formData, preservar: PRESERVAR_PANEL });
+  }
+
+  revalidatePath('/vendedor/vacaciones');
+  revalidatePath('/vendedor');
+
+  return { ok: 'Activamos el modo vacaciones. Tus publicaciones vuelven solas.' };
+}
+
+export async function desactivarVacaciones(
+  _estado: EstadoVendedor,
+  _formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('seller-vacation', user.id);
+
+    await setVacation(user, null);
+  } catch (error) {
+    // Esta accion no recibe campos: no hay nada que preservar.
+    return respuestaDeError(error, { ambito: 'vendedor' });
+  }
+
+  revalidatePath('/vendedor/vacaciones');
+  revalidatePath('/vendedor');
+
+  return { ok: 'Volviste. Tus publicaciones ya se muestran de nuevo.' };
 }

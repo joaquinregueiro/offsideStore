@@ -24,6 +24,9 @@ import { listingImages, listingPriceHistory, listings } from './listings';
 import { notifications } from './notifications';
 import { orderItems, orderStatusHistory, orders } from './orders';
 import { chargebacks, paymentSplits, payments, refunds, sellerLiabilities } from './payments';
+import { listingPromotions } from './promotions';
+import { listingQuestions } from './questions';
+import { listingReports } from './reports';
 import { reviews } from './reviews';
 import {
   mercadopagoAccounts,
@@ -76,6 +79,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   favorites: many(favorites),
   reviewsGiven: many(reviews),
   notifications: many(notifications),
+  /** Preguntas que HIZO (no las que respondio: esas van por `answeredBy`). */
+  questionsAsked: many(listingQuestions, { relationName: 'question_asker' }),
+  /** Denuncias que HIZO (no las que resolvio: esas van por `reviewedBy`). */
+  reportsMade: many(listingReports, { relationName: 'report_reporter' }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -163,6 +170,8 @@ export const sellerProfilesRelations = relations(sellerProfiles, ({ one, many })
   /** Historial de identidad fiscal; la vigente es la que tiene `valid_to` null. */
   taxProfiles: many(sellerTaxProfiles),
   listings: many(listings),
+  /** Historial de promociones del vendedor (delta 2026-09-10). */
+  promotions: many(listingPromotions),
   /** Ordenes donde el perfil es VENDEDOR. */
   orders: many(orders),
   liabilities: many(sellerLiabilities),
@@ -229,6 +238,62 @@ export const listingsRelations = relations(listings, ({ one, many }) => ({
   orderItems: many(orderItems),
   cartItems: many(cartItems),
   favorites: many(favorites),
+  questions: many(listingQuestions),
+  /** Historial; `promoted_until` es la proyeccion rapida (delta 2026-09-10). */
+  promotions: many(listingPromotions),
+  reports: many(listingReports),
+}));
+
+/**
+ * Delta al ERD v1.3 (owner, 2026-09-10). Dos relaciones con `users` y por eso
+ * llevan `relationName`: quien pregunta y quien responde son personas
+ * distintas y Drizzle no puede adivinar cual FK es cual.
+ */
+export const listingQuestionsRelations = relations(listingQuestions, ({ one }) => ({
+  listing: one(listings, { fields: [listingQuestions.listingId], references: [listings.id] }),
+  asker: one(users, {
+    fields: [listingQuestions.askerId],
+    references: [users.id],
+    relationName: 'question_asker',
+  }),
+  answeredByUser: one(users, {
+    fields: [listingQuestions.answeredBy],
+    references: [users.id],
+    relationName: 'question_answerer',
+  }),
+}));
+
+/**
+ * Segundo delta al ERD v1.3 (owner, 2026-09-10). Una promocion explica la
+ * comision de las ordenes creadas mientras estuvo vigente: de ahi `orders`.
+ */
+export const listingPromotionsRelations = relations(listingPromotions, ({ one, many }) => ({
+  listing: one(listings, { fields: [listingPromotions.listingId], references: [listings.id] }),
+  seller: one(sellerProfiles, {
+    fields: [listingPromotions.sellerId],
+    references: [sellerProfiles.id],
+  }),
+  createdByUser: one(users, { fields: [listingPromotions.createdBy], references: [users.id] }),
+  /** Ordenes que pagaron comision agravada por ESTA promocion. */
+  orders: many(orders),
+}));
+
+/**
+ * Segundo delta al ERD v1.3 (owner, 2026-09-10). Dos relaciones con `users`
+ * —quien denuncia y quien resuelve— y por eso llevan `relationName`.
+ */
+export const listingReportsRelations = relations(listingReports, ({ one }) => ({
+  listing: one(listings, { fields: [listingReports.listingId], references: [listings.id] }),
+  reporter: one(users, {
+    fields: [listingReports.reporterId],
+    references: [users.id],
+    relationName: 'report_reporter',
+  }),
+  reviewer: one(users, {
+    fields: [listingReports.reviewedBy],
+    references: [users.id],
+    relationName: 'report_reviewer',
+  }),
 }));
 
 export const listingImagesRelations = relations(listingImages, ({ one }) => ({
@@ -268,6 +333,11 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   chargebacks: many(chargebacks),
   review: one(reviews, { fields: [orders.id], references: [reviews.orderId] }),
   liabilities: many(sellerLiabilities),
+  /** Solo cuando `commission_source = 'promoted'` (delta 2026-09-10). */
+  listingPromotion: one(listingPromotions, {
+    fields: [orders.listingPromotionId],
+    references: [listingPromotions.id],
+  }),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({

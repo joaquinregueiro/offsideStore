@@ -1,5 +1,4 @@
 /**
-<<<<<<< HEAD
  * Primitivas de interfaz — version LUMINOSA (2026-09-10).
  *
  * ⚠️ ESTA HOJA REEMPLAZA A LA ANTERIOR POR DECISION DEL DUEÑO. La version
@@ -297,23 +296,10 @@
  */
 .boton {
   position: relative;
-=======
- * Primitivas de interfaz.
- *
- * ⚠️ Se escribieron CON la primera pantalla que las usa (el detalle de
- * producto), no antes. Inventar variantes por adelantado es adivinar cuales
- * hacen falta; cada una de estas existe porque algo la pidio.
- */
-
-/* ------------------------------------------------------------------ boton */
-
-.boton {
->>>>>>> origin/main
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--espacio-2);
-<<<<<<< HEAD
   border: 1px solid transparent;
   border-radius: var(--radio);
   font-family: var(--fuente-texto);
@@ -344,20 +330,6 @@
 .boton:hover:not(:disabled) .botonFlecha,
 .boton:focus-visible:not(:disabled) .botonFlecha {
   transform: translateX(4px) rotate(-6deg);
-=======
-  padding: var(--espacio-3) var(--espacio-5);
-  border: 1px solid transparent;
-  border-radius: var(--radio);
-  font-family: var(--fuente-texto);
-  font-size: var(--texto-base);
-  font-weight: var(--peso-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  cursor: pointer;
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
->>>>>>> origin/main
 }
 
 .boton:disabled {
@@ -365,7 +337,6 @@
   opacity: 0.55;
 }
 
-<<<<<<< HEAD
 /* ------------------------------------------------------------- tamanios */
 
 /**
@@ -678,37 +649,10 @@
   to {
     transform: rotate(360deg);
   }
-=======
-.botonPrimario {
-  background: var(--color-cancha);
-  color: var(--color-papel);
-}
-
-.botonPrimario:hover:not(:disabled) {
-  background: var(--color-tiempo-extra);
-  /* Se repite el color porque `a:hover` global lo pisaria en un boton-enlace. */
-  color: var(--color-papel);
-}
-
-.botonSecundario {
-  background: transparent;
-  border-color: var(--color-cancha);
-  color: var(--color-cancha);
-}
-
-.botonSecundario:hover:not(:disabled) {
-  background: var(--color-neutro-suave);
-}
-
-/** Ocupa todo el ancho. Util en formularios y en la columna de compra. */
-.botonBloque {
-  width: 100%;
->>>>>>> origin/main
 }
 
 /* ------------------------------------------------------------- etiquetas */
 
-<<<<<<< HEAD
 /**
  * ⚠️ AHORA SON PASTILLAS (`--radio-pastilla`). Una etiqueta de 24px de alto con
  * las puntas redondas se reconoce como "un dato" antes de leerla, que es lo que
@@ -826,31 +770,10 @@
     var(--luz-superior-oscura),
     var(--sombra-0),
     0 0 16px -3px rgb(var(--luz-marca) / 0.6);
-=======
-.etiqueta {
-  display: inline-block;
-  padding: 2px var(--espacio-2);
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio-chico);
-  background: var(--color-neutro-suave);
-  font-size: var(--texto-xs);
-  font-weight: var(--peso-medio);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  color: var(--color-neutro-texto);
-}
-
-/** Variante de aviso: usa el naranja de la identidad, reservado para esto. */
-.etiquetaAviso {
-  border-color: var(--color-naranja);
-  background: transparent;
-  color: var(--color-naranja);
->>>>>>> origin/main
 }
 
 /* ---------------------------------------------------------------- avisos */
 
-<<<<<<< HEAD
 /**
  * ⚠️ EL ACENTO LATERAL ES UNA BARRA DE LUZ, NO UN `border-left`. Es un pseudo en
  * pastilla, despegado de los bordes, con un halo del color del tono. Vive en
@@ -1019,26 +942,10 @@
   box-shadow:
     var(--sombra-0), var(--filo, var(--luz-superior)), var(--apoyo-alto, var(--sombra-3)),
     var(--glow-foco);
-=======
-.aviso {
-  padding: var(--espacio-4);
-  border: 1px solid var(--color-neutro-borde);
-  border-left-width: 3px;
-  border-radius: var(--radio);
-  background: var(--color-neutro-suave);
-  font-size: var(--texto-base);
-  color: var(--color-neutro-texto);
-}
-
-.avisoError {
-  border-color: var(--color-naranja);
-  color: var(--color-tinta);
->>>>>>> origin/main
 }
 
 /* ----------------------------------------------------------- estado vacio */
 
-<<<<<<< HEAD
 /**
  * ESTADO VACIO: una ficha con LUZ detras. Radio de ficha, el rombo de la
  * bandera desvanecido arriba a la derecha —de donde viene la luz— y dos blobs
@@ -2580,6 +2487,609 @@ span.mascaraCifra {
   text-shadow: none;
 }
 
+/* ------------------------------------------------------------- cronologia */
+
+/**
+ * ⚠️ EL RIEL ES UN PSEUDO DEL `<li>`, NO UN BORDE DEL `<ol>`: asi cada tramo
+ * conoce el estado de SU hito y el tramo que sigue a un cancelado no se dibuja.
+ */
+.cronologia {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.hito {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: var(--espacio-4);
+  padding-bottom: var(--espacio-5);
+}
+
+.hito::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 22px;
+  bottom: 0;
+  width: 2px;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--linea-tenue);
+  transform-origin: 50% 0;
+}
+
+.hito[data-estado='hecho']::before {
+  background-image: var(--degradado-acento);
+}
+
+.hito:last-child::before,
+.hito[data-estado='cancelado']::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hito[data-estado='hecho']::before {
+    animation: dibujarRiel var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+.hitoPunto {
+  position: relative;
+  z-index: var(--z-contenido);
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 2px solid var(--linea-tenue);
+  background-color: var(--superficie-1);
+}
+
+.hito[data-estado='hecho'] .hitoPunto {
+  border-color: var(--color-cancha);
+  background-image: var(--degradado-cancha);
+}
+
+.hito[data-estado='hecho'] .hitoPunto::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background-color: var(--color-papel);
+}
+
+/** El actual: relleno de marca con halo ESTATICO. */
+.hito[data-estado='actual'] .hitoPunto {
+  border-color: var(--color-cancha);
+  background-image: var(--degradado-cancha);
+  box-shadow: var(--glow-marca);
+}
+
+.hito[data-estado='cancelado'] .hitoPunto {
+  border-color: var(--color-naranja);
+  background-color: var(--superficie-1);
+}
+
+.hito[data-estado='cancelado'] .hitoPunto::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background-color: var(--color-naranja);
+}
+
+.hito[data-estado='futuro'] {
+  color: var(--color-neutro-tenue);
+}
+
+.hitoCuerpo {
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.hitoTitulo {
+  margin: 0;
+  font-weight: var(--peso-semi);
+  line-height: 1.35;
+}
+
+.hito[data-estado='actual'] .hitoTitulo {
+  color: var(--marca-texto, var(--color-tiempo-extra));
+}
+
+.hito[data-estado='futuro'] .hitoTitulo {
+  font-weight: var(--peso-medio);
+  color: var(--color-neutro-tenue);
+}
+
+.hitoMeta {
+  margin: 2px 0 0;
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.hitoNota {
+  margin: var(--espacio-2) 0 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-texto);
+  color: var(--color-neutro-texto);
+}
+
+/* -------------------------------------------------------------- estrellas */
+
+.estrellas,
+.estrellasGrande {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  --estrella: 16px;
+}
+
+.estrellasGrande {
+  --estrella: 24px;
+}
+
+.estrellasFila {
+  position: relative;
+  display: inline-block;
+  height: var(--estrella);
+  line-height: 0;
+}
+
+.estrellasVacias,
+.estrellasLlenas {
+  display: inline-flex;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.estrellasVacias svg,
+.estrellasLlenas svg {
+  width: var(--estrella);
+  height: var(--estrella);
+  flex: none;
+}
+
+.estrellasVacias svg {
+  fill: none;
+  stroke: var(--linea-control);
+  stroke-width: 1.5;
+}
+
+/**
+ * ⚠️ LA CAPA LLENA SE RECORTA POR ANCHO, no por opacidad: asi un 4,6 muestra
+ * cuatro estrellas y el 60% de la quinta, sin dibujar medias estrellas.
+ */
+.estrellasLlenas {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+}
+
+.estrellasLlenas svg {
+  fill: var(--color-cambio);
+  stroke: var(--color-cambio-hondo, #b8a83c);
+  stroke-width: 1.2;
+  filter: drop-shadow(0 0 4px rgb(var(--luz-cambio) / 0.55));
+}
+
+.estrellasNumero {
+  font-family: var(--fuente-titulo);
+  font-size: calc(var(--estrella) * 1.15);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+.estrellasCantidad,
+.estrellasSin {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+}
+
+.estrellasEntrada {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.estrellasLeyenda {
+  padding: 0;
+  margin-bottom: var(--espacio-2);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ DE DERECHA A IZQUIERDA. Las opciones van 5,4,3,2,1 en el DOM y se dan
+ * vuelta con `row-reverse`: asi `:checked ~ *` alcanza a las estrellas de MENOR
+ * valor, que son las que tienen que encenderse.
+ */
+.estrellasOpciones {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.estrellaOpcion {
+  position: relative;
+  display: inline-flex;
+}
+
+.estrellaRadio {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.estrellaEtiqueta {
+  display: grid;
+  place-items: center;
+  width: var(--alto-control);
+  height: var(--alto-control);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    transform var(--dur-hover) var(--curva-pop),
+    background-color var(--transicion) var(--curva);
+}
+
+.estrellaEtiqueta svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--linea-control);
+  stroke-width: 1.5;
+  transition:
+    fill var(--transicion) var(--curva),
+    stroke var(--transicion) var(--curva);
+}
+
+.estrellaRadio:checked + .estrellaEtiqueta svg,
+.estrellaOpcion:has(.estrellaRadio:checked) ~ .estrellaOpcion .estrellaEtiqueta svg,
+.estrellasOpciones:hover .estrellaOpcion:hover .estrellaEtiqueta svg,
+.estrellasOpciones:hover .estrellaOpcion:hover ~ .estrellaOpcion .estrellaEtiqueta svg {
+  fill: var(--color-cambio);
+  stroke: var(--color-cambio-hondo, #b8a83c);
+}
+
+.estrellaEtiqueta:hover {
+  transform: scale(1.12);
+}
+
+.estrellaRadio:focus-visible + .estrellaEtiqueta {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- insignias */
+
+.insigniaNivel,
+.insigniaNivelDestacada {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-4) var(--espacio-2) var(--espacio-2);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-pastilla);
+  background-color: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior);
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+.insigniaNivelDestacada {
+  border-color: var(--marca-borde, var(--color-cancha));
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--glow-suave);
+}
+
+.insigniaIcono {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--color-papel);
+  background-image: var(--degradado-cancha);
+  box-shadow: var(--luz-superior-oscura), var(--sombra-1);
+}
+
+.insigniaIcono svg {
+  width: 20px;
+  height: 20px;
+}
+
+.insigniaTexto {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.insigniaNombre {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+}
+
+.insigniaDato {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.reputacion {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+}
+
+.reputacionEtiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: 3px var(--espacio-3) 3px var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  border: 1px solid var(--marca-borde, var(--color-cancha));
+  color: var(--marca-texto, var(--color-tiempo-extra));
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  box-shadow:
+    var(--sombra-0),
+    0 0 14px -4px rgb(var(--luz-marca) / 0.45);
+}
+
+.reputacionEtiqueta::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: none;
+  margin-inline: 1px;
+  transform: rotate(45deg);
+  background-color: var(--marca-borde, var(--color-cancha));
+  box-shadow: 0 0 6px var(--marca-borde, var(--color-cancha));
+}
+
+.reputacionMetricas {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1) var(--espacio-3);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.reputacionMetrica + .reputacionMetrica::before {
+  content: '·';
+  margin-right: var(--espacio-3);
+  color: var(--color-neutro-tenue);
+}
+
+/* --------------------------------------------------------------- contador */
+
+.contador {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--alto-control);
+  height: var(--alto-control);
+  border-radius: 50%;
+  color: inherit;
+  transition:
+    background-color var(--transicion) var(--curva),
+    color var(--transicion) var(--curva),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+.contador:hover,
+.contador:focus-visible {
+  background-color: rgb(var(--luz-papel) / 0.1);
+  box-shadow: 0 0 18px -6px rgb(var(--luz-marca) / 0.6);
+}
+
+.contadorIcono {
+  display: grid;
+  place-items: center;
+}
+
+/**
+ * ⚠️ EL GLOBO ES AMARILLO CAMBIO CON TEXTO TINTA (12.6:1) y NO naranja con
+ * texto blanco (2.2:1): un numero de un digito a 11px necesita todo el
+ * contraste que se pueda.
+ */
+.contadorGlobo {
+  position: absolute;
+  top: 3px;
+  right: 1px;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: 11px;
+  font-weight: var(--peso-semi);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 0 0 2px var(--globo-borde, var(--color-cancha)),
+    0 0 12px -2px rgb(var(--luz-cambio) / 0.8);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .contadorGlobo {
+    animation: globoEntra var(--dur-media) var(--curva-pop) both;
+  }
+}
+
+/* ------------------------------------------------------------- paginacion */
+
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-bloque);
+}
+
+.paginacionLista {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.paginacionItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+}
+
+.paginacionNumero,
+.paginacionActual,
+.paginacionPaso,
+.paginacionPasoApagado {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--alto-control);
+  min-height: var(--alto-control);
+  padding-inline: var(--espacio-3);
+  border-radius: var(--radio-pastilla);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--transicion) var(--curva),
+    color var(--transicion) var(--curva),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+.paginacionNumero,
+.paginacionPaso {
+  color: var(--texto-fuerte, var(--color-tinta));
+  border: 1px solid var(--linea-tenue);
+  background-color: var(--superficie-1);
+}
+
+.paginacionNumero:hover,
+.paginacionNumero:focus-visible,
+.paginacionPaso:hover,
+.paginacionPaso:focus-visible {
+  border-color: var(--marca-borde, var(--color-cancha));
+  color: var(--marca-texto, var(--color-tiempo-extra));
+  box-shadow: var(--glow-suave);
+}
+
+.paginacionActual {
+  color: var(--color-papel);
+  background-image: var(--degradado-cancha);
+  box-shadow: var(--sombra-marca);
+}
+
+.paginacionPasoApagado {
+  color: var(--color-neutro-tenue);
+  border: 1px solid transparent;
+}
+
+.paginacionHueco {
+  padding-inline: var(--espacio-1);
+  color: var(--color-neutro-tenue);
+}
+
+/* ----------------------------------------------------------- definiciones */
+
+.definiciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--espacio-4) var(--espacio-6);
+  margin: 0;
+}
+
+.definiciones[data-columnas='1'] {
+  grid-template-columns: 1fr;
+}
+
+.definiciones[data-columnas='3'] {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.definicion {
+  min-width: 0;
+}
+
+.definicionTermino {
+  margin: 0 0 2px;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-tenue);
+}
+
+.definicionValor {
+  margin: 0;
+  line-height: var(--interlineado-texto);
+  color: var(--texto-fuerte, var(--color-tinta));
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------- distintivo */
+
+/**
+ * Amarillo Cambio macizo con texto Tinta (12.6:1) y un halo amarillo: es la
+ * unica etiqueta del sistema que brilla en Cambio, para que "Promocionada" no
+ * se confunda con un estado de la orden.
+ */
+.distintivo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  padding: 3px var(--espacio-3) 3px var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow:
+    0 0 0 1px rgb(var(--luz-cambio) / 0.7),
+    0 0 16px -3px rgb(var(--luz-cambio) / 0.8);
+}
+
+.distintivoRayo {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+}
+
+.distintivoRayo svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ------------------------------------------------------------- keyframes */
 
 /**
@@ -2601,19 +3111,11 @@ span.mascaraCifra {
   from {
     transform: scaleY(0);
   }
-=======
-.vacio {
-  border: 1px dashed var(--color-neutro-borde);
-  border-radius: var(--radio);
-  padding: var(--espacio-8);
-  text-align: center;
-  color: var(--color-neutro-texto);
 }
 
-.vacioTitulo {
-  font-size: var(--texto-xl);
-  text-transform: uppercase;
-  color: var(--color-tinta);
-  margin-bottom: var(--espacio-3);
->>>>>>> origin/main
+@keyframes globoEntra {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
 }

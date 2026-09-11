@@ -29,6 +29,22 @@ export const QUEUE_NAMES = {
   NOTIFICATIONS_SEND: 'notifications-send',
   /** Renovacion de los tokens de Mercado Pago (mercadopago-oauth-spec.md §10). */
   MERCADOPAGO_TOKEN_REFRESH: 'mercadopago-token-refresh',
+  /**
+   * Barrido que cancela las ordenes `PENDING_PAYMENT` con la ventana de pago
+   * vencida (DEC-033). Periodico; el procesador vive en `modules/orders`.
+   */
+  ORDERS_EXPIRE_PENDING_PAYMENT: 'orders-expire-pending-payment',
+  /**
+   * Barrido que cierra las ordenes `DELIVERED` cuya ventana de proteccion
+   * vencio sin reclamo (BR-033 / MF-040). Periodico; procesador en `orders`.
+   */
+  ORDERS_COMPLETE_DELIVERED: 'orders-complete-delivered',
+  /**
+   * Barrido que pasa a revision de Offside los reclamos cuyo plazo de
+   * respuesta del vendedor vencio (TS-053). Periodico; procesador en
+   * `modules/disputes`.
+   */
+  DISPUTES_ESCALATE_EXPIRED: 'disputes-escalate-expired',
 } as const satisfies Record<string, string>;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

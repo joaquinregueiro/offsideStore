@@ -6,8 +6,10 @@ import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../listings.errors';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
+import { getShippingSettings } from './listing-settings.service';
 import { toPublicListing, type PublicListing } from './listing.service';
 import { reindex } from './search.service';
+import { validateShippingDeclaration, type ShippingMode } from './shipping-declaration';
 
 /**
  * Edicion y ciclo de vida de una publicacion (SS-040/041, SS-050/051).
@@ -59,6 +61,16 @@ export interface EditListingInput {
   brandId?: string | null;
   competitionId?: string | null;
   seasonId?: string | null;
+  /**
+   * Envio declarado (delta §11).
+   *
+   * ⚠️ `undefined` SIGNIFICA "NO VINO EN EL FORMULARIO" Y CONSERVA LO QUE
+   * HABIA, igual que los catalogos. Es la misma trampa del 2026-09-09: si un
+   * campo ausente se leyera como "vaciar", corregir un typo en el titulo
+   * dejaria la publicacion sin modo de envio.
+   */
+  shippingMode?: string | null;
+  shippingCostAmount?: bigint | null;
 }
 
 /**
@@ -99,8 +111,40 @@ export async function editListing(
   const precioCambio = input.priceAmount !== undefined && input.priceAmount !== listing.priceAmount;
   const condicionCambio = input.condition !== undefined && input.condition !== listing.condition;
 
+  /*
+   * ⚠️ EL ENVIO SE REVALIDA CONTRA EL CONFIG STORE, pero pasandole lo que la
+   * publicacion YA TENIA: `validateShippingDeclaration` solo gobierna lo que
+   * se ELIGE ahora. Si Admin apago `pickup` despues de que este vendedor lo
+   * eligio, corregir el titulo no puede fallar por un campo que no se toco.
+   */
+  const tocaElEnvio = input.shippingMode !== undefined || input.shippingCostAmount !== undefined;
+  const envio = tocaElEnvio
+    ? validateShippingDeclaration(
+        {
+          ...(input.shippingMode === undefined ? {} : { shippingMode: input.shippingMode }),
+          ...(input.shippingCostAmount === undefined
+            ? {}
+            : { shippingCostAmount: input.shippingCostAmount }),
+        },
+        await getShippingSettings(),
+        {
+          shippingMode: listing.shippingMode as ShippingMode,
+          shippingCostAmount: listing.shippingCostAmount,
+        },
+      )
+    : undefined;
+
+  /*
+   * ⚠️ SE QUITAN LOS CAMPOS CRUDOS DEL ENVIO Y SE PONEN LOS VALIDADOS. El
+   * input los admite como `string | null` porque vienen de un `<select>`; el
+   * repositorio exige el modo ya estrechado. Pasarle el crudo escribiria en la
+   * columna lo que alguien haya mandado por POST.
+   */
+  const { shippingMode: _modoCrudo, shippingCostAmount: _costoCrudo, ...resto } = input;
+  const cambios = envio === undefined ? resto : { ...resto, ...envio };
+
   const actualizada = await getDatabase().transaction(async (tx) => {
-    const fila = await listingRepo.updateListing(listing.id, input, tx);
+    const fila = await listingRepo.updateListing(listing.id, cambios, tx);
     if (fila === undefined) throw errors.listingNotFound();
 
     if (precioCambio) {

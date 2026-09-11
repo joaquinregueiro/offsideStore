@@ -3,26 +3,51 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-<<<<<<< HEAD
 import {
   IconoAutenticado,
   IconoCamiseta,
+  IconoEstrella,
   IconoEtiqueta,
   IconoIntercambio,
+  IconoMedalla,
+  IconoPausa,
+  IconoPregunta,
+  IconoRayo,
+  IconoTienda,
 } from '@/components/iconos';
 import { FotoCompartida, Pantalla } from '@/components/movimiento';
-import { Aviso, BotonEnlace, Cifras, FilaDeDatos, Pasos, Seccion } from '@/components/ui';
-import { estadoDePublicacion, estadoDeVendedor, fecha, tonoDeVendedor } from '@/lib/formato';
+import {
+  Aviso,
+  BotonEnlace,
+  Cifras,
+  Estrellas,
+  FilaDeDatos,
+  Pasos,
+  Seccion,
+} from '@/components/ui';
+import {
+  estadoDePublicacion,
+  estadoDeVendedor,
+  fecha,
+  precio,
+  tonoDeVendedor,
+} from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
+import { getDispatchDeadlineHours } from '@/modules/config/services/setting-store.service';
+import { countOpenForSeller } from '@/modules/disputes/services/dispute.service';
 import {
   countMyListings,
   coverUrls,
   listMyListings,
 } from '@/modules/listings/services/listing.service';
-import { countMySales } from '@/modules/orders/services/order.service';
+import { isDispatchOverdue } from '@/modules/orders/services/order-transitions';
+import { countMySales, listMySales } from '@/modules/orders/services/order.service';
+import { countPendingForSeller } from '@/modules/questions/services/question.service';
+import { getSellerReputationForUser } from '@/modules/reputation/services/reputation.service';
 import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
 import { getStatus } from '@/modules/sellers/services/seller-approval.service';
 import { getMySellerProfile } from '@/modules/sellers/services/seller.service';
+import { getVacation } from '@/modules/sellers/services/vacation.service';
 
 import { Chapa } from '../chapa';
 import { NavDelVendedor } from '../nav';
@@ -33,104 +58,27 @@ export const dynamic = 'force-dynamic';
 
 /** Cuántas portadas entran en la tira sin convertirla en un catálogo. */
 const TIRA = 6;
-=======
-import { Aviso, BotonEnlace, Etiqueta } from '@/components/ui';
-import { estadoDeVendedor } from '@/lib/formato';
-import { requireVerifiedSessionUser } from '@/lib/session';
-import { getStatus } from '@/modules/sellers/services/seller-approval.service';
-import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
-import { getMySellerProfile } from '@/modules/sellers/services/seller.service';
 
-import estilos from '../vendedor.module.css';
-
-export const metadata: Metadata = { title: 'Panel de vendedor — Offside Store' };
-export const dynamic = 'force-dynamic';
-
-/**
- * Un paso del alta.
- *
- * ⚠️ EL ESTADO SE COMUNICA CON TEXTO Y CON UN SIMBOLO, no solo con color. Quien
- * no distingue verde de gris tiene que poder saber igual que le falta.
- */
-function Paso({
-  hecho,
-  titulo,
-  detalle,
-  children,
-}: {
-  hecho: boolean;
-  titulo: string;
-  detalle: string;
-  children?: ReactNode;
-}) {
-  return (
-    <li className={estilos.paso}>
-      <span
-        className={`${estilos.marca} ${hecho ? estilos.marcaHecha : estilos.marcaPendiente}`}
-        aria-hidden="true"
-      >
-        {hecho ? '✓' : '○'}
-      </span>
-      <div className={estilos.pasoCuerpo}>
-        <p className={estilos.pasoTitulo}>
-          {titulo} — {hecho ? 'listo' : 'pendiente'}
-        </p>
-        <p className={estilos.pasoDetalle}>{detalle}</p>
-        {!hecho && children}
-      </div>
-    </li>
-  );
-}
-
-function Acceso({
-  href,
-  titulo,
-  detalle,
-}: {
-  href: string;
-  titulo: string;
-  detalle: string;
-}): ReactNode {
-  return (
-    <Link href={href} className={estilos.acceso}>
-      <span className={estilos.accesoTitulo}>{titulo}</span>
-      <span className={estilos.accesoDetalle}>{detalle}</span>
-    </Link>
-  );
-}
->>>>>>> origin/main
+/** Órdenes que todavía están en curso: hay plata cobrada y algo que hacer. */
+const EN_CURSO = ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
 
 /**
  * Panel del vendedor.
  *
-<<<<<<< HEAD
- * Es la pantalla que responde "¿por qué todavía no puedo vender?". La respuesta
- * son las tres señales de TS-001 (DEC-044): email verificado + identidad fiscal
- * declarada + Mercado Pago conectado. Con las tres, la aprobación es automática.
+ * Es la pantalla que responde "¿por qué todavía no puedo vender?" el día 1 y
+ * "¿qué tengo que hacer hoy?" el día 90. Las tres señales de TS-001 (DEC-044)
+ * —email verificado + identidad fiscal declarada + Mercado Pago conectado—
+ * aprueban la cuenta solas; después el centro pasa a ser el trabajo pendiente.
  *
  * ⚠️ SE USA `getStatus`, NO `evaluate`. `evaluate` aprueba y escribe una fila de
  * verificación; hacer eso cada vez que alguien refresca una pantalla llenaría
  * la tabla de ruido. La aprobación se dispara donde cambia una señal —al
  * declarar el CUIT y al conectar Mercado Pago—, que es donde importa.
  *
- * ⚠️ LA PANTALLA CAMBIA SEGUN EL DIA. El día 1 el checklist es lo único que
- * importa y ocupa el centro; el día 90 ya está resuelto y lo que importa son
- * los números.
- *
- * ⚠️ LA TIRA DE PORTADAS NO PIDE NINGUN DATO NUEVO: `listMyListings` y
- * `coverUrls` son las mismas funciones que ya usa `/vendedor/publicaciones`. Está
- * acá porque nueve pantallas de una tienda de ropa no tenían una sola camiseta, y
- * "¿cómo se ve lo mío?" es la pregunta con la que alguien entra al panel.
-=======
- * Es la pantalla que responde "¿por que todavia no puedo vender?". La respuesta
- * son las tres señales de TS-001 (DEC-044): email verificado + identidad fiscal
- * declarada + Mercado Pago conectado. Con las tres, la aprobacion es automatica.
- *
- * ⚠️ SE USA `getStatus`, NO `evaluate`. `evaluate` aprueba y escribe una fila de
- * verificacion; hacer eso cada vez que alguien refresca una pantalla llenaria
- * la tabla de ruido. La aprobacion se dispara donde cambia una señal —al
- * declarar el CUIT y al conectar Mercado Pago—, que es donde importa.
->>>>>>> origin/main
+ * ⚠️ LAS CIFRAS SON TAREAS, NO VANIDAD. "Ventas del mes" es lo único que mira
+ * hacia atrás; las otras cinco son cosas que esperan una acción: despachar,
+ * responder, resolver. Un panel que sólo dice cuánto vendiste no sirve para
+ * abrirlo todas las mañanas.
  */
 export default async function PanelDeVendedor() {
   const user = await requireVerifiedSessionUser('/vendedor');
@@ -138,22 +86,74 @@ export default async function PanelDeVendedor() {
   const perfil = await getMySellerProfile(user.id);
   if (perfil === null) redirect('/vendedor/empezar');
 
-<<<<<<< HEAD
-  const [estado, conexion, publicaciones, ventas, propias] = await Promise.all([
+  const [
+    estado,
+    conexion,
+    publicaciones,
+    ventas,
+    propias,
+    ordenes,
+    preguntas,
+    reclamos,
+    reputacion,
+    vacaciones,
+    horasDeDespacho,
+  ] = await Promise.all([
     getStatus(user),
     getConnectionStatus(user),
     countMyListings(user),
     countMySales(user),
     listMyListings(user),
+    listMySales(user),
+    countPendingForSeller(user),
+    countOpenForSeller(user),
+    getSellerReputationForUser(user.id),
+    getVacation(user),
+    getDispatchDeadlineHours(),
   ]);
-=======
-  const [estado, conexion] = await Promise.all([getStatus(user), getConnectionStatus(user)]);
->>>>>>> origin/main
 
   const { signals } = estado;
   const puedeVender = conexion.canSell;
 
-<<<<<<< HEAD
+  const ahora = new Date();
+
+  /*
+   * ⚠️ "DEL MES" ES DESDE EL 1 DEL MES EN CURSO Y SE CUENTA POR `paidAt`, no por
+   * `createdAt`: una orden creada el 30 y pagada el 2 es plata de este mes. Se
+   * suma con `BigInt` —los importes viajan como string de centavos justamente
+   * para no perder precisión— y `precio()` recién convierte al final, para
+   * dibujar.
+   *
+   * ⚠️ ES EL SNAPSHOT DE CADA ORDEN (DEC-030), no un recálculo con la comisión
+   * de hoy: si mañana cambia la tasa, este número no se mueve.
+   */
+  const desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+  const delMes = ordenes.filter(
+    (orden) =>
+      orden.status !== 'CANCELLED' && orden.paidAt !== null && new Date(orden.paidAt) >= desde,
+  );
+  const netoDelMes = delMes.reduce((suma, orden) => suma + BigInt(orden.sellerAmount), 0n);
+  const moneda = ordenes[0]?.currency ?? 'ARS';
+
+  const enCurso = ordenes.filter((orden) => EN_CURSO.includes(orden.status)).length;
+  const aDespachar = ordenes.filter(
+    (orden) => orden.status === 'PAID' || orden.status === 'PROCESSING',
+  );
+
+  /*
+   * ⚠️ EL PLAZO SE RESUELVE UNA VEZ Y SE APLICA A TODAS. `getDispatchDeadline`
+   * lee la configuración en cada llamada; usarla por orden serían N lecturas de
+   * `app_settings` para pintar un número. `isDispatchOverdue` es la misma regla
+   * (BR-032), pura, con las horas ya resueltas.
+   */
+  const vencidas = aDespachar.filter((orden) =>
+    isDispatchOverdue(
+      { status: orden.status, paidAt: orden.paidAt === null ? null : new Date(orden.paidAt) },
+      horasDeDespacho,
+      ahora,
+    ),
+  ).length;
+
   /*
    * Una publicación eliminada es terminal y no se muestra: la tira responde
    * "cómo se ve mi tienda", y algo que ya no existe no se ve en ningún lado.
@@ -171,8 +171,7 @@ export default async function PanelDeVendedor() {
             /*
               ⚠️ ES ANTIGÜEDAD, NO REPUTACION. "Vendés desde" es un hecho
               verificable y no contradice BR-003, que prohíbe presentar la
-              conexión con Mercado Pago como un distintivo de confianza. La
-              reputación no existe todavía y esto no la simula.
+              conexión con Mercado Pago como un distintivo de confianza.
             */
             <p className={estilos.chapaDetalle}>
               Vendés en Offside desde {fecha(perfil.createdAt)}
@@ -180,13 +179,6 @@ export default async function PanelDeVendedor() {
           }
           estado={{ texto: estadoDeVendedor(perfil.status), tono: tonoDeVendedor(perfil.status) }}
           accion={
-            /*
-              ⚠️ LA ACCION PRINCIPAL SUBE A LA CHAPA. Publicar era un botón que
-              sólo existía en /vendedor/publicaciones: quien entraba al panel para
-              publicar tenía que pasar por una pantalla intermedia. Sobre la chapa
-              el primario es Amarillo Cambio con texto Tinta (13.97:1), porque
-              `.sup-cancha` remapea los ocho tokens de botón.
-            */
             puedeVender ? (
               <BotonEnlace href="/vendedor/publicaciones/nueva" flecha>
                 Publicar
@@ -195,41 +187,132 @@ export default async function PanelDeVendedor() {
           }
         />
 
-        <NavDelVendedor activo="panel" publicaciones={publicaciones.total} ventas={ventas.total} />
+        <NavDelVendedor
+          activo="panel"
+          publicaciones={publicaciones.total}
+          ventas={ventas.total}
+          preguntas={preguntas}
+          {...(reclamos > 0 ? { reclamos } : {})}
+        />
+
+        {/*
+          ⚠️ EL MODO VACACIONES SE AVISA ARRIBA DE TODO. Es la única condición
+          que apaga la tienda entera sin que nada esté roto: sin este aviso, el
+          vendedor ve cero visitas y cero ventas y no tiene forma de saber por
+          qué. Se dice que vuelven solas para que no toque nada.
+        */}
+        {vacaciones.onVacation && (
+          <Aviso tono="neutro">
+            <strong>Estás en modo vacaciones.</strong> Tus publicaciones no se muestran
+            {vacaciones.vacationUntil === null
+              ? ''
+              : ` hasta el ${fecha(vacaciones.vacationUntil)}`}
+            . <strong>Vuelven solas</strong>: no hace falta republicar nada.{' '}
+            <Link href="/vendedor/vacaciones">Cambiar</Link>
+          </Aviso>
+        )}
+
+        {/*
+          ⚠️ MERCADO PAGO DESCONECTADO NO ES UN DETALLE DE CONFIGURACION: apaga
+          la vitrina (SS-013). El vendedor tiene que enterarse acá y no cuando
+          deje de vender sin explicación.
+        */}
+        {!puedeVender && perfil.status === 'approved' && (
+          <Aviso tono="error">
+            <strong>Tus publicaciones no se están mostrando.</strong> Mientras Mercado Pago no esté
+            conectado nadie puede verlas ni comprarlas, porque no podríamos cobrarte la venta.{' '}
+            <strong>Vuelven solas al reconectar.</strong>{' '}
+            <Link href="/vendedor/mercadopago">Reconectar</Link>
+          </Aviso>
+        )}
+
+        {vencidas > 0 && (
+          <Aviso tono="error">
+            {vencidas === 1
+              ? 'Hay 1 venta con el plazo de despacho vencido.'
+              : `Hay ${vencidas} ventas con el plazo de despacho vencido.`}{' '}
+            Despachar fuera de plazo cuenta en tu reputación.{' '}
+            <Link href="/vendedor/ventas?estado=a-despachar">Ver cuáles</Link>
+          </Aviso>
+        )}
 
         {puedeVender ? (
           <>
             {/*
-              ⚠️ CON LA CUENTA HABILITADA, LOS NUMEROS VAN PRIMERO Y VAN SOBRE UN
-              PLANO OSCURO. Cuatro recuadros blancos sobre papel hacían que los
-              números —que son el contenido— pesaran lo mismo que un borde; el
-              pliego de noche es lo que le da ritmo vertical al scroll. El
-              checklist pasa a estar plegado: ya cumplió su función.
+              ⚠️ LOS NUMEROS VAN SOBRE UN PLANO OSCURO. Cuatro recuadros blancos
+              sobre papel hacían que los números —que son el contenido— pesaran lo
+              mismo que un borde; el pliego de noche es lo que le da ritmo
+              vertical al scroll.
+
+              ⚠️ EL IMPORTE ENTRA UNA VEZ Y QUEDA QUIETO. Nada de contar hacia
+              arriba: es plata real, y un número que sube mientras alguien lo lee
+              se interpreta como un número que todavía se está calculando.
             */}
             <div className={`${estilos.tablero} sup-noche con-grano`}>
               <Cifras
                 cifras={[
                   {
-                    valor: String(publicaciones.activas),
-                    etiqueta: 'A la venta',
+                    valor: precio(netoDelMes.toString(), moneda),
+                    etiqueta: 'Ventas de este mes',
+                    detalle: 'antes del costo de Mercado Pago',
+                  },
+                  {
+                    valor: String(enCurso),
+                    etiqueta: 'En curso',
+                    detalle: enCurso === 0 ? undefined : 'cobradas y sin cerrar',
+                  },
+                  {
+                    valor: String(aDespachar.length),
+                    etiqueta: 'A despachar',
                     detalle:
-                      publicaciones.borradores > 0
-                        ? `${publicaciones.borradores} en borrador`
+                      vencidas > 0
+                        ? vencidas === 1
+                          ? '1 con el plazo vencido'
+                          : `${vencidas} con el plazo vencido`
                         : undefined,
                   },
                   {
-                    valor: String(ventas.cobradas),
-                    etiqueta: 'Ventas cobradas',
-                    detalle:
-                      ventas.esperandoPago > 0
-                        ? `${ventas.esperandoPago} esperando pago`
-                        : undefined,
+                    valor: String(preguntas),
+                    etiqueta: 'Preguntas sin responder',
                   },
-                  { valor: String(publicaciones.pausadas), etiqueta: 'Pausadas' },
-                  { valor: String(publicaciones.agotadas), etiqueta: 'Agotadas' },
+                  {
+                    valor: String(reclamos),
+                    etiqueta: 'Reclamos abiertos',
+                  },
+                  {
+                    valor:
+                      reputacion?.ratingAvg == null
+                        ? '—'
+                        : new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 }).format(
+                            reputacion.ratingAvg,
+                          ),
+                    etiqueta: 'Calificación',
+                    detalle:
+                      reputacion === null || reputacion.ratingCount === 0
+                        ? 'todavía sin reseñas'
+                        : `${reputacion.ratingCount === 1 ? '1 reseña' : `${reputacion.ratingCount} reseñas`}`,
+                  },
                 ]}
               />
             </div>
+
+            {/*
+              ⚠️ LAS ESTRELLAS VAN APARTE Y NO ADENTRO DEL TABLERO. El número de
+              la cifra es el dato; las estrellas son el dibujo, y adentro del
+              pliego oscuro competirían con seis números que ya piden atención.
+            */}
+            {reputacion !== null && (
+              <div className={estilos.franjaReputacion}>
+                <Estrellas
+                  promedio={reputacion.ratingAvg}
+                  cantidad={reputacion.ratingCount}
+                  tamanio="grande"
+                />
+                <BotonEnlace href="/vendedor/reputacion" variante="fantasma" tamanio="chico">
+                  Ver tu reputación
+                </BotonEnlace>
+              </div>
+            )}
 
             {/*
               ⚠️ `desplegable` ANIMA LA ALTURA SIN UNA LINEA DE JAVASCRIPT (via
@@ -336,8 +419,7 @@ export default async function PanelDeVendedor() {
                     {/*
                       ⚠️ LA FOTO VIAJA A LA FICHA. Es la misma prenda: sin el
                       morph, una foto desaparece y otra aparece, y nada dice que
-                      son la misma. El nombre lleva el id, que es único en la
-                      página y el mismo que usa `/p/[id]`.
+                      son la misma.
                     */}
                     <FotoCompartida id={item.id}>
                       <Link href={`/p/${item.id}`} className={estilos.tiraItem}>
@@ -390,6 +472,58 @@ export default async function PanelDeVendedor() {
               }
             />
             <Acceso
+              href="/vendedor/preguntas"
+              icono={<IconoPregunta tamanio={22} />}
+              titulo="Preguntas"
+              detalle={
+                preguntas === 0
+                  ? 'No tenés preguntas sin responder.'
+                  : `${preguntas === 1 ? '1 pregunta espera' : `${preguntas} preguntas esperan`} respuesta.`
+              }
+            />
+            <Acceso
+              href="/vendedor/reputacion"
+              icono={<IconoEstrella tamanio={22} />}
+              titulo="Reputación"
+              detalle={
+                reputacion === null || reputacion.ratingCount === 0
+                  ? 'Todavía no te calificaron.'
+                  : `${reputacion.ratingCount === 1 ? '1 reseña' : `${reputacion.ratingCount} reseñas`} recibidas.`
+              }
+            />
+            <Acceso
+              href="/vendedor/nivel"
+              icono={<IconoMedalla tamanio={22} />}
+              titulo="Nivel"
+              detalle="Tu comisión depende de tus ventas completadas."
+            />
+            <Acceso
+              href="/vendedor/promociones"
+              icono={<IconoRayo tamanio={22} />}
+              titulo="Promociones"
+              detalle="Figurar primero, con la comisión agravada."
+            />
+            <Acceso
+              href="/vendedor/metricas"
+              icono={<IconoEtiqueta tamanio={22} />}
+              titulo="Métricas"
+              detalle="Ventas por mes, ticket promedio y qué se vende."
+            />
+            <Acceso
+              href="/vendedor/tienda"
+              icono={<IconoTienda tamanio={22} />}
+              titulo="Tienda"
+              detalle="Tu nombre visible y cómo te presentás."
+            />
+            <Acceso
+              href="/vendedor/vacaciones"
+              icono={<IconoPausa tamanio={22} />}
+              titulo="Vacaciones"
+              detalle={
+                vacaciones.onVacation ? 'Activado: no estás vendiendo.' : 'Apagá la tienda un rato.'
+              }
+            />
+            <Acceso
               href="/vendedor/mercadopago"
               icono={<IconoAutenticado tamanio={22} />}
               titulo="Mercado Pago"
@@ -398,8 +532,7 @@ export default async function PanelDeVendedor() {
             {/*
               ⚠️ SIN ESTA TARJETA, `/vendedor/fiscal` QUEDA HUÉRFANA. El único
               enlace vivía dentro del paso pendiente del checklist, así que
-              desaparecía en cuanto el vendedor cargaba su CUIT. Quien lo cargó
-              mal sólo podía llegar escribiendo la URL a mano.
+              desaparecía en cuanto el vendedor cargaba su CUIT.
             */}
             <Acceso
               href="/vendedor/fiscal"
@@ -417,9 +550,7 @@ export default async function PanelDeVendedor() {
         {/*
           ⚠️ Conectar Mercado Pago NO da confianza ni reputacion (BR-003 /
           SS-012). Es un requisito para poder cobrar, y decirlo evita que el
-          vendedor lo lea como un sello de calidad. Estaba escondido adentro del
-          desplegable de habilitación —o sea, invisible para quien no lo abre— y
-          en gris de 13px.
+          vendedor lo lea como un sello de calidad.
         */}
         <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
           <p className={estilos.nota}>
@@ -467,86 +598,5 @@ function Acceso({
       <span className={estilos.accesoTitulo}>{titulo}</span>
       <span className={estilos.accesoDetalle}>{detalle}</span>
     </Link>
-=======
-  return (
-    <main className={estilos.pagina}>
-      <div className={estilos.encabezado}>
-        <h1 className={estilos.titulo}>{perfil.displayName}</h1>
-        <Etiqueta aviso={perfil.status !== 'approved'}>{estadoDeVendedor(perfil.status)}</Etiqueta>
-      </div>
-
-      {puedeVender ? (
-        <Aviso>Tu cuenta está habilitada. Podés publicar y cobrar.</Aviso>
-      ) : (
-        <Aviso error>
-          Todavía no podés vender. Completá los pasos que quedan y la habilitación es automática.
-        </Aviso>
-      )}
-
-      <h2 className={estilos.subtitulo}>Habilitación</h2>
-
-      <ul className={estilos.tarjeta}>
-        <Paso
-          hecho={signals.emailVerified}
-          titulo="Email verificado"
-          detalle="Es el requisito para operar en Offside, no sólo para vender."
-        >
-          <BotonEnlace href="/verificar-email" variante="secundario">
-            Verificar email
-          </BotonEnlace>
-        </Paso>
-
-        <Paso
-          hecho={signals.fiscalIdentityDeclared}
-          titulo="Identidad fiscal"
-          detalle="Tu CUIT, CUIL o CDI. Se valida el formato y el dígito verificador."
-        >
-          <BotonEnlace href="/vendedor/fiscal" variante="secundario">
-            Cargar identificación
-          </BotonEnlace>
-        </Paso>
-
-        <Paso
-          hecho={signals.mercadoPagoConnected}
-          titulo="Mercado Pago conectado"
-          detalle="Cobrás en tu propia cuenta. Offside sólo retiene su comisión del pago."
-        >
-          <BotonEnlace href="/vendedor/mercadopago" variante="secundario">
-            Conectar Mercado Pago
-          </BotonEnlace>
-        </Paso>
-      </ul>
-
-      {/*
-        ⚠️ Conectar Mercado Pago NO da confianza ni reputacion (BR-003 / SS-012).
-        Es un requisito para poder cobrar, y decirlo evita que el vendedor lo
-        lea como un sello de calidad.
-      */}
-      <p className={estilos.nota}>
-        Estar habilitado significa que podés operar. No es un distintivo de confianza: la reputación
-        se construye vendiendo.
-      </p>
-
-      <h2 className={estilos.subtitulo}>Tu tienda</h2>
-
-      <div className={estilos.accesos}>
-        <Acceso
-          href="/vendedor/publicaciones"
-          titulo="Publicaciones"
-          detalle="Lo que tenés a la venta, con su stock."
-        />
-        <Acceso
-          href="/vendedor/ventas"
-          titulo="Ventas"
-          detalle="Órdenes recibidas, comisión y neto."
-        />
-        <Acceso
-          href="/vendedor/mercadopago"
-          titulo="Mercado Pago"
-          detalle={conexion.status === 'connected' ? 'Cuenta conectada.' : 'Sin conectar.'}
-        />
-      </div>
-    </main>
->>>>>>> origin/main
   );
 }

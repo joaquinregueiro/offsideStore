@@ -1,14 +1,25 @@
 import type { Metadata } from 'next';
-<<<<<<< HEAD
 import Link from 'next/link';
 
 import { CampoOculto, Formulario } from '@/components/form';
-import { IconoCamiseta } from '@/components/iconos';
+import { IconoBuscar, IconoCamiseta } from '@/components/iconos';
 import { FotoCompartida, Pantalla } from '@/components/movimiento';
-import { Aviso, BotonEnlace, Confirmar, EstadoVacio, Etiqueta, Seccion } from '@/components/ui';
-import { condicion, estadoDePublicacion, precio, tonoDePublicacion } from '@/lib/formato';
+import {
+  Aviso,
+  BotonEnlace,
+  Confirmar,
+  Distintivo,
+  EstadoVacio,
+  Etiqueta,
+  NavDeSeccion,
+  Pastilla,
+  Seccion,
+} from '@/components/ui';
+import { condicion, estadoDePublicacion, fecha, precio, tonoDePublicacion } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
+import { arePromotionsEnabled } from '@/modules/listings/services/listing-settings.service';
 import { coverUrls, listMyListings } from '@/modules/listings/services/listing.service';
+import { listPromotions } from '@/modules/listings/services/promotion.service';
 import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
 
 import { eliminar, pausar, reactivar } from '../../acciones';
@@ -17,59 +28,122 @@ import { NavDelVendedor } from '../../nav';
 import estilos from '../../vendedor.module.css';
 
 export const metadata: Metadata = { title: 'Mis publicaciones' };
-=======
-
-import { CampoOculto, Formulario } from '@/components/form';
-import { Aviso, BotonEnlace, EstadoVacio, Etiqueta } from '@/components/ui';
-import { condicion, estadoDePublicacion, precio } from '@/lib/formato';
-import { requireSellerSessionUser } from '@/lib/session';
-import { listMyListings } from '@/modules/listings/services/listing.service';
-import { getConnectionStatus } from '@/modules/sellers/services/mercadopago-connection.service';
-
-import { eliminar, pausar, reactivar } from '../../acciones';
-import estilos from '../../vendedor.module.css';
-
-export const metadata: Metadata = { title: 'Mis publicaciones — Offside Store' };
->>>>>>> origin/main
 export const dynamic = 'force-dynamic';
+
+/**
+ * Los filtros por estado, en el orden en que importan.
+ *
+ * ⚠️ "ELIMINADAS" NO ES UNA PESTAÑA. El borrado es lógico —`order_items`
+ * referencia la publicación— pero para el vendedor es terminal: ofrecer una
+ * pestaña para verlas sugeriría que se pueden recuperar, y no se pueden.
+ */
+const FILTROS = [
+  { clave: 'todas', texto: 'Todas' },
+  { clave: 'active', texto: 'A la venta' },
+  { clave: 'paused', texto: 'Pausadas' },
+  { clave: 'draft', texto: 'Borradores' },
+  { clave: 'sold_out', texto: 'Agotadas' },
+] as const;
+
+type ClaveDeFiltro = (typeof FILTROS)[number]['clave'];
+
+function esFiltro(valor: string | undefined): valor is ClaveDeFiltro {
+  return FILTROS.some((f) => f.clave === valor);
+}
+
+/** Arma la URL conservando el otro parámetro: filtrar no puede borrar la búsqueda. */
+function urlDe(filtro: ClaveDeFiltro, busqueda: string): string {
+  const params = new URLSearchParams();
+  if (filtro !== 'todas') params.set('estado', filtro);
+  if (busqueda !== '') params.set('q', busqueda);
+
+  const query = params.toString();
+
+  return query === '' ? '/vendedor/publicaciones' : `/vendedor/publicaciones?${query}`;
+}
 
 /**
  * Inventario del vendedor (SS-060).
  *
  * ⚠️ ESTA PANTALLA NO FILTRA POR SS-013, y es lo contrario de la vitrina a
- * proposito. Si un vendedor desconecta Mercado Pago, sus publicaciones
- * desaparecen del catalogo publico pero **siguen siendo suyas y siguen aca**:
- * esconderselas a el tambien seria hacerle creer que las perdio.
+ * propósito. Si un vendedor desconecta Mercado Pago, sus publicaciones
+ * desaparecen del catálogo público pero **siguen siendo suyas y siguen acá**:
+ * esconderselas a él también sería hacerle creer que las perdió.
  *
- * Lo que si cambia es el aviso: SS-013 pide "detectar y COMUNICAR" ese estado, y
- * comunicarlo es justamente lo que faltaba —la vitrina se apagaba y el vendedor
- * no tenia forma de enterarse—.
+ * ⚠️ EL FILTRO Y LA BUSQUEDA VIAJAN EN LA URL POR GET. Un inventario filtrado se
+ * comparte, se guarda en favoritos y vuelve con el botón atrás; y el buscador es
+ * un `<form method="get">` que funciona sin una línea de JavaScript.
+ *
+ * ⚠️ SE BUSCA EN MEMORIA Y NO CON `search_vector`. El índice full-text es de la
+ * vitrina pública (DEC-042) y sólo indexa lo que está a la venta: acá hay que
+ * poder encontrar un borrador y una pausada, que son justamente las que no están
+ * indexadas. Es el inventario propio de una persona, no el catálogo entero.
  */
-export default async function MisPublicaciones() {
+export default async function MisPublicaciones({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireSellerSessionUser('/vendedor/publicaciones');
+  const params = await searchParams;
 
-  const [publicaciones, conexion] = await Promise.all([
+  const crudo = Array.isArray(params.estado) ? params.estado[0] : params.estado;
+  const filtro: ClaveDeFiltro = esFiltro(crudo) ? crudo : 'todas';
+
+  const busquedaCruda = Array.isArray(params.q) ? params.q[0] : params.q;
+  const busqueda = (busquedaCruda ?? '').trim().slice(0, 120);
+
+  const [publicaciones, conexion, promociones, promocionesActivas] = await Promise.all([
     listMyListings(user),
     getConnectionStatus(user),
+    listPromotions(user),
+    arePromotionsEnabled(),
   ]);
 
-<<<<<<< HEAD
-  // Las portadas de todo el inventario en una sola consulta.
-  const portadas = await coverUrls(publicaciones.map((item) => item.id));
-
-=======
->>>>>>> origin/main
-  /**
-   * Cuantas dejaron de verse por la desconexion.
-   *
-   * Solo las `active`: una pausada o un borrador tampoco se muestran, pero eso
-   * lo decidio el vendedor y meterlas en la cuenta convertiria el aviso en un
-   * numero que no explica nada.
+  /*
+   * ⚠️ LA PROMOCION VIGENTE SALE DEL HISTORIAL, no de `listings.promoted_until`:
+   * `PublicListing` no expone esa columna. La fila de `listing_promotions` es
+   * además la fuente de verdad —`promoted_until` es una proyección para que la
+   * vitrina filtre con un solo WHERE—, así que esto no es un rodeo.
    */
-  const activas = publicaciones.filter((p) => p.status === 'active').length;
+  const promocionadas = new Map(
+    promociones.filter((p) => p.vigente).map((p) => [p.listingId, p] as const),
+  );
+
+  // Una eliminada es terminal: no se lista ni se cuenta.
+  const vivas = publicaciones.filter((item) => item.status !== 'deleted');
+
+  const normalizar = (texto: string): string =>
+    texto
+      .toLowerCase()
+      .normalize('NFD')
+      // Sin esto, buscar "lanus" no encuentra "Lanús": es el mismo criterio de
+      // `unaccent` que usa la busqueda publica. El rango es el de marcas
+      // combinantes, escrito con codepoints para que no dependa de como se
+      // guarde este archivo.
+      .replace(/[\u0300-\u036f]/g, '');
+
+  const termino = normalizar(busqueda);
+
+  const visibles = vivas.filter((item) => {
+    if (filtro !== 'todas' && item.status !== filtro) return false;
+    if (termino === '') return true;
+
+    return normalizar(item.title).includes(termino);
+  });
+
+  const portadas = await coverUrls(visibles.map((item) => item.id));
+
+  /**
+   * Cuántas dejaron de verse por la desconexión.
+   *
+   * Sólo las `active`: una pausada o un borrador tampoco se muestran, pero eso
+   * lo decidió el vendedor y meterlas en la cuenta convertiría el aviso en un
+   * número que no explica nada.
+   */
+  const activas = vivas.filter((p) => p.status === 'active').length;
 
   return (
-<<<<<<< HEAD
     <Pantalla>
       <main id="contenido" className={estilos.pagina}>
         <Chapa
@@ -85,7 +159,7 @@ export default async function MisPublicaciones() {
           }
         />
 
-        <NavDelVendedor activo="publicaciones" publicaciones={publicaciones.length} />
+        <NavDelVendedor activo="publicaciones" publicaciones={vivas.length} />
 
         {!conexion.canSell && (
           <Aviso tono="error">
@@ -106,11 +180,11 @@ export default async function MisPublicaciones() {
                 </>
               ))}
             Para publicar necesitás estar habilitado y tener Mercado Pago conectado.{' '}
-            <a href="/vendedor">Ver qué te falta</a>.
+            <Link href="/vendedor">Ver qué te falta</Link>.
           </Aviso>
         )}
 
-        {publicaciones.length === 0 ? (
+        {vivas.length === 0 ? (
           <EstadoVacio titulo="Todavía no publicaste nada" icono={<IconoCamiseta tamanio={40} />}>
             <p>Cuando publiques una camiseta va a aparecer acá, con su stock y su estado.</p>
             {conexion.canSell && (
@@ -120,211 +194,270 @@ export default async function MisPublicaciones() {
             )}
           </EstadoVacio>
         ) : (
-          <Seccion
-            titulo="Inventario"
-            dato={
-              publicaciones.length === 1 ? '1 publicación' : `${publicaciones.length} publicaciones`
-            }
-          >
-            <ul className={`${estilos.inventario} revela-grilla`}>
-              {publicaciones.map((publicacion) => {
-                const portada = portadas.get(publicacion.id);
+          <>
+            {/*
+              ⚠️ ES UN `<form method="get">` Y NO UN FILTRO EN VIVO. Sin
+              JavaScript el navegador navega a la misma URL que se podría
+              escribir a mano; con JavaScript se comporta igual. Un filtro en vivo
+              exigiría estado de cliente para algo que una URL representa mejor.
+            */}
+            <form className={estilos.buscadorInventario} method="get" role="search">
+              {filtro !== 'todas' && <input type="hidden" name="estado" value={filtro} />}
+              <label htmlFor="q" className="solo-lectores">
+                Buscar en tus publicaciones
+              </label>
+              <span className={estilos.buscadorIcono} aria-hidden="true">
+                <IconoBuscar tamanio={18} />
+              </span>
+              <input
+                id="q"
+                name="q"
+                type="search"
+                className={estilos.buscadorCampo}
+                placeholder="Buscar por título"
+                defaultValue={busqueda}
+                maxLength={120}
+              />
+              <button type="submit" className={estilos.buscadorBoton}>
+                Buscar
+              </button>
+            </form>
 
-                return (
-                  <li
-                    key={publicacion.id}
-                    className={estilos.fila}
-                    /*
-                      ⚠️ EL ESTADO VIAJA COMO ATRIBUTO, NO COMO CLASE CALCULADA.
-                      Así el CSS decide cómo se ve cada estado sin que esta
-                      pantalla tenga que conocer la paleta, y agregar un estado al
-                      enum no obliga a tocar el `.tsx`.
-                    */
-                    data-estado={publicacion.status}
-                  >
-                    {/*
-                      ⚠️ LA FOTO ES LO QUE HACE RECONOCIBLE UNA FILA. Un
-                      inventario de quince camisetas donde todas se llaman
-                      "Camiseta River 1996" obliga a leer el título entero de cada
-                      una; con la miniatura se encuentra la que se busca de un
-                      vistazo.
+            <div className={estilos.navMarco}>
+              <NavDeSeccion
+                etiqueta="Publicaciones por estado"
+                activo={filtro}
+                items={FILTROS.map((f) => {
+                  const cuantas =
+                    f.clave === 'todas'
+                      ? vivas.length
+                      : vivas.filter((p) => p.status === f.clave).length;
 
-                      ⚠️ EL MARCO ES EL QUE RECORTA, NO LA FILA: el acercamiento
-                      de la foto necesita un `overflow: hidden`, y ponerlo en la
-                      fila le comería el anillo de foco a los cinco controles que
-                      tiene adentro.
-                    */}
-                    <FotoCompartida id={publicacion.id}>
-                      <span className={estilos.filaMarco}>
-                        {portada === undefined ? (
-                          <span className={estilos.filaPatron} aria-hidden="true" />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            className={estilos.filaFoto}
-                            src={portada}
-                            alt=""
-                            width={84}
-                            height={105}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        )}
-                      </span>
-                    </FotoCompartida>
+                  return {
+                    clave: f.clave,
+                    texto: f.texto,
+                    href: urlDe(f.clave, busqueda),
+                    ...(cuantas > 0 ? { dato: cuantas } : {}),
+                  };
+                })}
+              />
+            </div>
 
-                    <div className={estilos.filaCuerpo}>
-                      <div className={estilos.filaTitulo}>
-                        {/*
-                          ⚠️ EL SUBRAYADO SE DIBUJA CON EL FONDO, NO CON UN
-                          `::after`. Un pseudo subraya el RECTÁNGULO del enlace:
-                          si el título parte en dos líneas, la raya cruza el aire
-                          a la derecha de la primera.
-                        */}
-                        <Link
-                          href={`/p/${publicacion.id}`}
-                          className="subraya"
-                          transitionTypes={['avanza']}
-                        >
-                          {publicacion.title}
-                        </Link>
-                        <Etiqueta tono={tonoDePublicacion(publicacion.status)}>
-                          {estadoDePublicacion(publicacion.status)}
-                        </Etiqueta>
-                      </div>
+            {/*
+              ⚠️ LA PASTILLA MUESTRA LO QUE ESTA FILTRANDO Y COMO SACARLO. Sin
+              ella, alguien que buscó "boca" hace diez minutos ve un inventario
+              incompleto y no tiene forma de saber por qué.
+            */}
+            {busqueda !== '' && (
+              <div className={estilos.pastillas}>
+                <Pastilla href={urlDe(filtro, '')} descripcion="Quitar la búsqueda">
+                  «{busqueda}»
+                </Pastilla>
+              </div>
+            )}
 
-                      {/*
-                        ⚠️ EL STOCK SE DICE SIEMPRE Y CON EL NUMERO. Sacarlo de
-                        acá para dejarlo sólo en el chip de "última unidad" deja
-                        sin ningún dato de stock a una publicación pausada o en
-                        borrador con una sola unidad — que es justo el caso donde
-                        el vendedor está decidiendo si reactivarla.
-                      */}
-                      <p className={estilos.filaMeta}>
-                        Talle {publicacion.sizeValue} · {condicion(publicacion.condition)} ·{' '}
-                        {publicacion.stock === 1 ? '1 unidad' : `${publicacion.stock} unidades`}
-                      </p>
+            {visibles.length === 0 ? (
+              <EstadoVacio titulo="No encontramos nada con esos filtros">
+                <p>
+                  Probá con otro texto o mirá{' '}
+                  <Link href="/vendedor/publicaciones">todas tus publicaciones</Link>.
+                </p>
+              </EstadoVacio>
+            ) : (
+              <Seccion
+                titulo="Inventario"
+                dato={visibles.length === 1 ? '1 publicación' : `${visibles.length} publicaciones`}
+              >
+                <ul className={`${estilos.inventario} revela-grilla`}>
+                  {visibles.map((publicacion) => {
+                    const portada = portadas.get(publicacion.id);
+                    const promocion = promocionadas.get(publicacion.id);
 
-                      {/*
-                        ⚠️ EL PULSO SÓLO EN LO QUE ESTÁ A LA VENTA, y es legítimo
-                        únicamente porque NO es la información: el chip lo dice
-                        con texto y con color (`--color-alerta`, 4.88:1 sobre
-                        blanco) y la línea de arriba ya dio el número. Quien no ve
-                        la animación no se pierde nada. Late TRES veces y para
-                        —WCAG 2.2.2 exige poder detener cualquier movimiento de
-                        más de cinco segundos, y algo que late para siempre al
-                        lado de un precio es una alarma—.
-                      */}
-                      {publicacion.stock === 1 && (
-                        <p className={estilos.filaMeta}>
-                          <span
-                            className={[
-                              estilos.chipUltima,
-                              publicacion.status === 'active' ? 'pulso-atencion' : '',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
-                          >
-                            Última unidad
+                    return (
+                      <li
+                        key={publicacion.id}
+                        className={estilos.fila}
+                        /*
+                          ⚠️ EL ESTADO VIAJA COMO ATRIBUTO, NO COMO CLASE
+                          CALCULADA. Así el CSS decide cómo se ve cada estado sin
+                          que esta pantalla tenga que conocer la paleta.
+                        */
+                        data-estado={publicacion.status}
+                      >
+                        <FotoCompartida id={publicacion.id}>
+                          <span className={estilos.filaMarco}>
+                            {portada === undefined ? (
+                              <span className={estilos.filaPatron} aria-hidden="true" />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                className={estilos.filaFoto}
+                                src={portada}
+                                alt=""
+                                width={84}
+                                height={105}
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            )}
                           </span>
-                        </p>
-                      )}
+                        </FotoCompartida>
 
-                      {/*
-                        ⚠️ EL PRECIO EN LA TIPOGRAFIA DE TITULARES, igual que en
-                        la vitrina. Es el dato que el vendedor viene a mirar
-                        cuando entra al inventario, y perdido dentro de la linea
-                        de metadatos no se distingue del talle.
-                      */}
-                      <p className={estilos.filaPrecio}>
-                        {precio(publicacion.priceAmount, publicacion.currency)}
-                      </p>
+                        <div className={estilos.filaCuerpo}>
+                          <div className={estilos.filaTitulo}>
+                            <Link
+                              href={`/p/${publicacion.id}`}
+                              className="subraya"
+                              transitionTypes={['avanza']}
+                            >
+                              {publicacion.title}
+                            </Link>
+                            <Etiqueta tono={tonoDePublicacion(publicacion.status)}>
+                              {estadoDePublicacion(publicacion.status)}
+                            </Etiqueta>
+                            {/*
+                              ⚠️ SE LLAMA "PROMOCIONADA" Y NO "DESTACADA". La
+                              eligió el vendedor y pagó por eso: decirlo con su
+                              nombre es lo que mantiene honesta la grilla.
+                            */}
+                            {promocion !== undefined && <Distintivo />}
+                          </div>
 
-                      {/*
-                        ⚠️ UN BORRADOR NO SE VE EN LA VITRINA, y el vendedor
-                        tiene que saber por que. Sin este aviso, una publicacion
-                        que quedo sin fotos parece publicada y no vende, sin
-                        explicacion.
-                      */}
-                      {publicacion.status === 'draft' && (
-                        <p className={estilos.filaAviso}>
-                          Sin fotos: no está a la venta hasta que subas al menos una.
-                        </p>
-                      )}
+                          <p className={estilos.filaMeta}>
+                            Talle {publicacion.sizeValue} · {condicion(publicacion.condition)} ·{' '}
+                            {publicacion.stock === 1 ? '1 unidad' : `${publicacion.stock} unidades`}
+                          </p>
 
-                      {/*
-                        SS-050. Cada accion es un formulario propio: son
-                        mutaciones y van por POST, no por enlace —un GET que
-                        cambia estado se dispara con el prefetch del navegador—.
-                      */}
-                      <div className={estilos.filaAcciones}>
-                        <BotonEnlace
-                          href={`/vendedor/publicaciones/${publicacion.id}/editar`}
-                          variante="fantasma"
-                          tamanio="chico"
-                        >
-                          Editar
-                        </BotonEnlace>
-                        <BotonEnlace
-                          href={`/vendedor/publicaciones/${publicacion.id}/fotos`}
-                          variante="fantasma"
-                          tamanio="chico"
-                        >
-                          Fotos
-                        </BotonEnlace>
+                          {publicacion.stock === 1 && (
+                            <p className={estilos.filaMeta}>
+                              <span
+                                className={[
+                                  estilos.chipUltima,
+                                  publicacion.status === 'active' ? 'pulso-atencion' : '',
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                              >
+                                Última unidad
+                              </span>
+                            </p>
+                          )}
 
-                        {(publicacion.status === 'active' || publicacion.status === 'sold_out') && (
-                          <Formulario
-                            accion={pausar}
-                            enviar="Pausar"
-                            variante="fantasma"
-                            tamanio="chico"
-                            bloque={false}
-                          >
-                            <CampoOculto nombre="listingId" valor={publicacion.id} />
-                          </Formulario>
-                        )}
+                          <p className={estilos.filaPrecio}>
+                            {precio(publicacion.priceAmount, publicacion.currency)}
+                          </p>
 
-                        {publicacion.status === 'paused' && (
-                          <Formulario
-                            accion={reactivar}
-                            enviar="Volver a la venta"
-                            variante="secundario"
-                            tamanio="chico"
-                            bloque={false}
-                          >
-                            <CampoOculto nombre="listingId" valor={publicacion.id} />
-                          </Formulario>
-                        )}
+                          {publicacion.status === 'draft' && (
+                            <p className={estilos.filaAviso}>
+                              Sin fotos: no está a la venta hasta que subas al menos una.
+                            </p>
+                          )}
 
-                        {/*
-                          ⚠️ ELIMINAR VA EN DOS PASOS. Es irreversible y hasta
-                          ahora pasaba con un solo clic, en una fila donde el
-                          boton de al lado es "Pausar" —que si se deshace—. El
-                          aviso de consecuencia se lee ANTES de decidir, no en
-                          una nota al pie.
-                        */}
-                        <Confirmar
-                          etiqueta="Eliminar"
-                          pregunta="Se saca de la venta para siempre. El historial de quien ya la compró no se toca, pero vos no podés recuperarla."
-                        >
-                          <Formulario
-                            accion={eliminar}
-                            enviar="Sí, eliminar"
-                            variante="peligro"
-                            tamanio="chico"
-                            bloque={false}
-                          >
-                            <CampoOculto nombre="listingId" valor={publicacion.id} />
-                          </Formulario>
-                        </Confirmar>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </Seccion>
+                          {/*
+                            ⚠️ SE DICE HASTA CUANDO DURA Y QUE NO SE PUEDE
+                            CORTAR. Una promoción que se ve como un adorno pero
+                            cobra el triple de comisión es una trampa.
+                          */}
+                          {promocion !== undefined && (
+                            <p className={estilos.filaAviso}>
+                              Promocionada hasta el {fecha(promocion.endsAt)}: mientras dure, tu
+                              comisión se multiplica. No se puede cortar antes.
+                            </p>
+                          )}
+
+                          {/*
+                            SS-050. Cada acción es un formulario propio: son
+                            mutaciones y van por POST, no por enlace —un GET que
+                            cambia estado se dispara con el prefetch del navegador—.
+                          */}
+                          <div className={estilos.filaAcciones}>
+                            <BotonEnlace
+                              href={`/vendedor/publicaciones/${publicacion.id}/editar`}
+                              variante="fantasma"
+                              tamanio="chico"
+                            >
+                              Editar
+                            </BotonEnlace>
+                            <BotonEnlace
+                              href={`/vendedor/publicaciones/${publicacion.id}/fotos`}
+                              variante="fantasma"
+                              tamanio="chico"
+                            >
+                              Fotos
+                            </BotonEnlace>
+
+                            {/*
+                              ⚠️ PROMOCIONAR ES UN ENLACE, NO UN BOTON QUE
+                              PROMOCIONA. Cuesta plata —la comisión se
+                              multiplica— y no se puede cancelar antes de tiempo:
+                              lleva a una pantalla que lo explica con SU tasa y SU
+                              precio antes de que apriete nada.
+                            */}
+                            {promocionesActivas &&
+                              publicacion.status === 'active' &&
+                              promocion === undefined && (
+                                <BotonEnlace
+                                  href={`/vendedor/publicaciones/${publicacion.id}/promocionar`}
+                                  variante="secundario"
+                                  tamanio="chico"
+                                >
+                                  Promocionar
+                                </BotonEnlace>
+                              )}
+
+                            {(publicacion.status === 'active' ||
+                              publicacion.status === 'sold_out') && (
+                              <Formulario
+                                accion={pausar}
+                                enviar="Pausar"
+                                variante="fantasma"
+                                tamanio="chico"
+                                bloque={false}
+                              >
+                                <CampoOculto nombre="listingId" valor={publicacion.id} />
+                              </Formulario>
+                            )}
+
+                            {publicacion.status === 'paused' && (
+                              <Formulario
+                                accion={reactivar}
+                                enviar="Volver a la venta"
+                                variante="secundario"
+                                tamanio="chico"
+                                bloque={false}
+                              >
+                                <CampoOculto nombre="listingId" valor={publicacion.id} />
+                              </Formulario>
+                            )}
+
+                            {/*
+                              ⚠️ ELIMINAR VA EN DOS PASOS. Es irreversible y el
+                              botón de al lado es "Pausar", que sí se deshace. El
+                              aviso de consecuencia se lee ANTES de decidir.
+                            */}
+                            <Confirmar
+                              etiqueta="Eliminar"
+                              pregunta="Se saca de la venta para siempre. El historial de quien ya la compró no se toca, pero vos no podés recuperarla."
+                            >
+                              <Formulario
+                                accion={eliminar}
+                                enviar="Sí, eliminar"
+                                variante="peligro"
+                                tamanio="chico"
+                                bloque={false}
+                              >
+                                <CampoOculto nombre="listingId" valor={publicacion.id} />
+                              </Formulario>
+                            </Confirmar>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Seccion>
+            )}
+          </>
         )}
 
         {/*
@@ -341,110 +474,5 @@ export default async function MisPublicaciones() {
         </div>
       </main>
     </Pantalla>
-=======
-    <main className={estilos.pagina}>
-      <div className={estilos.encabezado}>
-        <h1 className={estilos.titulo}>Mis publicaciones</h1>
-        {conexion.canSell && (
-          <BotonEnlace href="/vendedor/publicaciones/nueva">Publicar</BotonEnlace>
-        )}
-      </div>
-
-      {!conexion.canSell && (
-        <Aviso error>
-          {activas > 0 &&
-            (activas === 1 ? (
-              <>
-                <strong>Tu publicación activa no se está mostrando.</strong> Mientras Mercado Pago
-                no esté conectado nadie puede verla ni comprarla, porque no podríamos cobrarte la
-                venta. <strong>Vuelve sola al reconectar</strong>: no hace falta que la republiques
-                ni que toques nada.{' '}
-              </>
-            ) : (
-              <>
-                <strong>Tus {activas} publicaciones activas no se están mostrando.</strong> Mientras
-                Mercado Pago no esté conectado nadie puede verlas ni comprarlas, porque no podríamos
-                cobrarte la venta. <strong>Vuelven solas al reconectar</strong>: no hace falta que
-                las republiques ni que toques nada.{' '}
-              </>
-            ))}
-          Para publicar necesitás estar habilitado y tener Mercado Pago conectado.{' '}
-          <a href="/vendedor">Ver qué te falta</a>.
-        </Aviso>
-      )}
-
-      {publicaciones.length === 0 ? (
-        <EstadoVacio titulo="Todavía no publicaste nada">
-          Cuando publiques una camiseta va a aparecer acá, con su stock y su estado.
-        </EstadoVacio>
-      ) : (
-        publicaciones.map((publicacion) => (
-          <article key={publicacion.id} className={estilos.tarjeta}>
-            <div className={estilos.linea}>
-              <a href={`/p/${publicacion.id}`}>{publicacion.title}</a>
-              <Etiqueta aviso={publicacion.status !== 'active'}>
-                {estadoDePublicacion(publicacion.status)}
-              </Etiqueta>
-            </div>
-            <div className={estilos.linea}>
-              <span className={estilos.concepto}>
-                Talle {publicacion.sizeValue} · {condicion(publicacion.condition)} · stock{' '}
-                {publicacion.stock}
-              </span>
-              <span>{precio(publicacion.priceAmount, publicacion.currency)}</span>
-            </div>
-            <div className={estilos.linea}>
-              <a href={`/vendedor/publicaciones/${publicacion.id}/editar`}>Editar</a>
-              <a href={`/vendedor/publicaciones/${publicacion.id}/fotos`}>Fotos</a>
-            </div>
-
-            {/*
-              ⚠️ UN BORRADOR NO SE VE EN LA VITRINA, y el vendedor tiene que
-              saber por que. Sin este aviso, una publicacion que quedo sin fotos
-              parece publicada y no vende, sin explicacion.
-            */}
-            {publicacion.status === 'draft' && (
-              <p className={estilos.pasoDetalle}>
-                Sin fotos: no está a la venta hasta que subas al menos una.
-              </p>
-            )}
-
-            {/*
-              SS-050. Cada accion es un formulario propio: son mutaciones y van
-              por POST, no por enlace —un GET que cambia estado se dispara con
-              el prefetch del navegador—.
-            */}
-            <div className={estilos.acciones}>
-              {(publicacion.status === 'active' || publicacion.status === 'sold_out') && (
-                <Formulario accion={pausar} enviar="Pausar">
-                  <CampoOculto nombre="listingId" valor={publicacion.id} />
-                </Formulario>
-              )}
-
-              {publicacion.status === 'paused' && (
-                <Formulario accion={reactivar} enviar="Volver a la venta">
-                  <CampoOculto nombre="listingId" valor={publicacion.id} />
-                </Formulario>
-              )}
-
-              {/*
-                ⚠️ ELIMINAR ES IRREVERSIBLE para el vendedor. Se avisa ANTES,
-                junto al boton, no en un cartel que se lee despues.
-              */}
-              <Formulario accion={eliminar} enviar="Eliminar">
-                <CampoOculto nombre="listingId" valor={publicacion.id} />
-                <p className={estilos.pasoDetalle}>Eliminar no se puede deshacer.</p>
-              </Formulario>
-            </div>
-          </article>
-        ))
-      )}
-
-      <p className={estilos.nota}>
-        Pausar la saca de la vitrina y podés volver a activarla cuando quieras. Eliminar es
-        definitivo. Cambiar el precio no afecta a las órdenes ya hechas.
-      </p>
-    </main>
->>>>>>> origin/main
   );
 }

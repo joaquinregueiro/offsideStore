@@ -136,6 +136,193 @@ export function IconoFlechaIzquierda(props: PropsIcono) {
   );
 }
 
+export function IconoFlechaDerecha(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" />
+    </Icono>
+  );
+}
+
+/* ------------------------------------------- prendas (categorias, PS §4.3) */
+
+/**
+ * ⚠️ NO ESTAN EN LA LAMINA DE LA IDENTIDAD: el §04 solo dibuja la camiseta. Las
+ * otras cinco categorias del enum `garment_category` se dibujan con la misma
+ * regla —trazo 1.5, esquinas suaves, sin relleno— para que en la grilla de
+ * categorias las seis se lean como un solo juego. Pendientes de validacion con
+ * el diseño, igual que los de interfaz.
+ */
+
+export function IconoShort(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M5 4h14l1 14h-6.2L12 12l-1.8 6H4z" />
+      <path d="M5 8h14" />
+    </Icono>
+  );
+}
+
+export function IconoBuzo(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M9 4 4 6.6l1.5 4 2.5-.7V20h8V9.9l2.5.7 1.5-4L15 4" />
+      <path d="M9 4c0 1.2.6 2 1.5 2.4M15 4c0 1.2-.6 2-1.5 2.4" />
+      <path d="M8 16.5h8" />
+    </Icono>
+  );
+}
+
+export function IconoCampera(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M9 3 4 5.6l1.6 4L8 8.9V21h8V8.9l2.4.7 1.6-4L15 3" />
+      <path d="M12 6.5V21" />
+      <path d="M9 3c.6 1.3 1.6 2.2 3 2.6 1.4-.4 2.4-1.3 3-2.6" />
+    </Icono>
+  );
+}
+
+export function IconoConjunto(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M8 3 3.8 5.2l1.3 3.3 2-.6V13h6.6V7.9l2 .6 1.3-3.3L13 3" />
+      <path d="M8 3a2.5 2.5 0 0 0 5 0" />
+      <path d="M7.4 13h8.4l.7 8h-4.2l-.7-4.3-.7 4.3H6.7z" />
+    </Icono>
+  );
+}
+
+/* --------------------------------------------- interfaz (2026-09-11, panel) */
+
+export function IconoCampana(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z" />
+      <path d="M10 20.5a2 2 0 0 0 4 0" />
+    </Icono>
+  );
+}
+
+export function IconoCarrito(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M3 4h2.4l2.2 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L21 8H6.4" />
+      <circle cx="9.5" cy="20" r="1.2" />
+      <circle cx="17.5" cy="20" r="1.2" />
+    </Icono>
+  );
+}
+
+export function IconoEstrella(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="m12 3.6 2.6 5.6 6 .7-4.5 4.2 1.2 6.1L12 17.2l-5.3 3 1.2-6.1L3.4 9.9l6-.7z" />
+    </Icono>
+  );
+}
+
+export function IconoCamion(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M3 6.5h11v9H3zM14 10h4l3 3v2.5h-7z" />
+      <circle cx="7" cy="17.5" r="1.6" />
+      <circle cx="17" cy="17.5" r="1.6" />
+    </Icono>
+  );
+}
+
+export function IconoPregunta(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M4 5.5h16v10H12l-4.5 3.5V15.5H4z" />
+      <path d="M9.8 9.2a2.2 2.2 0 1 1 3 2c-.6.3-.8.6-.8 1.2M12 13.9v.1" />
+    </Icono>
+  );
+}
+
+export function IconoBandera(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M5 21V4" />
+      <path d="M5 4h13l-2.5 4 2.5 4H5" />
+    </Icono>
+  );
+}
+
+export function IconoReloj(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.2 2" />
+    </Icono>
+  );
+}
+
+export function IconoUbicacion(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M12 21s6.5-6 6.5-11a6.5 6.5 0 0 0-13 0c0 5 6.5 11 6.5 11z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </Icono>
+  );
+}
+
+export function IconoTienda(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M4 9.5 5.5 4h13L20 9.5" />
+      <path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" />
+      <path d="M5.5 12v8h13v-8M10 20v-5h4v5" />
+    </Icono>
+  );
+}
+
+export function IconoMedalla(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <circle cx="12" cy="14" r="5.5" />
+      <path d="m8.5 9.5-2.5-6h4l2 4.5M15.5 9.5l2.5-6h-4l-2 4.5" />
+      <path d="m12 11.5.9 1.9 2.1.3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1-1.5-1.4 2.1-.3z" />
+    </Icono>
+  );
+}
+
+export function IconoRayo(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M13 3 5 13.5h6L10 21l9-11h-6z" />
+    </Icono>
+  );
+}
+
+export function IconoCasa(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="m4 11 8-7 8 7" />
+      <path d="M6.5 9.5V20h11V9.5M10 20v-5h4v5" />
+    </Icono>
+  );
+}
+
+export function IconoPausa(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M8 5v14M16 5v14" />
+    </Icono>
+  );
+}
+
+export function IconoAjustes(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </Icono>
+  );
+}
+
 export function IconoSobre(props: PropsIcono) {
   return (
     <Icono {...props}>

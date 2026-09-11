@@ -294,8 +294,16 @@ describe('creacion de orden', () => {
     // Sin envio ni descuentos mientras esos modulos no existan.
     expect(fila?.shippingAmount).toBe(0n);
     expect(fila?.discountAmount).toBe(0n);
-    // El plazo de la ventana de pago sigue 🟡 sin decidir (DEC-033).
-    expect(fila?.paymentDeadline).toBeNull();
+    /*
+     * ⚠️ ESTO ANTES ESPERABA `null` Y AHORA ESPERA UNA FECHA, y no es un
+     * ajuste del test: es que DEC-033 se implemento (2026-09-11). La orden
+     * nace con `payment_deadline = now + payment_window_minutes` (⚙️ Config
+     * Store) y el barrido `orders-expire-pending-payment` la cancela al
+     * vencer. Lo que se fija acá es que el plazo EXISTE y esta en el futuro;
+     * cuanto dura es configuracion y no se escribe en un test.
+     */
+    expect(fila?.paymentDeadline).not.toBeNull();
+    expect(fila!.paymentDeadline!.getTime()).toBeGreaterThan(Date.now());
 
     const [item] = await getDatabase()
       .select()

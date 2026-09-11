@@ -1,30 +1,24 @@
-<<<<<<< HEAD
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-=======
->>>>>>> origin/main
 import { salir } from '@/app/(auth)/acciones';
 import { capabilitiesFor } from '@/lib/permissions';
 import { getSessionUser } from '@/lib/session';
 
+import { countCartItems } from '@/modules/cart/services/cart.service';
+import { countUnread } from '@/modules/notifications/services/inapp-notification.service';
+
 import estilos from './header.module.css';
-<<<<<<< HEAD
-import { IconoBuscar, IconoCerrar, IconoMenu } from './iconos';
+import { IconoBuscar, IconoCampana, IconoCarrito, IconoCerrar, IconoMenu } from './iconos';
 import { Logo } from './marca';
+import { Contador } from './ui';
 
 /**
  * Barra superior, en todas las pantallas.
-=======
-
-/**
- * Barra superior, en todas las pantallas publicas.
->>>>>>> origin/main
  *
  * Server Component: lee la sesion en el servidor y decide que enlaces mostrar.
  * No hay parpadeo de "cargando sesion" ni un estado intermedio en el que la
  * barra dice "Ingresar" a alguien que ya inicio sesion.
-<<<<<<< HEAD
  *
  * ⚠️ EL MENU DE TELEFONO NO USA JAVASCRIPT. Es un `<details>`: el navegador ya
  * sabe abrirlo y cerrarlo, responde a Enter y a Espacio, y expone el estado
@@ -76,6 +70,14 @@ export async function Header({
   const user = await getSessionUser();
 
   /*
+   * ⚠️ LA CAMPANITA NO PUEDE VOLTEAR LA BARRA. Es un conteo de cortesia en el
+   * componente que esta en TODAS las pantallas: si la consulta falla, la barra
+   * sale sin globo y el error queda en el log, no en la cara de la persona.
+   */
+  const [noLeidas, enElCarrito] =
+    user === null ? [0, 0] : await Promise.all([contarNoLeidas(user), contarEnElCarrito(user)]);
+
+  /*
    * `aria-current="page"` es lo que anuncia la seccion activa a un lector de
    * pantalla; el subrayado de `header.module.css` cuelga del MISMO atributo, asi
    * que no hay forma de que la señal visual y la accesible se desincronicen.
@@ -83,7 +85,47 @@ export async function Header({
   const actual = (s: SeccionDeNavegacion) =>
     seccion === s ? { 'aria-current': 'page' as const } : {};
 
-  const enlaces: ReactNode =
+  /*
+   * ⚠️ LA CAMPANITA SE DIBUJA DISTINTO SEGUN DONDE ESTE: en la barra es un
+   * icono con globo (hay lugar y se lee de un vistazo); adentro del menu de
+   * telefono es una fila de texto como las demas, porque una fila de ancho
+   * completo con un icono solo se ve rota.
+   */
+  const carrito = (donde: 'barra' | 'menu'): ReactNode =>
+    enElCarrito === 0 && donde === 'menu' ? null : donde === 'barra' ? (
+      <Contador
+        href="/carrito"
+        icono={<IconoCarrito tamanio={20} />}
+        texto="Carrito"
+        cantidad={enElCarrito}
+        className={estilos.contadorBarra}
+      />
+    ) : (
+      <Link href="/carrito" className={estilos.enlace} transitionTypes={['barrido']}>
+        Carrito
+        <span className={estilos.globoMenu}>{enElCarrito > 99 ? '99+' : enElCarrito}</span>
+      </Link>
+    );
+
+  const campanita = (donde: 'barra' | 'menu'): ReactNode =>
+    donde === 'barra' ? (
+      <Contador
+        href="/cuenta/notificaciones"
+        icono={<IconoCampana tamanio={20} />}
+        texto="Notificaciones"
+        cantidad={noLeidas}
+        className={estilos.contadorBarra}
+      />
+    ) : (
+      <Link href="/cuenta/notificaciones" className={estilos.enlace} transitionTypes={['barrido']}>
+        Notificaciones
+        {noLeidas > 0 && (
+          <span className={estilos.globoMenu}>{noLeidas > 99 ? '99+' : noLeidas}</span>
+        )}
+      </Link>
+    );
+
+  const enlaces = (donde: 'barra' | 'menu'): ReactNode =>
     user === null ? (
       <>
         <Link
@@ -103,8 +145,14 @@ export async function Header({
       </>
     ) : (
       <>
+        {/*
+          ⚠️ APUNTA A `/cuenta/compras`, NO A `/mis-compras`. La vieja sigue
+          existiendo y redirige con 308, pero mandar a la barra por una
+          redireccion en CADA pantalla del sitio es un salto de mas que se
+          paga en cada navegacion.
+        */}
         <Link
-          href="/mis-compras"
+          href="/cuenta/compras"
           className={estilos.enlace}
           transitionTypes={['barrido']}
           {...actual('compras')}
@@ -135,6 +183,8 @@ export async function Header({
             Admin
           </Link>
         )}
+        {carrito(donde)}
+        {campanita(donde)}
         {/*
           Salir es una MUTACION —invalida la sesion en la base—, asi que va en
           un `<form>` con POST, no en un enlace. Un GET que cambia estado se
@@ -192,18 +242,6 @@ export async function Header({
         >
           <Logo invertido />
         </Link>
-=======
- */
-export async function Header() {
-  const user = await getSessionUser();
-
-  return (
-    <header className={estilos.barra}>
-      <div className={estilos.contenido}>
-        <a href="/" className={estilos.marca}>
-          Offside
-        </a>
->>>>>>> origin/main
 
         {/*
           ⚠️ ES UN <form> CON GET, no un campo con JavaScript. Asi la busqueda
@@ -211,20 +249,15 @@ export async function Header() {
           el boton atras. Y funciona sin JS, como el resto del sitio.
         */}
         <form action="/buscar" method="get" className={estilos.buscadorForm} role="search">
-<<<<<<< HEAD
           <label htmlFor="busqueda-global" className="solo-lectores">
             Buscar publicaciones
           </label>
           <input
             id="busqueda-global"
-=======
-          <input
->>>>>>> origin/main
             className={estilos.buscador}
             type="search"
             name="q"
             placeholder="Buscar camiseta, club, temporada…"
-<<<<<<< HEAD
             /*
               ⚠️ EL CAMPO CONSERVA LO QUE SE BUSCO. Antes se vaciaba: en
               `/buscar?q=river` el titulo decia "Resultados para river" y el
@@ -247,7 +280,7 @@ export async function Header() {
         </form>
 
         <nav className={estilos.acciones} aria-label="Principal">
-          {enlaces}
+          {enlaces('barra')}
         </nav>
 
         <details className={estilos.menu}>
@@ -277,7 +310,7 @@ export async function Header() {
             primeros.
           */}
           <nav className={`${estilos.menuPanel} sup-noche escena-luz`} aria-label="Menú">
-            {enlaces}
+            {enlaces('menu')}
             <div className={`${estilos.menuLuz} blobs`} aria-hidden="true">
               <i className="blob blob-cancha blob-grande" />
               <i className="blob blob-cambio blob-chico" />
@@ -293,56 +326,38 @@ export async function Header() {
         los 320px porque no compite con nada.
       */}
       <div className={`${estilos.cinta} patron-vivo`} aria-hidden="true" />
-=======
-            aria-label="Buscar publicaciones"
-          />
-        </form>
-
-        <nav className={estilos.acciones}>
-          {user === null ? (
-            <>
-              <a href="/ingresar" className={estilos.enlace}>
-                Ingresar
-              </a>
-              <a href="/crear-cuenta" className={estilos.enlace}>
-                Crear cuenta
-              </a>
-            </>
-          ) : (
-            <>
-              <a href="/mis-compras" className={estilos.enlace}>
-                Mis compras
-              </a>
-              <a href="/vendedor" className={estilos.enlace}>
-                Vender
-              </a>
-              {/*
-                El acceso al back-office aparece SOLO para quien tiene alguna
-                capacidad. No es una medida de seguridad —cada pantalla y cada
-                Server Action exigen la suya—, sino la unica forma de llegar sin
-                escribir la URL a mano.
-              */}
-              {capabilitiesFor(user.adminRole).length > 0 && (
-                <a href="/admin" className={estilos.enlace}>
-                  Admin
-                </a>
-              )}
-              {/*
-                Salir es una MUTACION —invalida la sesion en la base—, asi que
-                va en un `<form>` con POST, no en un enlace. Un GET que cambia
-                estado se dispara con un prefetch del navegador o con una imagen
-                incrustada en otro sitio.
-              */}
-              <form action={salir}>
-                <button type="submit" className={estilos.enlaceBoton}>
-                  Salir
-                </button>
-              </form>
-            </>
-          )}
-        </nav>
-      </div>
->>>>>>> origin/main
     </header>
   );
+}
+
+/**
+ * Conteo de notificaciones sin leer, a prueba de fallas: la barra no depende
+ * de que la tabla responda.
+ */
+async function contarNoLeidas(user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>) {
+  try {
+    return await countUnread(user);
+  } catch (error) {
+    console.error('[header] no se pudo contar las notificaciones sin leer', error);
+
+    return 0;
+  }
+}
+
+/**
+ * Cuantas unidades hay en el carrito. Mismo criterio que la campanita: un
+ * fallo acá saca el globo, no la barra.
+ *
+ * ⚠️ CON `feature_cart` APAGADO DEVUELVE 0, asi que el icono desaparece solo:
+ * `countCartItems` consulta la perilla y el globo nunca ofrece una pantalla
+ * que da 404.
+ */
+async function contarEnElCarrito(user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>) {
+  try {
+    return await countCartItems(user);
+  } catch (error) {
+    console.error('[header] no se pudo contar el carrito', error);
+
+    return 0;
+  }
 }

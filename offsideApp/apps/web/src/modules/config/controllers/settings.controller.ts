@@ -7,6 +7,9 @@ import { CAPABILITIES } from '@/lib/permissions';
 import { consumeUserLimit, type RateLimitScope } from '@/lib/rate-limit';
 import { rateLimited } from '@/modules/auth/auth.errors';
 
+import { GLOBAL_SCOPE, type SettingScopeRef } from '../repositories/app-setting.repository';
+import * as settingStore from '../services/setting-store.service';
+import { assertSettingKey } from '../services/settings-registry';
 import * as settingsService from '../services/settings.service';
 
 /**
@@ -29,10 +32,21 @@ async function enforceUserLimit(scope: RateLimitScope, userId: string): Promise<
 /**
  * Controller del Config Store. Sin reglas de negocio.
  *
- * ⚠️ ES ESPECIFICO DE LA COMISION, NO UN LECTOR GENERICO DE `app_settings`.
- * Un `GET /api/admin/settings` que devolviera la tabla entera se convertiria en
- * una fuga el dia que alguien guarde ahi una clave sensible. Cada clave que
- * necesite administracion expone su propio endpoint acotado.
+ * Dos familias de handlers:
+ *
+ *   - los de la COMISION (`getCommission` / `updateCommission`), que siguen
+ *     tal cual: `/admin/comision` y su ruta los usan;
+ *   - los GENERICOS (`listSettings` / `updateSetting`, 2026-09-11), para que
+ *     el back-office edite ventanas, multiplicadores, umbrales y flags sin un
+ *     endpoint por clave.
+ *
+ * ⚠️ "GENERICO" NO ES "LA TABLA ENTERA". Este archivo decia que un `GET
+ * /api/admin/settings` seria una fuga el dia que alguien guarde una clave
+ * sensible en `app_settings`, y el argumento sigue valiendo: por eso el
+ * listado sale de `listSettings()`, que recorre el REGISTRO
+ * (`settings-registry.ts`) y no la tabla. Una fila cuya clave no este
+ * registrada no se devuelve, y en el registro solo entran parametros de
+ * negocio: un secreto no tiene schema ahi ni lo va a tener.
  */
 
 /**
@@ -140,6 +154,110 @@ export async function updateCommission(request: Request): Promise<NextResponse> 
     };
 
     return ok({ commission: vista });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Handlers genericos (todas las claves del registro)                          */
+/* -------------------------------------------------------------------------- */
+
+/** Fechas a ISO: es lo unico del listado que no viaja tal cual por JSON. */
+function toPublicEntry(entry: settingStore.SettingListEntry) {
+  return {
+    ...entry,
+    updatedAt: entry.updatedAt?.toISOString() ?? null,
+    overrides: entry.overrides.map((o) => ({ ...o, updatedAt: o.updatedAt.toISOString() })),
+  };
+}
+
+/**
+ * `GET /api/admin/settings` — todas las claves del registro con su valor
+ * vigente, version, definicion y overrides. Requiere `system_config:manage`.
+ */
+export async function listSettings(request: Request): Promise<NextResponse> {
+  try {
+    await requireCapability(request, CAPABILITIES.SYSTEM_CONFIG_MANAGE);
+
+    const settings = await settingStore.listSettings();
+
+    return ok({ settings: settings.map(toPublicEntry) });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+/**
+ * Cuerpo del cambio generico.
+ *
+ * ⚠️ `.strict()` por el mismo motivo que la comision: `updatedBy` en el cuerpo
+ * es un 422, no un campo ignorado. El autor sale SIEMPRE de la sesion.
+ *
+ * `value` es `z.json()` y no `z.unknown()`: lo que se guarda es `jsonb`, y un
+ * `undefined` o una funcion no tienen forma de llegar ahi. La validacion de
+ * FORMA por clave (rango, tipo, json con estructura) la hace el Service
+ * contra el registro y devuelve `VALIDATION_FAILED`, que `handleError`
+ * traduce a 422: el administrador que manda un plazo negativo recibe el
+ * motivo, no un 500.
+ *
+ * `scope` + `scopeId` viajan sueltos porque asi los manda un formulario; el
+ * `superRefine` reconstruye la union discriminada que el repositorio exige
+ * (global SIN id, los otros CON id) antes de que el Service la vea.
+ */
+const updateSettingSchema = z
+  .object({
+    key: z.string().min(1).max(100),
+    value: z.json(),
+    scope: z.enum(['global', 'seller_tier', 'category']).default('global'),
+    scopeId: z.uuid().optional(),
+  })
+  .strict()
+  .superRefine((body, ctx) => {
+    if (body.scope === 'global' && body.scopeId !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scopeId'],
+        message: 'el ambito global no lleva scopeId',
+      });
+    }
+
+    if (body.scope !== 'global' && body.scopeId === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scopeId'],
+        message: `el ambito ${body.scope} exige scopeId`,
+      });
+    }
+  });
+
+/**
+ * `PUT /api/admin/settings` — cambia UNA clave en UN ambito. Inserta una
+ * version nueva; la anterior queda como historial (DEC-030).
+ *
+ * ⚠️ NO AFECTA TRANSACCIONES YA CREADAS: cada orden congela lo que uso.
+ * Comparte el contador de rate limit con el cambio de comision: es la misma
+ * familia de operacion y bloquear una sin la otra no serviria de nada.
+ */
+export async function updateSetting(request: Request): Promise<NextResponse> {
+  try {
+    const admin = await requireCapability(request, CAPABILITIES.SYSTEM_CONFIG_MANAGE);
+    await enforceUserLimit('system-config', admin.id);
+
+    const input = updateSettingSchema.parse(await readJson(request));
+    const key = assertSettingKey(input.key);
+
+    // El `superRefine` ya garantizo la pareja scope/scopeId; esto solo la tipa.
+    const scope: SettingScopeRef =
+      input.scope === 'global' || input.scopeId === undefined
+        ? GLOBAL_SCOPE
+        : { scope: input.scope, scopeId: input.scopeId };
+
+    const resultado = await settingStore.setSetting(key, input.value, admin.id, undefined, scope);
+
+    return ok({
+      setting: { ...resultado, createdAt: resultado.createdAt.toISOString() },
+    });
   } catch (error) {
     return handleError(error);
   }

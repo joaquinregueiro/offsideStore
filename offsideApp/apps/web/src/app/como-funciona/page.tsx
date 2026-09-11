@@ -10,11 +10,25 @@ import {
   IconoIntercambio,
 } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
-import { BotonEnlace, FilaDeAcciones } from '@/components/ui';
+import { BotonEnlace, FilaDeAcciones, InsigniaDeNivel } from '@/components/ui';
+import { cantidad, multiplicador, porcentajeDeComision } from '@/lib/formato';
+import {
+  getBuyerProtectionDays,
+  getDisputeWindowDays,
+  getShippingSettings,
+  isFeatureEnabled,
+} from '@/modules/config/services/setting-store.service';
 import {
   basisPointsToPercent,
   getCommissionRateBasisPoints,
 } from '@/modules/config/services/settings.service';
+import { getPromotionSettings } from '@/modules/listings/services/listing-settings.service';
+import {
+  shippingModeLabel,
+  SHIPPING_MODES,
+  type ShippingMode,
+} from '@/modules/listings/services/shipping-declaration';
+import { listTiers, type TierSummary } from '@/modules/sellers/services/seller-tier.service';
 
 import estilos from './page.module.css';
 
@@ -159,19 +173,24 @@ const VENDER: PasoDeFlujo[] = [
  */
 const FALTANTES = [
   {
-    titulo: 'No calculamos el envío.',
+    titulo: 'No imprimimos la etiqueta ni seguimos el paquete.',
     texto:
-      'El total de una compra no lo incluye, y todavía no hay seguimiento dentro de Offside. Lo arreglan el comprador y el vendedor por su cuenta.',
+      'No hay integración con ningún correo: el vendedor despacha por su cuenta y carga el número de seguimiento A MANO. Si se equivoca al tipearlo, el enlace no lleva a ninguna parte.',
   },
   {
-    titulo: 'No hay reseñas ni reputación.',
+    titulo: 'No hay compra protegida en el sentido legal.',
     texto:
-      'Ningún vendedor tiene puntaje, y no mostramos sellos de confianza que no podamos respaldar.',
+      'Podés abrir un reclamo y hay un plazo para hacerlo, pero eso es un proceso NUESTRO: no es un seguro, no es una garantía y no reemplaza a Defensa del Consumidor.',
   },
   {
-    titulo: 'No hay un sistema de reclamos.',
+    titulo: 'No hay cuotas decididas por Offside.',
     texto:
-      'Si algo sale mal, todavía no existe un camino automático dentro del producto para resolverlo.',
+      'Las que veas al pagar son las que ofrece Mercado Pago con tu medio de pago. Offside no agrega, no financia y no decide ninguna.',
+  },
+  {
+    titulo: 'No hay chat entre comprador y vendedor.',
+    texto:
+      'Lo único que existe son las preguntas públicas de cada publicación. No hay mensajería privada, así que los datos de contacto se intercambian por fuera.',
   },
   {
     titulo: 'La autenticidad la declara el vendedor.',
@@ -183,8 +202,64 @@ const INDICE = [
   { id: 'comprar', numero: '01', texto: 'Comprar' },
   { id: 'vender', numero: '02', texto: 'Vender' },
   { id: 'la-plata', numero: '03', texto: 'La plata' },
-  { id: 'lo-que-falta', numero: '04', texto: 'Lo que falta' },
+  { id: 'confianza', numero: '04', texto: 'Confianza' },
+  { id: 'el-envio', numero: '05', texto: 'El envío' },
+  { id: 'lo-que-falta', numero: '06', texto: 'Lo que falta' },
 ] as const;
+
+/**
+ * Todo lo que esta pantalla dice del Config Store, leido de una vez.
+ *
+ * ⚠️ CADA LECTURA PUEDE FALTAR Y NINGUNA PUEDE VOLTEAR LA PANTALLA. `listTiers()`
+ * TIRA (`noActiveTiers`) cuando `seller_tiers` esta vacia —que es exactamente el
+ * estado que tuvo la tabla hasta hace poco—, y `getPromotionSettings()` tira si
+ * la clave no esta sembrada. Esta pagina existe para explicar como funciona el
+ * sistema: que se caiga entera porque una funcionalidad todavia no esta
+ * configurada seria el peor cambio posible. Lo que falta simplemente NO SE
+ * MUESTRA, que es la misma regla que aplica a las facetas vacias de `/buscar`.
+ */
+interface ReglasDeLaPantalla {
+  basisPoints: number;
+  tiers: TierSummary[];
+  promocion: { commissionMultiplier: number; durationDays: number } | null;
+  envio: { defaultMode: ShippingMode; pickupAllowed: boolean; toAgreeAllowed: boolean } | null;
+  plazos: { reclamoDias: number; proteccionDias: number } | null;
+}
+
+/** Devuelve `null` en vez de propagar: ver el comentario de `ReglasDeLaPantalla`. */
+async function opcional<T>(promesa: Promise<T>, que: string): Promise<T | null> {
+  try {
+    return await promesa;
+  } catch (error) {
+    console.error(`[como-funciona] no se pudo leer ${que}`, error);
+
+    return null;
+  }
+}
+
+async function leerReglas(): Promise<ReglasDeLaPantalla> {
+  const [basisPoints, tiers, promociones, promocion, envio, reclamoDias, proteccionDias] =
+    await Promise.all([
+      getCommissionRateBasisPoints(),
+      opcional(listTiers(), 'los niveles de vendedor'),
+      opcional(isFeatureEnabled('promotions'), 'el interruptor de promociones'),
+      opcional(getPromotionSettings(), 'los parámetros de promoción'),
+      opcional(getShippingSettings(), 'la configuración de envío'),
+      opcional(getDisputeWindowDays(), 'el plazo de reclamo'),
+      opcional(getBuyerProtectionDays(), 'la ventana de protección'),
+    ]);
+
+  return {
+    basisPoints,
+    tiers: tiers ?? [],
+    // Con la funcionalidad apagada no se explica: seria describir algo que hoy
+    // nadie puede contratar.
+    promocion: promociones === true ? promocion : null,
+    envio,
+    plazos:
+      reclamoDias === null || proteccionDias === null ? null : { reclamoDias, proteccionDias },
+  };
+}
 
 /**
  * Cómo funciona Offside.
@@ -207,7 +282,18 @@ const INDICE = [
  * no reemplaza un documento legal, y no se presenta como si lo hiciera.
  */
 export default async function ComoFunciona() {
-  const basisPoints = await getCommissionRateBasisPoints();
+  const { basisPoints, tiers, promocion, envio, plazos } = await leerReglas();
+
+  /**
+   * Los modos de envío que hoy se pueden declarar.
+   *
+   * ⚠️ NO SE USA `allowedShippingModes()` AUNQUE EXISTA. Esa función decide qué
+   * puede ELEGIR el vendedor al publicar; esta pantalla le explica al COMPRADOR
+   * qué puede llegar a leer en una ficha, y las publicaciones viejas conservan
+   * un modo que hoy podría estar deshabilitado. Se muestran los cuatro y se
+   * marca cuál rige por defecto.
+   */
+  const modosDeEnvio = SHIPPING_MODES;
 
   return (
     <>
@@ -341,6 +427,189 @@ export default async function ComoFunciona() {
                 El costo de procesamiento que cobra Mercado Pago se descuenta del lado del vendedor,
                 así que la comisión de Offside es limpia.
               </p>
+
+              {/*
+                NIVELES DE VENDEDOR (DEC-037).
+
+                ⚠️ NI UN SOLO PORCENTAJE ESCRITO A MANO: cada tasa sale de
+                `seller_tiers` y, cuando el nivel no fija una propia, de la
+                comisión global. `usesGlobalRate` existe justamente para que la
+                pantalla NO tenga que adivinar qué significa un `null`.
+
+                ⚠️ NO SE MUESTRA SI LA TABLA ESTÁ VACÍA. Un bloque "Niveles" con
+                cero filas promete un sistema de beneficios que no existe.
+              */}
+              {tiers.length > 0 && (
+                <div className={estilos.bloqueNiveles}>
+                  <h3 className={estilos.plataSubtitulo}>Cuántas ventas llevás cambia la tasa</h3>
+                  <p className={estilos.plataTexto}>
+                    La comisión no es la misma para todos: sube de nivel con las ventas completadas
+                    y baja el porcentaje que retiene Offside.
+                  </p>
+
+                  <ul className={estilos.niveles}>
+                    {tiers.map((tier) => (
+                      <li key={tier.code} className={estilos.nivel}>
+                        <InsigniaDeNivel
+                          nombre={tier.name}
+                          tasa={porcentajeDeComision(tier.basisPoints)}
+                        />
+                        <p className={estilos.nivelDetalle}>
+                          {tier.minCompletedSales === 0
+                            ? 'Desde la primera publicación.'
+                            : `Desde ${cantidad(tier.minCompletedSales, 'venta')} completadas.`}
+                          {tier.usesGlobalRate && ' Usa la comisión general.'}
+                        </p>
+                        {tier.description !== null && (
+                          <p className={estilos.nivelDetalle}>{tier.description}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/*
+                PROMOCIONADAS (PS-021).
+
+                ⚠️ EL MULTIPLICADOR Y LOS DÍAS SALEN DEL CONFIG STORE. Escribir
+                "el triple durante 7 días" acá volvería a clavar en el código dos
+                valores que Admin cambia sin redeploy — el mismo error que la
+                comisión ya no comete.
+
+                ⚠️ SE DICE QUE **NO SE PUEDE CANCELAR ANTES DE TIEMPO**, que es la
+                parte incómoda y la que más importa saber antes de contratarla.
+                Una página que explica el beneficio y esconde el compromiso es
+                publicidad, no una explicación.
+              */}
+              {promocion !== null && (
+                <div className={estilos.bloqueNiveles}>
+                  <h3 className={estilos.plataSubtitulo}>Aparecer primero se paga con comisión</h3>
+                  <p className={estilos.plataTexto}>
+                    Un vendedor puede promocionar una publicación: durante{' '}
+                    <strong>{cantidad(promocion.durationDays, 'día')}</strong> aparece antes que el
+                    resto en la vitrina y en la búsqueda, con el cartel{' '}
+                    <strong>“Promocionada”</strong> a la vista. No se paga por adelantado: si esa
+                    publicación se vende, la comisión de esa venta se multiplica por{' '}
+                    <strong>{multiplicador(promocion.commissionMultiplier)}</strong>.
+                  </p>
+                  <p className={estilos.plataTexto}>
+                    El multiplicador queda congelado el día que se contrata, así que un cambio
+                    posterior no la afecta — y la promoción <strong>no se puede cancelar</strong>{' '}
+                    antes de que termine.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ----------------------------------------------------- confianza */}
+          <section id="confianza" className={estilos.tramo}>
+            <div className={estilos.tramoInterior}>
+              <header className={estilos.tramoEncabezado}>
+                <p className={estilos.tramoRotulo}>04 · Confianza</p>
+                <h2 className={`${estilos.tramoTitulo} display-3`}>Números, no adjetivos</h2>
+                <span className={`${estilos.tramoFilete} revela-linea`} aria-hidden="true" />
+              </header>
+
+              {/*
+                ⚠️ ESTE BLOQUE NO PUEDE PROMETER UN SELLO. DEC-036 y TS-020 son
+                explícitos: el score es DERIVADO y no decide nada. Lo que se
+                muestra en una ficha son las métricas crudas —ventas, reclamos,
+                cuánto tarda en responder, promedio de reseñas— porque son
+                verificables; "vendedor confiable" no lo es.
+              */}
+              <div className={estilos.dobleColumna}>
+                <div className={estilos.bloqueTexto}>
+                  <h3 className={estilos.bloqueTitulo}>Reputación</h3>
+                  <p className={estilos.bloqueParrafo}>
+                    Cada vendedor muestra lo que hizo, no una medalla: cuántas ventas completó,
+                    cuántos reclamos tiene, cuánto tarda en responder preguntas y el promedio de las
+                    reseñas que le dejaron los compradores.
+                  </p>
+                  <p className={estilos.bloqueParrafo}>
+                    Las reseñas las escribe quien <strong>compró de verdad</strong>, sobre una orden
+                    completada. El vendedor puede responderlas una vez, y su respuesta queda abajo
+                    de la reseña: no puede borrarla ni editarla.
+                  </p>
+                  <p className={estilos.bloqueParrafo}>
+                    Un vendedor nuevo no tiene números todavía, y la ficha lo dice con esas
+                    palabras. No aparece con cero estrellas, que se leería como “lo calificaron
+                    mal”.
+                  </p>
+                </div>
+
+                <div className={estilos.bloqueTexto}>
+                  <h3 className={estilos.bloqueTitulo}>Reclamos</h3>
+                  <p className={estilos.bloqueParrafo}>
+                    Si el paquete no llega o llega distinto a lo publicado, se abre un reclamo sobre
+                    esa orden
+                    {plazos === null
+                      ? ''
+                      : `, dentro de los ${cantidad(plazos.reclamoDias, 'día')} posteriores`}
+                    . El vendedor tiene su turno para responder con su versión y sus fotos, y si no
+                    se resuelve entre las partes lo decide Offside.
+                  </p>
+                  {plazos !== null && (
+                    <p className={estilos.bloqueParrafo}>
+                      Una orden entregada se cierra sola después de{' '}
+                      <strong>{cantidad(plazos.proteccionDias, 'día')}</strong> sin reclamo. Ese es
+                      el plazo que tenés para revisar lo que recibiste.
+                    </p>
+                  )}
+                  <p className={estilos.bloqueParrafo}>
+                    Y cualquiera puede <strong>reportar una publicación</strong> desde su ficha
+                    —réplica vendida como original, fotos que no son del producto, descripción
+                    engañosa—. El reporte va a moderación; no baja la publicación sola.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ------------------------------------------------------ el envío */}
+          <section id="el-envio" className={`${estilos.tramoTenido} sup-2 con-grano`}>
+            <div className={estilos.tramoInterior}>
+              <header className={estilos.tramoEncabezado}>
+                <p className={estilos.tramoRotulo}>05 · El envío</p>
+                <h2 className={`${estilos.tramoTitulo} display-3`}>Lo declara el vendedor</h2>
+                <span className={`${estilos.tramoFilete} revela-linea`} aria-hidden="true" />
+              </header>
+
+              {/*
+                ⚠️ ESTA SECCIÓN EXISTE PORQUE NO HAY COTIZACIÓN. `shipping.md` deja
+                "quién paga" 🟡 y no hay integración con ningún correo, así que lo
+                ÚNICO que el comprador puede saber es lo que quien vende declaró.
+                Decirlo así es lo contrario de simular un cálculo de envío.
+
+                ⚠️ LAS ETIQUETAS SALEN DE `shippingModeLabel`, que es la misma
+                función que usan la vitrina, la ficha y la búsqueda. Escribirlas
+                a mano acá haría que el día que cambie una, esta página diga otra
+                cosa que el resto del sitio.
+              */}
+              <p className={estilos.bloqueParrafo}>
+                Offside no cotiza el envío ni imprime etiquetas. Cada publicación dice cuál de estas
+                cuatro modalidades eligió el vendedor, y ese dato viaja congelado a la orden: si
+                después la cambia, tu compra no se entera.
+              </p>
+
+              <ul className={estilos.modos}>
+                {modosDeEnvio.map((modo) => (
+                  <li key={modo} className={estilos.modo}>
+                    <span className={estilos.modoMarca} aria-hidden="true" />
+                    <span className={estilos.modoNombre}>{shippingModeLabel(modo)}</span>
+                    {envio?.defaultMode === modo && (
+                      <span className={estilos.modoDefecto}>Es lo que rige si no elige nada</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              <p className={estilos.bloqueParrafo}>
+                Cuando el envío corre por tu cuenta, el importe está declarado en la publicación y
+                se suma al total antes de pagar. Cuando dice “a convenir”, no hay un número: lo
+                arreglan por las preguntas de la publicación antes de comprar.
+              </p>
             </div>
           </section>
 
@@ -349,7 +618,7 @@ export default async function ComoFunciona() {
             <div className={estilos.tramoInterior}>
               <header className={estilos.tramoEncabezado}>
                 <hr className={estilos.faltaRegla} />
-                <p className={estilos.tramoRotulo}>04 · Sin maquillaje</p>
+                <p className={estilos.tramoRotulo}>06 · Sin maquillaje</p>
                 <h2 className={`${estilos.tramoTitulo} display-3`}>Lo que todavía no hacemos</h2>
               </header>
 

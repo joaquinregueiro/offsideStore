@@ -42,13 +42,30 @@ describe('el mapa de capacidades', () => {
     expect(rolesFor(CAPABILITIES.SYSTEM_CONFIG_MANAGE)).toEqual(['SUPER_ADMIN', 'ADMIN']);
   });
 
-  it('⚠️ MODERATOR y SUPPORT no habilitan NINGUNA capacidad todavía', () => {
-    // Deliberado, no es un olvido: sus funcionalidades no existen y fijarles
-    // permisos ahora sería decidir política sobre módulos sin diseñar.
+  it('resolver disputas es sólo de SUPER_ADMIN y ADMIN', () => {
+    // Quién analiza un reclamo sigue 🟡 (TS-052): hasta que el owner lo
+    // cierre, la capacidad queda en los dos roles generales. SUPPORT no entra
+    // aunque el nombre lo sugiera; FINANCE tampoco: lo suyo es el dinero.
+    expect(rolesFor(CAPABILITIES.DISPUTES_RESOLVE)).toEqual(['SUPER_ADMIN', 'ADMIN']);
+  });
+
+  it('sancionar vendedores es sólo de SUPER_ADMIN y ADMIN', () => {
+    expect(rolesFor(CAPABILITIES.TRUST_MODERATE)).toEqual(['SUPER_ADMIN', 'ADMIN']);
+  });
+
+  it('⚠️ MODERATOR y SUPPORT siguen sin ninguna capacidad', () => {
+    // DEC-023 los dejó declarados sin capacidades. Que ahora existan
+    // `disputes:resolve` y `trust:moderate` no cambia eso: asignarles una
+    // sería decidir política (TS-052) desde el código.
     for (const capacidad of Object.values(CAPABILITIES)) {
-      expect(hasCapability('MODERATOR', capacidad)).toBe(false);
       expect(hasCapability('SUPPORT', capacidad)).toBe(false);
+      expect(hasCapability('MODERATOR', capacidad)).toBe(false);
     }
+  });
+
+  it('FINANCE no resuelve disputas ni sanciona', () => {
+    expect(hasCapability('FINANCE', CAPABILITIES.DISPUTES_RESOLVE)).toBe(false);
+    expect(hasCapability('FINANCE', CAPABILITIES.TRUST_MODERATE)).toBe(false);
   });
 
   it('FINANCE puede reembolsar pero NO tocar la configuración', () => {

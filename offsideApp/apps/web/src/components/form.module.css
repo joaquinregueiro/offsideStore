@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * FORMULARIOS — autenticacion, vendedor, compra y back-office.
  *
@@ -214,23 +213,12 @@
  * `clamp(30px, …, 52px)`: a 320px entregaria ~32.6px contra los 36px de hoy, o
  * sea ACHICARIA el titulo de "Ingresar" justo en el telefono.
  */
-=======
-/** Formularios de autenticacion y del resto de la aplicacion. */
-
-.pagina {
-  max-width: 420px;
-  margin: 0 auto;
-  padding: var(--espacio-9) var(--espacio-6);
-}
-
->>>>>>> origin/main
 .titulo {
   font-size: var(--texto-3xl);
   text-transform: uppercase;
   margin-bottom: var(--espacio-3);
 }
 
-<<<<<<< HEAD
 /**
  * ⚠️ LA ENTRADA SIN SHIMMER VA PRIMERO, Y EL ORDEN ES EL ARREGLO DE UN BUG:
  * la regla de adentro del `@supports` tiene la MISMA especificidad y suma el
@@ -328,18 +316,10 @@
 
 /* ============================================================== formulario */
 
-=======
-.bajada {
-  margin: 0 0 var(--espacio-7);
-  color: var(--color-neutro-texto);
-}
-
->>>>>>> origin/main
 .formulario {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-5);
-<<<<<<< HEAD
   /* Tine radios y cualquier control nativo que quede sin dibujar a mano. */
   accent-color: var(--color-cancha);
   /* Canal del naranja de marca, para los halos de error. Ver el encabezado. */
@@ -620,15 +600,10 @@
 
 /* =================================================================== campo */
 
-=======
-}
-
->>>>>>> origin/main
 .campo {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-2);
-<<<<<<< HEAD
   /*
    * ⚠️ NO ES REDUNDANTE. El unico formulario que vive DENTRO de un
    * `EstadoVacio` —el reenvio de la verificacion de email— heredaba su
@@ -674,17 +649,11 @@
  */
 .etiqueta {
   width: fit-content;
-=======
-}
-
-.etiqueta {
->>>>>>> origin/main
   font-size: var(--texto-sm);
   font-weight: var(--peso-semi);
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-texto);
-<<<<<<< HEAD
   transform: translateY(2px);
   transform-origin: left center;
   transition:
@@ -1050,30 +1019,11 @@
 
 /* ======================================================= ayuda y contador */
 
-=======
-}
-
-.control {
-  padding: var(--espacio-3);
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-blanco);
-  color: var(--color-tinta);
-  font-family: var(--fuente-texto);
-  font-size: var(--texto-md);
-}
-
-.control:focus {
-  border-color: var(--color-cancha);
-}
-
->>>>>>> origin/main
 .ayuda {
   font-size: var(--texto-xs);
   color: var(--color-neutro-tenue);
 }
 
-<<<<<<< HEAD
 /**
  * CONTADOR DE CARACTERES. Solo existe con JavaScript y por eso no se renderiza
  * en el servidor (ver `form.tsx`): un contador servido diria "0/140" al lado
@@ -1156,14 +1106,10 @@
  * ⚠️ EL BORDE ES `--linea-control` (3.24:1) Y NO `--linea-tenue` (1.26:1). Si
  * la fila ES el control, su contorno cae bajo 1.4.11 igual que el del input.
  */
-=======
-/* Casilla de verificacion: el texto al lado, no debajo. */
->>>>>>> origin/main
 .casilla {
   display: flex;
   align-items: flex-start;
   gap: var(--espacio-3);
-<<<<<<< HEAD
   min-height: var(--alto-control);
   padding: var(--espacio-3) var(--espacio-4);
   border: 1px solid var(--borde-campo, var(--linea-control));
@@ -1309,17 +1255,6 @@
 
 /* --------------------------------------------------------------------- pie */
 
-=======
-  font-size: var(--texto-sm);
-  color: var(--color-neutro-texto);
-}
-
-.casilla input {
-  margin-top: 3px;
-  accent-color: var(--color-cancha);
-}
-
->>>>>>> origin/main
 .pie {
   margin-top: var(--espacio-6);
   font-size: var(--texto-sm);
@@ -1330,7 +1265,6 @@
 .pieSeparado {
   margin-top: var(--espacio-3);
 }
-<<<<<<< HEAD
 
 /* ------------------------------------------------------- campo con adorno */
 
@@ -1954,5 +1888,3 @@
     filter: blur(0);
   }
 }
-=======
->>>>>>> origin/main

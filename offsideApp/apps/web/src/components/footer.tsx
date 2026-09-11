@@ -125,6 +125,16 @@ export function Footer() {
           <Link href="/como-funciona" className={estilos.enlace} transitionTypes={['avanza']}>
             Cómo funciona
           </Link>
+          {/*
+            ⚠️ EL CARRITO ENTRA AL PIE PORQUE DEC-026 LO VUELVE UN PASO DEL
+            FLUJO, no un extra: una compra de dos vendedores se parte en dos
+            órdenes, así que la lista previa es donde eso se ve por primera vez.
+            Sin sesión la pantalla manda al login; no se esconde el enlace,
+            porque esconderlo haría que el pie cambie de forma según quién mira.
+          */}
+          <Link href="/carrito" className={estilos.enlace} transitionTypes={['barrido']}>
+            Mi carrito
+          </Link>
           <Link href="/mis-compras" className={estilos.enlace} transitionTypes={['barrido']}>
             Mis compras
           </Link>

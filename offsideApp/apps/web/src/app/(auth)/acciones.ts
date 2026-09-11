@@ -2,15 +2,9 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-<<<<<<< HEAD
 import { respuestaDeError } from '@/lib/errores';
 import { rutaInternaSegura } from '@/lib/formato';
 import type { EstadoFormulario } from '@/lib/formulario';
-=======
-import { z } from 'zod';
-
-import { rutaInternaSegura } from '@/lib/formato';
->>>>>>> origin/main
 import {
   exigirLimiteDeEnvio,
   exigirLimitePorCuenta,
@@ -48,33 +42,7 @@ import * as authService from '@/modules/auth/services/auth.service';
  * `error`. `ok` existe para las que se quedan en la misma pantalla —cambiar la
  * comision, emitir un reembolso— y necesitan confirmar que algo paso.
  */
-<<<<<<< HEAD
 export type { EstadoFormulario } from '@/lib/formulario';
-=======
-export interface EstadoFormulario {
-  error?: string;
-  ok?: string;
-}
-
-/**
- * Traduce un error de dominio a un mensaje para la persona.
- *
- * ⚠️ NO SE MUESTRA EL ERROR CRUDO. Un `AuthError` trae mensajes pensados para
- * el usuario, pero cualquier otra excepcion puede arrastrar detalle interno.
- * Lo desconocido se registra en el servidor y afuera sale un mensaje generico.
- */
-function mensajeDeError(error: unknown): string {
-  if (error instanceof z.ZodError) {
-    return error.issues[0]?.message ?? 'Revisá los datos ingresados.';
-  }
-
-  if (error instanceof AuthError) return error.message;
-
-  console.error('[auth] error inesperado en una accion:', error);
-
-  return 'Tuvimos un problema. Probá de nuevo en un momento.';
-}
->>>>>>> origin/main
 
 /**
  * Lee un campo de texto del formulario.
@@ -116,11 +84,7 @@ export async function crearCuenta(
 
     await authService.register(input);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, { ambito: 'auth', formData, preservar: ['email'] });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   // ⚠️ NO se inicia sesion automaticamente. BR-001 exige email verificado para
@@ -162,11 +126,7 @@ export async function ingresar(
 
     await guardarSesion(sesion.sessionToken, sesion.expiresAt);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, { ambito: 'auth', formData, preservar: ['email'] });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect(destino);
@@ -204,11 +164,7 @@ export async function pedirResetDePassword(
     // responder distinto convertiria esta pantalla en un enumerador de cuentas.
     await authService.requestPasswordReset(input.email);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, { ambito: 'auth', formData, preservar: ['email'] });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   redirect('/revisa-tu-email?motivo=reset');
@@ -238,11 +194,7 @@ export async function reenviarVerificacion(
 
     await authService.resendEmailVerification(input.email);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, { ambito: 'auth', formData, preservar: ['email'] });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   return {
@@ -264,11 +216,7 @@ export async function restablecerPassword(
 
     await authService.resetPassword(input.token, input.password);
   } catch (error) {
-<<<<<<< HEAD
     return respuestaDeError(error, { ambito: 'auth', formData, preservar: ['email'] });
-=======
-    return { error: mensajeDeError(error) };
->>>>>>> origin/main
   }
 
   // Sin sesion automatica: `resetPassword` cierra TODAS las sesiones del

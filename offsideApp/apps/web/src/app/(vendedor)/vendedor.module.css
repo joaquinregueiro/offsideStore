@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /* =============================================================================
  * PANEL DEL VENDEDOR
  * =============================================================================
@@ -677,141 +676,6 @@
   letter-spacing: var(--tracking-titulo);
   text-transform: uppercase;
   overflow-wrap: anywhere;
-=======
-.pagina {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
-}
-
-.encabezado {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--espacio-4);
-  flex-wrap: wrap;
-  margin-bottom: var(--espacio-6);
-}
-
-.titulo {
-  font-size: var(--texto-3xl);
-  text-transform: uppercase;
-}
-
-.bajada {
-  color: var(--color-neutro-texto);
-  margin-bottom: var(--espacio-7);
-  max-width: 60ch;
-}
-
-.subtitulo {
-  font-size: var(--texto-xl);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  margin: var(--espacio-7) 0 var(--espacio-4);
-}
-
-/** Tarjeta generica: checklist, publicacion, venta. */
-.tarjeta {
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-blanco);
-  padding: var(--espacio-5);
-  margin-bottom: var(--espacio-4);
-}
-
-.linea {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--espacio-4);
-  padding: var(--espacio-2) 0;
-}
-
-.concepto {
-  color: var(--color-neutro-texto);
-}
-
-/**
- * Pasos del alta (TS-001). El estado se comunica con texto y con un simbolo,
- * NUNCA solo con color: quien no distingue verde de gris tiene que poder leer
- * igual si el paso esta hecho.
- */
-.paso {
-  display: flex;
-  gap: var(--espacio-4);
-  align-items: flex-start;
-  padding: var(--espacio-4) 0;
-  border-bottom: 1px solid var(--color-neutro-borde);
-}
-
-.paso:last-child {
-  border-bottom: none;
-}
-
-.marca {
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-xl);
-  line-height: 1.2;
-  width: 1.5em;
-  flex: none;
-  text-align: center;
-}
-
-.marcaHecha {
-  color: var(--color-cancha);
-}
-
-.marcaPendiente {
-  color: var(--color-neutro-tenue);
-}
-
-.pasoCuerpo {
-  flex: 1;
-}
-
-.pasoTitulo {
-  font-weight: 600;
-  margin-bottom: var(--espacio-1);
-}
-
-.pasoDetalle {
-  color: var(--color-neutro-texto);
-  font-size: var(--texto-sm);
-  margin-bottom: var(--espacio-3);
-}
-
-/** Grilla de accesos del panel. */
-.accesos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--espacio-4);
-  margin-top: var(--espacio-5);
-}
-
-.acceso {
-  display: block;
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-blanco);
-  padding: var(--espacio-5);
-  color: inherit;
-  text-decoration: none;
-}
-
-.acceso:hover {
-  border-color: var(--color-cancha);
-}
-
-.accesoTitulo {
-  /* `display: block` porque son <span>: inline ignora el margin vertical y el
-     titulo terminaba pegado al detalle en la misma linea. */
-  display: block;
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-xl);
-  text-transform: uppercase;
-  margin-bottom: var(--espacio-1);
->>>>>>> origin/main
 }
 
 .accesoDetalle {
@@ -820,7 +684,6 @@
   font-size: var(--texto-sm);
 }
 
-<<<<<<< HEAD
 /* -------------------------------------------------------- tira de la tienda */
 
 /**
@@ -1599,13 +1462,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--espacio-4) var(--espacio-5);
-=======
-/** Dos columnas para campos cortos del formulario de publicacion. */
-.par {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--espacio-4);
->>>>>>> origin/main
 }
 
 @media (max-width: 640px) {
@@ -1614,7 +1470,6 @@
   }
 }
 
-<<<<<<< HEAD
 /* -------------------------------------------------------------- galeria */
 
 /** Galeria de fotos de una publicacion (vista del vendedor). */
@@ -1780,15 +1635,10 @@
 
 .nota {
   margin: 0;
-=======
-.nota {
-  margin-top: var(--espacio-5);
->>>>>>> origin/main
   font-size: var(--texto-sm);
   color: var(--color-neutro-tenue);
 }
 
-<<<<<<< HEAD
 /**
  * EL BLOQUE DE CIERRE.
  *
@@ -1811,13 +1661,10 @@
   --patron-color: color-mix(in oklab, var(--color-cancha) 22%, transparent);
 }
 
-=======
->>>>>>> origin/main
 .acciones {
   display: flex;
   gap: var(--espacio-4);
   flex-wrap: wrap;
-<<<<<<< HEAD
   margin-top: var(--espacio-6);
 }
 
@@ -1848,44 +1695,436 @@
 .cargandoBloque {
   height: 116px;
   border-radius: var(--radio);
-=======
-  margin-top: var(--espacio-5);
 }
 
-/** Galeria de fotos de una publicacion (vista del vendedor). */
-.galeria {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--espacio-4);
-  margin-bottom: var(--espacio-6);
+/* ======================================================================== */
+/* PANEL COMPLETO DEL VENDEDOR (2026-09-11)                                 */
+/* ======================================================================== */
+
+/**
+ * AVISO DE PLAZO VENCIDO, EN LA BANDEJA.
+ *
+ * ⚠️ NO ES UN `Aviso tono="error"` Y ES A PROPOSITO. Esa primitiva lleva
+ * `role="alert"`, que INTERRUMPE al lector de pantalla: correcto cuando algo
+ * acaba de fallar, una groseria para un dato que ya estaba ahi cuando la
+ * pantalla cargo. Aca es texto con jerarquia, no una alarma.
+ *
+ * ⚠️ EL TEXTO USA `--color-alerta`, NUNCA `--color-naranja`. El naranja de la
+ * identidad como color de TEXTO sobre papel da 2.16:1; `--color-alerta` es el
+ * mismo matiz oscurecido hasta 4.88:1. El naranja vivo queda para el filo, que
+ * es forma y no informacion.
+ */
+.avisoPlazo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0 0 var(--espacio-5);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-left: 3px solid var(--color-naranja);
+  border-radius: 0 var(--radio) var(--radio) 0;
+  background: color-mix(in oklab, var(--color-naranja) 8%, var(--superficie-1));
+  color: var(--color-alerta);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
 }
 
-.miniatura {
-  margin: 0;
-  border: 1px solid var(--color-neutro-borde);
+/**
+ * MARCAS DE FILA: plazo vencido y reclamo.
+ *
+ * ⚠️ EL COLOR NUNCA VA SOLO. Las dos escriben lo que pasa con todas las letras
+ * —"Plazo vencido", "Con reclamo"— y ademas llevan un rombo adelante: quien no
+ * distingue naranja de gris lee exactamente lo mismo.
+ *
+ * ⚠️ NO LATEN. El estado de una orden que se mueve se lee como un estado que
+ * todavia no esta decidido, y estas dos aparecen al lado de importes.
+ */
+.marcaVencida,
+.marcaReclamo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-2);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  letter-spacing: var(--tracking-etiqueta);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.marcaVencida::before,
+.marcaReclamo::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  rotate: 45deg;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.marcaVencida {
+  color: var(--color-alerta);
+}
+
+.marcaReclamo {
+  color: var(--color-neutro-texto);
+}
+
+/* ------------------------------------------------- detalle de una venta -- */
+
+/**
+ * LOS ITEMS DE LA ORDEN.
+ *
+ * Una lista y no una tabla: hoy una orden es de UN vendedor (DEC-026) y casi
+ * siempre de un solo item. Una tabla de una fila es un marco alrededor de nada.
+ */
+.itemsVenta {
+  list-style: none;
+  margin: 0 0 var(--espacio-5);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.itemVenta {
+  padding: var(--espacio-4);
+  border: 1px solid var(--linea-tenue);
   border-radius: var(--radio);
-  background: var(--color-blanco);
-  overflow: hidden;
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior);
 }
 
-.miniatura img {
-  display: block;
-  width: 100%;
-  /* Cuadrado uniforme: las fotos vienen con proporciones distintas y una
-     grilla despareja se lee como un error. `cover` recorta, no deforma. */
-  aspect-ratio: 1;
-  object-fit: cover;
-  background: var(--color-neutro-suave);
+.itemTitulo {
+  margin: 0 0 var(--espacio-1);
+  font-weight: var(--peso-medio);
 }
 
-.miniatura figcaption {
-  padding: var(--espacio-3);
+.itemMeta {
+  margin: 0;
+  color: var(--color-neutro-texto);
   font-size: var(--texto-sm);
 }
 
-.portada {
+/**
+ * LAS DOS ACCIONES DE LA VENTA, UNA AL LADO DE LA OTRA EN ESCRITORIO.
+ *
+ * ⚠️ DESPACHAR Y CANCELAR NO SE APILAN EN UNA COLUMNA EN ESCRITORIO. Apiladas
+ * se leen como dos pasos de un proceso —"primero despacho, despues cancelo"—
+ * cuando son alternativas excluyentes. En telefono si se apilan, que es lo
+ * correcto ahi.
+ */
+.accionesVenta {
+  display: grid;
+  gap: var(--espacio-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .accionesVenta {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+/* --------------------------------------------------- reputacion y nivel -- */
+
+/**
+ * LA FRANJA DE REPUTACION / DE NIVEL.
+ *
+ * ⚠️ LAS ESTRELLAS NO VAN ADENTRO DEL PLIEGO OSCURO. Ahi competirian con seis
+ * numeros que ya piden atencion, y ademas `Estrellas` pinta con tokens de
+ * superficie clara. Esta franja es papel, que es donde el componente esta
+ * medido.
+ */
+.franjaReputacion,
+.franjaNivel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-4);
+  margin-bottom: var(--espacio-6);
+  padding: var(--espacio-4) var(--espacio-5);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior);
+}
+
+.franjaNivel {
+  justify-content: flex-start;
+}
+
+/* ------------------------------------------------- buscador de inventario */
+
+/**
+ * EL BUSCADOR DEL INVENTARIO.
+ *
+ * ⚠️ ES UN `<form method="get">` DE VERDAD, asi que el boton "Buscar" NO es
+ * decoracion: sin JavaScript es la unica forma de enviarlo desde un teclado en
+ * pantalla que no ofrece "ir". Se ve, se toca y mide 44px.
+ *
+ * ⚠️ EL CAMPO VA A 16px Y NO MENOS. Abajo de eso iOS hace zoom al enfocar un
+ * input y no lo deshace al salir: la pantalla queda ampliada y desplazada.
+ */
+.buscadorInventario {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-4);
+  padding: var(--espacio-1);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio-pastilla);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-hundida);
+  transition: border-color var(--dur-instante) var(--curva-seca);
+}
+
+.buscadorInventario:focus-within {
+  border-color: var(--color-cancha);
+}
+
+.buscadorIcono {
+  display: inline-flex;
+  padding-left: var(--espacio-3);
+  color: var(--color-neutro-texto);
+}
+
+.buscadorCampo {
+  flex: 1 1 auto;
+  /*
+   * ⚠️ `min-width: 0` NO ES OPCIONAL EN UN HIJO FLEX. Sin el, el ancho minimo
+   * de un `<input>` es su tamaño por defecto (~20 caracteres) y a 320px empuja
+   * al `<body>`: desborde horizontal en el sitio entero.
+   */
+  min-width: 0;
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-tinta);
+  font: inherit;
+  font-size: 16px;
+}
+
+.buscadorCampo:focus {
+  outline: none;
+}
+
+.buscadorBoton {
+  flex: 0 0 auto;
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-4);
+  border: 0;
+  border-radius: var(--radio-pastilla);
+  background-image: var(--degradado-cancha);
+  color: var(--color-papel);
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  letter-spacing: var(--tracking-etiqueta);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.pastillas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-5);
+}
+
+/* ----------------------------------------------------- listas honestas --- */
+
+/**
+ * LA LISTA DE "LO QUE TENES QUE SABER".
+ *
+ * ⚠️ EL MARCADOR ES EL ROMBO DE LA BANDERA Y NO UN BULLET. Es la misma forma
+ * que usan las migas y las etiquetas de estado: un disco gris es de otro juego.
+ */
+.listaHonesta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.listaHonesta li {
+  position: relative;
+  padding-left: var(--espacio-5);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-lectura);
+}
+
+.listaHonesta li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 7px;
+  height: 7px;
+  rotate: 45deg;
+  border-radius: 1px;
+  background: var(--color-cancha);
+}
+
+.listaHonesta strong {
+  color: var(--color-tinta);
+}
+
+/* ------------------------------------------------------------- reseñas --- */
+
+.listaResenias,
+.listaPreguntas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+/**
+ * ⚠️ CADA RESEÑA ES UNA SUPERFICIE PROPIA Y NO UNA FILA SEPARADA POR UNA LINEA.
+ * Adentro hay un formulario con un `<textarea>`: sin un plano que las separe, la
+ * respuesta de una reseña parece pertenecer a la siguiente.
+ */
+.resenia,
+.pregunta {
+  padding: var(--espacio-5);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior);
+}
+
+.reseniaCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-3);
+}
+
+.reseniaTexto,
+.preguntaTexto {
+  margin: 0 0 var(--espacio-4);
+  max-width: var(--ancho-lectura);
+  line-height: var(--interlineado-lectura);
+}
+
+/**
+ * LA RESPUESTA DEL VENDEDOR, HUNDIDA Y CON FILETE.
+ *
+ * ⚠️ SE DISTINGUE DE LA RESEÑA POR FORMA, NO SOLO POR TEXTO. Las dos son texto
+ * libre de dos personas distintas sobre el mismo hecho; sin un plano distinto,
+ * quien lee no sabe cual es cual hasta terminar la frase.
+ */
+.reseniaRespuesta {
+  margin-top: var(--espacio-2);
+  padding: var(--espacio-4);
+  border-left: 3px solid var(--color-cancha);
+  border-radius: 0 var(--radio) var(--radio) 0;
+  background: var(--superficie-2);
+}
+
+.reseniaRespuestaRotulo {
+  margin: 0 0 var(--espacio-2);
+  color: var(--color-cancha);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  letter-spacing: var(--tracking-etiqueta);
+  text-transform: uppercase;
+}
+
+/**
+ * OCULTAR UNA PREGUNTA VIVE EN SEGUNDO PLANO.
+ *
+ * ⚠️ NO ES UN BOTON AL LADO DE "RESPONDER". Es para insultos y spam, no es lo
+ * que se vino a hacer: separado y arriba a la derecha del bloque siguiente, con
+ * su confirmacion en dos pasos, no se aprieta de paso.
+ */
+.preguntaSecundaria {
+  margin-top: var(--espacio-4);
+  padding-top: var(--espacio-3);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+/* ------------------------------------------------------------- metricas -- */
+
+/**
+ * LA BARRA DE UN MES.
+ *
+ * ⚠️ ES FORMA, NO EL DATO (`aria-hidden` en el TSX): los tres numeros de la fila
+ * ya lo dicen. Sirve para comparar doce meses de un vistazo sin dividir
+ * mentalmente, y la escala es el mes mas alto, no un maximo inventado.
+ *
+ * ⚠️ EL ANCHO LLEGA CALCULADO DEL SERVIDOR Y POR ESO NO SE ANIMA CON
+ * `transition`: una transicion que nunca se dispara deja la barra apareciendo de
+ * golpe. La entrada es un keyframe declarado sin `to`, cuyo valor final es el
+ * ancho que ya tiene.
+ */
+.barraMes {
   display: block;
-  font-weight: 600;
-  margin-bottom: var(--espacio-2);
->>>>>>> origin/main
+  height: 4px;
+  min-width: 2px;
+  margin-top: var(--espacio-2);
+  border-radius: var(--radio-chico);
+  background-image: var(--degradado-acento);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barraMes {
+    animation: vendedor-barra var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+/**
+ * LA FILA DEL NIVEL ACTUAL, EN LA TABLA DE NIVELES.
+ *
+ * ⚠️ EL ENGANCHE ES UN ATRIBUTO DE DATOS Y NO UNA CLASE. `Tabla` es la primitiva
+ * compartida y sus clases las hashea el CSS Module: desde aca no se pueden
+ * escribir. El atributo lo pone la pantalla y es estable.
+ *
+ * ⚠️ EL FONDO ES LUZ DE MARCA AL 8%, que es lo mismo que usa el hover de la nav:
+ * medido, deja el texto en Tinta muy por encima de AA. Y ademas la fila lleva la
+ * insignia destacada y un texto para lector de pantalla, o sea que el color no
+ * es la unica señal.
+ */
+.marcoVentas tr[data-actual] {
+  background-color: rgb(var(--luz-marca) / 0.08);
+}
+
+/**
+ * LA NOTA DE UNA RESEÑA INDIVIDUAL.
+ *
+ * ⚠️ NO SE REUSA `Estrellas` ACA. Esa primitiva dice "de 5, N reseñas" junto al
+ * promedio: correcto arriba, falso en cada fila de la lista —diria "1 reseña"
+ * diez veces—. Una reseña tiene una NOTA; el promedio es otra cosa.
+ *
+ * ⚠️ EL ICONO ES DECORATIVO Y EL DATO ES EL TEXTO ("4 de 5"). Al reves —cinco
+ * estrellas dibujadas y ningun numero— obliga a contar formas para leer un
+ * numero.
+ */
+.reseniaNota {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  color: var(--color-tinta);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.reseniaNotaIcono {
+  display: inline-flex;
+  color: var(--color-naranja);
 }

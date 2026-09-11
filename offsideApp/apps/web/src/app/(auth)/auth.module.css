@@ -39,7 +39,12 @@
    * respaldo la pantalla perderia su altura minima en silencio.
    */
   min-height: 60vh;
-  min-height: clamp(520px, 74svh, 880px);
+  /*
+   * ⚠️ LLENA LA PANTALLA. Con un alto fijo mas chico que el viewport, el marco
+   * terminaba a mitad de pantalla y hasta el pie quedaba una franja vacia que
+   * se leia como un error de maquetado (visto en produccion el 2026-09-11).
+   */
+  min-height: max(clamp(520px, 74svh, 880px), calc(100svh - var(--alto-barra) - 48px));
 }
 
 @media (max-width: 900px) {

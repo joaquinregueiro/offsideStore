@@ -46,7 +46,6 @@ function envolver(titulo: string, cuerpo: string, boton: { texto: string; href: 
 </html>`;
 }
 
-<<<<<<< HEAD
 /**
  * "1 hora", "24 horas". El plazo del reset es de UNA hora por defecto y el
  * email decia "vence en 1 horas": es lo primero que lee alguien que acaba de
@@ -56,8 +55,6 @@ function plazo(horas: number): string {
   return horas === 1 ? '1 hora' : `${horas} horas`;
 }
 
-=======
->>>>>>> origin/main
 export function verificacionDeEmail(
   to: string,
   token: string,
@@ -74,21 +71,13 @@ export function verificacionDeEmail(
       'Para empezar a operar necesitás confirmar tu dirección de email:',
       enlace,
       '',
-<<<<<<< HEAD
       `El enlace vence en ${plazo(horasDeValidez)}.`,
-=======
-      `El enlace vence en ${horasDeValidez} horas.`,
->>>>>>> origin/main
       '',
       'Si no creaste esta cuenta, ignorá este mensaje.',
     ].join('\n'),
     html: envolver(
       'Confirmá tu email',
-<<<<<<< HEAD
       `Bienvenido a Offside Store. Para empezar a operar necesitás confirmar tu dirección de email. El enlace vence en ${plazo(horasDeValidez)}.`,
-=======
-      `Bienvenido a Offside Store. Para empezar a operar necesitás confirmar tu dirección de email. El enlace vence en ${horasDeValidez} horas.`,
->>>>>>> origin/main
       { texto: 'Confirmar mi email', href: enlace },
     ),
   };
@@ -105,21 +94,13 @@ export function resetDePassword(to: string, token: string, horasDeValidez: numbe
       '',
       enlace,
       '',
-<<<<<<< HEAD
       `El enlace vence en ${plazo(horasDeValidez)} y se puede usar una sola vez.`,
-=======
-      `El enlace vence en ${horasDeValidez} horas y se puede usar una sola vez.`,
->>>>>>> origin/main
       '',
       'Si no lo pediste, ignorá este mensaje: tu contraseña actual sigue funcionando.',
     ].join('\n'),
     html: envolver(
       'Restablecé tu contraseña',
-<<<<<<< HEAD
       `Pediste restablecer tu contraseña de Offside Store. El enlace vence en ${plazo(horasDeValidez)} y se puede usar una sola vez. Si no lo pediste, ignorá este mensaje: tu contraseña actual sigue funcionando.`,
-=======
-      `Pediste restablecer tu contraseña de Offside Store. El enlace vence en ${horasDeValidez} horas y se puede usar una sola vez. Si no lo pediste, ignorá este mensaje: tu contraseña actual sigue funcionando.`,
->>>>>>> origin/main
       { texto: 'Elegir una contraseña nueva', href: enlace },
     ),
   };

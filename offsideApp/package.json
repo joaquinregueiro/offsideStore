@@ -26,6 +26,7 @@
     "db:generate": "npm run db:generate --workspace @offside/database",
     "db:migrate": "npm run db:migrate --workspace @offside/database",
     "db:studio": "npm run db:studio --workspace @offside/database",
+    "db:seed:dev": "tsx --tsconfig apps/web/tsconfig.json apps/web/src/dev/seed.ts",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",

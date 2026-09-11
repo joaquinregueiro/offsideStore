@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * BARRA SUPERIOR
  * =============================================================================
@@ -426,20 +425,11 @@ header.barra::before {
 
 /* ------------------------------------------------------------------ layout */
 
-=======
-.barra {
-  background: var(--color-cancha);
-  color: var(--color-papel);
-  padding: var(--espacio-4) var(--espacio-6);
-}
-
->>>>>>> origin/main
 .contenido {
   max-width: var(--ancho-contenido);
   margin: 0 auto;
   display: flex;
   align-items: center;
-<<<<<<< HEAD
   column-gap: var(--espacio-6);
   /*
    * ⚠️ EL `row-gap` ES LA SEPARACION REAL ENTRE LAS DOS FILAS DE TELEFONO y se
@@ -565,26 +555,37 @@ header.barra::before {
  */
 .buscadorForm {
   flex: 1;
-  max-width: 460px;
+  max-width: 520px;
   margin: 0;
   position: relative;
   isolation: isolate;
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  gap: var(--espacio-1);
+  min-height: 52px;
+  padding: 4px 4px 4px 0;
   background: var(--superficie-1);
   border-radius: var(--radio-pastilla);
+  /*
+   * ⚠️ EL BUSCADOR ES LO UNICO CLARO SOBRE LA BARRA VERDE: si parece un input
+   * nativo, la barra entera parece nativa. Tres luces: un filo claro arriba (la
+   * luz viene de arriba), un hairline exterior y una sombra larga hacia abajo
+   * que lo despega del vidrio. El boton adentro es una pastilla propia con
+   * glow, asi que el contenedor ya NO recorta (`overflow: visible`).
+   */
   box-shadow:
-    var(--sombra-hundida),
-    0 0 0 1px rgb(var(--luz-papel) / 0.3);
-  overflow: hidden;
+    inset 0 1px 0 rgb(var(--luz-papel) / 0.9),
+    0 0 0 1px rgb(var(--luz-papel) / 0.35),
+    0 10px 28px -14px rgb(0 0 0 / 0.55);
   transition: box-shadow var(--dur-hover) var(--curva);
 }
 
 .buscadorForm:hover {
   box-shadow:
-    var(--sombra-hundida),
-    0 0 0 1px rgb(var(--luz-papel) / 0.55),
-    0 0 22px -6px rgb(var(--luz-cambio) / 0.5);
+    inset 0 1px 0 rgb(var(--luz-papel) / 0.9),
+    0 0 0 1px rgb(var(--luz-papel) / 0.6),
+    0 10px 28px -14px rgb(0 0 0 / 0.55),
+    0 0 28px -6px rgb(var(--luz-cambio) / 0.55);
 }
 
 /*
@@ -664,9 +665,15 @@ header.barra::before {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: none;
+  align-self: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radio-pastilla);
+  box-shadow: var(--sombra-marca);
   /* Area tactil: el icono mide 18px, el boton 44 de alto y 52 de ancho. */
-  min-width: 52px;
-  padding: 0 var(--espacio-5) 0 var(--espacio-4);
+  min-width: 44px;
+  padding: 0;
   border: none;
   background-image: var(--degradado-boton);
   color: var(--color-papel);
@@ -677,6 +684,8 @@ header.barra::before {
 .buscadorBoton:hover,
 .buscadorForm:focus-within .buscadorBoton {
   background-image: var(--degradado-boton-activo);
+  box-shadow: var(--sombra-marca), var(--glow-marca);
+  transform: scale(1.05);
 }
 
 /** Banda de luz verde-500 al 20% bajo el icono: papel encima queda en 4.64 (medido en tokens.css). */
@@ -752,36 +761,6 @@ header.barra::before {
 
 /* --------------------------------------------------------------- enlaces */
 
-=======
-  gap: var(--espacio-6);
-}
-
-.marca {
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-3xl);
-  line-height: 1;
-  letter-spacing: var(--tracking-titulo);
-  color: var(--color-papel);
-  text-transform: uppercase;
-}
-
-.marca:hover {
-  color: var(--color-cambio);
-}
-
-/** Buscador. Vive dentro de `.buscadorForm`, que es quien ocupa el espacio. */
-.buscador {
-  width: 100%;
-  padding: var(--espacio-2) var(--espacio-3);
-  border: none;
-  border-radius: var(--radio);
-  background: var(--color-papel);
-  color: var(--color-tinta);
-  font-family: var(--fuente-texto);
-  font-size: var(--texto-sm);
-}
-
->>>>>>> origin/main
 .acciones {
   margin-left: auto;
   display: flex;
@@ -789,7 +768,6 @@ header.barra::before {
   gap: var(--espacio-5);
 }
 
-<<<<<<< HEAD
 .enlace,
 .enlaceBoton,
 .enlaceDestacado {
@@ -804,16 +782,11 @@ header.barra::before {
   min-height: var(--alto-control);
   color: var(--color-papel);
   font-family: var(--fuente-texto);
-=======
-.enlace {
-  color: var(--color-papel);
->>>>>>> origin/main
   font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
   white-space: nowrap;
-<<<<<<< HEAD
   transition:
     color var(--dur-hover) var(--curva),
     text-shadow var(--dur-hover) var(--curva);
@@ -873,11 +846,6 @@ header.barra::before {
 }
 
 .enlace[aria-current] {
-=======
-}
-
-.enlace:hover {
->>>>>>> origin/main
   color: var(--color-cambio);
 }
 
@@ -886,7 +854,6 @@ header.barra::before {
   padding: 0;
   border: none;
   background: none;
-<<<<<<< HEAD
   cursor: pointer;
 }
 
@@ -950,6 +917,37 @@ header.barra::before {
 .enlaceDestacado:active {
   translate: 0 1px;
   box-shadow: 0 0 10px -4px rgb(var(--luz-cambio) / 0.4);
+}
+
+/* ------------------------------------------------------------- campanita */
+
+/**
+ * ⚠️ EL GLOBO LLEVA UN ANILLO DEL VERDE DE LA BARRA (`--globo-borde`) para
+ * despegarse del icono: sin el, el amarillo toca el trazo blanco de la campana
+ * y el numero se lee peor.
+ */
+.contadorBarra {
+  --globo-borde: var(--color-cancha);
+  color: var(--color-papel);
+}
+
+.contadorBarra:hover,
+.contadorBarra:focus-visible {
+  color: var(--color-cambio);
+}
+
+/** En el menu de telefono el conteo va al lado del texto, como pastilla. */
+.globoMenu {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 1px var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------ menu de telefono */
@@ -1295,24 +1293,4 @@ header.barra::before {
   .barra .cinta {
     border-bottom: 1px solid CanvasText;
   }
-=======
-  color: var(--color-papel);
-  font-family: var(--fuente-texto);
-  font-size: var(--texto-sm);
-  font-weight: var(--peso-medio);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  cursor: pointer;
-}
-
-.enlaceBoton:hover {
-  color: var(--color-cambio);
-}
-
-/** El buscador es un formulario: ocupa el mismo lugar que ocupaba el input. */
-.buscadorForm {
-  flex: 1;
-  max-width: 420px;
-  margin: 0;
->>>>>>> origin/main
 }

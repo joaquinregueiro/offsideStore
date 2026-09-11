@@ -1,6 +1,5 @@
 'use client';
 
-<<<<<<< HEAD
 import {
   createContext,
   useActionState,
@@ -225,15 +224,6 @@ function ResumenDeErrores({ errores }: { errores: Record<string, string> }) {
     </div>
   );
 }
-=======
-import { useActionState } from 'react';
-import type { ReactNode } from 'react';
-
-import type { EstadoFormulario } from '@/app/(auth)/acciones';
-
-import estilos from './form.module.css';
-import { Aviso, Boton } from './ui';
->>>>>>> origin/main
 
 /**
  * Formulario con Server Action.
@@ -241,12 +231,7 @@ import { Aviso, Boton } from './ui';
  * ⚠️ ES CLIENT COMPONENT, y es la excepcion necesaria: `useActionState` es un
  * hook. Pero el formulario **sigue funcionando sin JavaScript**: sin JS el
  * navegador hace el POST nativo y el servidor responde con la pagina; con JS,
-<<<<<<< HEAD
  * React se queda en la pagina y muestra el error sin recargar.
-=======
- * React se queda en la pagina y muestra el error sin recargar. Es progressive
- * enhancement de verdad, no una promesa.
->>>>>>> origin/main
  *
  * ⚠️ El estado `pending` deshabilita el boton: sin eso, un doble clic manda dos
  * altas o dos logins.
@@ -254,19 +239,15 @@ import { Aviso, Boton } from './ui';
 export function Formulario({
   accion,
   enviar,
-<<<<<<< HEAD
   variante = 'primario',
   tamanio = 'grande',
   bloque = true,
   pie,
   clasePie,
-=======
->>>>>>> origin/main
   children,
 }: {
   accion: (estado: EstadoFormulario, formData: FormData) => Promise<EstadoFormulario>;
   enviar: string;
-<<<<<<< HEAD
   /**
    * ⚠️ ESTABA CLAVADO EN `primario` Y ERA UN PROBLEMA REAL. Veinte de las
    * veintidos acciones del sitio pasan por aca, incluidas **Eliminar
@@ -392,19 +373,10 @@ export function Formulario({
   return (
     <form
       ref={formRef}
-=======
-  children: ReactNode;
-}) {
-  const [estado, action, pending] = useActionState(accion, {});
-
-  return (
-    <form
->>>>>>> origin/main
       action={action}
       className={estilos.formulario}
       noValidate
       /**
-<<<<<<< HEAD
        * ⚠️ SEPARA EL FORMULARIO-PANTALLA DEL FORMULARIO-ACCION, Y SALE DE
        * `bloque` PORQUE ES EXACTAMENTE ESA DISTINCION. Verificado: los
        * formularios en linea del sitio —pausar, reactivar, eliminar, borrar
@@ -419,16 +391,15 @@ export function Formulario({
        * el mismo hecho.
        */
       data-enviando={pending ? 'true' : undefined}
-      /**
-=======
->>>>>>> origin/main
-       * ⚠️ `multipart/form-data` HACE FALTA PARA LOS ARCHIVOS SIN JAVASCRIPT.
-       * Con JS, React serializa el FormData por su cuenta y lo ignora; sin JS,
-       * el navegador hace el POST nativo y el `enctype` por defecto
-       * (`urlencoded`) mandaria solo el NOMBRE del archivo, no su contenido.
-<<<<<<< HEAD
+      /*
+       * ⚠️ NI `method` NI `encType` SE DECLARAN ACA, Y NO ES UN OLVIDO. Con una
+       * funcion como `action`, React 19 emite solos `method="POST"` y
+       * `encType="multipart/form-data"` en el HTML servido —verificado en la
+       * salida real: los archivos viajan enteros sin JavaScript—. Declararlos
+       * ademas hacia que React los pisara igual y avisara por consola en CADA
+       * pantalla con formulario, incluido el checkout. Se vio recorriendo la app
+       * corriendo el 2026-09-10.
        */
-      encType="multipart/form-data"
     >
       {estado.error !== undefined && (
         <Aviso tono="error">
@@ -490,27 +461,11 @@ export function Formulario({
           </div>
         )}
       </CtxFormulario.Provider>
-=======
-       * Ponerlo siempre no cuesta nada y evita que un formulario con archivos
-       * se rompa en silencio justamente en el modo degradado.
-       */
-      encType="multipart/form-data"
-    >
-      {estado.error !== undefined && <Aviso error>{estado.error}</Aviso>}
-      {estado.ok !== undefined && <Aviso>{estado.ok}</Aviso>}
-
-      {children}
-
-      <Boton type="submit" bloque disabled={pending}>
-        {pending ? 'Enviando…' : enviar}
-      </Boton>
->>>>>>> origin/main
     </form>
   );
 }
 
 /**
-<<<<<<< HEAD
  * Dos campos por fila.
  *
  * ⚠️ REEMPLAZA A `.par`, QUE ESTA DUPLICADO EN DOS MODULOS —`vendedor.module.css`
@@ -523,8 +478,6 @@ export function Fila({ children }: { children: ReactNode }) {
 }
 
 /**
-=======
->>>>>>> origin/main
  * Campo con etiqueta.
  *
  * ⚠️ La etiqueta usa `htmlFor` contra el `id` del control: sin esa asociacion,
@@ -539,7 +492,6 @@ export function Campo({
   requerido = true,
   autoComplete,
   defaultValue,
-<<<<<<< HEAD
   identificador,
   maximo,
   placeholder,
@@ -561,15 +513,11 @@ export function Campo({
   | 'aria-invalid'
   | 'aria-describedby'
 > & {
-=======
-}: {
->>>>>>> origin/main
   nombre: string;
   etiqueta: string;
   tipo?: string;
   ayuda?: string;
   requerido?: boolean;
-<<<<<<< HEAD
   /**
    * `id` del control, cuando `nombre` no alcanza para ser unico.
    *
@@ -770,33 +718,6 @@ export function CampoImporte({
         {simboloAlFinal && marca}
       </div>
       <PieDeCampo idError={idError} idAyuda={idAyuda} error={error} ayuda={ayuda} />
-=======
-  autoComplete?: string;
-  defaultValue?: string;
-}) {
-  const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
-
-  return (
-    <div className={estilos.campo}>
-      <label htmlFor={nombre} className={estilos.etiqueta}>
-        {etiqueta}
-      </label>
-      <input
-        id={nombre}
-        name={nombre}
-        type={tipo}
-        className={estilos.control}
-        required={requerido}
-        autoComplete={autoComplete}
-        defaultValue={defaultValue}
-        aria-describedby={idAyuda}
-      />
-      {ayuda !== undefined && (
-        <span id={idAyuda} className={estilos.ayuda}>
-          {ayuda}
-        </span>
-      )}
->>>>>>> origin/main
     </div>
   );
 }
@@ -805,7 +726,6 @@ export function CampoImporte({
  * Casilla de verificacion.
  *
  * La etiqueta ENVUELVE al control y ademas lo referencia con `htmlFor`.
-<<<<<<< HEAD
  * Envolver ya alcanza, pero la asociacion explicita sobrevive a que alguien
  * reordene el marcado mas adelante.
  *
@@ -819,9 +739,36 @@ export function CampoImporte({
  * mapea a `acceptedSellerTerms`, asi que esa casilla NUNCA va a poder mostrar
  * su error. Se arregla en la pantalla y en la accion, no aca.
  */
-export function Casilla({ nombre, children }: { nombre: string; children: ReactNode }) {
+export function Casilla({
+  nombre,
+  obligatoria = true,
+  marcada = false,
+  children,
+}: {
+  nombre: string;
+  /**
+   * ⚠️ `required` POR DEFECTO Y NO AL REVES. La primera casilla del sistema
+   * —aceptar los terminos al crear la cuenta— es obligatoria, y un opcional
+   * por defecto la habria dejado pasar sin que nada fallara. Las que son de
+   * verdad opcionales —"marcar como predeterminada"— lo declaran.
+   */
+  obligatoria?: boolean;
+  /** Estado inicial. Se conserva tras un error de validacion. */
+  marcada?: boolean;
+  children: ReactNode;
+}) {
   const idError = `${nombre}-error`;
-  const { error } = useCampo(nombre);
+  const { error, valor } = useCampo(nombre);
+
+  /*
+   * ⚠️ EL ESTADO TILDADO SE CONSERVA TRAS UN ERROR, igual que el texto de los
+   * campos. Un `<input type="checkbox">` solo viaja en el `FormData` cuando
+   * esta marcado, asi que `valoresDelFormulario` lo guarda con su `value`
+   * ("on" por defecto) o no lo guarda: la presencia ES el estado. Sin esto,
+   * equivocarse en el codigo postal desmarcaba "usar por defecto" sin avisar y
+   * la direccion se guardaba sin serlo.
+   */
+  const tildada = valor === undefined ? marcada : true;
 
   return (
     <div className={estilos.campo}>
@@ -834,7 +781,8 @@ export function Casilla({ nombre, children }: { nombre: string; children: ReactN
           id={nombre}
           name={nombre}
           className={estilos.tilde}
-          required
+          required={obligatoria}
+          defaultChecked={tildada}
           aria-invalid={error === undefined ? undefined : true}
           aria-describedby={error === undefined ? undefined : idError}
         />
@@ -846,18 +794,6 @@ export function Casilla({ nombre, children }: { nombre: string; children: ReactN
         </span>
       )}
     </div>
-=======
- * Envolver ya alcanza —verificado en el navegador: `input.labels` devuelve la
- * etiqueta correcta—, pero la asociacion explicita sobrevive a que alguien
- * reordene el marcado mas adelante.
- */
-export function Casilla({ nombre, children }: { nombre: string; children: ReactNode }) {
-  return (
-    <label className={estilos.casilla} htmlFor={nombre}>
-      <input type="checkbox" id={nombre} name={nombre} required />
-      <span>{children}</span>
-    </label>
->>>>>>> origin/main
   );
 }
 
@@ -871,7 +807,6 @@ export interface Opcion {
  * Lista desplegable.
  *
  * ⚠️ SIN OPCION VACIA CUANDO ES REQUERIDA. Un `<select required>` cuyo primer
-<<<<<<< HEAD
  * item ya es valido nunca puede quedar sin elegir. Cuando el campo es opcional
  * —`vacio`— la primera opcion vale cadena vacia y el Server Action la trata
  * como ausente.
@@ -885,11 +820,6 @@ export interface Opcion {
  * visible y el schema de publicar exige un uuid. La unica forma de que mande el
  * uuid es ponerlo en `value`, y entonces la persona ve el uuid escrito en el
  * campo. No hay mapeo etiqueta a valor en HTML sin JavaScript.
-=======
- * item ya es valido nunca puede quedar sin elegir, que es lo que queremos para
- * campos como la condicion. Cuando el campo es opcional —`vacio`— la primera
- * opcion vale cadena vacia y el Server Action la trata como ausente.
->>>>>>> origin/main
  */
 export function Seleccion({
   nombre,
@@ -898,10 +828,7 @@ export function Seleccion({
   vacio,
   ayuda,
   defaultValue,
-<<<<<<< HEAD
   identificador,
-=======
->>>>>>> origin/main
 }: {
   nombre: string;
   etiqueta: string;
@@ -912,7 +839,6 @@ export function Seleccion({
   // acepta que le pasen `undefined` a proposito, y quien arma la lista puede
   // no tener todavia un valor por defecto.
   defaultValue?: string | undefined;
-<<<<<<< HEAD
   /** Mismo motivo que en `Campo`: unicidad del `id` dentro de un `.map()`. */
   identificador?: string;
 }) {
@@ -937,22 +863,6 @@ export function Seleccion({
         defaultValue={valor ?? defaultValue}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describe(idAyuda, idError, error)}
-=======
-}) {
-  const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
-
-  return (
-    <div className={estilos.campo}>
-      <label htmlFor={nombre} className={estilos.etiqueta}>
-        {etiqueta}
-      </label>
-      <select
-        id={nombre}
-        name={nombre}
-        className={estilos.control}
-        defaultValue={defaultValue}
-        aria-describedby={idAyuda}
->>>>>>> origin/main
       >
         {vacio !== undefined && <option value="">{vacio}</option>}
         {opciones.map((opcion) => (
@@ -961,15 +871,7 @@ export function Seleccion({
           </option>
         ))}
       </select>
-<<<<<<< HEAD
       <PieDeCampo idError={idError} idAyuda={idAyuda} error={error} ayuda={ayuda} />
-=======
-      {ayuda !== undefined && (
-        <span id={idAyuda} className={estilos.ayuda}>
-          {ayuda}
-        </span>
-      )}
->>>>>>> origin/main
     </div>
   );
 }
@@ -982,11 +884,8 @@ export function AreaDeTexto({
   requerido = false,
   filas = 4,
   defaultValue,
-<<<<<<< HEAD
   identificador,
   maximo,
-=======
->>>>>>> origin/main
 }: {
   nombre: string;
   etiqueta: string;
@@ -994,7 +893,6 @@ export function AreaDeTexto({
   requerido?: boolean;
   filas?: number;
   defaultValue?: string;
-<<<<<<< HEAD
   /** Mismo motivo que en `Campo`: unicidad del `id` dentro de un `.map()`. */
   identificador?: string;
   /** Largo maximo REAL del servidor. Ver la nota en `Campo`. */
@@ -1051,30 +949,6 @@ export function AreaDeTexto({
           ) : undefined
         }
       />
-=======
-}) {
-  const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
-
-  return (
-    <div className={estilos.campo}>
-      <label htmlFor={nombre} className={estilos.etiqueta}>
-        {etiqueta}
-      </label>
-      <textarea
-        id={nombre}
-        name={nombre}
-        rows={filas}
-        className={estilos.control}
-        required={requerido}
-        defaultValue={defaultValue}
-        aria-describedby={idAyuda}
-      />
-      {ayuda !== undefined && (
-        <span id={idAyuda} className={estilos.ayuda}>
-          {ayuda}
-        </span>
-      )}
->>>>>>> origin/main
     </div>
   );
 }
@@ -1082,7 +956,6 @@ export function AreaDeTexto({
 /**
  * Selector de archivos.
  *
-<<<<<<< HEAD
  * ⚠️ `accept` es una AYUDA, NO UNA VALIDACION. Le dice al navegador que mostrar
  * en el dialogo; cualquiera puede mandar otra cosa. Quien decide es el Service,
  * que decodifica los bytes.
@@ -1090,11 +963,6 @@ export function AreaDeTexto({
  * ⚠️ AHORA LEE EL CONTEXTO DE ERRORES, igual que `Casilla`. Es el mismo
  * agujero: un error keyeado al nombre del campo de fotos no se veia en ningun
  * lado y ni siquiera se marcaba con `aria-invalid`.
-=======
- * ⚠️ `accept` es una AYUDA, NO UNA VALIDACION. Le dice al navegador que
- * mostrar en el dialogo; cualquiera puede mandar otra cosa. Quien decide es el
- * Service, que decodifica los bytes.
->>>>>>> origin/main
  */
 export function CampoArchivos({
   nombre,
@@ -1110,11 +978,8 @@ export function CampoArchivos({
   requerido?: boolean;
 }) {
   const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
-<<<<<<< HEAD
   const idError = `${nombre}-error`;
   const { error } = useCampo(nombre);
-=======
->>>>>>> origin/main
 
   return (
     <div className={estilos.campo}>
@@ -1125,7 +990,6 @@ export function CampoArchivos({
         id={nombre}
         name={nombre}
         type="file"
-<<<<<<< HEAD
         className={clases(
           estilos.control,
           estilos.controlArchivos,
@@ -1138,19 +1002,6 @@ export function CampoArchivos({
         aria-describedby={describe(idAyuda, idError, error)}
       />
       <PieDeCampo idError={idError} idAyuda={idAyuda} error={error} ayuda={ayuda} />
-=======
-        className={estilos.control}
-        accept="image/jpeg,image/png,image/webp"
-        multiple={multiple}
-        required={requerido}
-        aria-describedby={idAyuda}
-      />
-      {ayuda !== undefined && (
-        <span id={idAyuda} className={estilos.ayuda}>
-          {ayuda}
-        </span>
-      )}
->>>>>>> origin/main
     </div>
   );
 }
@@ -1159,7 +1010,6 @@ export function CampoArchivos({
 export function CampoOculto({ nombre, valor }: { nombre: string; valor: string }) {
   return <input type="hidden" name={nombre} value={valor} />;
 }
-<<<<<<< HEAD
 
 /**
  * Campo de contrasenia con dos ayudas que solo existen si hay JavaScript:
@@ -1303,5 +1153,3 @@ export function GrupoDeCampos({
 export function SubtituloDeGrupo({ children }: { children: ReactNode }) {
   return <p className={estilos.grupoSubtitulo}>{children}</p>;
 }
-=======
->>>>>>> origin/main

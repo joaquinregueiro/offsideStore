@@ -1,28 +1,27 @@
-<<<<<<< HEAD
 import type { CSSProperties } from 'react';
-=======
->>>>>>> origin/main
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { CampoOculto, Formulario } from '@/components/form';
-<<<<<<< HEAD
-import { IconoAutenticado, IconoIntercambio } from '@/components/iconos';
+import { IconoAutenticado, IconoCamion, IconoIntercambio } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
-import { Aviso, BotonEnlace, Etiqueta, FilaDeAcciones, Migas } from '@/components/ui';
-import { estadoDeOrden, fecha, precio, tonoDeOrden } from '@/lib/formato';
-import { requireVerifiedSessionUser } from '@/lib/session';
+import {
+  Aviso,
+  BotonEnlace,
+  Confirmar,
+  Cronologia,
+  Etiqueta,
+  FilaDeAcciones,
+  Migas,
+} from '@/components/ui';
+import { estadoDeEnvio, estadoDeOrden, fecha, precio, tonoDeOrden } from '@/lib/formato';
+import { getSessionUser, requireVerifiedSessionUser } from '@/lib/session';
 import { coverUrls } from '@/modules/listings/services/listing.service';
-=======
-import { Aviso, BotonEnlace, Etiqueta } from '@/components/ui';
-import { estadoDeOrden, precio } from '@/lib/formato';
-import { requireVerifiedSessionUser } from '@/lib/session';
->>>>>>> origin/main
-import { getMyOrder } from '@/modules/orders/services/order.service';
+import { getMyOrder, getMyOrderDetail } from '@/modules/orders/services/order.service';
 
-import { pagar } from '../../acciones';
+import { cancelarOrden, confirmarRecepcion, pagar } from '../../acciones';
+import { hitosDeLaOrden } from '../../cronologia';
 import estilos from '../../resumen.module.css';
-<<<<<<< HEAD
 import { RutaDeCompra } from '../../ruta';
 
 export const dynamic = 'force-dynamic';
@@ -35,12 +34,26 @@ export const dynamic = 'force-dynamic';
  * carga, asi que quien usa lector de pantalla escucha que se esta confirmando.
  */
 export async function generateMetadata({
+  params,
   searchParams,
 }: {
+  params: Promise<{ orderId: string }>;
   searchParams: Promise<{ status?: string }>;
 }): Promise<Metadata> {
-  const { status } = await searchParams;
+  const [{ orderId }, { status }] = await Promise.all([params, searchParams]);
 
+  /*
+   * ⚠️ EL TITULO SALE DEL ESTADO DE LA ORDEN, NO DEL QUERY. Una orden ya pagada
+   * a la que se vuelve con `?status=success` —el enlace que queda en el
+   * historial del navegador— decia "Confirmando tu pago" mientras el cuerpo
+   * decia "Pagada". Se detecto recorriendo la app real el 2026-09-10.
+   */
+  const user = await getSessionUser();
+  const order = user === null ? null : await getMyOrder(user, orderId);
+  const pendiente = order === null || order.status === 'PENDING_PAYMENT';
+
+  if (order !== null && !pendiente)
+    return { title: `Orden ${estadoDeOrden(order.status).toLowerCase()}` };
   return { title: status === 'success' ? 'Confirmando tu pago' : 'Pago' };
 }
 
@@ -78,53 +91,40 @@ function fechaHora(iso: string): string {
 }
 
 /**
-=======
-
-export const metadata: Metadata = { title: 'Pago — Offside Store' };
-export const dynamic = 'force-dynamic';
-
-/**
->>>>>>> origin/main
- * Pago de una orden. Esta pantalla cumple DOS papeles:
+ * Pago y seguimiento de una orden. Esta pantalla cumple TRES papeles:
  *
  *  1. ANTES de pagar: resumen y boton que lleva a Mercado Pago.
  *  2. AL VOLVER de Mercado Pago: es la `back_url` que la preferencia declara
  *     (`/checkout/{orderId}?status=success|pending|failure`).
+ *  3. DESPUES: el recorrido de la orden —cronologia, envio y "lo recibí"—
+ *     hasta que se cierra.
  *
- * Son la misma pantalla a proposito: el estado de la orden ya distingue los dos
- * momentos, y tener dos paginas obligaria a mantener dos resumenes iguales.
+ * Son la misma pantalla a proposito: el estado de la orden ya distingue los
+ * momentos, y tener dos paginas obligaria a mantener dos resumenes iguales. El
+ * detalle completo —direccion, importes desglosados, reclamos— vive en
+ * `/cuenta/compras/{orderId}`, y se enlaza desde aca.
  */
 export default async function Checkout({
   params,
   searchParams,
 }: {
   params: Promise<{ orderId: string }>;
-<<<<<<< HEAD
   searchParams: Promise<{ status?: string; intento?: string }>;
 }) {
   const [{ orderId }, { status, intento }] = await Promise.all([params, searchParams]);
-=======
-  searchParams: Promise<{ status?: string }>;
-}) {
-  const [{ orderId }, { status }] = await Promise.all([params, searchParams]);
->>>>>>> origin/main
 
   const user = await requireVerifiedSessionUser(`/checkout/${orderId}`);
-  const order = await getMyOrder(user, orderId);
+  const order = await getMyOrderDetail(user, orderId);
 
   // Una orden ajena devuelve `null` igual que una inexistente: no se distinguen.
   if (order === null) notFound();
 
-<<<<<<< HEAD
   const portadas = await coverUrls(order.items.map((item) => item.listingId));
 
-=======
->>>>>>> origin/main
   const pendiente = order.status === 'PENDING_PAYMENT';
   const vencida =
     order.paymentDeadline !== null && new Date(order.paymentDeadline).getTime() <= Date.now();
 
-<<<<<<< HEAD
   /**
    * ⚠️ VOLVER DE MERCADO PAGO NO ES HABER PAGADO (BS-072 / DEC-028). MP
    * devuelve al comprador apenas termina, pero la fuente de verdad es el
@@ -164,20 +164,25 @@ export default async function Checkout({
 
   /*
    * ⚠️ UNA ORDEN CANCELADA NO ES UN DESENLACE FELIZ, Y HASTA ACA SE DIBUJABA
-   * COMO SI LO FUERA. `!pendiente` mete en la MISMA rama a `PAID` y a
-   * `CANCELLED`, asi que una orden cancelada salia con los tres pasos marcados
-   * ✓ —el rombo de "Pago" en verde, afirmando que el pago se completo— y con el
-   * bloque de cierre de marca: "Cancelada" en Amarillo Cambio a tamaño display
-   * sobre Verde Cancha, o sea la tipografia de la celebracion.
-   *
-   * ⚠️ NO ES UNA RAMA MUERTA. `CANCELLED` esta en el enum y `lib/formato.ts` ya
-   * le asigna texto y tono `alerta`; el ciclo de vida de la orden todavia se
-   * corta en `PAID`, pero el dia que exista el vencimiento automatico esta
-   * pantalla es la que lo muestra.
+   * COMO SI LO FUERA. `!pendiente` mete en la MISMA rama a una orden pagada y a
+   * una `CANCELLED`, asi que una cancelada salia con los tres pasos marcados ✓
+   * —el rombo de "Pago" en verde, afirmando que el pago se completo— y con el
+   * bloque de cierre de marca.
    */
   const cancelada = order.status === 'CANCELLED';
+
+  /*
+   * ⚠️ SE PREGUNTA POR `paidAt`, NO POR `status === 'PAID'`, Y ES UN ARREGLO DE
+   * FONDO. Con la maquina de estados completa (DEC-029) `PAID` dura lo que dura
+   * una transaccion: el webhook la deja en `PROCESSING` en el mismo commit. El
+   * sello "Pagada" y el cierre feliz no se veian NUNCA en una compra normal.
+   */
+  const pagada = order.paidAt !== null;
+
   const tono = tonoDeOrden(order.status);
   const total = precio(order.totalAmount, order.currency);
+  const hitos = hitosDeLaOrden(order.status, order.timeline, order.createdAt);
+  const envio = order.shipment;
 
   return (
     <Pantalla>
@@ -196,7 +201,7 @@ export default async function Checkout({
           />
         )}
 
-        <Migas items={[{ texto: 'Mis compras', href: '/mis-compras' }, { texto: 'Pago' }]} />
+        <Migas items={[{ texto: 'Mis compras', href: '/cuenta/compras' }, { texto: 'Pago' }]} />
 
         <div className={`${estilos.cabecera}${quieto ? '' : ' entra'}`}>
           <h1 className={estilos.titulo}>Orden {order.orderNumber}</h1>
@@ -219,11 +224,6 @@ export default async function Checkout({
           ⚠️ LA ESPERA DEL WEBHOOK ERA UN PARRAFO GRIS QUIETO, y encima MUDO:
           `<Aviso tono="neutro">` no lleva `role`.
 
-          ⚠️ EL ANUNCIO REAL LO HACEN EL `<title>` Y ESTE `<h2>`, no el
-          `role="status"`: una live region solo anuncia mutaciones posteriores a
-          su insercion, y aca cada actualizacion es un documento nuevo. El `role`
-          queda como red para el dia que esto se actualice sin recargar.
-
           ⚠️ LA BARRA MIDE LA ESPERA DE VERDAD: su duracion es la del `<meta
           refresh>`. Una barra que se mueve sin medir nada es justo el tipo de
           movimiento que esta pantalla no puede permitirse.
@@ -244,7 +244,7 @@ export default async function Checkout({
               <p className={estilos.confirmandoTexto}>
                 {sigueEsperando
                   ? 'Mercado Pago nos está avisando. Esta página se actualiza sola; no hace falta que hagas nada.'
-                  : 'Está tardando más de lo habitual. Tu pago no se perdió: cuando Mercado Pago lo confirme, la orden pasa a Pagada.'}
+                  : 'Está tardando más de lo habitual. Tu pago no se perdió: cuando Mercado Pago lo confirme, la orden avanza sola.'}
               </p>
             </div>
 
@@ -258,8 +258,7 @@ export default async function Checkout({
               ⚠️ LA SALIDA MANUAL SE RENDERIZA SIEMPRE, y antes desaparecia justo
               cuando hacia falta: al agotarse la espera automatica la pantalla
               decia "esta tardando mas de lo habitual" y no ofrecia NINGUNA
-              accion —ni actualizar, ni volver—, porque el bloque de acciones de
-              abajo solo aparece cuando la orden ya no esta pendiente.
+              accion —ni actualizar, ni volver—.
             */}
             <p className={estilos.confirmandoManual}>
               <a href={proximoIntento}>
@@ -271,7 +270,7 @@ export default async function Checkout({
 
         {!sigueEsperando && confirmando && (
           <FilaDeAcciones centrada={false}>
-            <BotonEnlace href="/mis-compras" variante="secundario">
+            <BotonEnlace href="/cuenta/compras" variante="secundario">
               Ver mis compras
             </BotonEnlace>
           </FilaDeAcciones>
@@ -307,8 +306,7 @@ export default async function Checkout({
         {/*
           ⚠️ EL ESTADO TIÑE EL TICKET ENTERO —el asta y el paño—. `data-tono`
           recibe el tono YA resuelto por `tonoDeOrden()`: el CSS no tiene un
-          segundo mapa de estados, que es exactamente lo que `lib/formato.ts`
-          documenta que ya paso siete veces.
+          segundo mapa de estados.
         */}
         <section
           className={`${estilos.ticket} sup-ficha con-grano${quieto ? '' : ' entra'}`}
@@ -374,19 +372,33 @@ export default async function Checkout({
               );
             })}
 
+            {/*
+              ⚠️ ACA EL ENVIO YA NO ES UNA INCOGNITA: la orden lo CONGELO al
+              crearse (DEC-030) con lo que el vendedor declaro. Cero no es
+              "gratis" —puede estar incluido en el precio, ser a convenir o ser
+              un retiro en persona—, asi que se dice "sin costo agregado" y no
+              "gratis".
+            */}
             <div className={estilos.lineaTicket}>
               <span className={estilos.conceptoTicket}>Envío</span>
               <span className={estilos.guia} aria-hidden="true" />
-              <span className={`${estilos.valorTicket} ${estilos.pendiente}`}>No incluido</span>
+              <span
+                className={`${estilos.valorTicket}${
+                  order.shippingAmount === '0' ? ` ${estilos.pendiente}` : ''
+                }`}
+              >
+                {order.shippingAmount === '0'
+                  ? 'Sin costo agregado'
+                  : precio(order.shippingAmount, order.currency)}
+              </span>
             </div>
 
             {/*
               ⚠️ EL SELLO ES REDUNDANCIA PURA Y POR ESO PUEDE SER DECORATIVO: la
-              `<Etiqueta>` de arriba y el bloque de cierre ya dicen "Pagada" con
-              palabras. Es el unico desenlace feliz del producto entero y hasta
-              hoy lo unico que cambiaba era un chip de 12px.
+              `<Etiqueta>` de arriba y el bloque de cierre ya dicen el estado con
+              palabras.
             */}
-            {order.status === 'PAID' && (
+            {pagada && !cancelada && (
               <span className={`${estilos.sello} entra-telon-diagonal oblicuo`} aria-hidden="true">
                 Pagada
               </span>
@@ -404,10 +416,8 @@ export default async function Checkout({
         </section>
 
         {/*
-          ⚠️ EL PLAZO ESTABA EN LOS DATOS Y NO SE MOSTRABA. `getMyOrder` devuelve
-          `paymentDeadline` y la pantalla lo usaba solo para calcular `vencida`:
-          el dato mas util que puede tener una orden sin pagar es hasta cuando se
-          puede pagar.
+          ⚠️ EL PLAZO ESTABA EN LOS DATOS Y NO SE MOSTRABA. El dato mas util que
+          puede tener una orden sin pagar es hasta cuando se puede pagar.
         */}
         {pendiente && !vencida && !confirmando && order.paymentDeadline !== null && (
           <p className={estilos.plazo}>
@@ -452,13 +462,118 @@ export default async function Checkout({
         )}
 
         {/*
+          ⚠️ CANCELAR VA EN DOS PASOS Y SOLO SI LA MAQUINA DE ESTADOS LO PERMITE.
+          `actions.canCancel` sale de `canTransition(estado, 'CANCELLED',
+          'buyer')`: la pantalla no decide desde cuando se puede cancelar, lo
+          pregunta. Una orden ya pagada no se cancela desde acá — eso es un
+          reembolso, y lo emite el back-office.
+        */}
+        {order.actions.canCancel && !confirmando && (
+          <div className={estilos.cancelar}>
+            <Confirmar
+              etiqueta="Cancelar la orden"
+              pregunta="La orden se cancela y la unidad vuelve a estar disponible para otra persona. Si querés la camiseta después, tenés que empezar una compra nueva."
+            >
+              <Formulario
+                accion={cancelarOrden}
+                enviar="Sí, cancelar la orden"
+                variante="peligro"
+                tamanio="chico"
+                bloque={false}
+              >
+                <CampoOculto nombre="orderId" valor={order.id} />
+              </Formulario>
+            </Confirmar>
+          </div>
+        )}
+
+        {/*
+          ⚠️ EL ENVIO SE MUESTRA CUANDO EXISTE, no cuando el estado lo sugiere:
+          `shipments` guarda el despacho manual que cargo el vendedor (SH-010) y
+          es la unica fuente de transportista y numero de seguimiento. Correo
+          Argentino no esta integrado, asi que acá NO hay seguimiento automático
+          y no se promete ninguno.
+        */}
+        {envio !== null && (
+          <section className={`${estilos.envio} sup-ficha con-grano`}>
+            <h2 className={estilos.envioTitulo}>
+              <IconoCamion tamanio={20} />
+              <span>Envío</span>
+            </h2>
+
+            <div className={estilos.envioDatos}>
+              <p className={estilos.envioEstado}>
+                <Etiqueta tono={envio.deliveredAt === null ? 'marca' : 'exito'}>
+                  {estadoDeEnvio(envio.status)}
+                </Etiqueta>
+                {envio.carrierName !== null && <span>{envio.carrierName}</span>}
+              </p>
+
+              {envio.trackingNumber !== null && (
+                <p className={estilos.envioSeguimiento}>
+                  Seguimiento: <strong>{envio.trackingNumber}</strong>
+                  {envio.trackingUrl !== null && (
+                    <>
+                      {' · '}
+                      {/*
+                        ⚠️ ES UN SITIO DE UN TERCERO: se abre en otra pestaña y
+                        se avisa, en vez de sacar a alguien de su compra sin
+                        decirle a donde va.
+                      */}
+                      <a href={envio.trackingUrl} target="_blank" rel="noreferrer noopener">
+                        Seguirlo en el sitio del correo
+                      </a>
+                    </>
+                  )}
+                </p>
+              )}
+
+              {envio.dispatchedAt !== null && (
+                <p className={estilos.envioFecha}>Despachado el {fecha(envio.dispatchedAt)}</p>
+              )}
+            </div>
+
+            {/*
+              ⚠️ LO CONFIRMA QUIEN RECIBE, Y ES UNA CONSECUENCIA DE NO TENER
+              TRANSPORTISTA INTEGRADO: sin tracking, la unica persona que sabe
+              que el paquete llego es quien lo tiene en la mano.
+            */}
+            {order.actions.canConfirmDelivery && (
+              <div className={estilos.envioAccion}>
+                <Formulario accion={confirmarRecepcion} enviar="Lo recibí" bloque={false}>
+                  <CampoOculto nombre="orderId" valor={order.id} />
+                </Formulario>
+                <p className={estilos.envioNota}>
+                  Confirmalo cuando tengas el paquete. Desde ahí corre el plazo de protección al
+                  comprador.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/*
+          ⚠️ LA CRONOLOGIA VA DESPUES DEL DINERO Y ANTES DEL CIERRE. Es lo que
+          contesta "¿y ahora qué?", que es la pregunta que trae a alguien de
+          vuelta a esta pantalla cuando ya pagó.
+
+          ⚠️ NO SE DIBUJA SOBRE UNA ORDEN SIN PAGAR Y SIN HISTORIA: un solo hito
+          hecho y cinco apagados no es una cronologia, es una promesa. La ruta de
+          pasos de arriba ya dice en qué punto está.
+        */}
+        {(pagada || cancelada) && (
+          <section className={estilos.seguimiento}>
+            <h2 className={estilos.subtitulo}>Seguimiento</h2>
+            <Cronologia hitos={hitos} etiqueta="Recorrido de la orden" />
+          </section>
+        )}
+
+        {/*
           ⚠️ EL FINAL FELIZ TIENE QUE VERSE COMO UN FINAL. Antes una orden pagada
           terminaba en dos botones sueltos sobre papel.
 
           ⚠️ NINGUNO ES `fantasma`: esa variante escribe `--color-cancha` a mano
-          en `ui.module.css`, asi que sobre Verde Cancha es invisible. Sobre esta
-          superficie el primario es Amarillo Cambio y el secundario es contorno
-          papel (5.16:1).
+          en `ui.module.css`, asi que sobre Verde Cancha es invisible.
         */}
         {!pendiente && (
           /*
@@ -475,9 +590,9 @@ export default async function Checkout({
             }
           >
             <p className={estilos.cierreTitulo}>
-              {order.status === 'PAID' ? 'Listo, recibimos tu pago' : estadoDeOrden(order.status)}
+              {cancelada ? 'Orden cancelada' : 'Listo, recibimos tu pago'}
             </p>
-            {order.status === 'PAID' && (
+            {!cancelada && (
               <p className={estilos.cierreTexto}>
                 El vendedor ya puede preparar el envío. Vas a poder seguir esta orden desde Mis
                 compras.
@@ -486,8 +601,8 @@ export default async function Checkout({
             {/*
               ⚠️ SE DICE EL HECHO Y NADA MAS. Una orden cancelada ya no se puede
               pagar —lo dice la maquina de estados—, pero POR QUE se cancelo y si
-              hubo devolucion depende de disputas y refunds, que no existen: se
-              inventaria una politica desde la interfaz.
+              hubo devolucion depende de disputas y refunds: se inventaria una
+              politica desde la interfaz.
             */}
             {cancelada && (
               <p className={estilos.cierreTexto}>
@@ -495,97 +610,26 @@ export default async function Checkout({
               </p>
             )}
             <FilaDeAcciones>
-              <BotonEnlace href="/mis-compras">Ver mis compras</BotonEnlace>
+              <BotonEnlace href={`/cuenta/compras/${order.id}`}>Ver el detalle</BotonEnlace>
               <BotonEnlace href="/buscar" variante="secundario">
                 Seguir mirando camisetas
               </BotonEnlace>
             </FilaDeAcciones>
           </div>
         )}
+
+        {/*
+          ⚠️ EL DETALLE COMPLETO NO SE DUPLICA ACA. La direccion de envio, el
+          desglose de importes y los reclamos viven en una sola pantalla; esta es
+          la del pago. El enlace se renderiza siempre —incluso con la orden sin
+          pagar— porque es la unica salida hacia el historial.
+        */}
+        {pendiente && (
+          <p className={estilos.nota}>
+            <a href={`/cuenta/compras/${order.id}`}>Ver el detalle completo de la orden</a>
+          </p>
+        )}
       </main>
     </Pantalla>
-=======
-  return (
-    <main className={estilos.pagina}>
-      <h1 className={estilos.titulo}>Orden {order.orderNumber}</h1>
-
-      {/*
-        ⚠️ EL RETORNO DE MERCADO PAGO NO CONFIRMA NADA (BS-072 / DEC-028). MP
-        devuelve al comprador apenas termina, pero la fuente de verdad es el
-        WEBHOOK, que puede tardar segundos. Decir "pagado" porque la URL trae
-        `status=success` seria afirmar algo que todavia no sabemos.
-      */}
-      {status === 'success' && pendiente && (
-        <div style={{ marginBottom: 24 }}>
-          <Aviso>
-            Estamos confirmando tu pago con Mercado Pago. Puede tardar unos segundos; actualizá esta
-            página en un momento.
-          </Aviso>
-        </div>
-      )}
-
-      {status === 'failure' && pendiente && (
-        <div style={{ marginBottom: 24 }}>
-          {/*
-            ⚠️ Un pago rechazado NO cancela la orden (DEC-033 / UC-MF-2): sigue
-            en PENDING_PAYMENT y se puede reintentar dentro de la ventana.
-          */}
-          <Aviso error>El pago no se pudo completar. Podés intentar de nuevo.</Aviso>
-        </div>
-      )}
-
-      <div className={estilos.resumen}>
-        {order.items.map((item) => (
-          <div key={item.id} className={estilos.linea}>
-            <span>
-              {item.title}
-              {item.quantity > 1 && ` × ${item.quantity}`}
-            </span>
-            <span>{precio(item.unitPriceAmount, order.currency)}</span>
-          </div>
-        ))}
-
-        <div className={`${estilos.linea} ${estilos.lineaTotal}`}>
-          <span className={estilos.concepto}>Total</span>
-          <span className={estilos.total}>{precio(order.totalAmount, order.currency)}</span>
-        </div>
-
-        <div className={estilos.linea}>
-          <span className={estilos.concepto}>Estado</span>
-          <Etiqueta aviso={order.status === 'CANCELLED'}>{estadoDeOrden(order.status)}</Etiqueta>
-        </div>
-      </div>
-
-      {pendiente && !vencida && (
-        <Formulario accion={pagar} enviar="Pagar con Mercado Pago">
-          <CampoOculto nombre="orderId" valor={order.id} />
-        </Formulario>
-      )}
-
-      {pendiente && vencida && (
-        <>
-          <Aviso error>La ventana de pago de esta orden venció.</Aviso>
-          <p className={estilos.nota}>
-            <BotonEnlace href="/" variante="secundario">
-              Volver al catálogo
-            </BotonEnlace>
-          </p>
-        </>
-      )}
-
-      {!pendiente && (
-        <>
-          {order.status === 'PAID' && (
-            <Aviso>Recibimos tu pago. El vendedor ya puede preparar el envío.</Aviso>
-          )}
-          <p className={estilos.nota}>
-            <BotonEnlace href="/mis-compras" variante="secundario">
-              Ver mis compras
-            </BotonEnlace>
-          </p>
-        </>
-      )}
-    </main>
->>>>>>> origin/main
   );
 }

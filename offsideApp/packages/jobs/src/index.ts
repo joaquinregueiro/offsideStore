@@ -15,3 +15,12 @@ export {
 } from './queues/index';
 
 export { closeWorkers, createWorker, getRegisteredWorkers } from './workers/index';
+
+export {
+  acquireLock,
+  releaseLock,
+  withLock,
+  type AcquiredLock,
+  type LockStore,
+  type WithLockResult,
+} from './lock';

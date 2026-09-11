@@ -1,5 +1,4 @@
 /**
-<<<<<<< HEAD
  * Ficha de producto del catalogo — version LUMINOSA (2026-09-10).
  *
  * Es el objeto mas repetido del sitio, asi que es donde mas se nota la
@@ -47,22 +46,33 @@
  * dice con estas palabras: una grilla de 24 fichas NO es de vidrio.
  */
 
+/* ------------------------------------------------------------- envoltorio */
+
+/**
+ * ENVOLTORIO — lo unico que hace es dejar que el corazon sea HERMANO del enlace.
+ *
+ * ⚠️ EXISTE POR UNA RESTRICCION DE HTML, NO POR DISEÑO: un `<form>` no puede ir
+ * dentro de un `<a>`, y la ficha entera es un `<a>` desde siempre. Guardar en
+ * favoritos MUTA, asi que va por POST, asi que va en un formulario, asi que
+ * tiene que estar afuera del enlace.
+ *
+ * ⚠️ `height: 100%` SE PROPAGA: la grilla estira el `<li>`, el envoltorio lo
+ * hereda y la ficha —que ya traia `height: 100%`— sigue llegando al pie. Sin
+ * esto, en una fila con titulos de distinto largo las fichas dejan de alinear
+ * por abajo.
+ */
+.envoltorio {
+  position: relative;
+  height: 100%;
+}
+
 /* ------------------------------------------------------------------ ficha */
 
-=======
- * Ficha de producto.
- *
- * Sigue el ejemplo de la identidad §03: precio en la tipografia de titulares,
- * etiqueta de categoria en mayusculas con tracking, descripcion en Inter.
- */
-
->>>>>>> origin/main
 .ficha {
   /* Es un <a>: se neutraliza el color de enlace global para no tenir el titulo. */
   color: inherit;
   display: flex;
   flex-direction: column;
-<<<<<<< HEAD
   height: 100%;
   position: relative;
   /* Condicion para el `z-index: -1` del rombo del cuerpo y para el anillo. */
@@ -177,37 +187,37 @@
     animation-delay: calc(var(--paso-escalon-rapido, 40ms) * var(--i, 0));
   }
 
-  :nth-child(2) > .ficha {
+  :nth-child(2) > .envoltorio > .ficha {
     --i: 1;
   }
-  :nth-child(3) > .ficha {
+  :nth-child(3) > .envoltorio > .ficha {
     --i: 2;
   }
-  :nth-child(4) > .ficha {
+  :nth-child(4) > .envoltorio > .ficha {
     --i: 3;
   }
-  :nth-child(5) > .ficha {
+  :nth-child(5) > .envoltorio > .ficha {
     --i: 4;
   }
-  :nth-child(6) > .ficha {
+  :nth-child(6) > .envoltorio > .ficha {
     --i: 5;
   }
-  :nth-child(7) > .ficha {
+  :nth-child(7) > .envoltorio > .ficha {
     --i: 6;
   }
-  :nth-child(8) > .ficha {
+  :nth-child(8) > .envoltorio > .ficha {
     --i: 7;
   }
-  :nth-child(9) > .ficha {
+  :nth-child(9) > .envoltorio > .ficha {
     --i: 8;
   }
-  :nth-child(10) > .ficha {
+  :nth-child(10) > .envoltorio > .ficha {
     --i: 9;
   }
-  :nth-child(11) > .ficha {
+  :nth-child(11) > .envoltorio > .ficha {
     --i: 10;
   }
-  :nth-child(n + 12) > .ficha {
+  :nth-child(n + 12) > .envoltorio > .ficha {
     --i: 11;
   }
 }
@@ -521,14 +531,41 @@
  * `.pulso-atencion::after` usa `border-radius: inherit` y el glow toma la forma
  * de la caja. Con radios distintos el halo se ve corrido del chip.
  */
-.marco > .insignia {
+/**
+ * ⚠️ LA COLUMNA DE MARCAS REEMPLAZA AL POSICIONAMIENTO SUELTO DE LA INSIGNIA.
+ * Desde que existe "Promocionada" (PS-021) hay DOS chips que quieren la misma
+ * esquina: apilados en un flex se ordenan solos, comparten un unico inset y
+ * nunca se tapan. Lo que POSICIONA es esto; el color y la tipografia siguen
+ * siendo de `ui.module.css`.
+ *
+ * ⚠️ `align-items: flex-start` NO ES COSMETICA: sin el, los dos chips estiran
+ * al ancho de la columna y "Promocionada" queda con un rectangulo amarillo del
+ * ancho de "Última unidad".
+ */
+.marco > .marcas {
   position: absolute;
   top: var(--espacio-3);
   left: var(--espacio-3);
   z-index: 3;
-  display: inline-flex;
-  /* A 320px la columna es angosta: la etiqueta no puede empujar el marco. */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-2);
+  /* A 320px la columna es angosta: las etiquetas no pueden empujar el marco. */
   max-width: calc(100% - var(--espacio-3) * 2);
+}
+
+.marcas > .insignia {
+  /*
+   * ⚠️ `position: relative` EXPLICITO Y CON ESPECIFICIDAD (0,2,0). La utilidad
+   * global `.pulso-atencion` declara lo mismo con (0,1,0): si el orden de
+   * inyeccion pusiera el CSS global despues del chunk del modulo, la insignia
+   * quedaria igual, pero el `::before` de la chispa —que se posiciona contra
+   * ella— dependeria de un archivo ajeno. Se escribe acá y no se discute.
+   */
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
   border-radius: var(--radio-chico, 8px);
   box-shadow: var(--sombra-1), var(--glow-cambio);
 }
@@ -558,7 +595,7 @@
  * ⚠️ `drop-shadow` ESTATICO sobre 12px: cuesta nada y sigue la silueta de la
  * estrella, que un `box-shadow` no sabe hacer.
  */
-.marco > .insignia::before {
+.marcas > .insignia::before {
   content: '';
   position: absolute;
   top: -6px;
@@ -587,7 +624,7 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .marco > .insignia::before {
+  .marcas > .insignia::before {
     animation: chispea 1.6s var(--curva-flotar, ease-in-out) 3;
     animation-delay: 600ms;
   }
@@ -599,7 +636,7 @@
  * de inset a cada lado el ancho util era de 132. Se le devuelven 12px.
  */
 @media (max-width: 600px) {
-  .marco > .insignia {
+  .marco > .marcas {
     top: var(--espacio-2);
     left: var(--espacio-2);
     max-width: calc(100% - var(--espacio-2) * 2);
@@ -612,7 +649,7 @@
  * lineas se sigue leyendo entera. Solo POSICIONA: color, fondo y tipografia
  * siguen siendo de `ui.module.css`.
  */
-.marco > .insignia > * {
+.marcas > .insignia > * {
   white-space: normal;
 }
 
@@ -830,79 +867,12 @@
   font-weight: var(--peso-semi);
   line-height: 1.35;
   letter-spacing: normal;
-=======
-  background: var(--color-blanco);
-  border: 1px solid var(--color-neutro-borde);
-  /* 4px: el sistema es anguloso. */
-  border-radius: var(--radio);
-  overflow: hidden;
-  transition: border-color 120ms ease;
-}
-
-.ficha:hover {
-  border-color: var(--color-cancha);
-}
-
-/**
- * Marco de la imagen.
- *
- * ⚠️ TODAVIA NO HAY IMAGENES: el almacenamiento S3 no esta implementado y
- * `listing_images` esta vacia. Se reserva la proporcion para que el dia que
- * existan no se reacomode toda la grilla, y mientras tanto se muestra el
- * patron de rombos de la identidad §05.
- */
-.marco {
-  aspect-ratio: 4 / 5;
-  /* Cuando es un <img>, `cover` recorta sin deformar: las fotos vienen con
-     proporciones distintas y una grilla despareja se lee como un error. */
-  width: 100%;
-  object-fit: cover;
-  background-color: var(--color-neutro-suave);
-  /*
-   * El rombo de la bandera en su escala de TEXTURA FINA, no de bloque.
-   *
-   * ⚠️ La identidad §05 describe el patron en tres escalas: bloque grande,
-   * textura fina y cinta de seccion. Como marcador de CADA producto de la
-   * grilla corresponde la fina: en bloque grande, con el verde saturado, la
-   * vitrina entera se convierte en un tablero de ajedrez y el patron le gana
-   * al producto, que es lo unico que la persona vino a mirar.
-   *
-   * Cuando existan las fotos reales (S3 + `listing_images`), esto desaparece
-   * detras de la imagen y el cambio no deberia notarse como un salto.
-   */
-  background-image:
-    linear-gradient(45deg, var(--color-neutro-borde) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--color-neutro-borde) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--color-neutro-borde) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--color-neutro-borde) 75%);
-  background-size: 12px 12px;
-  background-position:
-    0 0,
-    0 6px,
-    6px -6px,
-    -6px 0;
-}
-
-.cuerpo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-2);
-  padding: var(--espacio-4);
-}
-
-.titulo {
-  font-family: var(--fuente-texto);
-  font-size: var(--texto-base);
-  font-weight: var(--peso-semi);
-  line-height: 1.35;
->>>>>>> origin/main
   color: var(--color-tinta);
   /* Dos lineas como maximo: la grilla se desalinea si un titulo se dispara. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-<<<<<<< HEAD
   /* `balance` es para titulares cortos; en dos lineas recortadas estorba. */
   text-wrap: initial;
   /* Un nombre de club larguisimo no puede empujar la ficha a 320px. */
@@ -923,36 +893,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-=======
-}
-
-/** Precio en la tipografia de titulares, como en la identidad §03. */
-.precio {
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
-  line-height: 1;
-  color: var(--color-tinta);
-}
-
-.metadatos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--espacio-2);
-  margin-top: var(--espacio-1);
-}
-
-/** Etiqueta de categoria: mayusculas con tracking (identidad §03). */
-.etiqueta {
-  padding: 2px var(--espacio-2);
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio-chico);
-  background: var(--color-neutro-suave);
->>>>>>> origin/main
   font-size: var(--texto-xs);
   font-weight: var(--peso-medio);
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
-<<<<<<< HEAD
   line-height: 1.4;
   /* Remapeado en `.ficha` a `--color-neutro-texto`: 5.37:1 en el peor punto del lavado. */
   color: var(--color-neutro-tenue);
@@ -1033,7 +977,7 @@
   .ficha::before,
   .cuerpo::after,
   .marco::after,
-  .marco > .insignia::before {
+  .marcas > .insignia::before {
     display: none;
   }
 
@@ -1042,12 +986,114 @@
     background-color: Canvas;
     color: CanvasText;
   }
-=======
-  color: var(--color-neutro-texto);
 }
 
-.vendedor {
-  font-size: var(--texto-xs);
-  color: var(--color-neutro-tenue);
->>>>>>> origin/main
+/* -------------------------------------------------------------- favoritos */
+
+/**
+ * EL CORAZON, SOBRE LA ESQUINA DERECHA DE LA FOTO.
+ *
+ * ⚠️ VA ANCLADO AL ENVOLTORIO Y NO AL MARCO, porque el `<form>` es hermano del
+ * enlace: el marco vive adentro del `<a>` y no puede contener nada de afuera.
+ * Como el marco arranca en el borde de arriba de la ficha, el resultado visual
+ * es el mismo — la estrella cae sobre la foto.
+ *
+ * ⚠️ `z-index` POR ENCIMA DE LA MARCA DE IR (3) Y DE LAS MARCAS (3). Si empatara,
+ * el orden del DOM decidiria, y el DOM pone el formulario DESPUES: funcionaria
+ * por accidente. Escrito, no se rompe el dia que alguien reordene.
+ */
+.favorito {
+  position: absolute;
+  top: var(--espacio-2);
+  right: var(--espacio-2);
+  z-index: 4;
+  /* El formulario es un contenedor invisible: no puede comerse el hover. */
+  line-height: 0;
+}
+
+/**
+ * ⚠️ 44px DE AREA TACTIL (WCAG 2.5.5) AUNQUE EL DIBUJO SEA DE 20. En un telefono
+ * este boton esta a milimetros del enlace que ocupa toda la ficha: un objetivo
+ * chico acá no es incomodo, es una compra abierta por error.
+ *
+ * ⚠️ FONDO SOLIDO, NO VIDRIO. Va encima de una foto cualquiera —incluida una
+ * camiseta blanca— y `backdrop-filter` por ficha son 24 recomposiciones por
+ * cuadro de scroll. Papel macizo resuelve el contraste en todas las fotos.
+ */
+.favoritoBoton {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-pastilla, 999px);
+  background-color: var(--superficie-1, #ffffff);
+  /* Tiempo Extra sobre papel: 8.31:1. La estrella vacia se lee igual. */
+  color: var(--color-tiempo-extra);
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px var(--linea-tenue, #e4e6de),
+    var(--luz-superior, inset 0 1px 0 rgb(255 255 255 / 0.9)),
+    var(--sombra-1);
+  transition:
+    transform var(--dur-hover, 320ms) var(--curva-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+    color var(--dur-hover, 320ms) var(--curva),
+    box-shadow var(--dur-hover, 320ms) var(--curva);
+}
+
+.favoritoBoton svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--trazo-icono, 1.5px);
+  transition: fill var(--dur-hover, 320ms) var(--curva);
+}
+
+/**
+ * ⚠️ GUARDADA SE DICE CON EL RELLENO, NO SOLO CON EL COLOR. Quien no distingue
+ * matices ve igual la diferencia entre una estrella hueca y una llena; y ademas
+ * el boton lleva `aria-pressed`, que es lo que un lector de pantalla anuncia.
+ * Nunca es una sola señal.
+ */
+.favoritoBoton[data-activo] {
+  color: var(--color-naranja, #ff902d);
+  box-shadow:
+    0 0 0 1px var(--linea-tenue, #e4e6de),
+    var(--luz-superior, inset 0 1px 0 rgb(255 255 255 / 0.9)),
+    var(--sombra-1),
+    var(--glow-cambio);
+}
+
+.favoritoBoton[data-activo] svg {
+  fill: currentColor;
+}
+
+.favoritoBoton:hover {
+  transform: scale(1.08);
+  color: var(--color-naranja, #ff902d);
+}
+
+.favoritoBoton:active {
+  transform: scale(0.96);
+}
+
+/** El anillo de foco es del sistema; acá sólo se le da aire para que se vea. */
+.favoritoBoton:focus-visible {
+  outline: var(--foco-grosor, 2px) solid var(--color-foco, currentColor);
+  outline-offset: 2px;
+}
+
+@media (min-width: 601px) {
+  .favorito {
+    top: var(--espacio-3);
+    right: var(--espacio-3);
+  }
+}
+
+@media (forced-colors: active) {
+  .favoritoBoton {
+    border: 1px solid CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
 }

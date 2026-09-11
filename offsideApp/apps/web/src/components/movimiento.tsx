@@ -1,5 +1,5 @@
 import { ViewTransition } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 /**
  * TRANSICIONES ENTRE PANTALLAS Y CAPAS DE LUZ
@@ -218,7 +218,7 @@ export function Blobs({ luces = TRES_LUCES }: { luces?: readonly Luz[] }) {
               El `style` va solo si hay posicion propia: un `style=""` vacio en
               cada blob es ruido en el HTML que se sirve en cada visita.
             */
-            {...(Object.keys(estilo).length > 0 ? { style: estilo as CSSProperties } : {})}
+            {...(Object.keys(estilo).length > 0 ? { style: estilo } : {})}
           />
         );
       })}

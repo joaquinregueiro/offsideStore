@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /* =============================================================================
  * BACK-OFFICE — HOJA DE OPERACIONES
  * =============================================================================
@@ -192,100 +191,58 @@
 }
 
 /**
- * PESTAÑAS PROPIAS.
+ * PESTAÑAS: AHORA SON `NavDeSeccion`, LA MISMA DEL PANEL DEL VENDEDOR.
  *
- * ⚠️ NO SE USA `NavDeSeccion`, Y NO ES DUPLICACION GRATUITA. Su item activo
- * declara `color: var(--color-tinta)` LITERAL (`ui.module.css`), y esta banda
- * ES `--color-tinta`: quedaria invisible. Redefinir `--color-tinta` en una
- * superficie oscura esta PROHIBIDO por el sistema, y cambiar el componente
- * tocaria `app/(vendedor)/nav.tsx`, que es su otro uso.
+ * ⚠️ ESTO BORRA 45 LINEAS DE COPIA Y CIERRA LA DEUDA QUE ESTE ARCHIVO DEJO
+ * ANOTADA. La copia existia porque `.navSeccionActivo` escribia
+ * `color: var(--color-tinta)` LITERAL y esta banda ES tinta: 1.00:1. La salida
+ * que se pidio acá —indireccionar el color con una variable y fallback igual
+ * al valor de antes— es la que `ui.module.css` implementa hoy, asi que la
+ * copia dejo de tener motivo. Con diez pestañas, ademas, mantener a mano el
+ * scroll horizontal, el `aria-current`, el indicador animado y el contador era
+ * mantener dos veces lo mismo.
  *
- * 🟡 LA SALIDA DE FONDO es indireccionar el componente:
- * `.navSeccionActivo { color: var(--nav-activo, var(--color-tinta)) }` mas
- * `border-bottom-color: var(--nav-acento, var(--color-cancha))`, con los
- * fallbacks iguales a los valores de hoy. Son dos lineas en `ui.module.css`,
- * cero riesgo para el panel del vendedor, y borran estas 45. No se hace porque
- * `ui.module.css` es superficie de otro agente: queda pedido, no supuesto.
+ * ⚠️ LOS TRES TOKENS SE DECLARAN ACA, EN EL MARCO, Y NO EN `.consola`: asi el
+ * remapeo alcanza SOLO a la barra y no a cualquier cosa que mañana entre a la
+ * banda.
+ *
+ *   --nav-activo   Amarillo Cambio sobre noche = **13.97:1**. Papel daria
+ *                  15.72 pero se confundiria con el `<h1>`, que es papel: la
+ *                  pestaña activa y el titulo tienen que distinguirse.
+ *   --nav-hover    el mismo Cambio: el hover ADELANTA el estado activo. El
+ *                  default del componente es `--color-cancha`, que sobre tinta
+ *                  da 3.05:1 y queda debajo de AA.
+ *   --nav-acento   el subrayado, que es FORMA y no informacion (el texto y el
+ *                  `aria-current` ya lo dicen). Se pide como IMAGEN porque el
+ *                  componente lo pinta con `background-image`.
+ *
+ * ⚠️ EL AIRE VERTICAL ES EL ANILLO DE FOCO, NO ESTETICA. La lista del
+ * componente es `overflow-x: auto`, o sea un contenedor de scroll —y cuando un
+ * eje deja de ser `visible` el otro computa a `auto`—, asi que el `outline` de
+ * 3px con offset 2 se recortaba arriba y abajo. Es el unico camino de teclado
+ * del back-office (WCAG 2.4.11). El padding se compensa con margenes negativos
+ * iguales para no mover un pixel: el subrayado de la activa tiene que seguir
+ * cayendo sobre la regla del `<nav>`.
  */
 .navConsola {
   max-width: 100%;
   margin-top: var(--espacio-4);
-  border-bottom: 1px solid var(--linea-tenue);
-}
-
-/**
- * ⚠️⚠️ EL AIRE VERTICAL ES EL ANILLO DE FOCO, NO ESTETICA, Y SIN EL SE PIERDE.
- * `overflow-x: auto` convierte esta lista en un CONTENEDOR DE SCROLL —y cuando
- * un eje deja de ser `visible` el otro tambien: `overflow-y` computa a `auto`—,
- * asi que todo lo que se pinte fuera del padding box queda recortado. El foco
- * del sistema es `outline: 2px` con `outline-offset: 2px` (tokens.css), o sea
- * 4px por afuera de la pestaña; las pestañas miden EXACTAMENTE el alto de la
- * lista, asi que el anillo se cortaba arriba y abajo. Es el unico camino de
- * teclado del back-office y la señal desaparecia justo ahi (WCAG 2.4.11).
- *
- * ⚠️ EL PADDING SE COMPENSA CON MARGENES NEGATIVOS IGUALES para no mover un
- * pixel del diseño: el subrayado de la pestaña activa tiene que seguir cayendo
- * sobre la regla del `<nav>`. Neto: identico al `margin: 0 0 -1px` anterior.
- */
-.navConsolaLista {
-  display: flex;
-  gap: var(--espacio-1);
-  list-style: none;
   padding-block: var(--espacio-2);
-  padding-inline: 0;
-  margin: calc(var(--espacio-2) * -1) 0 calc(var(--espacio-2) * -1 - 1px);
-  /* A 320px las tres pestañas no entran: se desplaza esto, no el documento. */
-  overflow-x: auto;
-  max-width: 100%;
-  scrollbar-width: none;
-}
+  margin-block: calc(var(--espacio-2) * -1 + var(--espacio-4)) calc(var(--espacio-2) * -1);
 
-.navConsolaLista::-webkit-scrollbar {
-  display: none;
+  --nav-activo: var(--color-cambio);
+  --nav-hover: var(--color-cambio);
+  --nav-acento: linear-gradient(var(--eje), var(--color-cambio), var(--color-naranja));
 }
 
 /**
- * ⚠️ 44px DE ALTO (`--alto-control`), SIN EXCEPCION. WCAG 2.5.5.
- * Inactiva: `--color-sobre-oscuro-tenue` sobre noche = **6.39:1**.
- * Activa: papel = **15.72:1**. Subrayado `--verde-400` = 6.86:1 (es forma).
- *
- * ⚠️ EL `color` VA EN LA CLASE Y NO SE CONFIA EN LA HERENCIA. La regla global
- * `a { color: var(--color-cancha) }` (tokens.css) tiene especificidad (0,0,1) y
- * Verde Cancha sobre tinta da **3.05:1**: cualquier `<a>` sin color propio
- * adentro de esta banda queda debajo de AA.
+ * ⚠️ EL MARGEN INFERIOR DEL COMPONENTE SE ANULA. `.navSeccion` trae
+ * `margin-bottom: var(--espacio-6)` pensado para una hoja clara donde debajo
+ * arranca el contenido; acá abajo viene el `<h1>`, que ya trae su propio aire.
+ * Se alcanza por hijo directo porque el nombre de la clase lo hashea su modulo.
  */
-.navConsolaItem,
-.navConsolaActivo {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--alto-control);
-  padding: 0 var(--espacio-4);
-  border-bottom: 2px solid transparent;
-  color: var(--color-sobre-oscuro-tenue);
-  font-size: var(--texto-sm);
-  font-weight: var(--peso-medio);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  white-space: nowrap;
-  transition:
-    color var(--transicion-rapida) var(--curva),
-    border-color var(--transicion) var(--curva);
-}
-
-/* Especificidad (0,2,0): le gana al `a:hover` global (0,1,1). */
-.navConsolaItem:hover,
-.navConsolaActivo:hover {
-  color: var(--color-papel);
-}
-
-.navConsolaItem:hover {
-  border-bottom-color: var(--linea-control-oscura);
-}
-
-.navConsolaActivo {
-  color: var(--color-papel);
-  font-weight: var(--peso-semi);
-  border-bottom-color: var(--verde-400);
+.navConsola > nav {
+  margin-bottom: 0;
 }
 
 /* ------------------------------------------------------- titulo de pantalla */
@@ -346,50 +303,11 @@
 }
 
 /** Encabezado de bloque dentro de la hoja. La regla maciza es del sistema. */
-=======
-.pagina {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
-}
-
-.titulo {
-  font-size: var(--texto-3xl);
-  text-transform: uppercase;
-  margin-bottom: var(--espacio-2);
-}
-
-/**
- * Marca de back-office. El panel se parece al resto del sitio, y sin una señal
- * clara es facil creerse en la tienda y ejecutar algo administrativo sin
- * registrarlo.
- */
-.contexto {
-  display: inline-block;
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-sm);
-  letter-spacing: var(--tracking-etiqueta);
-  text-transform: uppercase;
-  color: var(--color-blanco);
-  background: var(--color-tinta);
-  padding: 2px var(--espacio-3);
-  border-radius: var(--radio);
-  margin-bottom: var(--espacio-4);
-}
-
-.bajada {
-  color: var(--color-neutro-texto);
-  margin-bottom: var(--espacio-7);
-  max-width: 62ch;
-}
-
->>>>>>> origin/main
 .subtitulo {
   font-size: var(--texto-xl);
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
   margin: var(--espacio-7) 0 var(--espacio-4);
-<<<<<<< HEAD
   padding-bottom: var(--espacio-2);
   border-bottom: 2px solid var(--color-tinta);
 }
@@ -774,41 +692,12 @@
 
 /* ------------------------------------------------------ accesos del indice */
 
-=======
-}
-
-.tarjeta {
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-blanco);
-  padding: var(--espacio-5);
-  margin-bottom: var(--espacio-4);
-}
-
-.linea {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--espacio-4);
-  padding: var(--espacio-2) 0;
-}
-
-.concepto {
-  color: var(--color-neutro-texto);
-}
-
-.dato {
-  font-variant-numeric: tabular-nums;
-}
-
->>>>>>> origin/main
 .accesos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--espacio-4);
 }
 
-<<<<<<< HEAD
 /**
  * ⚠️⚠️ EL ENVOLTORIO NO ES DECORATIVO: SIN EL, EL HOVER DE LA TARJETA NO
  * FUNCIONA. `.escalona > *` (fundacion) declara `animation: acercarse-corto …
@@ -855,20 +744,6 @@
   color: var(--color-cancha);
   line-height: 0;
   margin-bottom: var(--espacio-3);
-=======
-.acceso {
-  display: block;
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-blanco);
-  padding: var(--espacio-5);
-  color: inherit;
-  text-decoration: none;
-}
-
-.acceso:hover {
-  border-color: var(--color-cancha);
->>>>>>> origin/main
 }
 
 .accesoTitulo {
@@ -878,10 +753,7 @@
   font-family: var(--fuente-titulo);
   font-size: var(--texto-xl);
   text-transform: uppercase;
-<<<<<<< HEAD
   letter-spacing: var(--tracking-etiqueta);
-=======
->>>>>>> origin/main
   margin-bottom: var(--espacio-1);
 }
 
@@ -891,7 +763,6 @@
   font-size: var(--texto-sm);
 }
 
-<<<<<<< HEAD
 /**
  * FICHA FANTASMA: una capacidad de `AR-006` que todavia no existe.
  *
@@ -954,26 +825,10 @@
   align-items: flex-end;
   flex-wrap: wrap;
   margin-top: var(--espacio-6);
-=======
-.nota {
-  margin-top: var(--espacio-5);
-  font-size: var(--texto-sm);
-  color: var(--color-neutro-tenue);
-}
-
-/** Buscador de la consola de pagos. */
-.buscador {
-  display: flex;
-  gap: var(--espacio-4);
-  align-items: flex-end;
-  flex-wrap: wrap;
-  margin-bottom: var(--espacio-6);
->>>>>>> origin/main
 }
 
 .buscadorCampo {
   flex: 1;
-<<<<<<< HEAD
   /* A 320px (288px utiles) el boton baja solo a su propia fila. */
   min-width: 200px;
 }
@@ -1357,6 +1212,8 @@ p.marcadorCifra {
   margin-top: var(--espacio-4);
   block-size: var(--alto-control);
   border-bottom: 1px solid var(--linea-tenue);
+  /* Cinco barras a 88px no entran en 320px: se recortan, no desbordan. */
+  overflow: hidden;
 }
 
 .esqueletoTab {
@@ -1374,24 +1231,374 @@ p.marcadorCifra {
   display: block;
   block-size: 96px;
   border-radius: var(--radio);
-=======
-  min-width: 220px;
 }
 
-.etiqueta {
+/* ==========================================================================
+ * PANTALLAS NUEVAS DEL BACK-OFFICE (2026-09-11)
+ * ==========================================================================
+ *
+ * Siete pantallas más: configuración, niveles, disputas, vendedores, órdenes,
+ * reportes e ingresos. Todo lo que se agrega acá sigue la regla de la cabecera
+ * del archivo: densidad y legibilidad, cero espectáculo. El único movimiento
+ * que entra es el que ya existía —el filete del título, `eleva` en lo que se
+ * puede tocar— y ninguno se dispara por scroll.
+ * ======================================================================== */
+
+/* --------------------------------------------------------- colas del indice */
+
+/**
+ * PENDIENTES: lo que espera a que alguien lo atienda.
+ *
+ * ⚠️ SOLO SE DIBUJA LO QUE TIENE ALGO. Una tarjeta en cero es ruido; la cola
+ * vacía ya se ve adentro de su pantalla. Lo decide el TSX, no el CSS.
+ *
+ * ⚠️ EL NUMERO ES EL CONTENIDO Y POR ESO VA EN LA TIPOGRAFIA DE TITULARES —la
+ * identidad le asigna Big Noodle a "titulares, precios, números de camiseta"—,
+ * pero NO se anima: es un back-office y el número se lee, no se mira aparecer.
+ */
+.pendientes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--espacio-4);
+}
+
+.pendiente {
   display: block;
-  font-size: var(--texto-sm);
-  font-weight: 600;
-  margin-bottom: var(--espacio-2);
+  padding: var(--espacio-5);
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  color: inherit;
 }
 
-.control {
-  width: 100%;
-  padding: var(--espacio-3);
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-blanco);
-  font: inherit;
+/* (0,2,0) le gana al `a:hover` global, que cambiaría el color del texto entero. */
+.pendiente:hover {
   color: inherit;
->>>>>>> origin/main
+}
+
+/**
+ * ⚠️ EL NARANJA DE MARCA COMO COLOR DE TEXTO DA 2.16:1 Y ESTA PROHIBIDO. Este
+ * número ES información —cuántos reclamos esperan—, así que usa
+ * `--color-alerta`, el mismo matiz oscurecido hasta 4.88:1 sobre claro. El
+ * naranja vivo queda para forma.
+ */
+.pendienteNumero {
+  display: block;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-4xl);
+  line-height: 1;
+  color: var(--color-alerta);
+  font-variant-numeric: tabular-nums;
+}
+
+.pendienteTexto {
+  display: block;
+  margin: var(--espacio-2) 0 var(--espacio-1);
+  font-weight: var(--peso-semi);
+}
+
+/* ----------------------------------------------------- filtros por enlace */
+
+/**
+ * PESTAÑAS DE FILTRO DE LA BANDEJA DE RECLAMOS.
+ *
+ * ⚠️ SON ENLACES, NO BOTONES: cada filtro es una URL propia, se comparte y anda
+ * sin JavaScript. No se usa `NavDeSeccion` porque eso es navegación entre
+ * SECCIONES —y ya hay una arriba, en la banda—: dos barras con el mismo dibujo
+ * en la misma pantalla dirían que son el mismo nivel de jerarquía.
+ *
+ * ⚠️ 44px DE ALTO (WCAG 2.5.5) y `overflow-x` propio: a 320px los seis filtros
+ * no entran, y lo que se desplaza es esta fila, nunca el documento.
+ */
+.filtros {
+  display: flex;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-6);
+  padding-block: var(--espacio-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filtros::-webkit-scrollbar {
+  display: none;
+}
+
+.filtro,
+.filtroActivo {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-4);
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-pastilla);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+  transition:
+    color var(--transicion-rapida) var(--curva),
+    background-color var(--transicion-rapida) var(--curva),
+    border-color var(--transicion-rapida) var(--curva);
+}
+
+.filtro {
+  color: var(--color-neutro-texto);
+  background: var(--superficie-1);
+}
+
+/* (0,2,0): le gana al `a:hover` global. */
+.filtro:hover {
+  color: var(--color-cancha);
+  border-color: var(--linea-marca);
+}
+
+/**
+ * ⚠️ EL ACTIVO ES PAPEL SOBRE VERDE CANCHA: **5.16:1**, el mismo par que sostiene
+ * los contrastes del sitio entero. La luz se RESTA: aclarar ese verde aunque sea
+ * un 7% rompe AA.
+ */
+.filtroActivo {
+  color: var(--color-papel);
+  background: var(--color-cancha);
+  border-color: var(--color-cancha);
+  font-weight: var(--peso-semi);
+}
+
+.filtroActivo:hover {
+  color: var(--color-papel);
+}
+
+/* ------------------------------------------------------------- meta de fila */
+
+/**
+ * Segunda línea dentro de una celda de tabla: el email bajo el nombre, el
+ * título bajo el número de orden, la fecha relativa bajo la absoluta.
+ *
+ * ⚠️ `display: block` PORQUE SON `<span>`: en `inline` el margen vertical se
+ * ignora y la segunda línea queda pegada a la primera.
+ *
+ * ⚠️ `--color-neutro-texto` Y NO `--color-neutro-tenue`. El tenue da 3.10:1
+ * sobre papel y esto es texto real —un email, un título—, no decoración.
+ */
+.metaFila {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-texto);
+}
+
+/* ------------------------------------------------------------ configuracion */
+
+/**
+ * Cada familia de claves. El aire lo da el margen del título, no el contenedor:
+ * así dos familias seguidas no acumulan dos separaciones.
+ */
+.familia {
+  margin-bottom: var(--espacio-7);
+}
+
+/**
+ * LA CLAVE, EN LA CABECERA DE SU FICHA.
+ *
+ * ⚠️ ES UN IDENTIFICADOR DE MAQUINA Y SE VE COMO TAL: monoespaciada y
+ * seleccionable entera de un clic. Es el texto que se pega en un `grep`, en una
+ * consulta SQL o en un mensaje al equipo, y perder un guion bajo al arrastrar
+ * es silencioso.
+ */
+.claveAjuste {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  color: var(--color-tinta);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/**
+ * La descripción que ya trae el registro. No se reescribe acá: es el mismo
+ * texto que documenta la clave en el código.
+ */
+.descripcionAjuste {
+  margin: var(--espacio-2) 0 var(--espacio-4);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+}
+
+/**
+ * Un dato dentro de la grilla `.datos`: rótulo arriba, valor abajo.
+ *
+ * ⚠️ EL RELLENO VERTICAL NO ES ESTETICA: `.datos > *` pone el separador de
+ * 1px, y sin aire el subrayado queda pegado al valor y las filas se leen como
+ * una sola masa.
+ */
+.datoAjuste {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: var(--espacio-3);
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------- overrides */
+
+/**
+ * OVERRIDES POR AMBITO.
+ *
+ * ⚠️ SE VEN Y NO SE EDITAN, Y POR ESO NO PARECEN UN CONTROL: es una lista de
+ * texto, sin borde de ficha ni hover. Un override por tier GANA sobre el global
+ * (`SCOPE_PRECEDENCE`): cambiar el global sin ver que un tier lo pisa es la
+ * forma de creer que un cambio no funcionó.
+ */
+.overrides {
+  margin-top: var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-4);
+  border-radius: var(--radio-chico);
+  background: var(--superficie-2);
+}
+
+.listaOverrides {
+  margin: var(--espacio-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  font-size: var(--texto-sm);
+}
+
+/* ------------------------------------------------------- zona de acciones */
+
+/**
+ * El bloque donde vive un `Confirmar` dentro de una ficha.
+ *
+ * ⚠️ SEPARA LA ACCION DEL DATO. Sin esto el disparador queda pegado al último
+ * valor con el mismo aire que separa dos importes, y en una pantalla donde una
+ * de las acciones apaga una funcionalidad para todo el sitio eso es demasiado
+ * poco. No lleva la cinta de peligro: esa es `.zonaPeligro`, para lo que mueve
+ * plata o sanciona a una persona.
+ *
+ * ⚠️ `flex-wrap` PORQUE HAY FICHAS CON DOS DISPARADORES —atender y descartar una
+ * denuncia—: a 320px bajan uno debajo del otro en vez de desbordar.
+ */
+.zonaAccion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-5);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+/* ----------------------------------------------------------------- leyenda */
+
+/**
+ * QUE HACE CADA OPCION DE UN `<select>`.
+ *
+ * ⚠️ EXISTE PORQUE UN `<select>` NO PUEDE EXPLICAR SUS OPCIONES, y las seis
+ * resoluciones de un reclamo —o los cinco tipos de sanción— tienen
+ * consecuencias muy distintas: una devuelve plata, dos sancionan a una persona,
+ * una no hace nada. La explicación va AL LADO del control y no en un `title`,
+ * que en un teléfono no existe.
+ */
+.leyenda {
+  margin: var(--espacio-5) 0 0;
+  display: grid;
+  gap: var(--espacio-3);
+  font-size: var(--texto-sm);
+}
+
+.leyendaItem dt {
+  font-weight: var(--peso-semi);
+}
+
+.leyendaItem dd {
+  margin: 0;
+  color: var(--color-neutro-texto);
+}
+
+/* ------------------------------------------------- bitacora de un reclamo */
+
+/**
+ * QUE PASO EN EL RECLAMO, en orden.
+ *
+ * ⚠️ ES UNA `<ol>` DE VERDAD: el orden ES la información, y un lector de
+ * pantalla anuncia "lista de 4 elementos, elemento 2". No se usa `Cronologia`
+ * acá porque eso dibuja el RECORRIDO —qué falta— y esto es la BITACORA —qué
+ * pasó—: las dos conviven en la pantalla y dicen cosas distintas.
+ */
+.bitacora {
+  margin: 0 0 var(--espacio-6);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.bitacoraItem {
+  padding: var(--espacio-4);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior);
+}
+
+.bitacoraTitulo {
+  margin: 0;
+  font-weight: var(--peso-semi);
+}
+
+.bitacoraDetalle {
+  margin: var(--espacio-2) 0 0;
+  color: var(--color-neutro-texto);
+  /* Lo escribió una persona: un texto largo sin espacios no puede desbordar. */
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* --------------------------------------------------------------- evidencias */
+
+.evidencias {
+  margin: 0 0 var(--espacio-6);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.evidencia {
+  padding: var(--espacio-4);
+  border-left: 3px solid var(--color-cancha);
+  border-radius: 0 var(--radio-chico) var(--radio-chico) 0;
+  background: var(--superficie-2);
+}
+
+/**
+ * EL TEXTO DE UNA DENUNCIA, tal como lo escribió quien denunció.
+ *
+ * ⚠️ SE MUESTRA COMO CITA Y NO COMO PARRAFO DE LA PANTALLA: es la palabra de un
+ * tercero y quien modera tiene que poder distinguirla de lo que dice Offside.
+ * El filete naranja es el mismo lenguaje que la cinta de peligro, un escalón
+ * más abajo.
+ */
+.cita {
+  margin: var(--espacio-4) 0 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  border-left: 3px solid var(--color-naranja);
+  border-radius: 0 var(--radio-chico) var(--radio-chico) 0;
+  background: var(--superficie-2);
+  color: var(--color-neutro-texto);
+  font-size: var(--texto-sm);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------- insignias */
+
+/** La fila de nivel + reputación en la ficha del vendedor. */
+.insignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-5);
 }

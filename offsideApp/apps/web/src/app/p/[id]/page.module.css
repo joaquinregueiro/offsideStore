@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * FICHA DE PRODUCTO — la pantalla donde se decide una compra.
  *
@@ -117,43 +116,10 @@
       'fotos'
       'detalle';
     grid-template-rows: auto;
-=======
-.contenedor {
-  max-width: var(--ancho-contenido);
-  margin: 0 auto;
-  padding: var(--espacio-7) var(--espacio-6) var(--espacio-9);
-}
-
-.volver {
-  display: inline-block;
-  margin-bottom: var(--espacio-6);
-  font-size: var(--texto-sm);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-}
-
-/**
- * Dos columnas en escritorio, una sola apilada en pantallas chicas.
- *
- * La imagen manda en el ancho: en una ficha de producto es lo primero que la
- * persona mira, aunque hoy sea un marcador.
- */
-.grilla {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: var(--espacio-8);
-  align-items: start;
-}
-
-@media (max-width: 860px) {
-  .grilla {
-    grid-template-columns: 1fr;
->>>>>>> origin/main
     gap: var(--espacio-6);
   }
 }
 
-<<<<<<< HEAD
 /* ------------------------------------------------------------- encabezado */
 
 /**
@@ -215,58 +181,12 @@
 .encabezado .precio {
   margin: var(--espacio-4) 0;
   font-size: var(--display-2);
-=======
-/* ---------------------------------------------------------------- imagen */
-
-/**
- * ⚠️ TODAVIA NO HAY IMAGENES: S3 no esta implementado y `listing_images` esta
- * vacia. Se reserva la proporcion para que el dia que existan no se reacomode
- * la pagina, y se usa el rombo de la identidad §05 en su escala de textura.
- */
-.marco {
-  aspect-ratio: 4 / 5;
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background-color: var(--color-neutro-suave);
-  background-image:
-    linear-gradient(45deg, var(--color-neutro-borde) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--color-neutro-borde) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--color-neutro-borde) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--color-neutro-borde) 75%);
-  background-size: 16px 16px;
-  background-position:
-    0 0,
-    0 8px,
-    8px -8px,
-    -8px 0;
-}
-
-/* ----------------------------------------------------------------- datos */
-
-.titulo {
-  font-size: clamp(32px, 5vw, 48px);
-  text-transform: uppercase;
-}
-
-.vendedor {
-  margin: var(--espacio-3) 0 0;
-  font-size: var(--texto-sm);
-  color: var(--color-neutro-texto);
-}
-
-.precio {
-  font-family: var(--fuente-titulo);
-  font-size: clamp(40px, 6vw, 56px);
-  line-height: 1;
-  margin: var(--espacio-6) 0 var(--espacio-4);
->>>>>>> origin/main
 }
 
 .atributos {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espacio-2);
-<<<<<<< HEAD
   margin: 0;
 }
 
@@ -1279,42 +1199,306 @@
   .fantasmaFoto {
     aspect-ratio: 4 / 5;
   }
-=======
-  margin-bottom: var(--espacio-6);
 }
 
-.descripcion {
-  margin: 0 0 var(--espacio-7);
-  color: var(--color-neutro-texto);
-  white-space: pre-line;
-}
+/* ------------------------------- llevar, preguntas y reporte (2026-09-11) */
 
-.compra {
+/**
+ * BLOQUE "LLEVARLA": cantidad + carrito + guardar.
+ *
+ * ⚠️ NO REPITE EL BOTON DE COMPRAR. Ese vive en la barra adherida, que esta en
+ * pantalla desde el primer scroll: dos botones primarios que hacen lo mismo a
+ * 200px de distancia convierten la decision en una duda sobre cual apretar.
+ *
+ * ⚠️ LOS DOS FORMULARIOS SON HERMANOS Y NO UNO ANIDADO. Anidar `<form>` es HTML
+ * invalido y el navegador lo desarma en silencio: el segundo submit dejaria de
+ * enviar sin ningun error.
+ */
+.bloqueLlevar {
   display: flex;
-  flex-direction: column;
-  gap: var(--espacio-3);
-  padding-top: var(--espacio-6);
-  border-top: 1px solid var(--color-neutro-borde);
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
 }
 
 /**
- * Galeria del detalle: las fotos apiladas, sin carrusel.
+ * El aviso de error ocupa la fila entera: no comparte renglon con un control.
  *
- * ⚠️ Un carrusel necesitaria JavaScript y esconderia detras de flechas
- * justamente lo que hay que mirar al comprar una camiseta usada: la etiqueta,
- * el dorso y los defectos. Apilarlas las muestra todas.
+ * ⚠️ EL ENVOLTORIO EXISTE PORQUE `Aviso` TRAE SU CLASE DE `ui.module.css`, que
+ * es un hash: desde acá no hay forma de alcanzarla, y un `:global(.aviso)` seria
+ * un selector muerto que nadie ve fallar. Es la misma razon por la que las
+ * pantallas envuelven las primitivas en vez de intentar pisarlas.
  */
-.galeria {
+.avisoLlevar {
+  flex-basis: 100%;
+}
+
+.guardar {
+  flex: none;
+}
+
+/**
+ * ⚠️ 44px DE ALTO PARA IGUALAR AL SUBMIT DE AL LADO (WCAG 2.5.5). Un boton de
+ * 36px pegado a uno de 44 no es solo feo: en un telefono el pulgar apunta al
+ * medio de la fila y acierta al equivocado.
+ */
+.guardarBoton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: 44px;
+  padding-inline: var(--espacio-4);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio);
+  background: transparent;
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  color: var(--color-neutro-texto);
+  cursor: pointer;
+  transition:
+    color var(--dur-hover, 320ms) var(--curva),
+    border-color var(--dur-hover, 320ms) var(--curva);
+}
+
+.guardarBoton svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--trazo-icono, 1.5px);
+}
+
+/**
+ * ⚠️ GUARDADA SE DICE CON EL RELLENO Y CON EL TEXTO, NO SOLO CON EL COLOR: la
+ * etiqueta cambia de "Guardar" a "Guardada" y la estrella se rellena. El color
+ * es la tercera señal, nunca la unica.
+ */
+.guardarBoton[data-activo] {
+  border-color: var(--color-naranja, #ff902d);
+  color: var(--color-alerta);
+}
+
+.guardarBoton[data-activo] svg {
+  fill: currentColor;
+}
+
+.guardarBoton:hover {
+  border-color: var(--color-cancha);
+  color: var(--color-cancha);
+}
+
+.guardarBoton:focus-visible {
+  outline: var(--foco-grosor, 2px) solid var(--color-foco, currentColor);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------ conversacion */
+
+.conversacion {
+  padding: var(--espacio-seccion) 0;
+}
+
+.conversacionInterior {
+  max-width: var(--ancho-medio);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+
+.tituloPreguntas {
+  margin: 0 0 var(--espacio-bloque);
+  text-transform: uppercase;
+}
+
+.preguntas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
+}
+
+.pregunta {
+  padding-block: var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.pregunta:last-child {
+  border-bottom: 1px solid var(--linea-tenue);
+}
+
+.preguntaTexto {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: start;
+  gap: var(--espacio-3);
+  margin: 0;
+  font-weight: var(--peso-semi);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-tinta);
+  /* Una pregunta puede traer una URL larga sin espacios. */
+  overflow-wrap: anywhere;
+}
+
+.preguntaMarca {
+  display: inline-flex;
+  color: var(--color-cancha);
+}
+
+/**
+ * ⚠️ LA RESPUESTA SE SANGRA Y LLEVA FILETE. Es la unica señal de que las dos
+ * lineas son de personas distintas: no se muestra quien pregunto (la lista de
+ * quien pregunta es la lista de quien esta por comprar) ni hace falta repetir
+ * el nombre del vendedor, que ya esta arriba en la ficha.
+ */
+.respuesta {
+  margin: var(--espacio-3) 0 0 calc(20px + var(--espacio-3));
+  padding-left: var(--espacio-4);
+  border-left: 2px solid var(--color-cancha);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+  overflow-wrap: anywhere;
+}
+
+.respuestaFecha {
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+.sinRespuesta {
+  margin: var(--espacio-3) 0 0 calc(20px + var(--espacio-3));
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.sinPreguntas {
+  margin: 0;
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.preguntar {
+  margin-top: var(--espacio-bloque);
+}
+
+/* ----------------------------------------------------------------- reporte */
+
+/**
+ * ⚠️ EL REPORTE VA AL FINAL Y SIN COLOR DE ALARMA. Tiene que existir y tiene que
+ * encontrarse; un boton rojo al lado del precio convierte cada ficha en una
+ * acusacion. La regla de arriba lo separa de la conversacion.
+ */
+.reportar {
+  margin-top: var(--espacio-seccion);
+  padding-top: var(--espacio-5);
+  border-top: 1px solid var(--linea-tenue);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  align-items: flex-start;
+}
+
+.reportarNota {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-lectura);
+  /* #5b6459 sobre papel: 6.15:1 ✅ */
+  color: var(--color-neutro-texto);
+}
+
+.reportarIcono {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-alerta);
+}
+
+/* ---------------------------------------- bloque del vendedor (2026-09-11) */
+
+/**
+ * QUIEN VENDE (SS-020 / DEC-036).
+ *
+ * ⚠️ COMPARTE LA FORMA DEL PANEL DE CONFIANZA PERO NO SU FILO DE MARCA. El de
+ * arriba es lo que afirma OFFSIDE; este es lo que hizo una PERSONA. Darles el
+ * mismo acento verde los volveria el mismo bloque, y la distincion —quien habla
+ * en cada caja— es justamente lo que sostiene la confianza de esta pantalla.
+ */
+.vendedor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5);
+  border-radius: var(--radio);
+  background: var(--superficie-1);
+  box-shadow:
+    0 0 0 1px var(--linea-tenue),
+    var(--sombra-0);
+}
+
+.vendedorNombre {
+  margin: 0;
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  color: var(--color-tinta);
+  overflow-wrap: anywhere;
+}
+
+.vendedorInsignias {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--espacio-3);
 }
 
-.foto {
-  width: 100%;
-  display: block;
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-neutro-suave);
->>>>>>> origin/main
+/**
+ * ⚠️ TRES RESEÑAS Y CADA UNA EN SU FILA CON FILETE. Sin la linea, tres textos
+ * seguidos se leen como un solo comentario largo de una sola persona.
+ */
+.resenasBreves {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.resenaBreve {
+  padding-block: var(--espacio-3);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.resenaBreveCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin: 0;
+}
+
+.resenaBreveFecha {
+  font-size: var(--texto-xs);
+  /* #5b6459 sobre blanco: 6.15:1 ✅ */
+  color: var(--color-neutro-texto);
+}
+
+.resenaBreveTexto {
+  margin: var(--espacio-2) 0 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+  overflow-wrap: anywhere;
+}
+
+.enlaceTienda {
+  align-self: flex-start;
+  /* Area tactil de 44px: es un enlace de bloque, no uno embebido en una oracion. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
 }

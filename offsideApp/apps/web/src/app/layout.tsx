@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 import type { Metadata, Viewport } from 'next';
-=======
-import type { Metadata } from 'next';
->>>>>>> origin/main
 import { Inter } from 'next/font/google';
 import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 
 import './tokens.css';
-<<<<<<< HEAD
 /*
  * ⚠️ EL ORDEN IMPORTA POR DOS RAZONES, NO POR UNA:
  *
@@ -37,8 +32,6 @@ import './tokens.css';
  * keyframe propio y `to` explicito.
  */
 import './movimiento.css';
-=======
->>>>>>> origin/main
 
 /**
  * Las dos familias del sistema visual, con los roles que la identidad les
@@ -81,7 +74,6 @@ const inter = Inter({
   display: 'swap',
 });
 
-<<<<<<< HEAD
 /**
  * ⚠️ SE LEE `process.env` DIRECTO Y NO `getEnv()`. `metadata` se evalua al
  * cargar el modulo —o sea, tambien durante `next build`—, y `getEnv()` valida
@@ -166,14 +158,6 @@ export const viewport: Viewport = {
  * `background-attachment: fixed` porque en iOS un fondo fijo sobre el body se
  * repinta en cada cuadro de scroll y el sitio se arrastra.
  */
-=======
-export const metadata: Metadata = {
-  title: 'Offside Store',
-  // La bajada es la de la identidad de marca, no una inventada.
-  description: 'Compra y venta de camisetas de fútbol para coleccionistas.',
-};
-
->>>>>>> origin/main
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es-AR" className={`${bigNoodle.variable} ${inter.variable}`}>

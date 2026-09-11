@@ -79,6 +79,19 @@ export const sellerProfiles = pgTable(
     dispatchLocation: jsonb('dispatch_location'),
     shippingPolicy: text('shipping_policy'),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
+    /**
+     * ⚠️ NO ESTA EN EL ERD v1.3 (segundo delta del 2026-09-10, autorizado por
+     * el owner; ver `docs-implementation/erd-delta-2026-09-10.md`).
+     *
+     * MODO VACACIONES: el vendedor esta ausente MIENTRAS `now() <
+     * vacation_until`. Es un PREDICADO DERIVADO, no un estado: no toca
+     * `listings.status` ni `seller_profiles.status`, y al vencer no hay nada
+     * que reactivar. Es exactamente la misma logica que la desconexion de
+     * Mercado Pago (SS-013): si se materializara `paused` en cada publicacion,
+     * al volver seria imposible distinguir las que el vendedor pauso a mano
+     * (SS-050) de las que apago la ausencia. Null = no esta de vacaciones.
+     */
+    vacationUntil: timestamp('vacation_until', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
   },

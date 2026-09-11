@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -59,7 +58,17 @@ const SALIDAS = [
   {
     href: '/como-funciona',
     titulo: 'Cómo funciona',
-    detalle: 'Cómo se paga, cómo se cobra y qué falta todavía.',
+    detalle: 'Comisión, niveles, reclamos, envío y lo que todavía no hacemos.',
+  },
+  /*
+    ⚠️ EL CARRITO ES LA SALIDA MÁS ÚTIL DE ESTE 404 Y NO ES OBVIO. La mitad de
+    los que llegan acá venían del enlace de una camiseta que ya no está: lo que
+    tienen guardado sigue existiendo, y es lo único de esta lista que ya es suyo.
+  */
+  {
+    href: '/carrito',
+    titulo: 'Lo que ya elegiste',
+    detalle: 'Tu carrito sigue ahí, con lo que agregaste antes.',
   },
   {
     href: '/vendedor/empezar',
@@ -68,20 +77,10 @@ const SALIDAS = [
   },
 ] as const;
 
-=======
-import { Header } from '@/components/header';
-import { BotonEnlace, EstadoVacio } from '@/components/ui';
-
-/**
- * 404. La usan tanto una URL inexistente como `notFound()`, que es lo que
- * llama el detalle cuando una publicacion no es comprable.
- */
->>>>>>> origin/main
 export default function NoEncontrado() {
   return (
     <>
       <Header />
-<<<<<<< HEAD
 
       <PantallaDeServicio
         codigo="404"
@@ -128,16 +127,6 @@ export default function NoEncontrado() {
       </PantallaDeServicio>
 
       <Footer />
-=======
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '80px 24px' }}>
-        <EstadoVacio titulo="No encontramos esta página">
-          <p style={{ marginBottom: 24 }}>
-            Puede que la publicación ya no esté disponible o que el enlace esté mal.
-          </p>
-          <BotonEnlace href="/">Ir al catálogo</BotonEnlace>
-        </EstadoVacio>
-      </main>
->>>>>>> origin/main
     </>
   );
 }

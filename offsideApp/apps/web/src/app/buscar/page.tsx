@@ -1,15 +1,16 @@
 import type { Metadata } from 'next';
-<<<<<<< HEAD
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { Footer } from '@/components/footer';
 import { Header } from '@/components/header';
 import { IconoBuscar, IconoCerrar, IconoFiltro } from '@/components/iconos';
-import { ListingCard } from '@/components/listing-card';
+import { ListingCard, type EstadoDeFavorito } from '@/components/listing-card';
 import { Pantalla } from '@/components/movimiento';
-import { BotonEnlace } from '@/components/ui';
-import { condicion, manga, tipoDeCamiseta } from '@/lib/formato';
+import { Aviso, BotonEnlace } from '@/components/ui';
+import { condicion, manga, precio, tipoDeCamiseta } from '@/lib/formato';
+import { getSessionUser } from '@/lib/session';
+import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
 import {
   POR_PAGINA,
   searchListings,
@@ -20,18 +21,6 @@ import {
 import estilos from './page.module.css';
 
 export const metadata: Metadata = { title: 'Buscar' };
-=======
-
-import { Header } from '@/components/header';
-import { ListingCard } from '@/components/listing-card';
-import { EstadoVacio } from '@/components/ui';
-import { condicion } from '@/lib/formato';
-import { searchListings, type Faceta } from '@/modules/listings/services/search.service';
-
-import estilos from './page.module.css';
-
-export const metadata: Metadata = { title: 'Buscar — Offside Store' };
->>>>>>> origin/main
 
 /**
  * ⚠️ SIN CACHE, igual que la vitrina. Los resultados dependen del stock y del
@@ -40,7 +29,6 @@ export const metadata: Metadata = { title: 'Buscar — Offside Store' };
  */
 export const dynamic = 'force-dynamic';
 
-<<<<<<< HEAD
 /** Las claves de faceta que devuelve el Service, para que un typo no compile. */
 type ClaveDeFaceta = keyof SearchResponse['facetas'];
 
@@ -102,34 +90,39 @@ const GRUPOS: {
  * los diez enlaces de faceta, a los ocultos de los dos formularios y a la
  * paginacion. La URL terminaba diciendo una cosa y la pantalla mostrando otra.
  */
-const ORDENES_VALIDOS = ['relevancia', 'precio_asc', 'precio_desc', 'recientes'] as const;
+const ORDENES_VALIDOS = [
+  'relevancia',
+  'precio_asc',
+  'precio_desc',
+  'recientes',
+  'reputacion',
+] as const;
 
 type Orden = (typeof ORDENES_VALIDOS)[number];
 
-/** Los cuatro ordenes posibles. `undefined` es el de por defecto. */
+/**
+ * Los cinco ordenes posibles. `undefined` es el de por defecto.
+ *
+ * ⚠️ "MEJOR REPUTACIÓN" ORDENA POR EL SCORE DEL VENDEDOR, QUE ES DERIVADO Y NO
+ * DECIDE NADA (DEC-036 / TS-020). Sirve para ordenar, no para etiquetar: la
+ * pantalla no dice "vendedor confiable" en ningún lado, y un vendedor sin
+ * proyeccion todavia —uno nuevo— no queda AFUERA de los resultados, queda al
+ * final (`NULLS LAST` en el repositorio).
+ *
+ * ⚠️ "POPULARIDAD" NO ESTÁ, aunque PS-021 la nombre: no hay metricas de visitas
+ * ni de ventas por publicacion. Una opcion que ordene por algo que no se mide
+ * es una opcion que miente.
+ */
 const ORDENES: { valor: Orden | undefined; texto: string; soloConTexto?: boolean }[] = [
   { valor: undefined, texto: 'Relevancia' },
   { valor: 'precio_asc', texto: 'Menor precio' },
   { valor: 'precio_desc', texto: 'Mayor precio' },
+  { valor: 'reputacion', texto: 'Mejor reputación' },
   { valor: 'recientes', texto: 'Más recientes', soloConTexto: true },
 ];
 
 /**
  * Búsqueda (PS-020 … PS-024).
-=======
-/** Etiquetas legibles de las facetas técnicas. */
-const MANGA: Record<string, string> = { short: 'Cortas', long: 'Largas' };
-const KIT: Record<string, string> = {
-  home: 'Titular',
-  away: 'Suplente',
-  third: 'Tercera',
-  goalkeeper: 'Arquero',
-  special: 'Especial',
-};
-
-/**
- * Búsqueda (PS-020 … PS-022).
->>>>>>> origin/main
  *
  * ⚠️ TODO VIAJA EN LA URL, por GET. Una búsqueda tiene que poder compartirse,
  * guardarse en favoritos y volver con el botón atrás. Guardar el estado en el
@@ -155,7 +148,6 @@ export default async function Buscar({
 
   const q = uno('q');
 
-<<<<<<< HEAD
   /**
    * ⚠️ EL PRECIO VIAJA EN PESOS Y SE GUARDA EN CENTAVOS. En la URL van pesos
    * enteros porque es lo que la persona escribe y lo que va a leer si comparte
@@ -195,9 +187,6 @@ export default async function Buscar({
 
   const resultado = await searchListings({
     pagina,
-=======
-  const resultado = await searchListings({
->>>>>>> origin/main
     ...(q === undefined ? {} : { texto: q }),
     ...(uno('categoria') === undefined ? {} : { categoryId: uno('categoria')! }),
     ...(uno('talle') === undefined ? {} : { sizeValue: uno('talle')! }),
@@ -209,16 +198,32 @@ export default async function Buscar({
     ...(uno('marca') === undefined ? {} : { brandId: uno('marca')! }),
     ...(uno('competicion') === undefined ? {} : { competitionId: uno('competicion')! }),
     ...(uno('temporada') === undefined ? {} : { seasonId: uno('temporada')! }),
-<<<<<<< HEAD
     ...(precioMin === undefined ? {} : { precioMin }),
     ...(precioMax === undefined ? {} : { precioMax }),
     ...(orden === undefined ? {} : { orden }),
-=======
-    ...(uno('orden') === undefined
-      ? {}
-      : { orden: uno('orden') as 'relevancia' | 'precio_asc' | 'precio_desc' | 'recientes' }),
->>>>>>> origin/main
   });
+
+  /**
+   * La sesión, después de la búsqueda.
+   *
+   * ⚠️ VA DESPUES DE `searchListings` Y NO ADENTRO DE SU `Promise.all` porque
+   * los favoritos NECESITAN los ids de los resultados: sin ellos habria que
+   * pedir los favoritos de toda la cuenta.
+   *
+   * ⚠️ YA NO SE CRUZA CONTRA `listPromotedCatalog`. `SearchResult.promocionada`
+   * viene de la fila: el cruce pedia las 60 promocionadas de la vitrina y
+   * buscaba cada id ahi adentro, asi que la promocionada numero 61 dejaba de
+   * mostrar su distintivo sin que nada fallara.
+   */
+  const user = await getSessionUser();
+
+  const favoritos =
+    user === null
+      ? new Set<string>()
+      : await favoriteIdsOf(
+          user,
+          resultado.resultados.map((item) => item.id),
+        );
 
   /** Conserva los demás filtros al tocar uno: las facetas se combinan (PS-020). */
   const conFiltro = (clave: string, valor: string | undefined): string => {
@@ -226,7 +231,6 @@ export default async function Buscar({
 
     for (const [k, v] of Object.entries(params)) {
       const texto = Array.isArray(v) ? v[0] : v;
-<<<<<<< HEAD
       /*
         ⚠️ CAMBIAR UN FILTRO VUELVE A LA PAGINA 1. Sin esto, alguien parado en
         la pagina 3 que agrega "Talle M" cae en la pagina 3 de un resultado que
@@ -235,13 +239,17 @@ export default async function Buscar({
       */
       if (k === 'pagina' && clave !== 'pagina') continue;
       /*
+        ⚠️ EL AVISO NUNCA SE ARRASTRA. Es el resultado de UNA acción que falló;
+        copiado a los diez enlaces de faceta y a la paginación, el cartel de
+        "no pudimos guardar" seguiría a la persona por toda la búsqueda.
+      */
+      if (k === 'aviso') continue;
+      /*
         ⚠️ UN `orden` INVALIDO O REDUNDANTE NO SE COPIA. Sin esto viaja intacto a
         los diez enlaces de faceta y a la paginacion: la URL sigue diciendo
         `orden=cualquiera` mientras la pantalla ordena por relevancia.
       */
       if (k === 'orden' && orden === undefined && clave !== 'orden') continue;
-=======
->>>>>>> origin/main
       if (texto !== undefined && texto !== '' && k !== clave) siguientes.set(k, texto);
     }
 
@@ -252,7 +260,6 @@ export default async function Buscar({
     return query === '' ? '/buscar' : `/buscar?${query}`;
   };
 
-<<<<<<< HEAD
   /**
    * Campos ocultos de un `<form method="get">`: todo lo que hay en la URL menos
    * lo que ese formulario controla.
@@ -267,9 +274,66 @@ export default async function Buscar({
       if (texto === undefined || texto === '' || excepto.includes(k)) return [];
       // Mismo criterio que `conFiltro`: un orden que no existe no se reinyecta.
       if (k === 'orden' && orden === undefined) return [];
+      // Ni el aviso de un guardado fallido, que no es un filtro.
+      if (k === 'aviso') return [];
 
       return [<input key={k} type="hidden" name={k} value={texto} />];
     });
+
+  /**
+   * La URL de ESTA búsqueda, tal cual, para volver después de guardar.
+   *
+   * ⚠️ NO SE REUSA `conFiltro`: esa función tira `pagina` a propósito —cambiar un
+   * filtro vuelve a la página 1— y acá pasa lo contrario, hay que conservarla.
+   * Quien guarda una camiseta en la página 3 de una búsqueda filtrada tiene que
+   * volver a la página 3 de esa misma búsqueda.
+   *
+   * ⚠️ `aviso` NO SE ARRASTRA. Si viajara, el cartel de error quedaría pegado en
+   * la URL para siempre: reaparecería en el siguiente guardado aunque hubiera
+   * salido bien.
+   */
+  const urlDeVuelta = ((): string => {
+    const siguientes = new URLSearchParams();
+
+    for (const [k, v] of Object.entries(params)) {
+      const texto = Array.isArray(v) ? v[0] : v;
+      if (k === 'aviso') continue;
+      if (k === 'orden' && orden === undefined) continue;
+      if (texto !== undefined && texto !== '') siguientes.set(k, texto);
+    }
+
+    const query = siguientes.toString();
+
+    return `${query === '' ? '/buscar' : `/buscar?${query}`}#resultados`;
+  })();
+
+  const avisoDeFavorito = uno('aviso') === 'favorito';
+
+  /**
+   * El rango real de precios del resultado completo, ya formateado.
+   *
+   * ⚠️ LOS DOS EXTREMOS VIENEN O NO VIENEN JUNTOS. `precios` es `null` en los
+   * dos campos cuando la búsqueda no devolvió nada; un mínimo sin máximo no
+   * existe, y comprobar los dos evita dibujar "De $12.000 a —".
+   */
+  const rangoDePrecios =
+    resultado.precios.minimo === null || resultado.precios.maximo === null
+      ? null
+      : {
+          /*
+            ⚠️ SIN MONEDA EXPLICITA: `precio` cae en ARS, que es la única que
+            existe hoy. El rango es del resultado ENTERO y no de una fila, así
+            que no hay un `currency` que copiarle — el día que haya más de una
+            moneda, este renglón deja de tener sentido y el Service tendrá que
+            decir cuál es.
+          */
+          desde: precio(resultado.precios.minimo),
+          hasta: precio(resultado.precios.maximo),
+        };
+
+  /** Lo que la ficha necesita para su corazón, o `undefined` si no hay sesión. */
+  const favoritoDe = (id: string): EstadoDeFavorito | undefined =>
+    user === null ? undefined : { activo: favoritos.has(id), volverA: urlDeVuelta };
 
   const facetasDe = (nombre: ClaveDeFaceta): Faceta[] => resultado.facetas[nombre];
 
@@ -343,8 +407,6 @@ export default async function Buscar({
     </Link>
   );
 
-=======
->>>>>>> origin/main
   const grupo = (
     titulo: string,
     clave: string,
@@ -355,7 +417,6 @@ export default async function Buscar({
 
     const activo = uno(clave);
 
-<<<<<<< HEAD
     /*
       ⚠️ EL TECHO ES DEL GRUPO, NO DEL TOTAL. Contra el total, "Talle M (40)"
       aplastaria a los 38 clubes y todas las barras darian el piso.
@@ -374,15 +435,10 @@ export default async function Buscar({
 
     return (
       <section key={clave} className={estilos.grupo}>
-=======
-    return (
-      <section className={estilos.grupo}>
->>>>>>> origin/main
         <h2 className={estilos.grupoTitulo}>{titulo}</h2>
         <ul className={estilos.opciones}>
           {facetas.map((faceta) => (
             <li key={faceta.valor}>
-<<<<<<< HEAD
               <Link
                 href={conFiltro(clave, faceta.valor === activo ? undefined : faceta.valor)}
                 className={faceta.valor === activo ? estilos.opcionActiva : estilos.opcion}
@@ -410,25 +466,11 @@ export default async function Buscar({
             Se muestran los {TOPE_DE_FACETA} más elegidos. Buscá por nombre para llegar al resto.
           </p>
         )}
-=======
-              <a
-                href={conFiltro(clave, faceta.valor === activo ? undefined : faceta.valor)}
-                className={faceta.valor === activo ? estilos.opcionActiva : estilos.opcion}
-              >
-                {etiquetar?.(faceta.valor) ?? faceta.etiqueta}
-                {/* PS-022: las facetas muestran conteos por valor. */}
-                <span className={estilos.cuenta}>{faceta.cantidad}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
->>>>>>> origin/main
       </section>
     );
   };
 
   return (
-<<<<<<< HEAD
     <>
       {/*
         ⚠️ `seccion` MARCA "Explorar" EN LA BARRA, y esta pantalla es su destino.
@@ -677,6 +719,29 @@ export default async function Buscar({
                           Aplicar
                         </button>
                       </form>
+
+                      {/*
+                        ⚠️ EL RANGO ES EL DE TODO EL RESULTADO, NO EL DE LA
+                        PÁGINA. `SearchResponse.precios` lo calcula el Service
+                        sobre el resultado entero: sacarlo de los 24 que se
+                        muestran diría "de $8.000 a $140.000" mientras hay una de
+                        $300.000 en la página tres, y el filtro mentiría justo
+                        sobre el número que la persona está por escribir.
+
+                        ⚠️ SIN RESULTADOS NO SE DIBUJA. El Service devuelve
+                        `null` en los dos extremos; "de $0 a $0" se leería como
+                        un precio real.
+
+                        ⚠️ SE DICE LA UNIDAD PORQUE LA BASE GUARDA CENTAVOS Y LA
+                        URL LLEVA PESOS. Sin el renglón, alguien que escribe
+                        "150000" pensando en centavos filtra por ciento cincuenta
+                        mil pesos y cree que la búsqueda está rota.
+                      */}
+                      <p className={estilos.precioNota}>
+                        {rangoDePrecios === null
+                          ? 'En pesos enteros, sin centavos.'
+                          : `De ${rangoDePrecios.desde} a ${rangoDePrecios.hasta}. En pesos enteros, sin centavos.`}
+                      </p>
                     </section>
 
                     {GRUPOS.map((g) => grupo(g.titulo, g.clave, facetasDe(g.faceta), g.etiquetar))}
@@ -702,7 +767,21 @@ export default async function Buscar({
                 </div>
               </details>
 
-              <div className={estilos.resultados}>
+              <div className={estilos.resultados} id="resultados">
+                {/*
+                  ⚠️ EL AVISO DEL CORAZÓN VIVE ACÁ Y NO ARRIBA DE TODO. La acción
+                  devuelve a `#resultados`, o sea a esta columna: un cartel en la
+                  banda oscura quedaría fuera de pantalla justo cuando hay algo
+                  que leer.
+                */}
+                {avisoDeFavorito && (
+                  <div className={estilos.avisoFavorito}>
+                    <Aviso tono="error">
+                      No pudimos guardar la publicación. Probá de nuevo en un momento.
+                    </Aviso>
+                  </div>
+                )}
+
                 <div className={estilos.barraOrden}>
                   {resultado.resultados.length > 0 && (
                     <p className={estilos.rango}>
@@ -824,6 +903,14 @@ export default async function Buscar({
                     <ul className={`${estilos.grilla} revela-grilla-materia enfoca-hermanos`}>
                       {resultado.resultados.map((item) => (
                         <li key={item.id}>
+                          {/*
+                            ⚠️ LAS PROMOCIONADAS YA VIENEN PRIMERAS DEL SERVICE
+                            (`promoted_first_in_search` ⚙️ + el boost del
+                            ranking). Lo único que agrega la pantalla es DECIRLO:
+                            una publicación que figura arriba porque alguien pagó
+                            y no lo declara es exactamente lo que un buscador no
+                            puede hacer.
+                          */}
                           <ListingCard
                             listing={{
                               id: item.id,
@@ -836,6 +923,8 @@ export default async function Buscar({
                               sellerDisplayName: item.sellerDisplayName,
                               coverUrl: item.coverUrl,
                             }}
+                            promocionada={item.promocionada}
+                            favorito={favoritoDe(item.id)}
                           />
                         </li>
                       ))}
@@ -909,89 +998,5 @@ export default async function Buscar({
 
       <Footer />
     </>
-=======
-    <div className={estilos.pagina}>
-      <Header />
-
-      <main className={estilos.contenido}>
-        <div className={estilos.encabezado}>
-          <h1 className={estilos.titulo}>
-            {q === undefined ? 'Todas las camisetas' : `Resultados para “${q}”`}
-          </h1>
-          <p className={estilos.total}>
-            {resultado.total === 1 ? '1 publicación' : `${resultado.total} publicaciones`}
-          </p>
-        </div>
-
-        <div className={estilos.columnas}>
-          <aside className={estilos.filtros}>
-            {/*
-              El catalogo va PRIMERO: club y marca son lo que la gente busca de
-              verdad en una camiseta. Categoria y talle son secundarios.
-            */}
-            {grupo('Club', 'club', resultado.facetas.club)}
-            {grupo('Selección', 'seleccion', resultado.facetas.seleccion)}
-            {grupo('Marca', 'marca', resultado.facetas.marca)}
-            {grupo('Temporada', 'temporada', resultado.facetas.temporada)}
-            {grupo('Competencia', 'competicion', resultado.facetas.competicion)}
-            {grupo('Categoría', 'categoria', resultado.facetas.categoria)}
-            {grupo('Talle', 'talle', resultado.facetas.talle)}
-            {grupo('Estado', 'condicion', resultado.facetas.condicion, condicion)}
-            {grupo('Tipo', 'kit', resultado.facetas.tipoDeCamiseta, (valor) => KIT[valor] ?? valor)}
-            {grupo('Mangas', 'manga', resultado.facetas.manga, (valor) => MANGA[valor] ?? valor)}
-
-            {/*
-              ⚠️ Una faceta VACIA no se muestra: los campos de catalogo son
-              opcionales al publicar. Ofrecer un filtro que no filtra nada es
-              peor que no ofrecerlo.
-            */}
-            <p className={estilos.nota}>
-              Los filtros muestran sólo lo que hay publicado. Si un club o una marca no aparecen, es
-              porque todavía nadie publicó una camiseta así.
-            </p>
-          </aside>
-
-          <div>
-            <form method="get" className={estilos.orden}>
-              {q !== undefined && <input type="hidden" name="q" value={q} />}
-              <label htmlFor="orden">Ordenar por</label>
-              <select id="orden" name="orden" defaultValue={uno('orden') ?? ''}>
-                <option value="">{q === undefined ? 'Más recientes' : 'Relevancia'}</option>
-                <option value="precio_asc">Precio: menor primero</option>
-                <option value="precio_desc">Precio: mayor primero</option>
-                <option value="recientes">Más recientes</option>
-              </select>
-              <button type="submit">Aplicar</button>
-            </form>
-
-            {resultado.resultados.length === 0 ? (
-              <EstadoVacio titulo="No encontramos nada">
-                Probá con menos palabras, o sacá algún filtro.
-              </EstadoVacio>
-            ) : (
-              <ul className={estilos.grilla}>
-                {resultado.resultados.map((item) => (
-                  <li key={item.id}>
-                    <ListingCard
-                      listing={{
-                        id: item.id,
-                        title: item.title,
-                        priceAmount: item.priceAmount,
-                        currency: item.currency,
-                        sizeValue: item.sizeValue,
-                        condition: item.condition,
-                        sellerDisplayName: item.sellerDisplayName,
-                        coverUrl: item.coverUrl,
-                      }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
->>>>>>> origin/main
   );
 }

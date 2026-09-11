@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import Link from 'next/link';
-=======
->>>>>>> origin/main
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import estilos from './ui.module.css';
@@ -9,7 +6,6 @@ import estilos from './ui.module.css';
 /**
  * Primitivas de interfaz.
  *
-<<<<<<< HEAD
  * ⚠️ Se escribieron CON la pantalla que las usa, no antes. Cada variante de
  * esta lista existe porque algo la pidio; inventar variantes por adelantado es
  * adivinar cuales hacen falta.
@@ -190,42 +186,10 @@ export function Boton({
       {cargando ? <span className={estilos.girador} aria-hidden="true" /> : icono}
       {children}
       {flecha && !cargando ? FLECHA : null}
-=======
- * Todas son SERVER COMPONENTS: no tienen estado ni manejadores de eventos. Un
- * boton dentro de un `<form>` que apunta a una Server Action funciona sin
- * JavaScript en el cliente, y por eso no necesita `'use client'`.
- */
-
-type VarianteBoton = 'primario' | 'secundario';
-
-export function Boton({
-  variante = 'primario',
-  bloque = false,
-  className,
-  children,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variante?: VarianteBoton;
-  bloque?: boolean;
-}) {
-  const clases = [
-    estilos.boton,
-    variante === 'primario' ? estilos.botonPrimario : estilos.botonSecundario,
-    bloque ? estilos.botonBloque : '',
-    className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <button className={clases} {...props}>
-      {children}
->>>>>>> origin/main
     </button>
   );
 }
 
-<<<<<<< HEAD
 /**
  * Enlace con aspecto de boton. Es un enlace, no un boton: NAVEGA.
  *
@@ -356,57 +320,21 @@ export function Etiqueta({
         .filter(Boolean)
         .join(' ')}
     >
-=======
-/** Enlace con aspecto de boton. Es un `<a>`, no un `<button>`: navega. */
-export function BotonEnlace({
-  href,
-  variante = 'primario',
-  bloque = false,
-  children,
-}: {
-  href: string;
-  variante?: VarianteBoton;
-  bloque?: boolean;
-  children: ReactNode;
-}) {
-  const clases = [
-    estilos.boton,
-    variante === 'primario' ? estilos.botonPrimario : estilos.botonSecundario,
-    bloque ? estilos.botonBloque : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <a href={href} className={clases}>
-      {children}
-    </a>
-  );
-}
-
-export function Etiqueta({ aviso = false, children }: { aviso?: boolean; children: ReactNode }) {
-  return (
-    <span className={`${estilos.etiqueta} ${aviso ? estilos.etiquetaAviso : ''}`.trim()}>
->>>>>>> origin/main
       {children}
     </span>
   );
 }
 
-<<<<<<< HEAD
 /* ---------------------------------------------------------------- avisos */
 
 export type TonoAviso = 'neutro' | 'error' | 'exito';
 
-=======
->>>>>>> origin/main
 /**
  * Aviso al usuario.
  *
  * ⚠️ `role="alert"` cuando es un error: hace que los lectores de pantalla lo
  * anuncien al aparecer. Sin eso, alguien que no ve la pantalla no se entera de
  * que su formulario fallo.
-<<<<<<< HEAD
  *
  * ⚠️ EL EXITO NO USA `role="alert"`, USA `role="status"`. "alert" interrumpe lo
  * que el lector este diciendo: para un error es exactamente lo que hace falta,
@@ -431,21 +359,12 @@ export function Aviso({ tono = 'neutro', children }: { tono?: TonoAviso; childre
     <p
       className={[estilos.aviso, clase, entrada].filter(Boolean).join(' ')}
       role={tono === 'error' ? 'alert' : tono === 'exito' ? 'status' : undefined}
-=======
- */
-export function Aviso({ error = false, children }: { error?: boolean; children: ReactNode }) {
-  return (
-    <p
-      className={`${estilos.aviso} ${error ? estilos.avisoError : ''}`.trim()}
-      role={error ? 'alert' : undefined}
->>>>>>> origin/main
     >
       {children}
     </p>
   );
 }
 
-<<<<<<< HEAD
 /* ------------------------------------------------------------ estructura */
 
 export type AnchoContenedor = 'contenido' | 'medio' | 'angosto' | 'formulario';
@@ -486,17 +405,10 @@ export function Contenedor({
         .filter(Boolean)
         .join(' ')}
     >
-=======
-export function EstadoVacio({ titulo, children }: { titulo: string; children?: ReactNode }) {
-  return (
-    <div className={estilos.vacio}>
-      <p className={estilos.vacioTitulo}>{titulo}</p>
->>>>>>> origin/main
       {children}
     </div>
   );
 }
-<<<<<<< HEAD
 
 /**
  * Fila de acciones.
@@ -1414,5 +1326,402 @@ export function Pliego({
     </section>
   );
 }
-=======
->>>>>>> origin/main
+
+/* --------------------------------------------------------------- cronologia */
+
+export type EstadoDeHito = 'hecho' | 'actual' | 'futuro' | 'cancelado';
+
+export interface Hito {
+  clave: string;
+  titulo: string;
+  estado: EstadoDeHito;
+  /** Fecha ya formateada (`fechaYHora`). Solo los hitos hechos la tienen. */
+  fecha?: string | undefined;
+  /** Quien lo produjo: "vos", "el vendedor", "Offside". */
+  actor?: string | undefined;
+  nota?: string | undefined;
+}
+
+/**
+ * Linea de tiempo de una orden o de un reclamo.
+ *
+ * ⚠️ ES UNA LISTA ORDENADA (`<ol>`): el orden ES la informacion. Un lector de
+ * pantalla anuncia "lista de 6 elementos, elemento 3" y con eso ya se sabe en
+ * que punto del recorrido esta la orden.
+ *
+ * ⚠️ EL HITO ACTUAL SE ENCIENDE, LOS FUTUROS SE APAGAN. Y el cancelado corta la
+ * linea: no hay nada despues de una cancelacion y dibujar los hitos siguientes
+ * apagados prometeria un recorrido que ya no existe.
+ *
+ * ⚠️ NADA SE MUEVE EN BUCLE. El riel se dibuja una vez al cargar; el punto del
+ * hito actual tiene un halo estatico. Un estado de orden que late se lee como un
+ * estado que todavia no esta decidido.
+ */
+export function Cronologia({ hitos, etiqueta }: { hitos: Hito[]; etiqueta: string }) {
+  return (
+    <ol className={estilos.cronologia} aria-label={etiqueta}>
+      {hitos.map((hito) => (
+        <li key={hito.clave} className={estilos.hito} data-estado={hito.estado}>
+          <span className={estilos.hitoPunto} aria-hidden="true" />
+          <div className={estilos.hitoCuerpo}>
+            <p className={estilos.hitoTitulo}>
+              {hito.titulo}
+              {hito.estado === 'actual' && <span className="solo-lectores"> (estado actual)</span>}
+            </p>
+            {(hito.fecha !== undefined || hito.actor !== undefined) && (
+              <p className={estilos.hitoMeta}>
+                {hito.fecha}
+                {hito.fecha !== undefined && hito.actor !== undefined && ' · '}
+                {hito.actor}
+              </p>
+            )}
+            {hito.nota !== undefined && <p className={estilos.hitoNota}>{hito.nota}</p>}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/* ----------------------------------------------------------------- estrellas */
+
+const ESTRELLA = (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="m12 3.6 2.6 5.6 6 .7-4.5 4.2 1.2 6.1L12 17.2l-5.3 3 1.2-6.1L3.4 9.9l6-.7z" />
+  </svg>
+);
+
+/**
+ * Calificacion en lectura: cinco estrellas rellenas en proporcion al promedio,
+ * el numero al lado y la cantidad de reseñas.
+ *
+ * ⚠️ EL NUMERO ES EL DATO Y LAS ESTRELLAS SON EL DIBUJO. Las estrellas van
+ * `aria-hidden`; lo que se lee es "4,6 de 5, 12 reseñas". Sin reseñas no se
+ * dibujan estrellas vacias como si fueran cero: se dice que todavia no hay.
+ *
+ * ⚠️ EL RELLENO PARCIAL ES UN `clip` SOBRE UNA FILA LLENA encima de una fila
+ * vacia: cinco iconos, dos capas, un `width` en porcentaje. Sin medias
+ * estrellas dibujadas a mano.
+ */
+export function Estrellas({
+  promedio,
+  cantidad,
+  tamanio = 'chico',
+}: {
+  /** Promedio 1..5 con decimales, o `null` si todavia no hay reseñas. */
+  promedio: number | null;
+  cantidad: number;
+  tamanio?: 'chico' | 'grande';
+}) {
+  if (promedio === null || cantidad === 0) {
+    return <span className={estilos.estrellasSin}>Sin calificaciones todavía</span>;
+  }
+
+  const porcentaje = Math.max(0, Math.min(100, (promedio / 5) * 100));
+  const texto = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 }).format(promedio);
+
+  return (
+    <span className={tamanio === 'grande' ? estilos.estrellasGrande : estilos.estrellas}>
+      <span className={estilos.estrellasFila} aria-hidden="true">
+        <span className={estilos.estrellasVacias}>
+          {ESTRELLA}
+          {ESTRELLA}
+          {ESTRELLA}
+          {ESTRELLA}
+          {ESTRELLA}
+        </span>
+        <span className={estilos.estrellasLlenas} style={{ width: `${porcentaje}%` }}>
+          {ESTRELLA}
+          {ESTRELLA}
+          {ESTRELLA}
+          {ESTRELLA}
+          {ESTRELLA}
+        </span>
+      </span>
+      <span className={estilos.estrellasNumero}>{texto}</span>
+      <span className={estilos.estrellasCantidad}>
+        <span className="solo-lectores">de 5, </span>
+        {cantidad === 1 ? '1 reseña' : `${cantidad} reseñas`}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Calificacion en entrada: cinco radios 1..5 SIN JavaScript.
+ *
+ * ⚠️ SON RADIOS DE VERDAD, EN UN `<fieldset>`, con la etiqueta de cada uno
+ * (`1 estrella`, `2 estrellas`…) para lectores de pantalla. El dibujo se
+ * colorea con `:checked ~` y `:hover`, que es todo lo que hace falta para que
+ * al elegir 4 se enciendan las cuatro primeras. Se dibujan de derecha a
+ * izquierda para que el selector hermano alcance a las anteriores.
+ */
+export function EstrellasEntrada({
+  nombre,
+  etiqueta,
+  valor,
+}: {
+  nombre: string;
+  etiqueta: string;
+  /** El valor conservado tras un error de validacion. */
+  valor?: number | undefined;
+}) {
+  return (
+    <fieldset className={estilos.estrellasEntrada}>
+      <legend className={estilos.estrellasLeyenda}>{etiqueta}</legend>
+      <div className={estilos.estrellasOpciones}>
+        {[5, 4, 3, 2, 1].map((n) => (
+          <span key={n} className={estilos.estrellaOpcion}>
+            <input
+              type="radio"
+              id={`${nombre}-${n}`}
+              name={nombre}
+              value={n}
+              required
+              defaultChecked={valor === n}
+              className={estilos.estrellaRadio}
+            />
+            <label htmlFor={`${nombre}-${n}`} className={estilos.estrellaEtiqueta}>
+              {ESTRELLA}
+              <span className="solo-lectores">{n === 1 ? '1 estrella' : `${n} estrellas`}</span>
+            </label>
+          </span>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/* ---------------------------------------------------------------- insignias */
+
+/**
+ * Nivel del vendedor (seller tier): nombre y tasa legible.
+ *
+ * ⚠️ LA TASA LLEGA YA FORMATEADA (`porcentajeDeComision`) y viene del Config
+ * Store; la insignia no sabe cuanto vale nada. Sin tasa —tier que usa la
+ * global— se muestra solo el nombre.
+ */
+export function InsigniaDeNivel({
+  nombre,
+  tasa,
+  destacada = false,
+}: {
+  nombre: string;
+  tasa?: string | undefined;
+  destacada?: boolean;
+}) {
+  return (
+    <span className={destacada ? estilos.insigniaNivelDestacada : estilos.insigniaNivel}>
+      <span className={estilos.insigniaIcono} aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="14" r="5.5" />
+          <path d="m8.5 9.5-2.5-6h4l2 4.5M15.5 9.5l2.5-6h-4l-2 4.5" />
+        </svg>
+      </span>
+      <span className={estilos.insigniaTexto}>
+        <span className={estilos.insigniaNombre}>{nombre}</span>
+        {tasa !== undefined && <span className={estilos.insigniaDato}>comisión {tasa}</span>}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Reputacion del vendedor en una linea: etiqueta legible + metricas crudas.
+ *
+ * ⚠️ METRICAS CRUDAS, NO UN VEREDICTO (DEC-036). "12 ventas · responde en ~3 h ·
+ * 0 reclamos" es verificable; "Vendedor confiable" no. El score derivado se
+ * muestra aparte, en el panel, y siempre como indicador.
+ */
+export function InsigniaDeReputacion({
+  etiqueta,
+  metricas,
+}: {
+  etiqueta: string;
+  metricas: string[];
+}) {
+  return (
+    <span className={estilos.reputacion}>
+      <span className={estilos.reputacionEtiqueta}>{etiqueta}</span>
+      {metricas.length > 0 && (
+        <span className={estilos.reputacionMetricas}>
+          {metricas.map((metrica) => (
+            <span key={metrica} className={estilos.reputacionMetrica}>
+              {metrica}
+            </span>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ contador */
+
+/**
+ * Icono con un numero encima: la campanita, el carrito.
+ *
+ * ⚠️ EL NUMERO NO ES LA UNICA SEÑAL: el texto accesible dice "Notificaciones, 3
+ * sin leer". Y arriba de 99 dice "99+", porque un globo de cuatro cifras deja
+ * de ser un globo.
+ */
+export function Contador({
+  href,
+  icono,
+  texto,
+  cantidad,
+  className,
+}: {
+  href: string;
+  icono: ReactNode;
+  /** "Notificaciones", "Carrito". */
+  texto: string;
+  cantidad: number;
+  className?: string | undefined;
+}) {
+  const visible = cantidad > 99 ? '99+' : String(cantidad);
+
+  return (
+    <Link href={href} className={[estilos.contador, className].filter(Boolean).join(' ')}>
+      <span className={estilos.contadorIcono} aria-hidden="true">
+        {icono}
+      </span>
+      {cantidad > 0 && (
+        <span className={estilos.contadorGlobo} aria-hidden="true">
+          {visible}
+        </span>
+      )}
+      <span className="solo-lectores">
+        {texto}
+        {cantidad > 0 ? `, ${cantidad}` : ''}
+      </span>
+    </Link>
+  );
+}
+
+/* --------------------------------------------------------------- paginacion */
+
+/**
+ * Paginacion por enlaces: anterior, numeros cercanos, siguiente.
+ *
+ * ⚠️ `hrefDe` LA ARMA LA PANTALLA, que es la que sabe que otros parametros
+ * tiene la URL (filtros, orden). Esto solo decide que numeros mostrar.
+ */
+export function Paginacion({
+  actual,
+  total,
+  hrefDe,
+}: {
+  actual: number;
+  total: number;
+  hrefDe: (pagina: number) => string;
+}) {
+  if (total <= 1) return null;
+
+  const cercanas = new Set<number>([1, total, actual - 1, actual, actual + 1]);
+  const paginas = Array.from(cercanas)
+    .filter((n) => n >= 1 && n <= total)
+    .sort((a, b) => a - b);
+
+  return (
+    <nav className={estilos.paginacion} aria-label="Paginación">
+      {actual > 1 ? (
+        <Link href={hrefDe(actual - 1)} className={estilos.paginacionPaso}>
+          ← Anterior
+        </Link>
+      ) : (
+        <span className={estilos.paginacionPasoApagado} aria-hidden="true">
+          ← Anterior
+        </span>
+      )}
+      <ul className={estilos.paginacionLista}>
+        {paginas.map((n, i) => {
+          const anterior = paginas[i - 1];
+          const hayHueco = anterior !== undefined && n - anterior > 1;
+
+          return (
+            <li key={n} className={estilos.paginacionItem}>
+              {hayHueco && (
+                <span className={estilos.paginacionHueco} aria-hidden="true">
+                  …
+                </span>
+              )}
+              {n === actual ? (
+                <span className={estilos.paginacionActual} aria-current="page">
+                  {n}
+                </span>
+              ) : (
+                <Link href={hrefDe(n)} className={estilos.paginacionNumero}>
+                  {n}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {actual < total ? (
+        <Link href={hrefDe(actual + 1)} className={estilos.paginacionPaso}>
+          Siguiente →
+        </Link>
+      ) : (
+        <span className={estilos.paginacionPasoApagado} aria-hidden="true">
+          Siguiente →
+        </span>
+      )}
+    </nav>
+  );
+}
+
+/* ------------------------------------------------------------- definiciones */
+
+export interface Definicion {
+  termino: string;
+  valor: ReactNode;
+}
+
+/**
+ * Lista de pares termino / valor (direccion, datos del comprador, importes).
+ * Es un `<dl>` de verdad: un lector de pantalla empareja cada dato con su
+ * nombre. `FilaDeDatos` sigue existiendo para una sola fila.
+ */
+export function Definiciones({
+  items,
+  columnas = 2,
+}: {
+  items: Definicion[];
+  columnas?: 1 | 2 | 3;
+}) {
+  return (
+    <dl className={estilos.definiciones} data-columnas={columnas}>
+      {items.map((item) => (
+        <div key={item.termino} className={estilos.definicion}>
+          <dt className={estilos.definicionTermino}>{item.termino}</dt>
+          <dd className={estilos.definicionValor}>{item.valor}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/* ----------------------------------------------------------------- distintivo */
+
+/**
+ * "Promocionada": la marca que lleva una publicacion promocionada en la grilla
+ * y en la ficha.
+ *
+ * ⚠️ SE LLAMA POR SU NOMBRE. "Destacada" o "Recomendada" sugeririan que Offside
+ * la eligio; la eligio el vendedor y pago por eso. Decirlo es lo que hace que la
+ * grilla siga siendo honesta.
+ */
+export function Distintivo({ children = 'Promocionada' }: { children?: ReactNode }) {
+  return (
+    <span className={estilos.distintivo}>
+      <span className={estilos.distintivoRayo} aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M13 3 5 13.5h6L10 21l9-11h-6z" />
+        </svg>
+      </span>
+      {children}
+    </span>
+  );
+}

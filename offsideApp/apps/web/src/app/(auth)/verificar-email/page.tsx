@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 
-<<<<<<< HEAD
 import { IconoSobre, IconoTilde } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
 import { BotonEnlace, FilaDeAcciones, PasosBreves } from '@/components/ui';
@@ -9,13 +8,6 @@ import { verifyEmail } from '@/modules/auth/services/auth.service';
 import propios from '../auth.module.css';
 
 export const metadata: Metadata = { title: 'Verificar email' };
-=======
-import estilos from '@/components/form.module.css';
-import { BotonEnlace, EstadoVacio } from '@/components/ui';
-import { verifyEmail } from '@/modules/auth/services/auth.service';
-
-export const metadata: Metadata = { title: 'Verificar email — Offside Store' };
->>>>>>> origin/main
 
 /**
  * Destino del enlace del email de verificación.
@@ -23,13 +15,10 @@ export const metadata: Metadata = { title: 'Verificar email — Offside Store' }
  * ⚠️ ACÁ SÍ SE CONSUME EL TOKEN AL CARGAR, a diferencia del reset. Verificar no
  * pide ningún dato más a la persona, así que un formulario intermedio sólo
  * agregaría un clic sin aportar nada.
-<<<<<<< HEAD
  *
  * ⚠️ ES SIEMPRE UNA CARGA DURA —se llega desde el email—, o sea que no hay
  * ninguna View Transition que anime la llegada. Por eso la tarjeta lleva su
  * propia entrada.
-=======
->>>>>>> origin/main
  */
 export default async function VerificarEmail({
   searchParams,
@@ -40,7 +29,6 @@ export default async function VerificarEmail({
 
   if (token === undefined || token === '') {
     return (
-<<<<<<< HEAD
       <Pantalla>
         <div className={`${propios.tarjeta} entra-acerca`}>
           <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta} sup-calida`}>
@@ -59,18 +47,6 @@ export default async function VerificarEmail({
           </div>
         </div>
       </Pantalla>
-=======
-      <main className={estilos.pagina}>
-        <EstadoVacio titulo="Revisá tu email">
-          <p style={{ marginBottom: 24 }}>
-            Te mandamos un enlace para confirmar tu dirección. Abrilo desde tu casilla.
-          </p>
-          <BotonEnlace href="/revisa-tu-email" variante="secundario">
-            No me llegó
-          </BotonEnlace>
-        </EstadoVacio>
-      </main>
->>>>>>> origin/main
     );
   }
 
@@ -80,7 +56,6 @@ export default async function VerificarEmail({
     // ⚠️ No se distingue "vencido" de "inexistente" ni se muestra el error
     // crudo: sería información sobre tokens ajenos.
     return (
-<<<<<<< HEAD
       <Pantalla>
         <div className={`${propios.tarjeta} entra-acerca`}>
           <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta} sup-calida`}>
@@ -103,27 +78,10 @@ export default async function VerificarEmail({
           </div>
         </div>
       </Pantalla>
-=======
-      <main className={estilos.pagina}>
-        <EstadoVacio titulo="El enlace no sirve">
-          {/*
-            ⚠️ ESTE TEXTO DECIA "Ingresá y te mandamos otro" Y ERA FALSO: no
-            existia ningun reenvio, y quien llegaba acá con un token vencido no
-            tenia salida —ingresar esta bloqueado sin verificar (BR-001)—.
-            Ahora manda al reenvio, que si existe.
-          */}
-          <p style={{ marginBottom: 24 }}>
-            Puede que ya lo hayas usado o que haya vencido. Pedinos uno nuevo.
-          </p>
-          <BotonEnlace href="/revisa-tu-email">Reenviar el email</BotonEnlace>
-        </EstadoVacio>
-      </main>
->>>>>>> origin/main
     );
   }
 
   return (
-<<<<<<< HEAD
     <Pantalla>
       {/*
         ⚠️ ES EL ÚNICO MOMENTO DEL ALTA QUE MERECE CELEBRARSE. Acá es una cabecera
@@ -168,13 +126,5 @@ export default async function VerificarEmail({
         </div>
       </div>
     </Pantalla>
-=======
-    <main className={estilos.pagina}>
-      <EstadoVacio titulo="¡Listo! Tu email está verificado">
-        <p style={{ marginBottom: 24 }}>Ya podés comprar y vender en Offside.</p>
-        <BotonEnlace href="/ingresar">Ingresar</BotonEnlace>
-      </EstadoVacio>
-    </main>
->>>>>>> origin/main
   );
 }

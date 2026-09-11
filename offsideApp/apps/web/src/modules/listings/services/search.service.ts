@@ -7,6 +7,8 @@ import * as listingRepoRuntime from '../repositories/listing.repository';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as searchRepo from '../repositories/search.repository';
 import { createStorage } from '../infrastructure/storage/index';
+import { getRankingSettings } from './listing-settings.service';
+import { shippingSummaryFor, type ShippingSummary } from './shipping-declaration';
 
 /**
  * Busqueda de publicaciones (PS-020 … PS-023, DEC-042).
@@ -29,17 +31,25 @@ export interface SearchResult {
   sizeValue: string;
   /** Tipado como el enum del ERD: la vitrina y la busqueda pintan lo mismo. */
   condition: listingRepo.ListingRow['condition'];
-<<<<<<< HEAD
   /**
    * ⚠️ HACE FALTA PARA QUE LA GRILLA DIGA LO MISMO EN LOS DOS LADOS. La vitrina
    * marca "Última unidad" leyendo `stock`; sin este campo, la MISMA camiseta
    * aparecia con el aviso en la home y sin el en los resultados de busqueda.
    */
   stock: number;
-=======
->>>>>>> origin/main
   sellerDisplayName: string;
   coverUrl: string | null;
+  /**
+   * Si esta promocionada AHORA.
+   *
+   * ⚠️ VIENE DE LA FILA, NO DE CRUZAR CONTRA OTRA CONSULTA. La pantalla lo
+   * resolvia pidiendo las 60 promocionadas de la vitrina y buscando cada id
+   * ahi adentro: con volumen, la promocionada numero 61 de la busqueda dejaba
+   * de mostrar su distintivo sin que nada fallara.
+   */
+  promocionada: boolean;
+  /** Como se resuelve el envio, ya resumido. La grilla lo dice en corto. */
+  shipping: ShippingSummary;
 }
 
 export interface Faceta {
@@ -64,6 +74,15 @@ export interface SearchResponse {
     tipoDeCamiseta: Faceta[];
     manga: Faceta[];
   };
+  /**
+   * Precio minimo y maximo de TODO el resultado, no de la pagina.
+   *
+   * ⚠️ ES LO QUE HACE HONESTO AL FILTRO DE PRECIO. Sacarlo de los 24
+   * resultados que se muestran diria "de $8.000 a $140.000" cuando la
+   * busqueda tiene una de $300.000 en la pagina tres. `null` cuando no hay
+   * resultados: ahi el control no se dibuja.
+   */
+  precios: { minimo: string | null; maximo: string | null };
 }
 
 export interface SearchQuery {
@@ -84,7 +103,6 @@ export interface SearchQuery {
   pagina?: number;
 }
 
-<<<<<<< HEAD
 /**
  * Tamaño de pagina. No es configuracion de negocio: es una constante de UI.
  *
@@ -94,10 +112,6 @@ export interface SearchQuery {
  * existe.
  */
 export const POR_PAGINA = 24;
-=======
-/** Tamaño de pagina. No es configuracion de negocio: es una constante de UI. */
-const POR_PAGINA = 24;
->>>>>>> origin/main
 
 /**
  * Busca publicaciones.
@@ -127,7 +141,13 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
   };
 
   const base = { ...(texto === undefined || texto === '' ? {} : { texto }), filtros };
-  const pesos = await getSearchRankWeights();
+  /*
+   * ⚠️ LOS DOS PARAMETROS DEL RANKING SALEN DEL CONFIG STORE, igual que los
+   * pesos (DEC-042 lo exige con esas palabras): cuanto empuja una promocionada
+   * y si van antes que el resto son decisiones de negocio, no numeros de este
+   * archivo.
+   */
+  const [pesos, ranking] = await Promise.all([getSearchRankWeights(), getRankingSettings()]);
   const pagina = Math.max(1, query.pagina ?? 1);
 
   // Resultados, total y las cinco facetas salen juntos: son consultas
@@ -145,11 +165,14 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
     marca,
     competicion,
     temporada,
+    precios,
   ] = await Promise.all([
     searchRepo.search({
       ...base,
       orden: query.orden ?? (texto === undefined ? 'recientes' : 'relevancia'),
       pesos,
+      promotionRankBoost: ranking.promotionRankBoost,
+      promotedFirst: ranking.promotedFirst,
       limite: POR_PAGINA,
       offset: (pagina - 1) * POR_PAGINA,
     }),
@@ -164,6 +187,7 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
     searchRepo.facetCounts('brandId', base),
     searchRepo.facetCounts('competitionId', base),
     searchRepo.facetCounts('seasonId', base),
+    searchRepo.priceBounds(base),
   ]);
 
   const nombres = await searchRepo.categoryNames(categoria.map((f) => f.valor));
@@ -171,6 +195,10 @@ export async function searchListings(query: SearchQuery): Promise<SearchResponse
   return {
     resultados: await conPortadas(filas),
     total,
+    precios: {
+      minimo: precios.minimo?.toString() ?? null,
+      maximo: precios.maximo?.toString() ?? null,
+    },
     facetas: {
       categoria: categoria.map((f) => ({
         valor: f.valor,
@@ -246,6 +274,8 @@ async function conPortadas(filas: searchRepo.SearchRow[]): Promise<SearchResult[
     }
   }
 
+  const ahora = Date.now();
+
   return filas.map((fila) => ({
     id: fila.id,
     title: fila.title,
@@ -253,10 +283,9 @@ async function conPortadas(filas: searchRepo.SearchRow[]): Promise<SearchResult[
     currency: fila.currency,
     sizeValue: fila.sizeValue,
     condition: fila.condition as listingRepo.ListingRow['condition'],
-<<<<<<< HEAD
+    promocionada: fila.promotedUntil !== null && fila.promotedUntil.getTime() > ahora,
+    shipping: shippingSummaryFor(fila),
     stock: fila.stock,
-=======
->>>>>>> origin/main
     sellerDisplayName: fila.sellerDisplayName,
     coverUrl: portadas.get(fila.id) ?? null,
   }));

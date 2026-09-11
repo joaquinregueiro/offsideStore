@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 
 import { Campo, Formulario } from '@/components/form';
-<<<<<<< HEAD
 import { IconoSobre } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
 import { BotonEnlace, PasosBreves } from '@/components/ui';
@@ -11,14 +10,6 @@ import { reenviarVerificacion } from '../acciones';
 import propios from '../auth.module.css';
 
 export const metadata: Metadata = { title: 'Revisá tu email' };
-=======
-import estilos from '@/components/form.module.css';
-import { BotonEnlace, EstadoVacio } from '@/components/ui';
-
-import { reenviarVerificacion } from '../acciones';
-
-export const metadata: Metadata = { title: 'Revisá tu email — Offside Store' };
->>>>>>> origin/main
 
 /**
  * Confirmación después de crear cuenta o de pedir recuperar la contraseña.
@@ -26,18 +17,11 @@ export const metadata: Metadata = { title: 'Revisá tu email — Offside Store' 
  * ⚠️ ACÁ VIVE EL REENVÍO, y no es un adorno. Un email se pierde por motivos
  * triviales —spam, un corte de SES, el job agotando sus reintentos— y sin una
  * forma de pedir otro la cuenta queda muerta: no puede ingresar (BR-001) y no
-<<<<<<< HEAD
  * hay token nuevo.
  *
  * ⚠️ NO USA `EstadoVacio` NI `Panel`. Es una CONFIRMACIÓN —"salió bien, andá a
  * tu casilla"—, no un hueco ni una caja de un solo tono: cabecera de marca y
  * cuerpo claro, dos planos de verdad.
-=======
- * hay token nuevo. El reenvío es lo que hace recuperable ese estado.
- *
- * ⚠️ El formulario NO se muestra en el caso de reset. Pedir la contraseña de
- * nuevo ya tiene su propia pantalla, y mezclar los dos caminos sólo confunde.
->>>>>>> origin/main
  */
 export default async function RevisaTuEmail({
   searchParams,
@@ -47,7 +31,6 @@ export default async function RevisaTuEmail({
   const { motivo } = await searchParams;
   const esReset = motivo === 'reset';
 
-<<<<<<< HEAD
   /*
    * ⚠️ LA DURACIÓN SALE DEL ENTORNO. El email dice cuánto vale el enlace y esta
    * pantalla no lo decía: quien vuelve al día siguiente no tenía forma de saber
@@ -111,32 +94,5 @@ export default async function RevisaTuEmail({
         </div>
       </div>
     </Pantalla>
-=======
-  return (
-    <main className={estilos.pagina}>
-      <EstadoVacio titulo="Revisá tu email">
-        <p style={{ marginBottom: 24 }}>
-          {esReset
-            ? 'Si esa dirección está registrada, te mandamos un enlace para elegir una nueva contraseña.'
-            : 'Te mandamos un enlace para confirmar tu dirección. Hace falta para poder comprar o vender.'}
-        </p>
-
-        {esReset ? (
-          <BotonEnlace href="/" variante="secundario">
-            Ir al catálogo
-          </BotonEnlace>
-        ) : (
-          <>
-            <p style={{ marginBottom: 16 }}>
-              ¿No te llegó? Revisá el correo no deseado, o pedí que te lo mandemos de nuevo.
-            </p>
-            <Formulario accion={reenviarVerificacion} enviar="Reenviar el email">
-              <Campo nombre="email" etiqueta="Tu email" tipo="email" autoComplete="email" />
-            </Formulario>
-          </>
-        )}
-      </EstadoVacio>
-    </main>
->>>>>>> origin/main
   );
 }

@@ -1,0 +1,1005 @@
+/* =============================================================================
+ * PANEL DEL COMPRADOR — /cuenta
+ * =============================================================================
+ *
+ * Es la contracara del panel del vendedor: la misma jerarquia de seccion, pero
+ * lo que se mira aca no son numeros de negocio sino EL ESTADO DE COSAS QUE YA
+ * PASARON —una compra en curso, un reclamo abierto, un aviso sin leer—. Esa
+ * diferencia decide el movimiento: la pagina entra viva, y despues se queda
+ * quieta. Nada late al lado de un importe ni al lado del estado de una orden.
+ *
+ * ⚠️ LOS FONDOS OSCUROS Y DE MARCA NO SE ESCRIBEN ACA. Se componen las clases
+ * globales `.sup-cancha` / `.sup-noche` / `.sup-ficha` / `.escena-luz` /
+ * `.con-grano`, que ya traen su filo de luz, su `--color-foco`, su `--destello`
+ * y la familia de neutros que corresponde. Este archivo pone LAYOUT y ESTADO,
+ * nunca color de superficie: 35 `background: var(--color-blanco)` escritos a
+ * mano fueron la causa medida de que el sitio se viera plano.
+ *
+ * ⚠️ `.sup-*` Y `.patron-vivo` NO PUEDEN IR EN EL MISMO ELEMENTO: las dos pintan
+ * `::before` y la segunda mata al filo de luz sin dar ningun error. El patron
+ * vive siempre en un `<span>` decorativo vacio y absoluto, que ademas es lo
+ * unico que evita que su `overflow: hidden` rompa el `animation-timeline:
+ * view()` de lo que tenga adentro.
+ *
+ * ⚠️ NINGUN CONTENEDOR CON CONTROLES ENFOCABLES LLEVA `overflow: hidden`. El
+ * `outline` del foco no lo recorta el propio elemento, pero SI lo recorta un
+ * ANCESTRO con overflow oculto — y aca casi toda tarjeta tiene un boton adentro.
+ *
+ * ⚠️ LOS `@keyframes` DE ESTE ARCHIVO SON LOCALES Y LLEVAN PREFIJO `cuenta-`.
+ * En un CSS Module el nombre se hashea: declarar aca uno que ya exista en
+ * `movimiento.css` deja muerta a la global, y referenciar una global por nombre
+ * resuelve a un nombre que no existe.
+ * ========================================================================== */
+
+/* --------------------------------------------------------------- keyframes */
+
+/** Linea de titular que sube desde detras de su mascara. */
+@keyframes cuenta-alzar {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+/** Entrada de materia: viene desde atras del plano, no se infla. */
+@keyframes cuenta-acerca {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+/* ------------------------------------------------------------------ pagina */
+
+/*
+ * El ancho sale de un token y el margen lateral de `--canal`, que a 320px
+ * entrega 16px de cada lado sin necesitar una media query.
+ *
+ * ⚠️ `width: 100%` NO ES REDUNDANTE. `body` es flex para pegar el pie abajo, y
+ * el `margin: 0 auto` de este bloque CANCELA el `stretch` del contenedor: sin
+ * el ancho explicito el `<main>` se encoge al ancho de su contenido (medido:
+ * 394px dentro de un viewport de 760).
+ */
+.pagina {
+  width: 100%;
+  max-width: var(--ancho-medio);
+  margin: 0 auto;
+  padding: var(--espacio-5) var(--canal) var(--espacio-seccion);
+}
+
+/**
+ * ⚠️ FAVORITOS Y COMPRAS SON CATALOGOS, NO FORMULARIOS. A 1440px una grilla de
+ * fichas dentro de `--ancho-medio` deja medio papel vacio a los costados.
+ */
+.paginaAncha {
+  max-width: var(--ancho-contenido);
+}
+
+@media (max-width: 480px) {
+  .pagina {
+    padding-bottom: var(--espacio-8);
+  }
+}
+
+/* ======================================================= chapa de la cuenta */
+
+/**
+ * LA CHAPA — el masthead de la seccion, hermana de la del vendedor.
+ *
+ * Contrastes verificados sobre Verde Cancha plano, que es el punto MAS CLARO
+ * posible de `--malla-cancha` (la luz se RESTA, nunca se suma):
+ *   papel 5.16:1 · --color-sobre-cancha 4.60:1 · Amarillo Cambio 4.59:1
+ *
+ * ⚠️ LA PISTA DEL TITULO ARRANCA EN `min(100%, 14ch)`. Con `minmax(0, 1fr)` a
+ * secas, la columna `auto` se lleva el ancho de la insignia de nivel y el
+ * saludo queda partido en lineas de tres caracteres.
+ */
+.chapa {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(min(100%, 14ch), 1fr) auto;
+  align-items: end;
+  gap: var(--espacio-4) var(--espacio-5);
+  padding: var(--espacio-7) var(--espacio-6);
+  margin-bottom: var(--espacio-5);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-2);
+
+  /**
+   * ⚠️ LOS TRES REMAPEOS SON UN ARREGLO, NO PRECAUCION. `.sup-cancha` da vuelta
+   * `--color-neutro-texto` y `--color-alerta` pero NO `--superficie-1` ni
+   * `--color-neutro-suave`: cualquier chip del sistema que se apoye en un fondo
+   * claro queda con texto casi blanco sobre fondo casi blanco. Aca las
+   * superficies chicas pasan a ser POZOS oscuros —la luz se resta— y el texto
+   * claro ya remapeado da 7.90:1 encima.
+   */
+  --superficie-1: rgb(7 26 18 / 0.42);
+  --superficie-2: rgb(7 26 18 / 0.42);
+  --color-neutro-suave: rgb(7 26 18 / 0.42);
+}
+
+@media (max-width: 640px) {
+  .chapa {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--espacio-6) var(--espacio-5);
+  }
+}
+
+.chapaPatron {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+}
+
+/**
+ * ⚠️ EL ROTULO USA `--color-neutro-texto` Y NO UN HEX. Adentro de `.sup-cancha`
+ * ese token esta remapeado a `--color-sobre-cancha` (4.60:1): el mismo codigo
+ * cumple AA en las dos superficies.
+ */
+.chapaRotulo {
+  margin: 0 0 var(--espacio-3);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ EL TITULO VA EN DOS `<span>` ANIDADOS: `translateY(100%)` sin una mascara
+ * no es un revelado, es texto que se superpone al de abajo. El externo recorta
+ * con `overflow: clip`, el interno se mueve.
+ *
+ * ⚠️ EL RECORTE DEJA AIRE ARRIBA (`padding-top`) PORQUE BIG NOODLE SE PASA DE
+ * SU PROPIA CAJA: la tinta de una vocal acentuada se va 0.1029em por encima de
+ * la altura de mayusculas —medido en el navegador con la Canvas API sobre la
+ * woff2 real—, asi que un recorte al ras RAPA los acentos y se lee "MI CUENTA"
+ * donde dice "SESIÓN".
+ */
+.chapaTitulo {
+  margin: 0;
+  overflow: clip;
+  padding-top: 0.11em;
+  font-family: var(--fuente-titulo);
+  font-size: var(--display-3);
+  line-height: var(--interlineado-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--color-papel);
+}
+
+.chapaTitulo > span {
+  display: block;
+  overflow: clip;
+  padding-top: 0.11em;
+  margin-top: -0.11em;
+}
+
+/**
+ * ⚠️ LA ANIMACION VA ADENTRO DE LA MEDIA QUERY Y EL `display: block` AFUERA.
+ * `movimiento.css` condiciona TODAS sus animaciones a
+ * `prefers-reduced-motion: no-preference` en vez de apagarlas despues bajando
+ * la duracion, y una regla suelta en un modulo queda fuera de esa red: con
+ * `both`, el titular se pintaria desde `opacity: 0` para quien pidio menos
+ * movimiento. El `display: block` sigue haciendo falta siempre — es lo que le
+ * da caja al `<span>` que la mascara recorta.
+ */
+.chapaTitulo > span > span {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chapaTitulo > span > span {
+    animation: cuenta-alzar var(--dur-entrada) var(--curva-entrada) both;
+  }
+}
+
+.chapaDetalle {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+/** El email de la cuenta: dato tecnico, nunca titular. */
+.chapaEmail {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.chapaLateral {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+/* ======================================================= riel de pestañas */
+
+/**
+ * ⚠️ EL MARCO NO ES DECORACION: ES EL UNICO ENGANCHE POSIBLE. `NavDeSeccion` es
+ * compartida con el vendedor y el back-office, y la clase de su item activo la
+ * hashea el CSS Module: desde aca no se puede escribir. El marco permite
+ * alcanzarla por `[aria-current="page"]` —que es ademas la señal accesible, o
+ * sea que estilo y semantica no pueden desincronizarse— sin tocar el componente
+ * ni cambiar como se ve en las otras dos secciones.
+ */
+.navMarco {
+  margin-bottom: var(--espacio-6);
+}
+
+/**
+ * ⚠️ EL GLOW VA EN EL ITEM ACTIVO Y NO EN EL HOVER DE TODOS. Nueve pestañas que
+ * se encienden al pasar el mouse convierten el riel en un arbol de navidad; lo
+ * que hay que poder encontrar de un vistazo es en cual estas parado.
+ *
+ * ⚠️ NO SE ANIMA EN BUCLE. El halo es estatico: una pestaña que late se lee
+ * como una pestaña que reclama algo.
+ */
+.navMarco [aria-current='page'] {
+  box-shadow: var(--glow-marca);
+}
+
+/* ============================================================ tablero de cifras */
+
+/**
+ * ⚠️ LOS NUMEROS VAN SOBRE UN PLANO OSCURO. Cuatro recuadros blancos sobre papel
+ * hacen que el numero —que es el contenido— pese lo mismo que su borde; el
+ * pliego de noche es lo que le da ritmo vertical al scroll.
+ */
+.tablero {
+  padding: var(--espacio-6);
+  margin-bottom: var(--espacio-6);
+  border-radius: var(--radio-panel);
+  box-shadow: var(--sombra-2);
+}
+
+/* ============================================================ accesos rapidos */
+
+.atajos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/**
+ * ⚠️ ES UN ENLACE ENTERO, NO UNA TARJETA CON UN ENLACE ADENTRO. Un area de 88px
+ * de alto que solo responde en su titulo es una trampa en un telefono.
+ *
+ * ⚠️ `.presiona` NO ES REDUNDANTE CON `.eleva`: en un telefono no existe el
+ * `:hover`, asi que sin el la tarjeta no da NINGUNA señal de haber sido tocada
+ * hasta que llega la pantalla siguiente.
+ */
+.atajo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-4);
+  min-height: 88px;
+  padding: var(--espacio-5);
+  color: inherit;
+  text-decoration: none;
+}
+
+.atajoIcono {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radio-medio);
+  background: var(--superficie-marca);
+  color: var(--verde-750);
+}
+
+.atajoCuerpo {
+  min-width: 0;
+}
+
+.atajoTitulo {
+  margin: 0;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-semi);
+}
+
+.atajoDato {
+  margin: var(--espacio-1) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+/* =================================================================== filtros */
+
+/**
+ * ⚠️ LOS FILTROS SON ENLACES Y VIAJAN EN LA URL POR GET. Una compra filtrada por
+ * estado se comparte, se guarda en favoritos y vuelve con el boton atras. Y
+ * anda sin JavaScript, que es la regla del sitio.
+ *
+ * ⚠️ SCROLL HORIZONTAL PROPIO. Siete estados no entran en 320px, y sin esto el
+ * que scrollea de costado es el documento entero.
+ */
+.filtros {
+  display: flex;
+  gap: var(--espacio-2);
+  margin-bottom: var(--espacio-5);
+  padding-bottom: var(--espacio-2);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.filtro {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--espacio-4);
+  border-radius: var(--radio-pastilla);
+  border: 1px solid var(--linea-control);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: var(--transicion-rapida);
+}
+
+.filtro:hover {
+  border-color: var(--linea-marca);
+  color: var(--enlace-activo);
+}
+
+/**
+ * ⚠️ NO USA `composes`. El resto del proyecto no lo usa en ningun modulo, y una
+ * sola hoja que lo estrene cambia la forma de la clase que llega al HTML (pasa
+ * a ser dos nombres) justo en el unico lugar donde nadie lo espera. Las dos
+ * clases se aplican juntas desde el JSX.
+ */
+.filtroActivo {
+  border-color: transparent;
+  background: var(--boton-primario-fondo);
+  color: var(--boton-primario-texto);
+  font-weight: var(--peso-semi);
+  box-shadow: var(--glow-suave);
+}
+
+/* ================================================================== listas */
+
+/** Reset compartido de todas las listas de esta seccion. */
+.lista {
+  display: grid;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --------------------------------------------------------------- compras */
+
+/**
+ * ⚠️ ES UN ENLACE, NO UNA TARJETA. Igual que el atajo: el area entera lleva al
+ * detalle. Y `data-tono` lleva el TONO YA RESUELTO, no el estado: el CSS mapea
+ * cuatro tonos a cuatro colores y nunca vuelve a decidir que estado es cual
+ * —esa decision vive en un solo lugar, `lib/formato.ts`—.
+ */
+.compra {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--espacio-4);
+  padding: var(--espacio-4);
+  color: inherit;
+  text-decoration: none;
+}
+
+/** El filete de estado: forma ademas de color, porque el color solo no alcanza. */
+.compra::before {
+  content: '';
+  position: absolute;
+  inset: var(--espacio-4) auto var(--espacio-4) 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--tono-compra, var(--color-neutro-borde));
+}
+
+.compra[data-tono='marca'] {
+  --tono-compra: var(--color-cancha);
+}
+
+.compra[data-tono='exito'] {
+  --tono-compra: var(--verde-600);
+}
+
+.compra[data-tono='alerta'] {
+  --tono-compra: var(--color-alerta);
+}
+
+.compraMarco {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radio-medio);
+  overflow: hidden;
+}
+
+.compraFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.compraPatron {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.compraCuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+}
+
+.compraTitulo {
+  margin: 0;
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semi);
+  overflow-wrap: anywhere;
+}
+
+.compraOtros {
+  font-weight: var(--peso-normal);
+  color: var(--color-neutro-texto);
+}
+
+.compraMeta {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.compraPie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-top: auto;
+}
+
+.compraTotal {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-xl);
+  letter-spacing: var(--tracking-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================ ficha (detalle) */
+
+/**
+ * ⚠️ DOS COLUMNAS EN ESCRITORIO, UNA EN TELEFONO, Y EL ORDEN DEL DOM ES EL DE
+ * TELEFONO. La cronologia es lo que se vino a mirar; las acciones van despues.
+ * Reordenar con `order` en escritorio es gratis, al reves no: un lector de
+ * pantalla lee el DOM, no la grilla.
+ */
+.ficha {
+  display: grid;
+  gap: var(--espacio-5);
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .ficha {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+
+.bloque {
+  padding: var(--espacio-5);
+}
+
+.bloqueTitulo {
+  margin: 0 0 var(--espacio-4);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-texto);
+}
+
+/** Columna: varios bloques apilados con el mismo aire. */
+.columna {
+  display: grid;
+  gap: var(--espacio-5);
+  align-content: start;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}
+
+/**
+ * ⚠️ CADA ACCION ES SU PROPIO `<form>`, asi que sin esto los botones se apilan
+ * al ancho completo y "Cancelar" se lee como el paso siguiente de "Pagar" en
+ * vez de como su alternativa.
+ */
+.acciones > * {
+  flex: 0 1 auto;
+}
+
+/* ------------------------------------------------------------------ items */
+
+.items {
+  display: grid;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--espacio-4);
+}
+
+.itemMarco {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radio-chico);
+  overflow: hidden;
+}
+
+.itemFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.itemPatron {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.itemTitulo {
+  margin: 0;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-medio);
+  overflow-wrap: anywhere;
+}
+
+.itemMeta {
+  margin: var(--espacio-1) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.itemPrecio {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- direcciones */
+
+/** La direccion tal como se despacha: una linea por renglon de la etiqueta. */
+.domicilio {
+  margin: 0;
+  font-style: normal;
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.domicilioNombre {
+  display: block;
+  color: var(--color-tinta);
+  font-weight: var(--peso-semi);
+}
+
+.direcciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: var(--espacio-4);
+  margin: 0 0 var(--espacio-6);
+  padding: 0;
+  list-style: none;
+}
+
+.direccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-5);
+}
+
+.direccionCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.direccionEtiqueta {
+  margin: 0;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-semi);
+}
+
+.direccionAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin-top: auto;
+  padding-top: var(--espacio-3);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+/* ---------------------------------------------------------- notificaciones */
+
+.notificacion {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--espacio-4);
+  padding: var(--espacio-4) var(--espacio-5);
+}
+
+/**
+ * ⚠️ LA NO LEIDA SE MARCA CON UN PUNTO Y CON UN FILETE, no solo con un fondo
+ * mas claro: un fondo apenas distinto no lo distingue nadie en un telefono al
+ * sol, y el texto accesible del punto lo dice con todas las letras.
+ */
+.notificacionMarca {
+  width: 10px;
+  height: 10px;
+  margin-top: 0.45em;
+  border-radius: 50%;
+  background: var(--color-neutro-borde);
+}
+
+.noLeida .notificacionMarca {
+  background: var(--color-cancha);
+  box-shadow: var(--glow-suave);
+}
+
+.noLeida {
+  border-left: 3px solid var(--color-cancha);
+}
+
+.notificacionTitulo {
+  margin: 0;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-semi);
+}
+
+.notificacionTexto {
+  margin: var(--espacio-2) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  overflow-wrap: anywhere;
+}
+
+.notificacionPie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-3);
+}
+
+.notificacionFecha {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-texto);
+}
+
+/* ------------------------------------------------------------- favoritos */
+
+.favoritos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--espacio-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.favorito {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+}
+
+.favoritoEnlace {
+  color: inherit;
+  text-decoration: none;
+}
+
+.favoritoMarco {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radio-medio);
+  overflow: hidden;
+}
+
+.favoritoFoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.favoritoPatron {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.favoritoTitulo {
+  margin: 0;
+  font-size: var(--texto-base);
+  font-weight: var(--peso-semi);
+  overflow-wrap: anywhere;
+}
+
+.favoritoMeta {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.favoritoPie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  margin-top: auto;
+  padding-top: var(--espacio-3);
+}
+
+/**
+ * ⚠️ EL PRECIO VIEJO VA TACHADO **Y** ROTULADO. `<s>` solo no lo anuncia ningun
+ * lector de pantalla: sin el texto de al lado, "antes $80.000" se escucha
+ * exactamente igual que el precio de hoy.
+ */
+.favoritoAntes {
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------- preguntas y reseñas */
+
+.tarjetaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-5);
+}
+
+.tarjetaCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.tarjetaEnlace {
+  font-size: var(--texto-base);
+  font-weight: var(--peso-semi);
+  overflow-wrap: anywhere;
+}
+
+.tarjetaFecha {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-texto);
+  white-space: nowrap;
+}
+
+.texto {
+  margin: 0;
+  line-height: var(--interlineado-lectura);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/**
+ * LA RESPUESTA DEL OTRO LADO — del vendedor a una pregunta o a una reseña.
+ *
+ * ⚠️ SANGRADA Y CON FILETE porque es una CONVERSACION: sin la sangria, pregunta
+ * y respuesta se leen como dos parrafos del mismo autor.
+ */
+.respuesta {
+  padding-left: var(--espacio-4);
+  border-left: 3px solid var(--linea-marca);
+}
+
+.respuestaRotulo {
+  margin: 0 0 var(--espacio-2);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-texto);
+}
+
+/** Sin respuesta todavia: es un hecho, no un error. Tono normal, nunca alerta. */
+.pendiente {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+/* ------------------------------------------------------------- reclamos */
+
+.reclamo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-5);
+  color: inherit;
+  text-decoration: none;
+}
+
+.reclamoCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.reclamoTitulo {
+  margin: 0;
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semi);
+}
+
+/**
+ * LA CONVERSACION DEL RECLAMO.
+ *
+ * ⚠️ ES UNA `<ol>`: el orden ES la informacion. Un lector de pantalla anuncia
+ * "lista de 4 elementos, elemento 3" y con eso ya se sabe en que punto del
+ * recorrido esta el reclamo.
+ */
+.conversacion {
+  display: grid;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mensaje {
+  padding: var(--espacio-4);
+  border-radius: var(--radio-medio);
+  background: var(--superficie-2);
+}
+
+/** Lo que escribio esta persona se apoya en el lado de marca: se distingue sin color solo. */
+.mensajePropio {
+  background: var(--superficie-marca);
+  border-left: 3px solid var(--linea-marca);
+}
+
+.mensajeRotulo {
+  margin: 0 0 var(--espacio-2);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-texto);
+}
+
+.evidencias {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: var(--espacio-3) 0 0;
+  padding-left: var(--espacio-5);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+.evidencias li {
+  overflow-wrap: anywhere;
+}
+
+/* ============================================================== auxiliares */
+
+/**
+ * ⚠️ LA NOTA NO ES LETRA CHICA DECORATIVA: es donde se dice lo que el sistema NO
+ * hace. Usa `--color-neutro-texto` (4.60:1 sobre papel) y no el gris tenue, que
+ * daba 3.10:1 y era texto real.
+ */
+.nota {
+  margin: var(--espacio-4) 0 0;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.separador {
+  margin: var(--espacio-6) 0;
+}
+
+/* ------------------------------------------------ patron de hueco de foto */
+
+/**
+ * ⚠️ EL HUECO DE FOTO NO ES UN RECTANGULO GRIS, ES EL ROMBO DE LA BANDERA. Una
+ * caja vacia se lee como una imagen rota; el patron dice "todavia no hay foto".
+ */
+.rombos {
+  background-image:
+    linear-gradient(45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--patron-color) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--patron-color) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--patron-color) 75%);
+  background-size: var(--patron-tamanio-fino);
+  background-position: var(--patron-posicion-fino);
+  background-color: var(--superficie-marca);
+  --patron-color: color-mix(in oklab, var(--color-cancha) 22%, transparent);
+}
+
+/* ------------------------------------------------------------- esqueleto */
+
+.cargandoChapa {
+  height: 148px;
+  border-radius: var(--radio);
+  margin-bottom: var(--espacio-5);
+}
+
+.cargandoNav {
+  height: 44px;
+  border-radius: var(--radio-pastilla);
+  margin-bottom: var(--espacio-6);
+}
+
+.cargandoBloques {
+  display: grid;
+  gap: var(--espacio-4);
+}
+
+.cargandoBloque {
+  height: 108px;
+  border-radius: var(--radio-ficha);
+}
+
+/* ============================================================== movimiento */
+
+/**
+ * ⚠️ LA GUARDA `@supports` VA POR AFUERA Y NO ES OPCIONAL. Sin soporte de
+ * `animation-timeline` el navegador aplica igual el estado inicial del keyframe
+ * —`opacity: 0`— y la pagina queda VACIA, no "sin animar". Firefox hoy.
+ *
+ * ⚠️ Y `prefers-reduced-motion` VA POR ADENTRO. Una animacion dirigida por
+ * scroll NO se apaga bajandole la duracion, porque su progreso lo da el scroll:
+ * la regla entera tiene que vivir adentro de la media query.
+ *
+ * ⚠️ `animation-delay` NO HACE NADA EN UNA ANIMACION DE SCROLL. El escalonado
+ * se corre con `animation-range`, no con delay.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .revela > * {
+      animation: cuenta-acerca auto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 22%;
+    }
+  }
+}
+
+/** Entrada al primer pintado de lo que ya esta arriba del pliegue. */
+@media (prefers-reduced-motion: no-preference) {
+  .entraBloque {
+    animation: cuenta-acerca var(--dur-entrada) var(--curva-entrada) both;
+  }
+}

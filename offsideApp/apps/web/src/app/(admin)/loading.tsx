@@ -37,7 +37,17 @@ export default function CargandoPantalla() {
             <span className={`${estilos.esqueletoOscuro} ${estilos.esqueletoIdentidad}`} />
           </div>
 
+          {/*
+            ⚠️ CINCO BARRAS Y NO TRES: la consola pasó de tres pestañas a diez,
+            y con tres el esqueleto dibujaba una fila que se llenaba de golpe al
+            resolver. Cinco cubren el ancho visible sin desbordar a 320px —la
+            fila real desplaza de costado, esta no—. El ALTO sigue siendo el de
+            la nav real (`--alto-control` + la regla de 1px), que es lo único
+            que evita que el título salte.
+          */}
           <div className={estilos.esqueletoTabs}>
+            <span className={`${estilos.esqueletoOscuro} ${estilos.esqueletoTab}`} />
+            <span className={`${estilos.esqueletoOscuro} ${estilos.esqueletoTab}`} />
             <span className={`${estilos.esqueletoOscuro} ${estilos.esqueletoTab}`} />
             <span className={`${estilos.esqueletoOscuro} ${estilos.esqueletoTab}`} />
             <span className={`${estilos.esqueletoOscuro} ${estilos.esqueletoTab}`} />

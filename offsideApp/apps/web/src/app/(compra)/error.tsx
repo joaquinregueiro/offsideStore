@@ -22,7 +22,7 @@ export default function ErrorDelGrupo({ reset }: { error: Error; reset: () => vo
       <ErrorDePantalla
         titulo="No pudimos cargar tu compra"
         detalle="Tu orden no se perdió: si ya pagaste, el pago sigue su curso y la vas a ver en Mis compras. Probá de nuevo en un momento."
-        volverA="/mis-compras"
+        volverA="/cuenta/compras"
         textoVolver="Ver mis compras"
         reset={reset}
       />

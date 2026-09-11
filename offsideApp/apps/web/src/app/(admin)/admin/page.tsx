@@ -1,12 +1,24 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-<<<<<<< HEAD
-import { IconoAutenticado, IconoEtiqueta, IconoIntercambio } from '@/components/iconos';
+import {
+  IconoAjustes,
+  IconoAutenticado,
+  IconoBandera,
+  IconoCamion,
+  IconoEtiqueta,
+  IconoIntercambio,
+  IconoMedalla,
+  IconoRayo,
+  IconoTienda,
+} from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
 import { Seccion } from '@/components/ui';
-import { CAPABILITIES, hasCapability } from '@/lib/permissions';
+import { CAPABILITIES, hasCapability, type Capability } from '@/lib/permissions';
 import { requireAnyCapabilitySessionUser } from '@/lib/session';
+import { listOpenForAdmin } from '@/modules/disputes/services/dispute.service';
+import { listPaidWithoutStock } from '@/modules/orders/services/order.service';
+import { countOpenReports } from '@/modules/reports/services/report.service';
 
 import { Consola } from '../consola';
 import estilos from '../admin.module.css';
@@ -15,37 +27,124 @@ export const metadata: Metadata = { title: 'Administración' };
 export const dynamic = 'force-dynamic';
 
 /**
- * ⚠️ LAS SIETE CAPACIDADES QUE FALTAN SE DIBUJAN, NO SE CUENTAN EN UNA NOTA AL
- * PIE. `AR-006` define nueve y existen dos. Una grilla con dos tarjetas y un
- * parrafo gris se lee como un back-office terminado; siete fichas fantasma
- * comunican hoja de ruta y evitan que alguien busque en el lugar equivocado.
+ * Las pantallas que existen, con la capacidad que cada una exige.
+ *
+ * ⚠️ LA CAPACIDAD SE DECLARA ACA JUNTO AL ACCESO, no en un `if` suelto: así
+ * agregar una pantalla es agregar una fila, y no hay forma de olvidarse de
+ * filtrarla. Mostrar u ocultar sigue siendo CORTESIA: cada pantalla vuelve a
+ * exigir la suya, y cada Server Action también.
+ */
+const ACCESOS: {
+  nombre: string;
+  href: string;
+  detalle: string;
+  capacidad: Capability;
+  icono:
+    'ajustes' | 'medalla' | 'etiqueta' | 'intercambio' | 'bandera' | 'tienda' | 'camion' | 'rayo';
+}[] = [
+  {
+    nombre: 'Configuración',
+    href: '/admin/configuracion',
+    detalle: 'Las claves del Config Store: plazos, límites, interruptores y pesos.',
+    capacidad: CAPABILITIES.SYSTEM_CONFIG_MANAGE,
+    icono: 'ajustes',
+  },
+  {
+    nombre: 'Niveles',
+    href: '/admin/niveles',
+    detalle: 'Los niveles de vendedor y su comisión, y a quién se le asigna cuál.',
+    capacidad: CAPABILITIES.SYSTEM_CONFIG_MANAGE,
+    icono: 'medalla',
+  },
+  {
+    nombre: 'Comisión',
+    href: '/admin/comision',
+    detalle: 'La tasa que Offside retiene de cada venta, con su historial de versiones.',
+    capacidad: CAPABILITIES.SYSTEM_CONFIG_MANAGE,
+    icono: 'etiqueta',
+  },
+  {
+    nombre: 'Pagos y reembolsos',
+    href: '/admin/pagos',
+    detalle: 'Buscar una orden y devolver dinero, total o parcial.',
+    capacidad: CAPABILITIES.PAYMENTS_REFUND,
+    icono: 'intercambio',
+  },
+  {
+    nombre: 'Disputas',
+    href: '/admin/disputas',
+    detalle: 'Los reclamos: leer la evidencia y resolver, con reembolso o con sanción.',
+    capacidad: CAPABILITIES.DISPUTES_RESOLVE,
+    icono: 'bandera',
+  },
+  {
+    nombre: 'Vendedores',
+    href: '/admin/vendedores',
+    detalle: 'Reputación, sanciones, nivel de cuenta y promociones de un vendedor.',
+    capacidad: CAPABILITIES.TRUST_MODERATE,
+    icono: 'tienda',
+  },
+  {
+    nombre: 'Órdenes',
+    href: '/admin/ordenes',
+    detalle: 'Buscar una compra, ver su recorrido y destrabar las que quedaron a mitad.',
+    capacidad: CAPABILITIES.SYSTEM_CONFIG_MANAGE,
+    icono: 'camion',
+  },
+  {
+    nombre: 'Reportes',
+    href: '/admin/reportes',
+    detalle: 'Las denuncias sobre publicaciones, para atender o descartar.',
+    capacidad: CAPABILITIES.TRUST_MODERATE,
+    icono: 'bandera',
+  },
+  {
+    nombre: 'Ingresos',
+    href: '/admin/ingresos',
+    detalle: 'Comisión cobrada por mes y por origen, leída de los snapshots.',
+    capacidad: CAPABILITIES.SYSTEM_CONFIG_MANAGE,
+    icono: 'rayo',
+  },
+];
+
+const ICONOS = {
+  ajustes: IconoAjustes,
+  medalla: IconoMedalla,
+  etiqueta: IconoEtiqueta,
+  intercambio: IconoIntercambio,
+  bandera: IconoBandera,
+  tienda: IconoTienda,
+  camion: IconoCamion,
+  rayo: IconoRayo,
+};
+
+/**
+ * ⚠️ LO QUE FALTA SE DIBUJA, NO SE CUENTA EN UNA NOTA AL PIE. `AR-006` define
+ * nueve capacidades; hoy existen cuatro. Una grilla completa y un párrafo gris
+ * se leen como un back-office terminado; las fichas fantasma comunican hoja de
+ * ruta y evitan que alguien busque en el lugar equivocado.
  *
  * ⚠️ NO SON CONTROLES Y NO LO PARECEN: son `<div>` sin `href` ni `tabindex`, no
- * elevan y no responden al hover. Prometer un enlace que no existe es peor que
- * no listar nada.
+ * elevan y no responden al hover.
  */
 const PENDIENTES: { nombre: string; detalle: string }[] = [
-  { nombre: 'Usuarios', detalle: 'Buscar, suspender y revisar el historial de una cuenta.' },
-  { nombre: 'Vendedores', detalle: 'Revisar identidad fiscal y estado de aprobación.' },
-  { nombre: 'Moderación', detalle: 'Bajar una publicación y resolver reportes.' },
-  { nombre: 'Órdenes', detalle: 'Ver y destrabar una compra que quedó a mitad de camino.' },
-  { nombre: 'Disputas', detalle: 'El módulo entero: no hay reclamos todavía.' },
-  { nombre: 'Bloqueos', detalle: 'Listas de bloqueo y parámetros de riesgo.' },
-  { nombre: 'Auditoría', detalle: 'Leer el log que hoy sólo se consulta por SQL.' },
+  {
+    nombre: 'Usuarios',
+    detalle: 'Buscar una cuenta que no es vendedora, suspenderla, leer su historial.',
+  },
+  {
+    nombre: 'Aprobación de vendedores',
+    detalle: 'Hoy es automática (TS-001/TS-010): no hay revisión manual.',
+  },
+  {
+    nombre: 'Moderar publicaciones',
+    detalle: 'Bajar una publicación. Cerrar su denuncia no la baja.',
+  },
+  { nombre: 'Bloqueos y riesgo', detalle: 'Listas de bloqueo y umbrales de riesgo (TS-042, 🟡).' },
+  { nombre: 'Auditoría', detalle: 'Leer el `audit_log`, que hoy sólo se consulta por SQL.' },
 ];
 
 /**
-=======
-import { CAPABILITIES, hasCapability } from '@/lib/permissions';
-import { requireAnyCapabilitySessionUser } from '@/lib/session';
-
-import estilos from '../admin.module.css';
-
-export const metadata: Metadata = { title: 'Administración — Offside Store' };
-export const dynamic = 'force-dynamic';
-
-/**
->>>>>>> origin/main
  * Índice del back-office (DEC-023).
  *
  * ⚠️ QUIEN NO TIENE NINGUNA CAPACIDAD RECIBE UN 404, no un 403. Para alguien que
@@ -53,25 +152,69 @@ export const dynamic = 'force-dynamic';
  * que la pantalla está ahí y qué hay detrás.
  *
  * ⚠️ ENTRAR ACÁ NO HABILITA NADA. Cada pantalla exige su propia capacidad, y
- * cada Server Action la vuelve a exigir. Este índice sólo decide QUÉ MOSTRAR:
- * ocultar una tarjeta es cortesía, no seguridad.
-<<<<<<< HEAD
-=======
+ * cada Server Action la vuelve a exigir. Este índice sólo decide QUÉ MOSTRAR.
  *
- * ⚠️ SÓLO HAY DOS CAPACIDADES. `AR-006` lista nueve —usuarios, vendedores,
- * moderación, órdenes, disputas, bloqueos, audit logs—, pero la mayoría
- * pertenece a módulos que todavía no existen. No se muestran accesos a
- * funcionalidad inexistente.
->>>>>>> origin/main
+ * ⚠️ LOS PENDIENTES SE CUENTAN SOLO PARA QUIEN PUEDE ATENDERLOS. `countOpenReports`
+ * y `listOpenForAdmin` LANZAN sin la capacidad —fallan cerrado, que es lo
+ * correcto—, así que preguntarlos sin mirar el rol tiraría la pantalla de un
+ * FINANCE. Sin capacidad no se pide el número y no se muestra la tarjeta.
  */
 export default async function Administracion() {
   const admin = await requireAnyCapabilitySessionUser('/admin');
 
+  const puedeResolver = hasCapability(admin.adminRole, CAPABILITIES.DISPUTES_RESOLVE);
+  const puedeModerar = hasCapability(admin.adminRole, CAPABILITIES.TRUST_MODERATE);
   const puedeConfigurar = hasCapability(admin.adminRole, CAPABILITIES.SYSTEM_CONFIG_MANAGE);
-  const puedeReembolsar = hasCapability(admin.adminRole, CAPABILITIES.PAYMENTS_REFUND);
+
+  const [disputas, reportes, trabadas] = await Promise.all([
+    puedeResolver
+      ? listOpenForAdmin(admin, {
+          statuses: ['OPEN', 'WAITING_SELLER', 'UNDER_REVIEW'],
+          limit: 100,
+        })
+      : Promise.resolve([]),
+    puedeModerar ? countOpenReports(admin) : Promise.resolve(0),
+    puedeConfigurar ? listPaidWithoutStock(50) : Promise.resolve([]),
+  ]);
+
+  const accesos = ACCESOS.filter((acceso) => hasCapability(admin.adminRole, acceso.capacidad));
+
+  /*
+   * ⚠️ SOLO SE MUESTRA LO QUE TIENE ALGO PENDIENTE. Una tarjeta en cero es
+   * ruido: la cola vacía ya se ve dentro de cada pantalla, y acá lo único que
+   * importa es que algo espera.
+   */
+  const colas = [
+    {
+      clave: 'disputas',
+      cantidad: disputas.length,
+      singular: 'reclamo abierto',
+      plural: 'reclamos abiertos',
+      detalle: 'Sólo se resuelven los que están en revisión.',
+      href: '/admin/disputas?estado=revision',
+      visible: puedeResolver,
+    },
+    {
+      clave: 'reportes',
+      cantidad: reportes,
+      singular: 'denuncia sin revisar',
+      plural: 'denuncias sin revisar',
+      detalle: 'Sobre publicaciones. Cerrarlas no baja la publicación.',
+      href: '/admin/reportes',
+      visible: puedeModerar,
+    },
+    {
+      clave: 'ordenes',
+      cantidad: trabadas.length,
+      singular: 'orden pagada sin stock',
+      plural: 'órdenes pagadas sin stock',
+      detalle: 'Plata cobrada contra algo que no se puede entregar.',
+      href: '/admin/ordenes',
+      visible: puedeConfigurar,
+    },
+  ].filter((cola) => cola.visible && cola.cantidad > 0);
 
   return (
-<<<<<<< HEAD
     <Pantalla>
       <main id="contenido" className={estilos.pagina}>
         <Consola
@@ -79,71 +222,65 @@ export default async function Administracion() {
           email={admin.email}
           activo="inicio"
           titulo="Administración"
+          pendientes={{
+            ...(puedeResolver ? { disputas: disputas.length } : {}),
+            ...(puedeModerar ? { reportes } : {}),
+          }}
         />
 
         <div className={estilos.hoja}>
           <p className={estilos.bajada}>
-            {/*
-              ⚠️ ESTE TEXTO DECIA QUE *TODO* QUEDA EN EL LOG DE AUDITORIA, Y ES
-              FALSO. `setCommissionRateBasisPoints` NO escribe en `audit_log`: su
-              propio comentario explica por qué —`app_settings` ya es versionada y
-              cada cambio deja su fila con `updated_by`—. Los reembolsos SÍ pasan
-              por `audit`. Son dos mecanismos distintos y prometer uno solo para
-              los dos es exactamente el tipo de afirmación que después nadie
-              verifica.
-              ⚠️ SE SACO EL ROL DE ACA: la banda ya dice con qué rol y con qué
-              cuenta se está operando, en las tres pantallas.
-            */}
-            Cada acción queda registrada con tu usuario: los reembolsos en el log de auditoría, y la
-            comisión como una versión nueva de la configuración.
+            Cada acción queda registrada con tu usuario: los reembolsos, las sanciones, las
+            resoluciones y las denuncias en el log de auditoría, y la configuración como una versión
+            nueva de la clave que cambiaste.
           </p>
+
+          {colas.length > 0 && (
+            <Seccion titulo="Pendientes">
+              <div className={estilos.pendientes}>
+                {colas.map((cola) => (
+                  <Link key={cola.clave} href={cola.href} className={`${estilos.pendiente} eleva`}>
+                    <span className={estilos.pendienteNumero}>{cola.cantidad}</span>
+                    <span className={estilos.pendienteTexto}>
+                      {cola.cantidad === 1 ? cola.singular : cola.plural}
+                    </span>
+                    <span className={estilos.accesoDetalle}>{cola.detalle}</span>
+                  </Link>
+                ))}
+              </div>
+            </Seccion>
+          )}
 
           <Seccion titulo="Qué podés hacer">
             {/*
-              ⚠️ `escalona` REEMPLAZA A `revela-grilla`, Y NO ES UN CAMBIO DE
-              GUSTO. `revela-grilla` es `animation-timeline: view()` y estas
-              tarjetas están ARRIBA DEL PLIEGUE: una animación dirigida por scroll
-              sobre contenido que ya se ve arranca a mitad de su rango o no
-              arranca nunca. `escalona` corre contra el reloj al primer pintado.
+              ⚠️ `escalona` Y NO `revela-grilla`: estas tarjetas están ARRIBA DEL
+              PLIEGUE, y una animación dirigida por scroll sobre contenido que ya
+              se ve arranca a mitad de su rango o no arranca nunca.
 
-              ⚠️⚠️ LA ENTRADA VA EN EL ENVOLTORIO Y LA ELEVACION EN LA TARJETA, Y
-              SI SE JUNTAN EL HOVER DEJA DE FUNCIONAR. `.escalona > *` declara
-              `animation: … both`, y `both` incluye `forwards`: la animación sigue
-              aplicando `transform` para siempre, y una propiedad bajo control de
-              una animación que rellena NO transiciona. Con las dos clases en el
-              mismo elemento, `.eleva` saltaría de golpe y el `:active` no se
-              percibiría.
+              ⚠️ LA ENTRADA VA EN EL ENVOLTORIO Y LA ELEVACION EN LA TARJETA. Si
+              se juntan, el hover deja de funcionar: `.escalona > *` declara
+              `animation: … both`, y una propiedad bajo control de una animación
+              que rellena NO transiciona.
 
-              ⚠️ `escalona` CORTA EN EL HIJO 12. Acá son 2 + 7 = 9.
+              ⚠️ `escalona` CORTA EN EL HIJO 12. Acá son como mucho 9 + 5 = 14, y
+              las últimas simplemente aparecen sin escalonar.
             */}
             <div className={`${estilos.accesos} escalona`}>
-              {puedeConfigurar && (
-                <div className={estilos.celda}>
-                  <Link href="/admin/comision" className={`${estilos.acceso} eleva`}>
-                    <span className={estilos.accesoIcono} aria-hidden="true">
-                      <IconoEtiqueta tamanio={22} />
-                    </span>
-                    <span className={estilos.accesoTitulo}>Comisión</span>
-                    <span className={estilos.accesoDetalle}>
-                      La tasa que Offside retiene de cada venta, con su historial de versiones.
-                    </span>
-                  </Link>
-                </div>
-              )}
+              {accesos.map((acceso) => {
+                const Icono = ICONOS[acceso.icono];
 
-              {puedeReembolsar && (
-                <div className={estilos.celda}>
-                  <Link href="/admin/pagos" className={`${estilos.acceso} eleva`}>
-                    <span className={estilos.accesoIcono} aria-hidden="true">
-                      <IconoIntercambio tamanio={22} />
-                    </span>
-                    <span className={estilos.accesoTitulo}>Pagos y reembolsos</span>
-                    <span className={estilos.accesoDetalle}>
-                      Buscar una orden y devolver dinero, total o parcial.
-                    </span>
-                  </Link>
-                </div>
-              )}
+                return (
+                  <div key={acceso.href} className={estilos.celda}>
+                    <Link href={acceso.href} className={`${estilos.acceso} eleva`}>
+                      <span className={estilos.accesoIcono} aria-hidden="true">
+                        <Icono tamanio={22} />
+                      </span>
+                      <span className={estilos.accesoTitulo}>{acceso.nombre}</span>
+                      <span className={estilos.accesoDetalle}>{acceso.detalle}</span>
+                    </Link>
+                  </div>
+                );
+              })}
 
               {PENDIENTES.map((pendiente) => (
                 <div key={pendiente.nombre} className={estilos.celda}>
@@ -159,21 +296,19 @@ export default async function Administracion() {
         </div>
 
         {/*
-          ⚠️ LA ADVERTENCIA SALE DE LA NOTA AL PIE Y PASA A SER UN PLANO. Estaba
-          en gris, al final, del mismo tamaño que una firma. Acá es una tira
-          oscura a sangre: le da ritmo vertical a la pantalla y le da a la
-          advertencia el peso que tiene.
+          ⚠️ LA ADVERTENCIA ES UN PLANO, NO UNA NOTA AL PIE. Es una tira oscura a
+          sangre: le da ritmo vertical a la pantalla y le da a la advertencia el
+          peso que tiene.
 
           ⚠️ ADENTRO SOLO MARCADO PROPIO: ningún componente de `ui.tsx` puede ir
-          en una superficie oscura (escriben `--color-tinta` literal en su color
-          de texto).
+          en una superficie oscura (escriben `--color-tinta` literal).
         */}
         <div className={`${estilos.cierre} sup-noche con-grano`}>
           <div className={estilos.consolaCentro}>
             <p className={estilos.cierreCuerpo}>
               <IconoAutenticado tamanio={18} />
               <span>
-                Son 2 de las 9 capacidades que define <code>AR-006</code>. Las otras siete
+                Son 4 de las 9 capacidades que define <code>AR-006</code>. Las otras cinco
                 pertenecen a módulos que todavía no existen. Los roles se asignan sólo por SQL: no
                 hay forma de darse permisos desde acá ni desde la API, y es deliberado.
               </span>
@@ -182,41 +317,5 @@ export default async function Administracion() {
         </div>
       </main>
     </Pantalla>
-=======
-    <main className={estilos.pagina}>
-      <span className={estilos.contexto}>Back-office</span>
-      <h1 className={estilos.titulo}>Administración</h1>
-
-      <p className={estilos.bajada}>
-        Estás operando como <strong>{admin.adminRole}</strong>. Todo lo que hagas acá queda
-        registrado en el log de auditoría con tu usuario.
-      </p>
-
-      <div className={estilos.accesos}>
-        {puedeConfigurar && (
-          <Link href="/admin/comision" className={estilos.acceso}>
-            <span className={estilos.accesoTitulo}>Comisión</span>
-            <span className={estilos.accesoDetalle}>
-              La tasa que Offside retiene de cada venta.
-            </span>
-          </Link>
-        )}
-
-        {puedeReembolsar && (
-          <Link href="/admin/pagos" className={estilos.acceso}>
-            <span className={estilos.accesoTitulo}>Pagos y reembolsos</span>
-            <span className={estilos.accesoDetalle}>
-              Buscar una orden y devolver dinero, total o parcial.
-            </span>
-          </Link>
-        )}
-      </div>
-
-      <p className={estilos.nota}>
-        Los roles se asignan sólo por SQL: no hay forma de darse permisos desde acá ni desde la API.
-        Es deliberado.
-      </p>
-    </main>
->>>>>>> origin/main
   );
 }

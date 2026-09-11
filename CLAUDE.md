@@ -5,11 +5,7 @@
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
 > Estado: marketplace operable de punta a punta —registro, publicación, compra y
 > cobro con Mercado Pago— con frontend propio, incluido el back-office (ver §19).
-<<<<<<< HEAD
 > Última actualización: 2026-09-10.
-=======
-> Última actualización: 2026-09-08.
->>>>>>> origin/main
 
 ---
 
@@ -731,8 +727,6 @@ búsqueda y ficha; desconectando queda vitrina en 0, búsqueda en "0
 publicaciones" y ficha en **404**; reconectando vuelven las tres, y la
 publicación siguió en `active` todo el tiempo.
 
-<<<<<<< HEAD
-=======
 **Envíos — puerto y adaptador simulado (2026-09-09)**: existe
 `ShippingPort` (`modules/shipments/infrastructure/shipping/`) y un adaptador
 **falso**. No hay Service, ni repositorios, ni pantallas: **una orden sigue sin
@@ -778,7 +772,6 @@ y explota al integrar—. Su número de seguimiento **lleva adentro el momento d
 creación**, así que el seguimiento es una función pura de (número, ahora): un
 test fabrica un envío viejo y lo ve entregado, sin esperar ni simular relojes.
 
->>>>>>> origin/main
 **Rebotes y quejas de email — ✅ EN PRODUCCIÓN (2026-09-08)**:
 `POST /api/webhooks/ses/notifications` recibe por SNS lo que publica SES y las
 direcciones afectadas dejan de recibir email.
@@ -900,16 +893,11 @@ recién cuando tiene una imagen. Sin fotos queda en borrador, fuera de la
 vitrina, y el vendedor la completa desde sus publicaciones. Borrar la última
 foto de una activa se **rechaza**: bajarla en silencio sería dejar de vender sin
 enterarse.
-<<<<<<< HEAD
-⚠️ Las publicaciones creadas ANTES de esto siguen `active` sin fotos: no se
-tocaron retroactivamente.
-=======
 Las publicaciones creadas ANTES de esto quedaban `active` sin fotos, porque no
 se tocaron retroactivamente. **El owner las eliminó el 2026-09-09** (reportado
 por él; no se verificó desde el código, que no tiene acceso a la base de
 producción). No pueden volver a aparecer: PS-010 se exige al publicar y también
 al reactivar, así que la regla no tiene puerta de atrás.
->>>>>>> origin/main
 
 **Editar, pausar y eliminar publicaciones — SS-040/041/050/051 (2026-09-08)**:
 el vendedor puede corregir lo publicado y sacarlo de la venta.
@@ -983,7 +971,6 @@ depende de una capacidad nueva en el mapa de DEC-023, y `MODERATOR` hoy no tiene
 ninguna. Mientras tanto el catálogo sólo crece por migración. No bloquea a nadie
 porque los campos son opcionales.
 
-<<<<<<< HEAD
 **Sistema visual, navegación y pantallas públicas — ✅ (2026-09-09)**: se
 auditó el frontend entero por doce dimensiones con verificación adversarial
 —**251 hallazgos confirmados, 39 descartados**— y se ejecutaron las fases 1 a 3
@@ -1011,8 +998,8 @@ reportado, no simulado.
 identidad como color de TEXTO daba **2.16:1** en "Última unidad", "Cancelada" y
 "Sin conectar"; el gris de las ayudas de formulario y las notas, **3.10:1**; la
 bajada de la portada, 4.29:1 a 18px. **El naranja de marca no se tocó**: se
-agregó `--color-alerta` para texto y la regla es *naranja para forma, alerta
-para información*. Los neutros sí se corrigieron: la identidad los llama
+agregó `--color-alerta` para texto y la regla es _naranja para forma, alerta
+para información_. Los neutros sí se corrigieron: la identidad los llama
 "derivados", no son de marca.
 
 ⚠️ **El anillo de foco era del mismo verde que la barra**: invisible, en el
@@ -1107,7 +1094,7 @@ pantalla decía "unos minutos" teniendo el TTL exacto de Redis.
    filas después de un UPDATE: **pausar una publicación reordenaba el inventario
    entero** y cobrar una orden barajaba el historial de compras.
 3. ⚠️ **Regresión propia del 2026-09-09 detectada y corregida**: `body { display:
-   flex }` para pegar el pie abajo, combinado con el `margin: 0 auto` que llevan
+flex }` para pegar el pie abajo, combinado con el `margin: 0 auto` que llevan
    casi todos los `<main>`, hacía que **el margen automático cancelara el
    `stretch`** y el `<main>` se encogiera al ancho de su contenido. Con un
    viewport de 760px, un `<main>` que declara `max-width: 760px` medía **394**.
@@ -1249,22 +1236,69 @@ de la foto de la grilla a la ficha, y **19 de las 22 pantallas** (se renderizaro
 home, primitivas y 404). Eso se verificó leyendo el código y con los chequeos
 automáticos, no con los ojos. **Los 257 tests de integración siguen sin correr.**
 
-=======
->>>>>>> origin/main
+**Marketplace completo de punta a punta — ✅ (2026-09-11)**: niveles de
+vendedor, publicaciones promocionadas, ciclo de vida completo de la orden,
+reputación, reseñas, reclamos, carrito, favoritos, direcciones, preguntas,
+denuncias y sanciones, con los paneles de comprador, vendedor y back-office.
+Nueve módulos de dominio nuevos. Detalle en
+`offsideApp/docs-implementation/marketplace-completo-2026-09-11.md`.
+
+⚠️ **`PAID` DEJO DE SER UN ESTADO Y PASO A SER UN INSTANTE.** El pago aprobado
+deja la orden en `PROCESSING` en la MISMA transacción, salvo que el descuento
+de stock deje faltantes: ahí se queda en `PAID`, no corre el plazo de despacho
+y aparece en el back-office porque necesita una persona. Tres tests de
+integración que fijaban `PAID` como final se actualizaron; no fue un ajuste al
+test, fue que el ciclo pasó a existir.
+
+⚠️ **LA COMISION SE RESUELVE ADENTRO DE `orders`, NO EN LA PANTALLA.**
+`createOrder` consulta el nivel del vendedor y la promoción vigente y congela
+el resultado con su ORIGEN (`commission_source`: general, nivel o
+promocionada). Si la pantalla lo resolviera, el día que alguien llame a
+`createOrder` desde otro lado se cobraría la tasa equivocada sin que nada
+falle.
+
+⚠️ **LA PROMOCION SE CONGELA AL CONTRATARLA Y NO SE PUEDE CANCELAR ANTES DE
+TIEMPO.** Lo primero evita que un cambio de configuración altere lo que alguien
+aceptó; lo segundo evita el abuso obvio —promocionar para figurar primero,
+recibir las visitas y cancelar antes de vender—. Sólo Admin puede terminarla,
+con motivo. **Asumido el 2026-09-11, a confirmar.**
+
+⚠️ **UNA ORDEN POR VENDEDOR (DEC-026), Y CADA PROMOCIONADA EN LA SUYA.** El
+snapshot guarda UN multiplicador por orden: mezclar una promocionada con otras
+le cobraría comisión agravada a artículos que nadie promocionó, o dejaría una
+tasa congelada que no reproduce el importe cobrado.
+
+⚠️ **EL DESPACHO EXIGE TRANSPORTISTA Y NUMERO DE SEGUIMIENTO**, de la lista ⚙️
+`shipping_carriers`. Sin Correo Argentino el envío lo declara el vendedor, y la
+reputación por tiempo de despacho se apoya en esa fecha. Ninguna pantalla
+promete seguimiento automático.
+
+⚠️ **LOS AVISOS Y LA CONFIANZA SE ENGANCHAN, NO SE LLAMAN.** `orders` anuncia
+cada transición y no sabe quién escucha; `notifications`, `reputation` y
+`sellers` se registran al arrancar el servidor. Ninguno puede romper una
+transición: cuando corren, la orden ya está commiteada.
+
+⚠️ **LAS EVIDENCIAS DE UN RECLAMO SON SOLO TEXTO Y ENLACES.** El bucket de
+fotos es público por diseño: una foto de documento ahí sería una fuga con
+dirección adivinable. Y **quien resuelve no puede ser parte**: la capacidad no
+alcanza si además es el comprador o el vendedor de esa orden.
+
+Capacidades nuevas: `disputes:resolve` y `trust:moderate`, sólo ADMIN. Otorgar
+el nivel TIENDA pasó a `trust:moderate`. Cambiar el nivel de un vendedor a mano
+exige un motivo, que va a la auditoría.
+
 **NO implementado:** webhook `mp-connect`, `catalog_change_requests`, jugador y
-número en el formulario, ranking por popularidad/reputación (PS-021: no hay
-reviews ni métricas), carrito, envíos, disputas, reviews, reputación, reordenar
-fotos y editar la autenticidad declarada. Del back-office existen
-**dos** de las nueve capacidades que lista `AR-006`: el resto pertenece a módulos
-que todavía no existen. De los nueve emails que lista la documentación sólo están
-los dos de `auth`; sus rebotes y quejas sí se procesan. Los refunds tienen código y tests, pero **no se probaron
+número en el formulario, reordenar fotos, editar la autenticidad declarada,
+envío con etiqueta y seguimiento automático (Correo Argentino necesita un
+acuerdo comercial), compra protegida legal, cuotas propias, chat entre partes,
+reseñas ocultas por moderación (`reviews` no tiene `hidden_at`/`hidden_by`:
+requiere migración), nombre de usuario para la tienda (`users.username` existe
+y nadie lo asigna: la tienda va por id de vendedor), edición del nombre y el
+email de la cuenta, baja de cuenta (DEC-011 🔴) y overrides de configuración
+por ámbito editables. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-<<<<<<< HEAD
-Tests: **538** (281 unitarios + 257 de integración contra PostgreSQL y Redis
-=======
-Tests: **556** (299 unitarios + 257 de integración contra PostgreSQL y Redis
->>>>>>> origin/main
+Tests: **905** (545 unitarios + 360 de integración contra PostgreSQL y Redis
 reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
 que no haya drift entre el schema de Drizzle y las migraciones.
 ⚠️ Los fixtures **leen** las categorías que carga la migración `0004`; no crean

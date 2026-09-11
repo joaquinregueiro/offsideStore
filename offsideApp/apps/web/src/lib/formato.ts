@@ -1,21 +1,15 @@
-<<<<<<< HEAD
 import type { TonoEtiqueta } from '@/components/ui';
 
-=======
->>>>>>> origin/main
 /**
  * Formateo para la interfaz. Funciones PURAS, sin dependencias de React ni de
  * Next: se pueden testear sin montar nada.
  *
-<<<<<<< HEAD
  * ⚠️ LA UNICA IMPORTACION ES UN TIPO. `TonoEtiqueta` viene de `components/ui`
  * con `import type`, asi que se borra al compilar y no crea dependencia en
  * tiempo de ejecucion: estas funciones se siguen pudiendo llamar desde un test
  * sin React. Se importa el tipo y no se redeclara para que agregar un tono
  * rompa acá si alguien se olvida de mapearlo.
  *
-=======
->>>>>>> origin/main
  * ⚠️ ESTO ES PRESENTACION, NO DOMINIO. Los enums vienen del ERD y no se tocan;
  * aca solo se los vuelve legibles.
  */
@@ -47,7 +41,6 @@ export function condicion(valor: string): string {
 }
 
 /**
-<<<<<<< HEAD
  * Tipo de camiseta (`kit_type`).
  *
  * ⚠️ ESTO ARREGLA UN TEXTO EN INGLES EN LA VITRINA. La ficha de producto
@@ -83,8 +76,6 @@ export function manga(valor: string): string {
 }
 
 /**
-=======
->>>>>>> origin/main
  * Estado de una orden, en palabras que le sirvan a una persona.
  *
  * ⚠️ Los nombres del enum son tecnicos (`PENDING_PAYMENT`) y estan bien asi en
@@ -146,7 +137,6 @@ export function fecha(iso: string): string {
 }
 
 /**
-<<<<<<< HEAD
  * Rol administrativo, en palabras.
  *
  * ⚠️ EL BACK-OFFICE IMPRIMIA `ADMIN` Y `FINANCE` CRUDOS, rompiendo la regla que
@@ -269,8 +259,6 @@ export function tonoDeVendedor(valor: string): TonoEtiqueta {
 }
 
 /**
-=======
->>>>>>> origin/main
  * Valida un destino de redireccion que vino de la URL.
  *
  * ⚠️ ESTO ES SEGURIDAD, NO PROLIJIDAD. El login acepta `?next=` para volver a
@@ -290,4 +278,203 @@ export function rutaInternaSegura(destino: string | undefined, porDefecto = '/')
   if (destino.startsWith('/\\')) return porDefecto;
 
   return destino;
+}
+
+/* ----------------------------------------------- panel, envios y disputas */
+
+/**
+ * Tasa en basis points a porcentaje legible: `600` -> `6 %`, `1250` -> `12,5 %`.
+ *
+ * ⚠️ NO RECIBE `number` SUELTO DESDE LA PANTALLA: recibe lo que el Config Store
+ * o el snapshot de la orden dicen. Nunca se calcula un porcentaje acá.
+ */
+export function porcentajeDeComision(basisPoints: number): string {
+  const porcentaje = basisPoints / 100;
+
+  return `${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(porcentaje)} %`;
+}
+
+/** Multiplicador de promocion legible: `3` -> `×3`, `2.5` -> `×2,5`. */
+export function multiplicador(valor: number): string {
+  return `×${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(valor)}`;
+}
+
+/**
+ * Fecha y hora cortas: `1 sep 2026, 14:32`. Para cronologias y bandejas, donde
+ * el dia solo no alcanza: dos hechos de la misma orden pueden ser del mismo dia.
+ */
+export function fechaYHora(iso: string): string {
+  return new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+/**
+ * Fecha relativa en castellano: `hace 3 días`, `en 2 horas`, `recién`.
+ *
+ * ⚠️ `ahora` SE RECIBE POR PARAMETRO Y NO SE LEE DEL RELOJ ADENTRO: asi la
+ * funcion es pura y un test la fija sin simular relojes. Las pantallas pasan
+ * `new Date()` una sola vez por render.
+ */
+export function fechaRelativa(iso: string, ahora: Date = new Date()): string {
+  const diferencia = new Date(iso).getTime() - ahora.getTime();
+  const absoluta = Math.abs(diferencia);
+  const formato = new Intl.RelativeTimeFormat('es-AR', { numeric: 'auto' });
+
+  const minuto = 60_000;
+  const hora = 60 * minuto;
+  const dia = 24 * hora;
+
+  if (absoluta < minuto) return 'recién';
+  if (absoluta < hora) return formato.format(Math.round(diferencia / minuto), 'minute');
+  if (absoluta < dia) return formato.format(Math.round(diferencia / hora), 'hour');
+  if (absoluta < 30 * dia) return formato.format(Math.round(diferencia / dia), 'day');
+
+  return fecha(iso);
+}
+
+/**
+ * Horas a un plazo legible: `18 h`, `2 días`, `3 días y 4 h`. Para "despacha
+ * en ~18 h" y para los plazos de despacho, pago y proteccion.
+ */
+export function horas(valor: number): string {
+  const redondeadas = Math.max(0, Math.round(valor));
+  const dias = Math.floor(redondeadas / 24);
+  const resto = redondeadas % 24;
+
+  if (dias === 0) return `${resto} h`;
+  if (resto === 0) return dias === 1 ? '1 día' : `${dias} días`;
+
+  return `${dias === 1 ? '1 día' : `${dias} días`} y ${resto} h`;
+}
+
+/** Estado de una disputa (ERD §16, trust-and-safety.md §5). */
+const ESTADOS_DE_DISPUTA: Record<string, string> = {
+  OPEN: 'Abierto',
+  WAITING_SELLER: 'Esperando al vendedor',
+  UNDER_REVIEW: 'En revisión',
+  RESOLVED: 'Resuelto',
+  CLOSED: 'Cerrado',
+};
+
+export function estadoDeDisputa(valor: string): string {
+  return ESTADOS_DE_DISPUTA[valor] ?? valor;
+}
+
+export function tonoDeDisputa(valor: string): TonoEtiqueta {
+  if (valor === 'RESOLVED' || valor === 'CLOSED') return 'exito';
+  if (valor === 'OPEN' || valor === 'WAITING_SELLER') return 'alerta';
+
+  return 'marca';
+}
+
+/** Estado de un envio (ERD §13). */
+const ESTADOS_DE_ENVIO: Record<string, string> = {
+  created: 'Preparando',
+  dispatched: 'Despachado',
+  in_transit: 'En camino',
+  delivered: 'Entregado',
+  delivery_issue: 'Con problemas en la entrega',
+  returned: 'Devuelto',
+};
+
+export function estadoDeEnvio(valor: string): string {
+  return ESTADOS_DE_ENVIO[valor] ?? valor;
+}
+
+/**
+ * Como se resuelve el envio de una publicacion (listings.shipping_mode).
+ *
+ * ⚠️ NINGUNA DICE "GRATIS". Con `included` el costo esta adentro del precio; no
+ * hay envio sin costo en ningun lado, y prometerlo seria la primera queja.
+ */
+const MODOS_DE_ENVIO: Record<string, string> = {
+  included: 'Envío incluido en el precio',
+  buyer_pays: 'Envío a cargo del comprador',
+  to_agree: 'Envío a convenir con el vendedor',
+  pickup: 'Retiro en persona',
+};
+
+export function modoDeEnvio(valor: string): string {
+  return MODOS_DE_ENVIO[valor] ?? valor;
+}
+
+/** Version corta del modo de envio, para una grilla: `Envío incluido`, `+ envío`, `Retiro`. */
+const MODOS_DE_ENVIO_CORTOS: Record<string, string> = {
+  included: 'Envío incluido',
+  buyer_pays: '+ envío',
+  to_agree: 'Envío a convenir',
+  pickup: 'Retiro en persona',
+};
+
+export function modoDeEnvioCorto(valor: string): string {
+  return MODOS_DE_ENVIO_CORTOS[valor] ?? valor;
+}
+
+/** Motivo de un reclamo (enum dispute_reason del ERD). */
+const MOTIVOS_DE_RECLAMO: Record<string, string> = {
+  not_received: 'No recibí el producto',
+  different_from_listing: 'No es lo que se publicó',
+  counterfeit: 'Sospecho que no es original',
+  condition_mismatch: 'El estado no coincide',
+  size_mismatch: 'El talle no coincide',
+  damaged: 'Llegó dañado',
+  wrong_description: 'La descripción estaba mal',
+  other: 'Otro motivo',
+};
+
+export function motivoDeReclamo(valor: string): string {
+  return MOTIVOS_DE_RECLAMO[valor] ?? valor;
+}
+
+/** Nivel de usuario (DEC-020). Es un estatus, no una garantia. */
+const NIVELES_DE_USUARIO: Record<string, string> = {
+  NUEVO: 'Nuevo',
+  CONFIABLE: 'Confiable',
+  DESTACADO: 'Destacado',
+  COLECCIONISTA: 'Coleccionista',
+  TIENDA: 'Tienda',
+};
+
+export function nivelDeUsuario(valor: string): string {
+  return NIVELES_DE_USUARIO[valor] ?? valor;
+}
+
+/**
+ * Cantidad con su sustantivo: `1 venta`, `12 ventas`. Evita el "1 ventas" que
+ * ya aparecio una vez en la portada.
+ */
+export function cantidad(n: number, singular: string, plural = `${singular}s`): string {
+  return `${new Intl.NumberFormat('es-AR').format(n)} ${n === 1 ? singular : plural}`;
+}
+
+/** Resolucion de una disputa (enum dispute_resolution). */
+const RESOLUCIONES_DE_DISPUTA: Record<string, string> = {
+  no_action: 'Sin acción',
+  partial_refund: 'Reembolso parcial',
+  full_refund: 'Reembolso total',
+  return_required: 'Requiere devolución',
+  seller_penalty: 'Penalización al vendedor',
+  seller_suspended: 'Vendedor suspendido',
+};
+
+export function resolucionDeDisputa(valor: string): string {
+  return RESOLUCIONES_DE_DISPUTA[valor] ?? valor;
+}
+
+/** Tipo de sancion (enum sanction_type). */
+const TIPOS_DE_SANCION: Record<string, string> = {
+  warning: 'Advertencia',
+  limitation: 'Limitación',
+  suspension: 'Suspensión',
+  expulsion: 'Expulsión',
+  penalty: 'Penalización',
+};
+
+export function tipoDeSancion(valor: string): string {
+  return TIPOS_DE_SANCION[valor] ?? valor;
 }

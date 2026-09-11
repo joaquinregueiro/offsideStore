@@ -527,7 +527,10 @@ describe('flujo completo: publicar → ordenar → cobrar', () => {
       .select()
       .from(schema.orders)
       .where(eq(schema.orders.id, orden.id));
-    expect(ordenFinal?.status).toBe('PAID');
+    // Con el ciclo de DEC-029 implementado, el pago aprobado ademas arranca la
+    // preparacion: `PAID` es un instante, no un estado en el que la orden se
+    // queda. `paid_at` sigue marcando cuando entro la plata.
+    expect(ordenFinal?.status).toBe('PROCESSING');
     expect(ordenFinal?.paidAt).not.toBeNull();
 
     // El reparto real quedo registrado para conciliar.

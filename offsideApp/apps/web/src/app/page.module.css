@@ -1,7 +1,6 @@
 /**
  * Home — la vitrina.
  *
-<<<<<<< HEAD
  * Sigue el mockup de la identidad §06 y le agrega la capa de profundidad: la
  * portada es una superficie de marca con malla, grano, patron vivo y fotos
  * reales en diagonal; abajo, el ritmo alterna densidades en vez de apilar cajas
@@ -58,19 +57,10 @@
 }
 .retraso4 {
   --retraso: 320ms;
-=======
- * Sigue el mockup de la identidad §06: barra superior verde con el wordmark y
- * el buscador, y una grilla de fichas de producto sobre papel.
- */
-
-.pagina {
-  min-height: 100vh;
->>>>>>> origin/main
 }
 
 /* ---------------------------------------------------------------- portada */
 
-<<<<<<< HEAD
 /**
  * ⚠️ `svh` Y NO `vh`. En el telefono, `vh` cuenta la barra del navegador como si
  * no existiera: la portada quedaba mas alta que la pantalla.
@@ -154,36 +144,6 @@
  * 640px) para que la grilla real —que son camisetas de verdad, con precio—
  * aparezca antes, que es mejor que una foto decorativa.
  */
-.portadaTira {
-  position: absolute;
-  top: 50%;
-  left: 58%;
-  right: -12%;
-  z-index: var(--z-fondo);
-  pointer-events: none;
-  transform: translateY(-50%) rotate(-22deg);
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    rgb(0 0 0 / 0.85) 26%,
-    #000 58%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    rgb(0 0 0 / 0.85) 26%,
-    #000 58%,
-    transparent 100%
-  );
-}
-
-.portada .portadaTiraPista {
-  display: flex;
-  align-items: center;
-  gap: var(--espacio-5);
-  --deriva: 9%;
-}
 
 /**
  * ⚠️ SIN `clip-path` EN CADA FOTO, AUNQUE EL PARALELOGRAMO TIENTE: `clip-path`
@@ -193,21 +153,201 @@
  * ⚠️ SOBRE UN FONDO OSCURO UNA SOMBRA NO EXISTE: lo que separa la foto del verde
  * es el filo de luz, no la sombra.
  */
-.tiraFoto {
-  flex: none;
-  width: clamp(120px, 12vw, 190px);
+
+/* ------------------------------------------------ escenario de la portada */
+
+/**
+ * Tres cartas y tres cifras, para que la mitad derecha de la portada exista
+ * aunque el catalogo tenga una publicacion. Va ADELANTE del patron y detras del
+ * texto; el paralaje lo mueve a la velocidad del medio (`--deriva`).
+ */
+.portada .portadaVisual {
+  position: absolute;
+  top: 50%;
+  right: max(var(--canal), 4%);
+  z-index: var(--z-contenido);
+  width: min(36%, 480px);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.escenario {
+  position: relative;
+  height: clamp(320px, 40vw, 460px);
+  --deriva: 6%;
+}
+
+.camisetaCarta {
+  position: absolute;
+  width: 46%;
   aspect-ratio: 4 / 5;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--radio-ficha);
+  color: var(--color-papel);
+  background-image: linear-gradient(var(--eje), var(--carta-a), var(--carta-b));
+  box-shadow:
+    var(--sombra-5),
+    0 0 0 1px rgb(var(--luz-papel) / 0.18),
+    var(--glow-marca);
+}
+
+/* Las rayas de la camiseta, en el eje del sistema y sin tapar el icono. */
+.camisetaCarta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--patron-diagonales);
+  opacity: 0.32;
+  mix-blend-mode: soft-light;
+}
+
+.camisetaCarta[data-pos='a'] {
+  left: 0;
+  top: 8%;
+  rotate: -9deg;
+  --carta-a: #1b4fb8;
+  --carta-b: #0a1e4d;
+}
+
+.camisetaCarta[data-pos='b'] {
+  right: 0;
+  top: 0;
+  rotate: 7deg;
+  --carta-a: #d92c2c;
+  --carta-b: #3a0d0d;
+}
+
+.camisetaCarta[data-pos='c'] {
+  left: 24%;
+  bottom: 0;
+  rotate: -2deg;
+  --carta-a: var(--verde-500);
+  --carta-b: var(--verde-950);
+  box-shadow:
+    var(--sombra-5),
+    0 0 0 1px rgb(var(--luz-cambio) / 0.35),
+    var(--glow-cambio);
+}
+
+.cartaFoto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: var(--radio);
-  box-shadow: var(--luz-superior-oscura), var(--sombra-4);
+}
+
+.cartaIcono {
+  width: 62%;
+  height: auto;
+  filter: drop-shadow(0 14px 26px rgb(0 0 0 / 0.38));
+}
+
+.cartaEtiqueta {
+  position: absolute;
+  left: var(--espacio-3);
+  bottom: var(--espacio-3);
+  padding: var(--espacio-1) var(--espacio-3);
+  border-radius: var(--radio-pastilla);
+  background: rgb(var(--luz-papel) / 0.14);
+  border: 1px solid rgb(var(--luz-papel) / 0.3);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  letter-spacing: var(--tracking-etiqueta);
+  text-transform: uppercase;
+}
+
+.chipsDatos {
+  position: absolute;
+  right: -6%;
+  bottom: -10%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--espacio-2);
+}
+
+.chipDato {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-4);
+  border-radius: var(--radio-pastilla);
+  background: rgb(var(--luz-papel) / 0.1);
+  border: 1px solid rgb(var(--luz-papel) / 0.28);
+  box-shadow: var(--sombra-3);
+  color: var(--color-papel);
+}
+
+.chipNumero {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.chipTexto {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-sobre-cancha);
+}
+
+/**
+ * ⚠️ ABAJO DE 1200px LA ESCENA NO SE APAGA: BAJA. Antes se escondia y la
+ * portada de una tablet o un telefono era tipografia sobre un damero, o sea la
+ * misma tapa "vacia" que se reclamo en escritorio, pero en el 70% de las
+ * visitas. Ahora entra en flujo debajo del texto (`order`), mas baja y con las
+ * cartas mas chicas, y las cifras se pegan al borde derecho en vez de salirse.
+ *
+ * ⚠️ `transform: none` ES OBLIGATORIO: el `translateY(-50%)` del centrado
+ * vertical, ya en flujo, correria la escena media altura hacia arriba, encima
+ * de los botones.
+ */
+@media (max-width: 1199px) {
+  .portada .portadaVisual {
+    position: relative;
+    top: auto;
+    right: auto;
+    order: 2;
+    width: 100%;
+    max-width: 560px;
+    margin: var(--espacio-bloque) auto 0;
+    transform: none;
+  }
+
+  .escenario {
+    height: clamp(230px, 54vw, 360px);
+  }
+
+  .camisetaCarta {
+    width: 40%;
+  }
+
+  .chipsDatos {
+    right: 0;
+    bottom: -4%;
+  }
+}
+
+@media (max-width: 640px) {
+  .chipNumero {
+    font-size: var(--texto-xl);
+  }
+
+  .chipDato {
+    padding-block: var(--espacio-1);
+  }
 }
 
 @media (max-width: 1023px) {
-  .portadaTira {
-    display: none;
-  }
-
   /*
    * Sin la tira, el patron se corre al angulo superior derecho —donde no hay
    * texto— en vez de apagarse.
@@ -591,6 +731,190 @@
   color: var(--color-sobre-oscuro-tenue);
 }
 
+/* -------------------------------------------------------------- categorias */
+
+/**
+ * Las seis prendas, cada una en una ficha con insignia. Es la primera decision
+ * que la home le ofrece y por eso va inmediatamente despues de las bandas.
+ *
+ * ⚠️ SUPERFICIE DE MARCA (`.sup-marca`, verde lavado) Y FICHAS BLANCAS: es el
+ * unico tramo de la home donde el fondo es mas oscuro que las fichas, y eso es
+ * lo que hace que se lean como seis objetos y no como seis recuadros.
+ */
+.categorias {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  padding-block: var(--espacio-seccion);
+}
+
+.categorias .categoriasPatron {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-fondo);
+  pointer-events: none;
+  --patron-color: color-mix(in oklab, var(--color-cancha) 8%, transparent);
+  -webkit-mask-image: linear-gradient(var(--eje), transparent 30%, rgb(0 0 0 / 0.9));
+  mask-image: linear-gradient(var(--eje), transparent 30%, rgb(0 0 0 / 0.9));
+}
+
+.categoriasInterior {
+  position: relative;
+  z-index: var(--z-contenido);
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+
+.categoriasInterior .tituloSeccion {
+  margin: 0;
+  font-size: var(--display-3);
+}
+
+/**
+ * ⚠️ `auto-fit` Y NO `auto-fill`, Y UN MINIMO DE 172px: son SEIS fichas y el
+ * peor caso es que cinco entren en una fila y la sexta quede sola abajo. Con
+ * este minimo, a 1200px de contenido entran las seis (6 × 172 + 5 × 16 =
+ * 1112) y abajo de eso se parten en tres y tres.
+ */
+.categoriasLista {
+  list-style: none;
+  margin: var(--espacio-bloque) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 172px), 1fr));
+  gap: var(--espacio-4);
+}
+
+/**
+ * ⚠️ NO DECLARA FONDO, SOMBRA, `position` NI `overflow`: los ponen `.sup-ficha`,
+ * `.eleva-marca`, `.borde-brilla` y `.destello`. El `border: 1px solid
+ * transparent` es el que `.eleva-marca:hover` tiñe.
+ */
+.categoria {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--espacio-3);
+  min-height: 210px;
+  padding: var(--espacio-5) var(--espacio-4) var(--espacio-4);
+  border: 1px solid transparent;
+  color: var(--color-tinta);
+}
+
+.categoriaOrden {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-2xl);
+  line-height: 1;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-cancha);
+}
+
+/**
+ * La insignia: el icono sobre el degradado de la marca, con la sombra de
+ * marca. Al pasar se enciende (`--glow-marca`) y crece (`.icono-crece`, en el
+ * enlace).
+ */
+.categoriaIcono {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: start;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  color: var(--color-papel);
+  background-image: var(--degradado-cancha);
+  box-shadow: var(--luz-superior-oscura), var(--sombra-marca);
+  transition: box-shadow var(--dur-hover) var(--curva);
+}
+
+.categoria:hover .categoriaIcono,
+.categoria:focus-visible .categoriaIcono {
+  box-shadow: var(--luz-superior-oscura), var(--sombra-marca), var(--glow-marca);
+}
+
+/**
+ * ⚠️ EL NOMBRE OCUPA LAS DOS COLUMNAS Y NO SE PARTE POR LETRA. Con la flecha al
+ * lado, "ENTRENAMIENTO" a 36px no entraba en una ficha de 172px y
+ * `overflow-wrap: anywhere` lo partia en "ENTREN / AMIENT / O". El tamaño se
+ * acota por viewport —23px a 1440— y la palabra mas larga del enum mide unos
+ * 125px en Big Noodle a ese cuerpo, contra 140px utiles.
+ */
+.categoriaNombre {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  align-self: end;
+  font-family: var(--fuente-titulo);
+  font-size: clamp(22px, 1.2rem + 0.5vw, 30px);
+  line-height: 0.95;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  overflow-wrap: normal;
+}
+
+.categoriaFlecha {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: end;
+  justify-self: end;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--linea-tenue);
+  border-radius: 50%;
+  color: var(--color-cancha);
+  transition:
+    background-color var(--dur-hover) var(--curva),
+    color var(--dur-hover) var(--curva),
+    border-color var(--dur-hover) var(--curva),
+    translate var(--dur-hover) var(--curva-pop);
+}
+
+.categoria:hover .categoriaFlecha,
+.categoria:focus-visible .categoriaFlecha {
+  background-color: var(--color-cancha);
+  border-color: var(--color-cancha);
+  color: var(--color-papel);
+  translate: 3px 0;
+}
+
+/**
+ * ⚠️ EN TELEFONO SON UNA FILA QUE SE DESLIZA, igual que los atajos, y por el
+ * mismo motivo: seis fichas de 210px apiladas son 1300px entre las bandas y
+ * las garantias.
+ */
+@media (max-width: 640px) {
+  .categoriasLista {
+    display: flex;
+    max-width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: var(--espacio-3);
+    padding-bottom: var(--espacio-2);
+  }
+
+  .categoriasLista > li {
+    flex: 0 0 min(64%, 220px);
+    scroll-snap-align: start;
+  }
+
+  .categoria {
+    min-height: 180px;
+  }
+
+  .categoriaIcono {
+    width: 56px;
+    height: 56px;
+  }
+}
+
 /* -------------------------------------------------------------- garantias */
 
 /**
@@ -655,15 +979,48 @@
   gap: var(--espacio-bloque);
 }
 
+/**
+ * ⚠️ FICHA Y NO COLUMNA. Tres columnas de texto con un filete arriba eran, a
+ * un metro de distancia, tres parrafos: la seccion que explica como funciona
+ * el sitio se leia como letra chica. Ahora cada garantia es un plano propio
+ * —blanco sobre la superficie calida, con luz superior y sombra— que se
+ * levanta al pasar y cuyo marco de icono se enciende.
+ *
+ * ⚠️ EL FILETE DE ARRIBA SE FUE Y EL ORDINAL SUBIO A LA ESQUINA. Es el mismo
+ * numero, mas grande y en Verde Cancha sobre blanco (5.40:1).
+ */
 .garantia {
+  position: relative;
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto 1fr;
   align-items: center;
   column-gap: var(--espacio-4);
   row-gap: var(--espacio-3);
-  padding-top: var(--espacio-5);
-  /* Filete editorial macizo: un 1px gris no separa, apenas ensucia. */
-  border-top: 2px solid var(--color-tinta);
+  padding: var(--espacio-6) var(--espacio-5) var(--espacio-5);
+  border: 1px solid transparent;
+  border-radius: var(--radio-ficha);
+  background: var(--superficie-1);
+  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-2);
+  overflow: clip;
+}
+
+/** La brasa de la esquina: el mismo angulo del sistema, apenas. */
+.garantia::after {
+  content: '';
+  position: absolute;
+  inset: auto -30% -40% auto;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgb(var(--luz-marca) / 0.16), transparent 72%);
+  opacity: 0;
+  transition: opacity var(--dur-hover) var(--curva);
+}
+
+.garantia:hover::after,
+.garantia:focus-within::after {
+  opacity: 1;
 }
 
 /**
@@ -673,8 +1030,11 @@
  * `#f7f4cf` da 4.83:1, calculado con la formula WCAG.
  */
 .garantiaOrden {
+  position: absolute;
+  top: var(--espacio-4);
+  right: var(--espacio-5);
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
+  font-size: var(--texto-3xl);
   line-height: 1;
   letter-spacing: var(--tracking-etiqueta);
   color: var(--color-cancha);
@@ -689,11 +1049,21 @@
 .garantiaIcono {
   display: inline-grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  color: var(--color-cancha);
-  background: var(--superficie-1);
+  width: 56px;
+  height: 56px;
+  color: var(--color-papel);
+  background-image: var(--degradado-cancha);
   clip-path: polygon(0 0, 100% 0, 100% 74%, 74% 100%, 0 100%);
+  transition: transform var(--dur-hover) var(--curva-pop);
+}
+
+.garantia:hover .garantiaIcono,
+.garantia:focus-within .garantiaIcono {
+  transform: scale(1.08) rotate(-4deg);
+}
+
+.garantiaIcono svg {
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.25));
 }
 
 .garantiaTitulo {
@@ -711,32 +1081,6 @@
   font-size: var(--texto-sm);
   line-height: var(--interlineado-lectura);
   color: var(--color-neutro-texto);
-=======
-.portada {
-  background: var(--color-cancha);
-  color: var(--color-papel);
-  /* Sin separacion con la barra: es un solo bloque verde, como en la identidad. */
-  padding: var(--espacio-6) var(--espacio-6) var(--espacio-8);
-}
-
-.portadaContenido {
-  max-width: var(--ancho-contenido);
-  margin: 0 auto;
-}
-
-.titulo {
-  font-size: clamp(40px, 8vw, 76px);
-  text-transform: uppercase;
-  max-width: 16ch;
-}
-
-.bajada {
-  margin: var(--espacio-4) 0 0;
-  font-size: var(--texto-lg);
-  max-width: 48ch;
-  /* Sobre el verde, el papel puro compite con el titulo: se baja un punto. */
-  color: var(--color-neutro-borde);
->>>>>>> origin/main
 }
 
 /* --------------------------------------------------------------- catalogo */
@@ -744,7 +1088,6 @@
 .catalogo {
   max-width: var(--ancho-contenido);
   margin: 0 auto;
-<<<<<<< HEAD
   padding: var(--espacio-seccion) var(--canal);
 }
 
@@ -829,13 +1172,45 @@
  * a 132px. Con (0,2,0) el resultado no depende de nada.
  */
 .catalogo .tituloSeccion,
+.promocionadas .tituloSeccion,
 .explorarInterior .tituloSeccion {
   margin: 0;
   font-size: var(--display-3);
 }
 
-.catalogo .reglaCatalogo {
+.catalogo .reglaCatalogo,
+.promocionadas .reglaCatalogo {
   margin: 0 0 var(--espacio-bloque);
+}
+
+/* ---------------------------------------------------------- promocionadas */
+
+/**
+ * PROMOCIONADAS (PS-021), arriba del catalogo.
+ *
+ * ⚠️ NO LLEVA SUPERFICIE PROPIA NI FONDO TEÑIDO, Y ES UNA DECISION DE PRODUCTO,
+ * no de estetica: un bloque con plano propio se lee como "otra cosa", y esto es
+ * catalogo —las mismas publicaciones estan tambien en la grilla de abajo—. Lo
+ * que las separa es el ROTULO y la regla de acento, que es lo que hay que
+ * distinguir: quien pago, no que producto es.
+ *
+ * ⚠️ SIN PADDING ABAJO. `.catalogo` ya aporta su propio `--espacio-seccion`
+ * arriba; sumar los dos dejaria un hueco del doble entre las dos grillas y la
+ * pantalla se leeria cortada al medio.
+ */
+.promocionadas {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-seccion) var(--canal) 0;
+}
+
+/**
+ * ⚠️ EL AVISO NO SE ANIMA MAS ALLA DE APARECER. Es la regla del sistema para
+ * cualquier mensaje de error: un cartel que entra bailando le quita la urgencia
+ * a lo que dice.
+ */
+.avisoFavorito {
+  margin-bottom: var(--espacio-bloque);
 }
 
 .cuenta {
@@ -843,21 +1218,10 @@
   font-size: var(--texto-sm);
   color: var(--color-neutro-texto);
   font-variant-numeric: tabular-nums;
-=======
-  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
-}
-
-.tituloSeccion {
-  font-size: var(--texto-xl);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  margin-bottom: var(--espacio-6);
->>>>>>> origin/main
 }
 
 .grilla {
   display: grid;
-<<<<<<< HEAD
   /*
    * Se acomoda sola: sin breakpoints que mantener.
    *
@@ -866,16 +1230,11 @@
    * vertical de fotos gigantes y ver diez camisetas eran diez pantallazos.
    */
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-=======
-  /* Se acomoda sola: sin breakpoints que mantener. */
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
->>>>>>> origin/main
   gap: var(--espacio-6);
   list-style: none;
   padding: 0;
   margin: 0;
 }
-<<<<<<< HEAD
 
 @media (max-width: 600px) {
   .grilla {
@@ -980,8 +1339,8 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
-  gap: var(--espacio-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 236px), 1fr));
+  gap: var(--espacio-3);
 }
 
 /**
@@ -1008,7 +1367,7 @@
   }
 
   .fichas > li {
-    flex: 0 0 62%;
+    flex: 0 0 min(76%, 260px);
     scroll-snap-align: start;
   }
 }
@@ -1022,39 +1381,64 @@
  * ⚠️ TAMPOCO DECLARA `overflow` NI `position`: los pone `.destello`, que ademas
  * aisla el contexto para que su barrido quede debajo del texto y no lo lave.
  */
-.ficha {
+/**
+ * PASTILLA CON INSIGNIA. Antes era una caja blanca con el nombre y un conteo:
+ * veinte cajas iguales se leian como un formulario. La insignia —dos letras
+ * sobre el degradado de la marca— le da a cada atajo una cara, y la flecha
+ * dice sin texto que esto lleva a algun lado.
+ *
+ * ⚠️ EL RADIO SE GANA POR DESCENDENCIA: `.sup-ficha` declara `--radio-ficha`
+ * con la misma especificidad y en otro archivo.
+ */
+.explorarInterior .ficha {
   display: flex;
-  flex-direction: column;
-  gap: var(--espacio-1);
-  min-height: var(--alto-control);
-  padding: var(--espacio-4) var(--espacio-4) var(--espacio-4) var(--espacio-5);
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: 64px;
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-2) var(--espacio-2);
   border: 1px solid transparent;
+  border-radius: var(--radio-pastilla);
   color: var(--color-tinta);
 }
 
-/**
- * Filete de acento que se dibuja de arriba hacia abajo al pasar el mouse.
- *
- * ⚠️ ES `scaleY` Y NO `height`. La altura rehace layout en cada cuadro; la
- * escala corre en el compositor.
- *
- * ⚠️ NO ES LA UNICA SEÑAL DE QUE ESTO SE APRIETA: en un telefono no existe el
- * hover. La ficha ya es un enlace con nombre, cantidad y elevacion propia.
- */
-.ficha::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background-image: var(--degradado-acento);
-  transform: scaleY(0);
-  transform-origin: 50% 0;
-  transition: transform var(--dur-media) var(--curva-corte);
+.fichaMonograma {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--color-papel);
+  background-image: var(--degradado-cancha);
+  box-shadow: var(--luz-superior-oscura), var(--sombra-1);
+  transition: box-shadow var(--dur-hover) var(--curva);
 }
 
-.ficha:hover::before,
-.ficha:focus-visible::before {
-  transform: scaleY(1);
+.fichas[data-grupo='marca'] .fichaMonograma {
+  background-image: var(--degradado-noche);
+}
+
+.fichas[data-grupo='temporada'] .fichaMonograma {
+  background-image: none;
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: var(--texto-sm);
+}
+
+.ficha:hover .fichaMonograma,
+.ficha:focus-visible .fichaMonograma {
+  box-shadow: var(--luz-superior-oscura), var(--sombra-1), var(--glow-marca);
+}
+
+.fichaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .fichaNombre {
@@ -1071,6 +1455,29 @@
   font-size: var(--texto-xs);
   font-variant-numeric: tabular-nums;
   color: var(--color-neutro-tenue);
+}
+
+.fichaFlecha {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border: 1px solid var(--linea-tenue);
+  border-radius: 50%;
+  color: var(--color-cancha);
+  transition:
+    background-color var(--dur-hover) var(--curva),
+    color var(--dur-hover) var(--curva),
+    border-color var(--dur-hover) var(--curva);
+}
+
+.ficha:hover .fichaFlecha,
+.ficha:focus-visible .fichaFlecha {
+  background-color: var(--color-cancha);
+  border-color: var(--color-cancha);
+  color: var(--color-papel);
 }
 
 /* ----------------------------------------------------------------- cierre */
@@ -1203,5 +1610,3 @@
     white-space: normal;
   }
 }
-=======
->>>>>>> origin/main

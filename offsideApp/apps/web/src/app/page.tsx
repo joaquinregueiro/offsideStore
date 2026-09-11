@@ -1,20 +1,33 @@
-<<<<<<< HEAD
 import Link from 'next/link';
+import type { CSSProperties, JSX } from 'react';
 
 import { Footer } from '@/components/footer';
 import { Header } from '@/components/header';
-import { IconoAutenticado, IconoCamiseta, IconoIntercambio } from '@/components/iconos';
-import { ListingCard } from '@/components/listing-card';
+import {
+  IconoAutenticado,
+  IconoBalon,
+  IconoBuzo,
+  IconoCamiseta,
+  IconoCampera,
+  IconoConjunto,
+  IconoFlechaDerecha,
+  IconoIntercambio,
+  IconoShort,
+} from '@/components/iconos';
+import { ListingCard, type EstadoDeFavorito } from '@/components/listing-card';
 import { Pantalla } from '@/components/movimiento';
-import { BotonEnlace } from '@/components/ui';
-import { listPublicCatalog } from '@/modules/listings/services/listing.service';
+import { Aviso, BotonEnlace } from '@/components/ui';
+import { getSessionUser } from '@/lib/session';
+import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
+import {
+  catalogoDeLaVitrina,
+  coverUrls,
+  listPublicCatalog,
+  type CatalogListing,
+  type EntradaDeCatalogo,
+} from '@/modules/listings/services/listing.service';
+import { listPromotedCatalog } from '@/modules/listings/services/promotion.service';
 import { searchListings, type Faceta } from '@/modules/listings/services/search.service';
-=======
-import { Header } from '@/components/header';
-import { ListingCard } from '@/components/listing-card';
-import { EstadoVacio } from '@/components/ui';
-import { listPublicCatalog } from '@/modules/listings/services/listing.service';
->>>>>>> origin/main
 
 import estilos from './page.module.css';
 
@@ -26,12 +39,6 @@ import estilos from './page.module.css';
  * Next, asi que una peticion de la pagina a su propia API seria un rodeo: mismo
  * proceso, misma base, una serializacion de mas.
  *
-<<<<<<< HEAD
-=======
- * La API sigue existiendo y sirve para lo que fue pensada: clientes externos y
- * una app movil futura.
- *
->>>>>>> origin/main
  * ⚠️ NO EXIGE SESION. Es la vitrina: cualquiera tiene que poder ver el catalogo
  * sin registrarse, y por eso `listPublicCatalog` no recibe usuario.
  */
@@ -43,7 +50,6 @@ import estilos from './page.module.css';
  */
 export const dynamic = 'force-dynamic';
 
-<<<<<<< HEAD
 /** Tope que aplica el repositorio (`findPublicCatalog`) cuando no se le pasa uno. */
 const TOPE_DE_LA_VITRINA = 60;
 
@@ -78,14 +84,99 @@ const TOPE_DE_LA_BANDA = 12;
 const TOPE_CLUBES = 8;
 const TOPE_RESTO = 6;
 
+/** Cuantas entradas de catalogo entran en un atajo cuando todavia no hay facetas. */
+const TOPE_CATALOGO_CLUBES = 12;
+const TOPE_CATALOGO_RESTO = 8;
+
 /**
- * ⚠️ LA TIRA DE FOTOS DE LA PORTADA SON PUBLICACIONES REALES, NO UN MOCKUP.
- * Salen de `listings`, que ya esta en memoria: cero consultas extra. Con menos
- * de tres no se muestra —dos fotos sueltas en diagonal se ven como un error de
- * maquetado, no como una tira—.
+ * Cuantas promocionadas entran arriba del catalogo.
+ *
+ * ⚠️ CUATRO Y NO OCHO, QUE ES EL DEFAULT DEL SERVICE. Son exactamente una fila
+ * de la grilla en escritorio: dos filas de destacadas empujarian el catalogo
+ * real fuera de la pantalla, y entonces la vitrina pasaria a ser "lo que se
+ * pago" con el catalogo debajo. La promocion compra lugar, no la portada.
  */
-const MINIMO_PARA_LA_TIRA = 3;
-const FOTOS_DE_LA_TIRA = 7;
+const TOPE_DE_PROMOCIONADAS = 4;
+
+/**
+ * El icono de cada categoria del enum `garment_category` (ERD §5). Se indexa
+ * por `code`, que es fijo: las seis filas las siembra la migracion 0004 y
+ * DEC-041 las excluye de las propuestas de catalogo. Si un dia apareciera un
+ * codigo nuevo, cae en la camiseta y no en un hueco.
+ */
+const ICONO_DE_CATEGORIA: Record<string, (props: { tamanio?: number }) => JSX.Element> = {
+  camiseta: IconoCamiseta,
+  short: IconoShort,
+  buzo: IconoBuzo,
+  campera: IconoCampera,
+  conjunto: IconoConjunto,
+  entrenamiento: IconoBalon,
+};
+
+/**
+ * Un tramo del catalogo que cambia con el dia.
+ *
+ * ⚠️ NO ES ALEATORIO Y NO ES ALFABETICO, Y LAS DOS COSAS SON DECISIONES. Con 38
+ * clubes sembrados y lugar para doce, el orden alfabetico mostraria siempre los
+ * mismos doce —y serian Aldosivi, Argentinos, Arsenal…— mientras River y Boca
+ * no aparecerian nunca. Al azar, dos personas mirando la misma home verian dos
+ * paginas distintas y cada recarga barajaria los atajos. Con el dia del año
+ * como corrimiento, la ventana avanza un lugar por dia, todos ven lo mismo el
+ * mismo dia y el catalogo entero pasa por la portada en poco mas de un mes.
+ *
+ * ⚠️ EL CATALOGO NO SABE CUANTAS CAMISETAS HAY DE CADA UNO: por eso estas
+ * entradas van sin cantidad. Cuando la vitrina tiene facetas reales se usan
+ * esas, con su conteo, y esto no se muestra.
+ */
+function tramoDelDia<T>(valores: T[], cuantos: number): T[] {
+  if (valores.length <= cuantos) return valores;
+
+  const hoy = new Date();
+  const inicioDelAnio = Date.UTC(hoy.getUTCFullYear(), 0, 1);
+  const diaDelAnio = Math.floor((hoy.getTime() - inicioDelAnio) / 86_400_000);
+  const desde = diaDelAnio % valores.length;
+
+  return Array.from({ length: cuantos }, (_, i) => valores[(desde + i) % valores.length]!);
+}
+
+/** Lo que una banda o un atajo muestran: una faceta con conteo o una entrada de catalogo sin el. */
+interface Atajo {
+  valor: string;
+  etiqueta: string;
+  cantidad?: number;
+}
+
+const desdeFaceta = (faceta: Faceta): Atajo => ({
+  valor: faceta.valor,
+  etiqueta: faceta.etiqueta,
+  cantidad: faceta.cantidad,
+});
+
+const desdeCatalogo = (entrada: EntradaDeCatalogo): Atajo => ({
+  valor: entrada.id,
+  etiqueta: entrada.nombre,
+});
+
+/**
+ * Las facetas reales si alcanzan; si no, un tramo del catalogo.
+ *
+ * ⚠️ NO SE MEZCLAN. Una lista con ocho clubes con conteo y cuatro sin conteo se
+ * leeria como "de estos cuatro hay cero", que es verdad pero es lo contrario de
+ * un atajo. O todos con cantidad o ninguno.
+ */
+function atajosDe(
+  facetas: Faceta[],
+  catalogo: EntradaDeCatalogo[],
+  minimo: number,
+  tope: number,
+  topeCatalogo: number,
+): Atajo[] {
+  if (facetas.length >= minimo) return facetas.slice(0, tope).map(desdeFaceta);
+
+  return tramoDelDia(catalogo, topeCatalogo).map(desdeCatalogo);
+}
+
+const FOTOS_DE_LA_TIRA = 3;
 
 /**
  * Lo que Offside garantiza, en las palabras que la documentacion usa.
@@ -162,6 +253,48 @@ const RESUMEN_VACIO: ResumenDeVitrina = { total: 0, club: [], marca: [], tempora
  * El error se registra —no se traga en silencio— y la pagina sigue de pie sin
  * esas tres secciones.
  */
+/**
+ * Las promocionadas vigentes de la vitrina, ya con portada (PS-021).
+ *
+ * ⚠️ TIENE EL MISMO BLINDAJE QUE EL RESUMEN Y POR EL MISMO MOTIVO. Las
+ * promocionadas son realce: si la consulta falla —la tabla de promociones, el
+ * bucket de imagenes— la vitrina sigue siendo el catalogo. Encadenarla en un
+ * `Promise.all` pelado convertiria cualquier falla de una funcionalidad
+ * accesoria en un 500 de la pantalla mas visitada del sitio.
+ *
+ * ⚠️ LAS PORTADAS SALEN EN UNA SOLA CONSULTA, igual que en `listPublicCatalog`:
+ * pedirlas de a una seria el problema N+1 en la primera seccion de la home.
+ *
+ * ⚠️ EL SERVICE YA APLICA EL FILTRO DE VISIBILIDAD DE LA VITRINA. Una
+ * promocionada cuyo vendedor se desconecto de Mercado Pago o se fue de
+ * vacaciones NO aparece: que alguien haya pagado por figurar no la vuelve
+ * comprable, y ofrecer lo que la compra rechaza es peor que no ofrecerlo.
+ */
+async function promocionadasDeLaVitrina(): Promise<CatalogListing[]> {
+  try {
+    const filas = await listPromotedCatalog(TOPE_DE_PROMOCIONADAS);
+    if (filas.length === 0) return [];
+
+    const portadas = await coverUrls(filas.map((fila) => fila.id));
+
+    return filas.map((fila) => ({
+      id: fila.id,
+      title: fila.title,
+      priceAmount: fila.priceAmount.toString(),
+      currency: fila.currency,
+      sizeValue: fila.sizeValue,
+      condition: fila.condition,
+      stock: fila.stock,
+      sellerDisplayName: fila.sellerDisplayName,
+      coverUrl: portadas.get(fila.id) ?? null,
+    }));
+  } catch (error) {
+    console.error('[home] no se pudieron leer las promocionadas', error);
+
+    return [];
+  }
+}
+
 async function resumenDeVitrina(): Promise<ResumenDeVitrina> {
   try {
     const { total, facetas } = await searchListings({});
@@ -205,7 +338,7 @@ function Banda({
 }: {
   etiqueta: string;
   clave: string;
-  valores: Faceta[];
+  valores: Atajo[];
   inversa?: boolean;
 }) {
   const nombres = valores.slice(0, TOPE_DE_LA_BANDA);
@@ -236,7 +369,9 @@ function Banda({
                   transitionTypes={['barrido']}
                 >
                   <span>{valor.etiqueta}</span>
-                  <span className={estilos.bandaCuenta}>{valor.cantidad}</span>
+                  {valor.cantidad !== undefined && (
+                    <span className={estilos.bandaCuenta}>{valor.cantidad}</span>
+                  )}
                 </Link>
               </li>
             ))}
@@ -247,28 +382,141 @@ function Banda({
   );
 }
 
-export default async function Home() {
-  /**
-   * ⚠️ LAS DOS LLAMADAS VAN EN PARALELO, NO ENCADENADAS. `listPublicCatalog`
-   * trae la grilla (hasta 60 con sus portadas) y el resumen trae el total real y
-   * las tres facetas de catalogo.
-   */
-  const [listings, resumen] = await Promise.all([listPublicCatalog(), resumenDeVitrina()]);
+/**
+ * Dos letras para la insignia de un atajo: "RP" para River Plate, "BO" para
+ * Boca Juniors —la primera de cada una de las dos primeras palabras, o las dos
+ * primeras letras si es una sola—. Es decoracion y va `aria-hidden`: el nombre
+ * completo esta al lado.
+ */
+function monograma(nombre: string): string {
+  const palabras = nombre
+    .split(/[\s/-]+/)
+    .map((palabra) => palabra.replace(/[^\p{L}\p{N}]/gu, ''))
+    .filter((palabra) => palabra.length > 0);
 
-  const clubes = resumen.club;
-  const marcas = resumen.marca;
+  if (palabras.length === 0) return '·';
+  if (palabras.length === 1) return palabras[0]!.slice(0, 2).toUpperCase();
+
+  return `${palabras[0]![0]}${palabras[1]![0]}`.toUpperCase();
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  /**
+   * ⚠️ LA HOME NO TIENE FILTROS, PERO SI TIENE UN AVISO. El corazon de una ficha
+   * vuelve acá por POST y, si algo fallo, la accion redirige con
+   * `?aviso=favorito`: sin leer la URL, el error seria invisible.
+   */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  /**
+   * ⚠️ LAS CUATRO LLAMADAS VAN EN PARALELO, NO ENCADENADAS. `listPublicCatalog`
+   * trae la grilla (hasta 60 con sus portadas), el resumen trae el total real y
+   * las tres facetas de catalogo, y las promocionadas son su propia consulta
+   * blindada.
+   */
+  /*
+    ⚠️ `searchParams` SE ESPERA SOLO Y PRIMERO, NO ADENTRO DEL `Promise.all`.
+    Medido en el navegador: metido en el mismo `Promise.all` que
+    `getSessionUser()`, la sesion volvia SIEMPRE null y la vitrina se pintaba
+    sin corazones aunque la barra de arriba —que llama a la misma funcion—
+    mostrara "Salir". Esperar el parametro primero deja la peticion en modo
+    dinamico antes de que nadie lea la cookie, que es lo que hacen las demas
+    pantallas de este grupo.
+  */
+  const params = await searchParams;
+
+  const [listings, resumen, catalogo, promocionadas, user] = await Promise.all([
+    listPublicCatalog(),
+    resumenDeVitrina(),
+    catalogoDeLaVitrina(),
+    promocionadasDeLaVitrina(),
+    getSessionUser(),
+  ]);
+
+  const avisoDeFavorito = params.aviso === 'favorito';
+
+  /**
+   * Que ids de la grilla estan promocionados.
+   *
+   * ⚠️ NO ES UNA CONSULTA MAS: las promocionadas ya vinieron para la seccion de
+   * arriba, y la MISMA publicacion aparece tambien abajo, en el catalogo. Sin
+   * este set, la ficha de la grilla general no llevaria distintivo y la misma
+   * camiseta se veria promocionada arriba y comun abajo.
+   */
+  const idsPromocionados = new Set(promocionadas.map((item) => item.id));
+
+  /**
+   * Cuales de todo lo que se pinta ya tiene guardadas esta cuenta (BS-050).
+   *
+   * ⚠️ UNA SOLA CONSULTA PARA TODA LA PANTALLA, no una por ficha. Y sin sesion
+   * ni siquiera se hace: `favoriteIdsOf` exige usuario y la ficha se pinta sin
+   * corazon, que es lo que corresponde para quien todavia no tiene cuenta.
+   */
+  const favoritos =
+    user === null
+      ? new Set<string>()
+      : await favoriteIdsOf(user, [
+          ...new Set([...promocionadas.map((i) => i.id), ...listings.map((i) => i.id)]),
+        ]);
+
+  /**
+   * Lo que la ficha necesita para su corazon, o `undefined` si no hay sesion.
+   *
+   * ⚠️ `volverA` LLEVA ANCLA. Sin ella, tocar la estrella de la ficha 40 devuelve
+   * a la home y la deja ARRIBA DE TODO, o sea en la portada: la persona pierde
+   * el lugar del catalogo en el que estaba por guardar una camiseta.
+   */
+  const favoritoDe = (id: string): EstadoDeFavorito | undefined =>
+    user === null ? undefined : { activo: favoritos.has(id), volverA: '/#en-venta' };
 
   /** Fotos reales para la tira de la portada. Ya estan en memoria. */
   const tira = listings.filter((listing) => listing.coverUrl !== null).slice(0, FOTOS_DE_LA_TIRA);
 
-  /** Un grupo vacio no se arma: la seccion entera desaparece si no hay ninguno. */
-  const explorar: { titulo: string; clave: string; valores: Faceta[] }[] = [
-    { titulo: 'Clubes', clave: 'club', valores: clubes.slice(0, TOPE_CLUBES) },
-    { titulo: 'Marcas', clave: 'marca', valores: marcas.slice(0, TOPE_RESTO) },
-    { titulo: 'Temporadas', clave: 'temporada', valores: resumen.temporada.slice(0, TOPE_RESTO) },
-  ].filter((grupo) => grupo.valores.length > 0);
+  /**
+   * ⚠️ LAS BANDAS SIEMPRE EXISTEN. Antes se armaban solo con las facetas de lo
+   * publicado, y con menos de cuatro clubes vendiendo la home saltaba de la
+   * portada a las garantias: en un marketplace recien abierto —que es cuando
+   * mas tiene que convencer— la seccion mas reconocible no aparecia. Con pocas
+   * facetas la banda corre sobre el catalogo sembrado, sin conteos.
+   */
+  const bandaClubes = atajosDe(
+    resumen.club,
+    catalogo.clubes,
+    MINIMO_PARA_LA_BANDA,
+    TOPE_DE_LA_BANDA,
+    TOPE_DE_LA_BANDA,
+  );
+  const bandaMarcas = atajosDe(
+    resumen.marca,
+    catalogo.marcas,
+    MINIMO_PARA_LA_BANDA,
+    TOPE_DE_LA_BANDA,
+    TOPE_DE_LA_BANDA,
+  );
 
-  const hayBandas = clubes.length >= MINIMO_PARA_LA_BANDA || marcas.length >= MINIMO_PARA_LA_BANDA;
+  /**
+   * Atajos. Clubes y marcas siempre; temporadas solo cuando hay facetas
+   * reales: 135 temporadas sembradas no son un atajo, son un almanaque.
+   */
+  const explorar: { titulo: string; clave: string; valores: Atajo[] }[] = [
+    {
+      titulo: 'Clubes',
+      clave: 'club',
+      valores: atajosDe(resumen.club, catalogo.clubes, 1, TOPE_CLUBES, TOPE_CATALOGO_CLUBES),
+    },
+    {
+      titulo: 'Marcas',
+      clave: 'marca',
+      valores: atajosDe(resumen.marca, catalogo.marcas, 1, TOPE_RESTO, TOPE_CATALOGO_RESTO),
+    },
+    {
+      titulo: 'Temporadas',
+      clave: 'temporada',
+      valores: resumen.temporada.slice(0, TOPE_RESTO).map(desdeFaceta),
+    },
+  ].filter((grupo) => grupo.valores.length > 0);
 
   return (
     <>
@@ -318,25 +566,100 @@ export default async function Home() {
               ⚠️ `fetchPriority="low"`: son ornamento. No pueden competir por
               ancho de banda con la grilla, que es el contenido.
             */}
-            {tira.length >= MINIMO_PARA_LA_TIRA && (
-              <div className={estilos.portadaTira} aria-hidden="true">
-                <div className={`${estilos.portadaTiraPista} paralaje-portada`}>
-                  {tira.map((listing) => (
-                    /* eslint-disable-next-line @next/next/no-img-element */
+            {/*
+              ⚠️ LA PORTADA NO PUEDE DEPENDER DE QUE HAYA FOTOS. La tira de fotos
+              anterior solo aparecia con tres o mas publicaciones con foto, y en
+              un marketplace recien abierto —que es cuando mas tiene que
+              convencer— la mitad derecha quedaba VACIA: un damero tenue y nada
+              mas. Ahora hay SIEMPRE tres cartas: con fotos reales de la vitrina
+              si existen, y con la camiseta de la identidad si no. Las cifras
+              salen del catalogo sembrado. Nada inventado.
+            */}
+            {/*
+              ⚠️ `paralaje-portada` VA EN EL HIJO, NO EN EL CONTENEDOR. La clase
+              anima `transform`, y el contenedor usa `transform` para centrarse
+              verticalmente: en el mismo elemento, la animacion pisa el centrado
+              y la escena aparece corrida media altura hacia abajo, cortada por
+              el borde de la portada. Es el mismo reparto que tenia la tira.
+            */}
+            <div className={estilos.portadaVisual} aria-hidden="true">
+              <div className={`${estilos.escenario} tilt-escena paralaje-portada`}>
+                <div
+                  className={`${estilos.camisetaCarta} flota-lento aparece-escala`}
+                  data-pos="a"
+                  style={{ '--retraso': '120ms' } as CSSProperties}
+                >
+                  {tira[0]?.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      key={listing.id}
-                      className={estilos.tiraFoto}
-                      src={listing.coverUrl ?? ''}
+                      className={estilos.cartaFoto}
+                      src={tira[0].coverUrl ?? ''}
                       alt=""
                       loading="lazy"
                       decoding="async"
                       fetchPriority="low"
                     />
-                  ))}
+                  ) : (
+                    <IconoCamiseta className={estilos.cartaIcono} tamanio={160} strokeWidth={0.9} />
+                  )}
+                  <span className={estilos.cartaEtiqueta}>Retro</span>
                 </div>
+                <div
+                  className={`${estilos.camisetaCarta} flota aparece-escala`}
+                  data-pos="b"
+                  style={{ '--retraso': '260ms' } as CSSProperties}
+                >
+                  {tira[1]?.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className={estilos.cartaFoto}
+                      src={tira[1].coverUrl ?? ''}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
+                    />
+                  ) : (
+                    <IconoCamiseta className={estilos.cartaIcono} tamanio={160} strokeWidth={0.9} />
+                  )}
+                  <span className={estilos.cartaEtiqueta}>De época</span>
+                </div>
+                <div
+                  className={`${estilos.camisetaCarta} flota-inverso aparece-escala`}
+                  data-pos="c"
+                  style={{ '--retraso': '400ms' } as CSSProperties}
+                >
+                  {tira[2]?.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className={estilos.cartaFoto}
+                      src={tira[2].coverUrl ?? ''}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
+                    />
+                  ) : (
+                    <IconoCamiseta className={estilos.cartaIcono} tamanio={160} strokeWidth={0.9} />
+                  )}
+                  <span className={estilos.cartaEtiqueta}>De temporada</span>
+                </div>
+                <ul className={`${estilos.chipsDatos} escalona`}>
+                  <li className={estilos.chipDato}>
+                    <span className={estilos.chipNumero}>{catalogo.clubes.length}</span>
+                    <span className={estilos.chipTexto}>clubes</span>
+                  </li>
+                  <li className={estilos.chipDato}>
+                    <span className={estilos.chipNumero}>{catalogo.marcas.length}</span>
+                    <span className={estilos.chipTexto}>marcas</span>
+                  </li>
+                  <li className={estilos.chipDato}>
+                    <span className={estilos.chipNumero}>{catalogo.temporadas.length}</span>
+                    <span className={estilos.chipTexto}>temporadas</span>
+                  </li>
+                </ul>
               </div>
-            )}
-
+            </div>
             <div className={`${estilos.portadaContenido} paralaje-portada`}>
               <p className={`${estilos.antetitulo} entra ${estilos.retraso1}`}>
                 Marketplace de camisetas
@@ -413,7 +736,9 @@ export default async function Home() {
                   <span className={`${estilos.cifraNumero} cifra-entra`}>
                     <span>{resumen.total}</span>
                   </span>
-                  <span className={estilos.cifraEtiqueta}>camisetas en venta ahora</span>
+                  <span className={estilos.cifraEtiqueta}>
+                    {resumen.total === 1 ? 'camiseta en venta ahora' : 'camisetas en venta ahora'}
+                  </span>
                 </p>
               )}
 
@@ -447,21 +772,75 @@ export default async function Home() {
             reconocible del recurso y los datos ya estan en memoria: `marca`
             viene en la misma respuesta que `club`.
           */}
-          {hayBandas && (
-            <section className={`${estilos.cinta} ${estilos.corte} sup-fosa`}>
-              {clubes.length >= MINIMO_PARA_LA_BANDA && (
-                <Banda etiqueta="Clubes con camisetas publicadas" clave="club" valores={clubes} />
-              )}
-              {marcas.length >= MINIMO_PARA_LA_BANDA && (
-                <Banda
-                  etiqueta="Marcas con camisetas publicadas"
-                  clave="marca"
-                  valores={marcas}
-                  inversa
-                />
-              )}
-            </section>
-          )}
+          <section className={`${estilos.cinta} ${estilos.corte} sup-fosa`}>
+            <Banda etiqueta="Clubes" clave="club" valores={bandaClubes} />
+            <Banda etiqueta="Marcas" clave="marca" valores={bandaMarcas} inversa />
+          </section>
+
+          {/*
+            CATEGORIAS. Las seis prendas del enum `garment_category`, que son
+            fijas (ERD §5, DEC-041) y por eso pueden ser la primera decision
+            que la home le ofrece a alguien: antes de un club o una temporada,
+            que tipo de prenda busca. Cada ficha lleva a la busqueda filtrada
+            por `categoria`, que ya existia como faceta y nadie encontraba.
+
+            ⚠️ NO DICE CUANTAS HAY DE CADA UNA. Las categorias vienen de la
+            tabla y no de las facetas: decir "0" al lado de Shorts en un
+            marketplace de dos semanas es cierto y es lo contrario de invitar.
+
+            ⚠️ EL REVELADO VA EN LA LISTA, NO EN LA SECCION: la seccion lleva
+            `.patron-vivo` en un hijo y ese hijo es `overflow: hidden`.
+          */}
+          <section
+            className={`${estilos.categorias} sup-marca`}
+            aria-labelledby="categorias-titulo"
+          >
+            <div
+              className={`${estilos.categoriasPatron} patron-vivo patron-vivo-fino`}
+              aria-hidden="true"
+            />
+            <div className={estilos.categoriasInterior}>
+              <div className={estilos.encabezado}>
+                <div>
+                  <p className={estilos.seccionEtiqueta}>Qué buscás</p>
+                  <h2
+                    id="categorias-titulo"
+                    className={`${estilos.tituloSeccion} display display-3`}
+                  >
+                    Elegí la prenda
+                  </h2>
+                </div>
+                <p className={estilos.cuenta}>Seis categorías, todas con fotos reales</p>
+              </div>
+
+              <ul className={`${estilos.categoriasLista} revela-grilla-materia`}>
+                {catalogo.categorias.map((categoria, indice) => {
+                  const Icono = ICONO_DE_CATEGORIA[categoria.code] ?? IconoCamiseta;
+
+                  return (
+                    <li key={categoria.id}>
+                      <Link
+                        href={`/buscar?categoria=${categoria.id}`}
+                        className={`${estilos.categoria} sup-ficha eleva-marca borde-brilla destello icono-crece`}
+                        transitionTypes={['barrido']}
+                      >
+                        <span className={estilos.categoriaOrden} aria-hidden="true">
+                          {String(indice + 1).padStart(2, '0')}
+                        </span>
+                        <span className={estilos.categoriaIcono} aria-hidden="true">
+                          <Icono tamanio={34} />
+                        </span>
+                        <span className={estilos.categoriaNombre}>{categoria.name}</span>
+                        <span className={estilos.categoriaFlecha} aria-hidden="true">
+                          <IconoFlechaDerecha tamanio={18} />
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </section>
 
           {/*
             ⚠️ NO ES UNA TIRA DE ADORNO. Es la unica parte del sitio que explica
@@ -508,6 +887,72 @@ export default async function Home() {
             </div>
           </section>
 
+          {/*
+            PROMOCIONADAS (PS-021).
+
+            ⚠️ VA ARRIBA DEL CATALOGO Y NO MEZCLADA ADENTRO. Un marketplace que
+            intercala lo pago con lo organico sin decirlo está vendiendo
+            posiciones en secreto; separado y rotulado, quien mira sabe qué está
+            viendo. Las MISMAS publicaciones aparecen despues en la grilla
+            general —con su distintivo— porque siguen siendo catalogo.
+
+            ⚠️ EL TEXTO DICE QUIEN PAGO Y QUE NO SIGNIFICA. "El vendedor pagó por
+            aparecer acá" es verificable; "Las mejores de la semana" seria un
+            juicio de Offside sobre publicaciones que Offside no eligio.
+
+            ⚠️ NO DICE CUANTO CUESTA PROMOCIONAR. El multiplicador y la duracion
+            son ⚙️ CONFIGURABLES (Config Store): escribirlos acá los clavaria en
+            el codigo. Quien quiera el numero lo tiene en `/como-funciona`, que
+            lo lee del Config Store.
+
+            ⚠️ SIN SECCION CUANDO NO HAY NINGUNA. Un rotulo "Promocionadas" sobre
+            una fila vacia es peor que no tenerlo: parece una funcionalidad rota.
+          */}
+          {promocionadas.length > 0 && (
+            <section
+              className={estilos.promocionadas}
+              id="promocionadas"
+              aria-labelledby="promocionadas-titulo"
+            >
+              <div className={estilos.encabezado}>
+                <div>
+                  <p className={estilos.seccionEtiqueta}>Promocionadas</p>
+                  <h2
+                    id="promocionadas-titulo"
+                    className={`${estilos.tituloSeccion} display display-3`}
+                  >
+                    Las que quieren que veas
+                  </h2>
+                </div>
+                <p className={estilos.cuenta}>El vendedor pagó por aparecer acá</p>
+              </div>
+
+              <hr className={`regla regla-acento revela-linea ${estilos.reglaCatalogo}`} />
+
+              {/*
+                ⚠️ `compartirFoto={false}` NO ES UN DETALLE: ESTA MISMA
+                PUBLICACION APARECE ABAJO, EN LA GRILLA GENERAL. Dos elementos
+                con el mismo `view-transition-name` vivos a la vez rompen la
+                transicion ENTERA —React lo grita por consola y el navegador
+                aborta la animacion—, asi que la copia de arriba viaja sin
+                nombre y el morph hacia la ficha se lo queda la grilla, que es
+                donde esta el catalogo completo.
+              */}
+              <ul className={`${estilos.grilla} enfoca-hermanos revela-grilla-materia`}>
+                {promocionadas.map((listing) => (
+                  <li key={listing.id}>
+                    <ListingCard
+                      listing={listing}
+                      promocionada
+                      compartirFoto={false}
+                      favorito={favoritoDe(listing.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className={estilos.catalogo} id="en-venta">
             {/*
               ROTULO CINETICO. Movimiento permanente y a la vez completamente
@@ -549,6 +994,22 @@ export default async function Home() {
 
             <hr className={`regla revela-linea ${estilos.reglaCatalogo}`} />
 
+            {/*
+              ⚠️ EL UNICO AVISO DE ESTA PANTALLA, Y APARECE SOLO SI FALLO ALGO.
+              `alternarFavorito` no tiene estado —es un `<form>` pelado dentro de
+              una grilla de 60, sin un componente cliente por ficha—, asi que la
+              unica forma de contar que no se pudo guardar es este codigo en la
+              URL. No dice POR QUE: el motivo exacto quedo en el log del servidor
+              y un texto que viaje por la URL lo escribe cualquiera.
+            */}
+            {avisoDeFavorito && (
+              <div className={estilos.avisoFavorito}>
+                <Aviso tono="error">
+                  No pudimos guardar la publicación. Probá de nuevo en un momento.
+                </Aviso>
+              </div>
+            )}
+
             {listings.length === 0 ? (
               /*
                 ⚠️ EL ESTADO VACIO ES EL ESTADO MAS PROBABLE DE UN MARKETPLACE
@@ -585,7 +1046,11 @@ export default async function Home() {
                 <ul className={`${estilos.grilla} enfoca-hermanos revela-grilla-materia`}>
                   {listings.map((listing) => (
                     <li key={listing.id}>
-                      <ListingCard listing={listing} />
+                      <ListingCard
+                        listing={listing}
+                        promocionada={idsPromocionados.has(listing.id)}
+                        favorito={favoritoDe(listing.id)}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -610,7 +1075,14 @@ export default async function Home() {
             invisibles. Se revela el grupo entero, que esta afuera.
           */}
           {explorar.length > 0 && (
-            <section className={`${estilos.explorar} sup-2`} aria-labelledby="explorar-titulo">
+            <section
+              className={`${estilos.explorar} sup-2 escena-luz`}
+              aria-labelledby="explorar-titulo"
+            >
+              <div className="blobs" aria-hidden="true">
+                <span className="blob blob-cancha blob-grande" />
+                <span className="blob blob-cambio blob-chico" />
+              </div>
               <div className={estilos.explorarInterior}>
                 <p className={estilos.seccionEtiqueta}>Atajos</p>
                 <h2 id="explorar-titulo" className={`${estilos.tituloSeccion} display display-3`}>
@@ -620,17 +1092,29 @@ export default async function Home() {
                 {explorar.map((grupo) => (
                   <div key={grupo.clave} className={`${estilos.grupo} revela-acerca`}>
                     <h3 className={estilos.grupoTitulo}>{grupo.titulo}</h3>
-                    <ul className={estilos.fichas}>
+                    <ul className={estilos.fichas} data-grupo={grupo.clave}>
                       {grupo.valores.map((valor) => (
                         <li key={valor.valor}>
                           <Link
                             href={`/buscar?${grupo.clave}=${valor.valor}`}
-                            className={`${estilos.ficha} sup-ficha eleva destello`}
+                            className={`${estilos.ficha} sup-ficha eleva destello icono-vivo`}
                             transitionTypes={['barrido']}
                           >
-                            <span className={estilos.fichaNombre}>{valor.etiqueta}</span>
-                            <span className={estilos.fichaCuenta}>
-                              {valor.cantidad === 1 ? '1 camiseta' : `${valor.cantidad} camisetas`}
+                            <span className={estilos.fichaMonograma} aria-hidden="true">
+                              {monograma(valor.etiqueta)}
+                            </span>
+                            <span className={estilos.fichaTexto}>
+                              <span className={estilos.fichaNombre}>{valor.etiqueta}</span>
+                              <span className={estilos.fichaCuenta}>
+                                {valor.cantidad === undefined
+                                  ? 'Ver camisetas'
+                                  : valor.cantidad === 1
+                                    ? '1 camiseta'
+                                    : `${valor.cantidad} camisetas`}
+                              </span>
+                            </span>
+                            <span className={estilos.fichaFlecha} aria-hidden="true">
+                              <IconoFlechaDerecha tamanio={16} />
                             </span>
                           </Link>
                         </li>
@@ -714,41 +1198,5 @@ export default async function Home() {
 
       <Footer />
     </>
-=======
-export default async function Home() {
-  const listings = await listPublicCatalog();
-
-  return (
-    <div className={estilos.pagina}>
-      <Header />
-
-      <section className={estilos.portada}>
-        <div className={estilos.portadaContenido}>
-          <h1 className={estilos.titulo}>Camisetas con historia</h1>
-          <p className={estilos.bajada}>
-            Compra y venta de camisetas de fútbol para coleccionistas.
-          </p>
-        </div>
-      </section>
-
-      <main className={estilos.catalogo}>
-        <h2 className={estilos.tituloSeccion}>En venta</h2>
-
-        {listings.length === 0 ? (
-          <EstadoVacio titulo="Todavía no hay publicaciones">
-            Cuando un vendedor publique su primera camiseta, va a aparecer acá.
-          </EstadoVacio>
-        ) : (
-          <ul className={estilos.grilla}>
-            {listings.map((listing) => (
-              <li key={listing.id}>
-                <ListingCard listing={listing} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </main>
-    </div>
->>>>>>> origin/main
   );
 }

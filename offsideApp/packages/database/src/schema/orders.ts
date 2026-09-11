@@ -17,6 +17,7 @@ import {
 import { actorType, orderStatus } from './_enums';
 import { users } from './auth';
 import { listings } from './listings';
+import { listingPromotions } from './promotions';
 import { sellerProfiles } from './sellers';
 
 /**
@@ -81,6 +82,50 @@ export const orders = pgTable(
     offsideAmount: bigint('offside_amount', { mode: 'bigint' }),
     /** Snapshot del tier del vendedor al momento de la venta (CASO 8). */
     sellerTierCodeAtTransaction: text('seller_tier_code_at_transaction'),
+    /**
+     * ⚠️ NO ESTA EN EL ERD v1.3 (delta autorizado por el owner 2026-09-10, ver
+     * `docs-implementation/erd-delta-2026-09-10.md`).
+     *
+     * Multiplicador de comision aplicado por PROMOCION de la publicacion
+     * (`listings.promoted_until`). Es parte del snapshot financiero (DEC-030):
+     * sin esto, `commission_rate_at_transaction` diria "18%" y nadie podria
+     * explicar por que esa orden pago el triple que la de al lado. Null = la
+     * publicacion no estaba promocionada (equivale a 1, pero se guarda null
+     * para distinguir "no aplico" de "aplico x1").
+     *
+     * numeric(6,3): admite 999.999 como techo, de sobra para "el triple".
+     * NUNCA se recalcula con el multiplicador vigente en `app_settings`.
+     */
+    promotionMultiplierAtTransaction: numeric('promotion_multiplier_at_transaction', {
+      precision: 6,
+      scale: 3,
+    }),
+    /**
+     * ⚠️ NO ESTA EN EL ERD v1.3 (segundo delta del 2026-09-10, autorizado por
+     * el owner; ver `docs-implementation/erd-delta-2026-09-10.md`).
+     *
+     * DE DONDE salio la tasa que se congelo en `commission_rate_at_transaction`.
+     * Con `seller_tier_code_at_transaction` y
+     * `promotion_multiplier_at_transaction` deja escrito POR QUE la comision
+     * fue la que fue, sin tener que reconstruirlo desde la config de entonces
+     * (DEC-030):
+     *
+     *   default      → `app_settings.commission_rate_default`; el vendedor no
+     *                  tenia tier al momento de la venta
+     *   seller_tier  → la tasa del tier (`seller_tiers.commission_rate`)
+     *   promoted     → la tasa base (del tier o la global) multiplicada por la
+     *                  promocion vigente; `listing_promotion_id` dice cual
+     *
+     * `text` con CHECK y no enum, como los demas estados de este delta.
+     */
+    commissionSource: text('commission_source').notNull().default('default'),
+    /**
+     * La promocion que agravo la comision. Null salvo `commission_source =
+     * 'promoted'`. RESTRICT: no se borra una promocion que explica una orden.
+     */
+    listingPromotionId: uuid('listing_promotion_id').references(() => listingPromotions.id, {
+      onDelete: 'restrict',
+    }),
 
     /** SNAPSHOT de la direccion, no FK: editar la libreta no altera la orden. */
     shippingAddress: jsonb('shipping_address').notNull(),
@@ -113,6 +158,10 @@ export const orders = pgTable(
     check(
       'orders_amounts_non_negative_check',
       sql`${t.productAmount} >= 0 AND ${t.discountAmount} >= 0 AND ${t.shippingAmount} >= 0 AND ${t.totalAmount} >= 0`,
+    ),
+    check(
+      'orders_commission_source_check',
+      sql`${t.commissionSource} IN ('default', 'seller_tier', 'promoted')`,
     ),
   ],
 );

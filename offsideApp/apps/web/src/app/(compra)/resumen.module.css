@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * EL TRAMO DE COMPRA — confirmar, pagar y el historial.
  *
@@ -72,18 +71,11 @@
 
 .cabecera {
   margin-bottom: var(--espacio-6);
-=======
-.pagina {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: var(--espacio-8) var(--espacio-6) var(--espacio-9);
->>>>>>> origin/main
 }
 
 .titulo {
   font-size: var(--texto-3xl);
   text-transform: uppercase;
-<<<<<<< HEAD
   /**
    * ⚠️ GARANTIA DE 320px. `--texto-3xl` es fluido y arranca en 36px: una palabra
    * sola mas larga que la columna empujaria la pagina entera.
@@ -118,49 +110,12 @@
   font-size: var(--texto-sm);
   color: var(--color-neutro-tenue);
   font-variant-numeric: tabular-nums;
-=======
-  margin-bottom: var(--espacio-6);
-}
-
-/** Resumen de lo que se esta comprando. */
-.resumen {
-  border: 1px solid var(--color-neutro-borde);
-  border-radius: var(--radio);
-  background: var(--color-blanco);
-  padding: var(--espacio-5);
-  margin-bottom: var(--espacio-7);
-}
-
-.linea {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--espacio-4);
-  padding: var(--espacio-2) 0;
-}
-
-.lineaTotal {
-  border-top: 1px solid var(--color-neutro-borde);
-  margin-top: var(--espacio-3);
-  padding-top: var(--espacio-4);
-}
-
-.concepto {
-  color: var(--color-neutro-texto);
-}
-
-.total {
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-3xl);
-  line-height: 1;
->>>>>>> origin/main
 }
 
 .subtitulo {
   font-size: var(--texto-xl);
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
-<<<<<<< HEAD
   margin: var(--espacio-8) 0 var(--espacio-5);
 }
 
@@ -1248,22 +1203,6 @@
   margin: 0 auto var(--espacio-6);
   max-width: 46ch;
   color: var(--color-neutro-tenue);
-=======
-  margin: var(--espacio-7) 0 var(--espacio-5);
-}
-
-/** Dos columnas para los campos cortos de la direccion. */
-.par {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--espacio-4);
-}
-
-@media (max-width: 640px) {
-  .par {
-    grid-template-columns: 1fr;
-  }
->>>>>>> origin/main
 }
 
 .nota {
@@ -1272,7 +1211,6 @@
   color: var(--color-neutro-tenue);
   text-align: center;
 }
-<<<<<<< HEAD
 
 /* ============================================================ mis compras */
 
@@ -1529,6 +1467,370 @@
   background: var(--superficie-2);
 }
 
+/* ============================================================== cantidad */
+
+/**
+ * CUANTAS UNIDADES, como `<form method="get">`.
+ *
+ * ⚠️ ES UN FORMULARIO APARTE Y NO UN CONTROL DEL FORMULARIO DE COMPRA: la
+ * cantidad tiene que recalcular el TICKET, que se arma en el servidor. Anidar
+ * formularios ademas es HTML invalido y el navegador los desarma en silencio.
+ *
+ * ⚠️ SE ESCONDE ENTERO CUANDO HAY UNA SOLA UNIDAD (lo decide el marcado): un
+ * desplegable con una sola opcion es un control que no controla nada.
+ */
+.cantidad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-5);
+  padding: var(--espacio-4) var(--espacio-5);
+  border-radius: var(--radio);
+}
+
+.cantidadEtiqueta {
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ 44px DE ALTO Y 16px DE TEXTO. Abajo de 16px iOS hace zoom al enfocar un
+ * control y despues no lo deshace; abajo de 44px el area tactil queda por
+ * debajo del minimo.
+ */
+.cantidadSelect {
+  min-height: var(--alto-control);
+  min-width: 5rem;
+  padding: 0 var(--espacio-4);
+  font: inherit;
+  font-size: var(--texto-base);
+  color: var(--color-tinta);
+  background: var(--superficie-1);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio-chico);
+}
+
+.cantidadSelect:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.cantidadBoton {
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-5);
+  font: inherit;
+  font-weight: var(--peso-semi);
+  color: var(--boton-secundario-texto);
+  background: var(--boton-secundario-fondo);
+  border: 1px solid var(--boton-secundario-borde);
+  border-radius: var(--radio-chico);
+  cursor: pointer;
+  transition: background var(--dur-hover) var(--curva);
+}
+
+.cantidadBoton:hover {
+  background: var(--boton-secundario-fondo-activo);
+  color: var(--boton-secundario-texto-activo);
+}
+
+.cantidadBoton:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.cantidadNota {
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  /* Empuja la nota al final de la fila cuando entra; abajo, cuando no. */
+  margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .cantidadNota {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ============================================================ direcciones */
+
+.direcciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.libreta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+/**
+ * ⚠️ LA TARJETA ENTERA ES LA ETIQUETA DEL RADIO. Un radio de 16px al costado de
+ * cuatro lineas de texto es un blanco imposible en un telefono; con un `<label>`
+ * envolvente, tocar cualquier parte de la tarjeta la elige.
+ */
+.direccion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+  padding: var(--espacio-4);
+  border-radius: var(--radio);
+  border: 1px solid var(--linea-tenue);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-hover) var(--curva),
+    box-shadow var(--dur-hover) var(--curva);
+}
+
+.direccion:hover {
+  border-color: var(--linea-marca);
+}
+
+/**
+ * ⚠️ EL ESTADO ELEGIDO SE VE SIN DEPENDER DEL PUNTITO. `:has()` tiñe la tarjeta
+ * entera; donde no haya soporte, el radio nativo sigue marcado igual, asi que la
+ * informacion nunca se pierde.
+ */
+.direccion:has(input:checked) {
+  border-color: var(--color-cancha);
+  box-shadow: var(--glow-suave);
+}
+
+/* El anillo de foco va en la TARJETA, no en el radio de 16px escondido. */
+.direccion:has(input:focus-visible) {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.direccionRadio {
+  margin-top: 3px;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-cancha);
+}
+
+.direccionCuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.direccionTitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-weight: var(--peso-semi);
+  color: var(--color-tinta);
+}
+
+.direccionTitulo svg {
+  flex: none;
+  color: var(--color-cancha);
+}
+
+.direccionChip {
+  font-size: var(--texto-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  padding: 2px var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  background: var(--superficie-2);
+  color: var(--color-neutro-texto);
+}
+
+.direccionTexto {
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------- otra direccion */
+
+.otraDireccion {
+  border: 1px dashed var(--color-neutro-borde);
+  border-radius: var(--radio);
+}
+
+.otraDireccionDisparador {
+  min-height: var(--alto-control);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--espacio-4);
+  font-weight: var(--peso-semi);
+  color: var(--color-cancha);
+  cursor: pointer;
+}
+
+.otraDireccionDisparador:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.otraDireccionPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: 0 var(--espacio-4) var(--espacio-5);
+}
+
+.otraDireccionNota {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+/**
+ * ⚠️ NO ES UN `<Casilla>`: ese componente pone `required` fijo —nacio para la
+ * aceptacion de terminos— y guardar la direccion es opcional.
+ */
+.guardar {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control);
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  cursor: pointer;
+}
+
+.guardar input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-cancha);
+}
+
+/* ========================================================= segunda accion */
+
+/**
+ * ⚠️ ES UN FORMULARIO HERMANO DEL DE COMPRA, NO UN SEGUNDO SUBMIT ADENTRO. Con
+ * dos submits en el mismo `<form>`, apretar Enter en un campo de direccion
+ * dispara el PRIMERO —el carrito— y lo tipeado se pierde.
+ */
+.segundaAccion {
+  margin-top: var(--espacio-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-3);
+  text-align: center;
+}
+
+.segundaAccionNota {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+.segundaAccionNota svg {
+  flex: none;
+  color: var(--color-neutro-tenue);
+}
+
+/* ============================================================== cancelar */
+
+/**
+ * ⚠️ CANCELAR NO COMPITE CON PAGAR. Va debajo del bloque de pago, alineado a la
+ * izquierda y sin superficie propia: es una salida, no una opcion equivalente.
+ */
+.cancelar {
+  margin-top: var(--espacio-5);
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* ================================================================= envio */
+
+.envio {
+  margin-top: var(--espacio-6);
+  padding: var(--espacio-5);
+  border-radius: var(--radio);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.envioTitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0;
+  font-size: var(--texto-lg);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+}
+
+.envioTitulo svg {
+  flex: none;
+  color: var(--color-cancha);
+}
+
+.envioDatos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.envioEstado {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+}
+
+/** El numero de seguimiento se copia a mano: cifras tabulares y sin cortar. */
+.envioSeguimiento {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.envioFecha {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+.envioAccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid var(--linea-tenue);
+}
+
+.envioNota {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-tenue);
+}
+
+/* =========================================================== seguimiento */
+
+.seguimiento {
+  margin-top: var(--espacio-6);
+}
+
 /* ========================================================= keyframes locales */
 
 /**
@@ -1567,5 +1869,3 @@
     transform: scale(1.06);
   }
 }
-=======
->>>>>>> origin/main

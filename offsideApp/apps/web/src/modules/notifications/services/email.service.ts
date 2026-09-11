@@ -3,6 +3,11 @@ import { QUEUE_NAMES, defaultJobOptions, getQueue } from '@offside/jobs';
 import { createEmailSender, type EmailMessage } from '../infrastructure/email/index';
 import * as templates from '../templates/auth.templates';
 import { isSuppressed } from './email-suppression.service';
+import {
+  isOrderEmailJob,
+  processOrderEmailJob,
+  type OrderEmailJobData,
+} from './order-emails.service';
 
 /**
  * Envio de emails.
@@ -45,7 +50,20 @@ function build(data: EmailJobData): EmailMessage {
  * molesta, no rompe— y es preferible a perder el unico aviso que desbloquea el
  * alta. El token que lleva adentro sigue siendo de un solo uso.
  */
-export async function processEmailJob(data: EmailJobData): Promise<void> {
+export async function processEmailJob(data: EmailJobData | OrderEmailJobData): Promise<void> {
+  /**
+   * La cola `notifications-send` es UNA para todos los emails y el worker de
+   * `instrumentation.ts` registra este procesador. Los emails de negocio
+   * (orden, reclamo, calificacion, nivel) tienen su propio procesador con su
+   * propia validacion de payload; se deriva por `kind` y se sale. Lo que sigue
+   * es SOLO para los emails de `auth`, que llevan un token.
+   */
+  if (isOrderEmailJob(data)) {
+    await processOrderEmailJob(data);
+
+    return;
+  }
+
   /**
    * ⚠️ LA SUPRESION SE CONSULTA ACA, en el ultimo punto antes del proveedor.
    *

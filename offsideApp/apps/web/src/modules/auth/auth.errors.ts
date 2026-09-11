@@ -75,7 +75,6 @@ export class AuthError extends Error {
  * password es incorrecta. Distinguirlos permitiria enumerar cuentas.
  */
 export const invalidCredentials = (): AuthError =>
-<<<<<<< HEAD
   new AuthError('INVALID_CREDENTIALS', 'El email o la contraseña no coinciden');
 
 export const emailAlreadyRegistered = (): AuthError =>
@@ -108,37 +107,6 @@ export const sellerProfileAlreadyExists = (): AuthError =>
 
 export const termsNotAccepted = (): AuthError =>
   new AuthError('TERMS_NOT_ACCEPTED', 'Tenés que aceptar los términos y la política de privacidad');
-=======
-  new AuthError('INVALID_CREDENTIALS', 'Email o contrasena incorrectos');
-
-export const emailAlreadyRegistered = (): AuthError =>
-  new AuthError('EMAIL_ALREADY_REGISTERED', 'Ese email ya esta registrado');
-
-/** BR-001: no se opera sin email verificado. */
-export const emailNotVerified = (): AuthError =>
-  new AuthError('EMAIL_NOT_VERIFIED', 'Tenes que verificar tu email antes de operar (BR-001)');
-
-export const accountNotActive = (): AuthError =>
-  new AuthError('ACCOUNT_NOT_ACTIVE', 'La cuenta no esta activa');
-
-export const invalidToken = (): AuthError =>
-  new AuthError('INVALID_TOKEN', 'El token es invalido o expiro');
-
-export const sessionInvalid = (): AuthError =>
-  new AuthError('SESSION_INVALID', 'La sesion es invalida o expiro');
-
-export const notAuthenticated = (): AuthError =>
-  new AuthError('NOT_AUTHENTICATED', 'Necesitas iniciar sesion');
-
-export const forbidden = (): AuthError =>
-  new AuthError('FORBIDDEN', 'No tenes permisos para esta accion');
-
-export const sellerProfileAlreadyExists = (): AuthError =>
-  new AuthError('SELLER_PROFILE_ALREADY_EXISTS', 'El usuario ya tiene perfil de vendedor');
-
-export const termsNotAccepted = (): AuthError =>
-  new AuthError('TERMS_NOT_ACCEPTED', 'Tenes que aceptar los terminos y la politica de privacidad');
->>>>>>> origin/main
 
 /**
  * Demasiados intentos (`security-observability-analytics.md` §1).
@@ -149,10 +117,6 @@ export const termsNotAccepted = (): AuthError =>
 export const rateLimited = (retryAfterSeconds: number): AuthError =>
   new AuthError(
     'RATE_LIMITED',
-<<<<<<< HEAD
     'Demasiados intentos. Esperá unos minutos antes de volver a probar',
-=======
-    'Demasiados intentos. Espera unos minutos antes de volver a intentar',
->>>>>>> origin/main
     retryAfterSeconds,
   );

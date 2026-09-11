@@ -1,6 +1,8 @@
 import { getDatabase, schema, type Database } from '@offside/database';
 import { eq, sql } from 'drizzle-orm';
 
+import { TIPOS_QUE_BLOQUEAN_VENTA } from '../../trust/services/sanction-rules';
+
 /**
  * Busqueda de publicaciones (PS-020 … PS-023, DEC-042).
  *
@@ -10,9 +12,10 @@ import { eq, sql } from 'drizzle-orm';
  * interpolado: `sql` de Drizzle produce placeholders, no concatenacion.
  *
  * ⚠️ EL FILTRO DE VISIBILIDAD ES EL MISMO QUE EL DE LA VITRINA (ERD §9.1 +
- * SS-013): `status = 'active'`, `moderation_status = 'APPROVED'`, `stock >= 1`
- * y **el vendedor puede operar**. Si la busqueda mostrara algo que la compra
- * rechaza, prometeria lo que no cumple.
+ * SS-013 + vacaciones y sanciones): `status = 'active'`, `moderation_status =
+ * 'APPROVED'`, `stock >= 1`, **el vendedor puede operar** y **esta
+ * disponible**. Si la busqueda mostrara algo que la compra rechaza,
+ * prometeria lo que no cumple.
  */
 
 const conn = (db?: Database): Database => db ?? getDatabase();
@@ -33,7 +36,24 @@ export interface SearchFilters {
   precioMax?: bigint;
 }
 
-export type SearchOrder = 'relevancia' | 'precio_asc' | 'precio_desc' | 'recientes';
+/**
+ * Los ordenes que el SQL sabe producir (PS-021). UNICA fuente: el Service los
+ * re-exporta desde `services/search-query.ts`, asi que no pueden divergir.
+ *
+ * `popularidad` NO esta: no hay metricas de visitas ni de ventas por
+ * publicacion. `reputacion` ordena por `seller_reputations.score`, que es una
+ * proyeccion derivada (DEC-036) y puede no existir todavia para un vendedor:
+ * esos van al final (`NULLS LAST`), no afuera.
+ */
+export const SEARCH_ORDERS = [
+  'relevancia',
+  'recientes',
+  'precio_asc',
+  'precio_desc',
+  'reputacion',
+] as const;
+
+export type SearchOrder = (typeof SEARCH_ORDERS)[number];
 
 export interface SearchRow {
   id: string;
@@ -42,13 +62,15 @@ export interface SearchRow {
   currency: string;
   sizeValue: string;
   condition: string;
-<<<<<<< HEAD
   /** Unidades restantes. La grilla marca "Última unidad" con esto. */
   stock: number;
-=======
->>>>>>> origin/main
   sellerDisplayName: string;
   rank: number;
+  /** Para el distintivo de promocionada. */
+  promotedUntil: Date | null;
+  /** Envio declarado (delta §11). */
+  shippingMode: string;
+  shippingCostAmount: bigint | null;
 }
 
 /**
@@ -83,18 +105,29 @@ export async function reindexListing(
   `);
 }
 
+/** Los tipos de sancion que bloquean la venta, como lista SQL (ver `listing.repository.ts`). */
+const TIPOS_BLOQUEANTES_SQL = sql.join(
+  [...TIPOS_QUE_BLOQUEAN_VENTA].map((tipo) => sql`${tipo}::sanction_type`),
+  sql`, `,
+);
+
 /**
- * El vendedor puede operar (SS-013), expresado en SQL.
+ * El vendedor puede operar (SS-013) Y esta disponible (vacaciones, sanciones),
+ * expresado en SQL.
  *
- * ⚠️ ES UN `EXISTS` Y NO UN JOIN A PROPOSITO. Esta condicion la usan los tres
- * caminos —resultados, conteo total y CADA faceta—, y dos de ellos consultan
- * `FROM listings l` a secas. Con un join habria que agregarlo en tres lugares y
- * acordarse de sumarlo a cada faceta nueva; dentro de `condiciones()` entra
- * solo. Ademas un `EXISTS` no puede multiplicar filas, asi que los conteos de
- * las facetas siguen siendo exactos.
+ * ⚠️ ES UN `EXISTS` Y NO UN JOIN A PROPOSITO. Esta condicion la usan los
+ * cuatro caminos —resultados, conteo total, cotas de precio y CADA faceta—, y
+ * tres de ellos consultan `FROM listings l` a secas. Con un join habria que
+ * agregarlo en cada lugar y acordarse de sumarlo a cada faceta nueva; dentro
+ * de `condiciones()` entra solo. Ademas un `EXISTS` no puede multiplicar
+ * filas, asi que los conteos de las facetas siguen siendo exactos.
  *
  * Si las facetas no lo aplicaran, dirian "River Plate (3)" y la busqueda
  * devolveria dos: un filtro que miente sobre lo que hay.
+ *
+ * Es el MISMO predicado que `VISIBLE_EN_VITRINA` en `listing.repository.ts`
+ * (Drizzle) y que `isPurchasableNow()` (memoria): un lugar por lenguaje, y
+ * un test de integracion que fija que digan lo mismo.
  */
 const VENDEDOR_OPERATIVO = sql`EXISTS (
   SELECT 1
@@ -103,7 +136,20 @@ const VENDEDOR_OPERATIVO = sql`EXISTS (
    WHERE sp.id = l.seller_id
      AND sp.status = 'approved'
      AND mp.status = 'connected'
+     AND (sp.vacation_until IS NULL OR sp.vacation_until <= now())
+     AND NOT EXISTS (
+       SELECT 1
+         FROM sanctions sa
+        WHERE sa.seller_id = sp.id
+          AND sa.status = 'active'
+          AND sa.type IN (${TIPOS_BLOQUEANTES_SQL})
+          AND (sa.starts_at IS NULL OR sa.starts_at <= now())
+          AND (sa.ends_at IS NULL OR sa.ends_at > now())
+     )
 )`;
+
+/** Promocionada VIGENTE. Siempre booleano: ver `ordenDeVitrina` en `listing.repository.ts`. */
+const PROMOCIONADA = sql`(l.promoted_until IS NOT NULL AND l.promoted_until > now())`;
 
 /** Condiciones de visibilidad + filtros. Se comparte entre resultados y facetas. */
 function condiciones(filtros: SearchFilters) {
@@ -156,25 +202,36 @@ function coincideTexto(texto: string) {
   )`;
 }
 
+/** WHERE completo: visibilidad + filtros (+ texto si hay). */
+function where(input: Pick<SearchInput, 'texto' | 'filtros'>) {
+  return input.texto === undefined
+    ? condiciones(input.filtros)
+    : sql`${condiciones(input.filtros)} AND ${coincideTexto(input.texto)}`;
+}
+
 export interface SearchInput {
   texto?: string;
   filtros: SearchFilters;
   orden: SearchOrder;
   /** Pesos {D,C,B,A} del Config Store (PS-021 / DEC-042). */
   pesos: number[];
+  /**
+   * Sumando al ranking de una promocionada vigente (`promotion_rank_boost`
+   * ⚙️). `0` = las promocionadas no reciben ningun empujon en relevancia.
+   */
+  promotionRankBoost: number;
+  /** Promocionadas ANTES que el resto, en cualquier orden (`promoted_first_in_search` ⚙️). */
+  promotedFirst: boolean;
   limite: number;
   offset: number;
 }
 
 export async function search(input: SearchInput, db?: Database): Promise<SearchRow[]> {
-  const where =
-    input.texto === undefined
-      ? condiciones(input.filtros)
-      : sql`${condiciones(input.filtros)} AND ${coincideTexto(input.texto)}`;
-
-  // El ranking sólo tiene sentido si hay texto; sin él, `ts_rank` daria 0 para
-  // todo y el orden por relevancia seria arbitrario.
-  const rank =
+  // El ranking de TEXTO sólo tiene sentido si hay texto; sin él, `ts_rank`
+  // daria 0 para todo. El boost de promocion se suma en los dos casos: sin
+  // texto es lo unico que ordena por "relevancia", y es exactamente lo que
+  // PS-021 llama "destacadas".
+  const rankDeTexto =
     input.texto === undefined
       ? sql`0::float4`
       : sql`ts_rank(
@@ -183,28 +240,42 @@ export async function search(input: SearchInput, db?: Database): Promise<SearchR
             websearch_to_tsquery('spanish', unaccent(${input.texto}))
           )`;
 
-  const orden =
+  const boost = Number(input.promotionRankBoost);
+  const rank =
+    boost > 0
+      ? sql`(${rankDeTexto} + CASE WHEN ${PROMOCIONADA} THEN ${sql.raw(String(boost))}::float4 ELSE 0::float4 END)`
+      : rankDeTexto;
+
+  const ordenPropio =
     input.orden === 'precio_asc'
-      ? sql`l.price_amount ASC`
+      ? sql`l.price_amount ASC, l.created_at DESC`
       : input.orden === 'precio_desc'
-        ? sql`l.price_amount DESC`
+        ? sql`l.price_amount DESC, l.created_at DESC`
         : input.orden === 'recientes'
           ? sql`l.created_at DESC`
-          : // Relevancia. El desempate por fecha evita que dos publicaciones con
-            // el mismo rank salgan en orden distinto en cada consulta.
-            sql`rank DESC, l.created_at DESC`;
+          : input.orden === 'reputacion'
+            ? // `seller_reputations.score` es un cache derivado (DEC-036) y
+              // puede no existir todavia para un vendedor nuevo: va al final,
+              // no afuera.
+              sql`r.score DESC NULLS LAST, l.created_at DESC`
+            : // Relevancia. El desempate por fecha evita que dos publicaciones con
+              // el mismo rank salgan en orden distinto en cada consulta.
+              sql`rank DESC, l.created_at DESC`;
+
+  // "Promocionadas primero" es un PREFIJO del orden elegido, no otro orden:
+  // dentro de cada grupo (promocionadas / resto) se respeta lo que pidio la
+  // persona. Sin esto, elegir "precio ascendente" borraria el destacado.
+  const orden = input.promotedFirst ? sql`${PROMOCIONADA} DESC, ${ordenPropio}` : ordenPropio;
 
   const filas = await conn(db).execute(sql`
-<<<<<<< HEAD
     SELECT l.id, l.title, l.price_amount, l.currency, l.size_value, l.condition, l.stock,
-=======
-    SELECT l.id, l.title, l.price_amount, l.currency, l.size_value, l.condition,
->>>>>>> origin/main
+           l.promoted_until, l.shipping_mode, l.shipping_cost_amount,
            s.display_name AS seller_display_name,
            ${rank} AS rank
       FROM listings l
       JOIN seller_profiles s ON s.id = l.seller_id
-     WHERE ${where}
+      LEFT JOIN seller_reputations r ON r.seller_id = l.seller_id
+     WHERE ${where(input)}
      ORDER BY ${orden}
      LIMIT ${input.limite} OFFSET ${input.offset}
   `);
@@ -216,13 +287,54 @@ export async function search(input: SearchInput, db?: Database): Promise<SearchR
     currency: String(row.currency),
     sizeValue: String(row.size_value),
     condition: String(row.condition),
-<<<<<<< HEAD
     stock: Number(row.stock),
-=======
->>>>>>> origin/main
     sellerDisplayName: String(row.seller_display_name),
     rank: Number(row.rank),
+    promotedUntil: comoFecha(row.promoted_until),
+    shippingMode: String(row.shipping_mode),
+    shippingCostAmount: comoCentavos(row.shipping_cost_amount),
   }));
+}
+
+/**
+ * Texto de una columna cruda de una consulta `sql``…```.
+ *
+ * ⚠️ EXISTE PORQUE `String(unknown)` ES UNA TRAMPA: si el driver devolviera un
+ * objeto, `String()` produce `"[object Object]"` sin avisar y ese texto termina
+ * en un `BigInt()` o en un `new Date()` que fallan lejos de la causa. Acá se
+ * aceptan solo los tipos que un driver puede devolver para estas columnas y
+ * cualquier otra cosa es `null`, que los llamadores ya saben manejar.
+ */
+function comoTexto(valor: unknown): string | null {
+  if (typeof valor === 'string') return valor;
+  if (typeof valor === 'number' || typeof valor === 'bigint') return String(valor);
+
+  return null;
+}
+
+/**
+ * `timestamptz` crudo → `Date`. postgres-js ya devuelve `Date` para esa
+ * columna; el `string` cubre un driver que la devuelva sin parsear.
+ */
+function comoFecha(valor: unknown): Date | null {
+  if (valor === null || valor === undefined) return null;
+  if (valor instanceof Date) return valor;
+
+  const texto = comoTexto(valor);
+  if (texto === null) return null;
+
+  const fecha = new Date(texto);
+
+  return Number.isNaN(fecha.getTime()) ? null : fecha;
+}
+
+/** `bigint` crudo (centavos) → `bigint`. */
+function comoCentavos(valor: unknown): bigint | null {
+  if (typeof valor === 'bigint') return valor;
+
+  const texto = comoTexto(valor);
+
+  return texto === null ? null : BigInt(texto);
 }
 
 /** Cuantos resultados hay en total, para paginar y para mostrar el numero. */
@@ -230,16 +342,36 @@ export async function countResults(
   input: Pick<SearchInput, 'texto' | 'filtros'>,
   db?: Database,
 ): Promise<number> {
-  const where =
-    input.texto === undefined
-      ? condiciones(input.filtros)
-      : sql`${condiciones(input.filtros)} AND ${coincideTexto(input.texto)}`;
-
   const filas = await conn(db).execute(sql`
-    SELECT count(*)::int AS total FROM listings l WHERE ${where}
+    SELECT count(*)::int AS total FROM listings l WHERE ${where(input)}
   `);
 
   return Number((filas as unknown as { total: number }[])[0]?.total ?? 0);
+}
+
+export interface PriceBounds {
+  /** Centavos. `null` cuando no hay resultados. */
+  minimo: bigint | null;
+  maximo: bigint | null;
+}
+
+/**
+ * Precio minimo y maximo DEL RESULTADO (con texto y filtros aplicados, incluido
+ * el propio rango de precio). Es lo que le permite a la pantalla dibujar el
+ * control de precio con limites reales en vez de un campo vacio.
+ */
+export async function priceBounds(
+  input: Pick<SearchInput, 'texto' | 'filtros'>,
+  db?: Database,
+): Promise<PriceBounds> {
+  const filas = await conn(db).execute(sql`
+    SELECT min(l.price_amount) AS minimo, max(l.price_amount) AS maximo
+      FROM listings l
+     WHERE ${where(input)}
+  `);
+
+  const fila = (filas as unknown as { minimo: unknown; maximo: unknown }[])[0];
+  return { minimo: comoCentavos(fila?.minimo), maximo: comoCentavos(fila?.maximo) };
 }
 
 export interface FacetCount {
@@ -279,10 +411,10 @@ export async function facetCounts(
 ): Promise<FacetCount[]> {
   const { [faceta]: _excluida, ...resto } = input.filtros;
 
-  const base =
-    input.texto === undefined
-      ? condiciones(resto)
-      : sql`${condiciones(resto)} AND ${coincideTexto(input.texto)}`;
+  const base = where({
+    ...(input.texto === undefined ? {} : { texto: input.texto }),
+    filtros: resto,
+  });
 
   const columna = sql.raw(`l.${COLUMNA_DE_FACETA[faceta]}`);
 
