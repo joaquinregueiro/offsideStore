@@ -769,8 +769,87 @@ header.barra::before {
 
 /* --------------------------------------------------------------- enlaces */
 
-.acciones {
+/* ------------------------------------------------ interruptor de tema */
+
+/**
+ * ⚠️ `margin-left: auto` VA ACA Y NO EN `.acciones`, y es el unico cambio de
+ * layout que trae el interruptor: es el primer elemento despues del buscador,
+ * asi que el que empuja todo a la derecha pasa a ser este. `.acciones` lo
+ * pierde. Si lo llevaran los dos, el segundo `auto` repartiria el sobrante y
+ * quedaria un hueco entre el tema y los enlaces.
+ */
+.tema {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+/**
+ * ⚠️ LOS DOS BOTONES EXISTEN SIEMPRE Y EL CSS ELIGE CUAL SE VE. Sin JavaScript,
+ * el servidor no puede saber si el sistema de quien mira esta en claro o en
+ * oscuro, asi que con la preferencia en "automatico" un solo boton no sabria
+ * que ofrecer. Puestos los dos, la decision la toma el `@media`, que si lo
+ * sabe. Es la misma tecnica que usa el boton de menu con sus dos iconos.
+ *
+ * ⚠️ EL DEFAULT MUESTRA LA LUNA. Si un dia apareciera un caso que ninguna de
+ * las reglas de abajo cubre, se ve un boton —el que lleva a oscuro— en vez de
+ * ninguno. Un interruptor que desaparece es peor que uno que ofrece lo que ya
+ * esta puesto.
+ */
+.temaBoton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  /* El mismo blanco apuntable que el resto de la barra (WCAG 2.5.8 pide 24). */
+  width: var(--alto-control);
+  height: var(--alto-control);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-pastilla);
+  background: transparent;
+  color: var(--color-papel);
+  cursor: pointer;
+  transition:
+    background-color var(--transicion-rapida) var(--curva),
+    color var(--transicion-rapida) var(--curva);
+}
+
+.temaBoton[data-para='oscuro'] {
+  display: inline-flex;
+}
+
+.temaBoton:hover,
+.temaBoton:focus-visible {
+  background-color: rgb(250 250 247 / 0.12);
+  color: var(--color-cambio);
+}
+
+/** Ya estamos en oscuro: lo que se ofrece es el sol. */
+:global(:root[data-tema='oscuro']) .temaBoton[data-para='oscuro'] {
+  display: none;
+}
+
+:global(:root[data-tema='oscuro']) .temaBoton[data-para='claro'] {
+  display: inline-flex;
+}
+
+/**
+ * ⚠️ EN "AUTOMATICO" MANDA EL SISTEMA, y por eso estas dos reglas miran
+ * `:root:not([data-tema])`: es el unico estado que no escribe atributo. Sin
+ * ellas, quien elige automatico con el sistema en oscuro veria el boton que
+ * lleva a oscuro, o sea el que no hace nada.
+ */
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-tema])) .temaBoton[data-para='oscuro'] {
+    display: none;
+  }
+
+  :global(:root:not([data-tema])) .temaBoton[data-para='claro'] {
+    display: inline-flex;
+  }
+}
+
+.acciones {
   display: flex;
   align-items: center;
   gap: var(--espacio-5);

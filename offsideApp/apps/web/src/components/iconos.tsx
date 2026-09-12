@@ -296,6 +296,35 @@ export function IconoRayo(props: PropsIcono) {
   );
 }
 
+/**
+ * SOL Y LUNA — el interruptor de tema.
+ *
+ * ⚠️ NO ESTAN EN LA IDENTIDAD §04: son de interfaz pura, dibujados con la misma
+ * regla que el resto (trazo 1.5, esquinas suaves, sin relleno) para que no se
+ * noten de otro juego. Quedan pendientes de validacion con diseño.
+ *
+ * ⚠️ LA LUNA ES UNA SOLA FORMA, no un circulo con otro circulo encima tapandolo.
+ * Con dos circulos, el de arriba tiene que pintarse del color del FONDO para
+ * recortar, y entonces deja de heredar `currentColor`: el icono se rompe apenas
+ * cambia la superficie, que es justo lo que este boton hace todo el tiempo.
+ */
+export function IconoSol(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </Icono>
+  );
+}
+
+export function IconoLuna(props: PropsIcono) {
+  return (
+    <Icono {...props}>
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z" />
+    </Icono>
+  );
+}
+
 export function IconoCasa(props: PropsIcono) {
   return (
     <Icono {...props}>

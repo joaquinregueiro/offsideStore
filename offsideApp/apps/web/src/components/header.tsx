@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { salir } from '@/app/(auth)/acciones';
+import { elegirTema } from '@/app/acciones';
 import { capabilitiesFor } from '@/lib/permissions';
 import { getSessionUser } from '@/lib/session';
 
@@ -9,7 +10,15 @@ import { countCartItems } from '@/modules/cart/services/cart.service';
 import { countUnread } from '@/modules/notifications/services/inapp-notification.service';
 
 import estilos from './header.module.css';
-import { IconoBuscar, IconoCampana, IconoCarrito, IconoCerrar, IconoMenu } from './iconos';
+import {
+  IconoBuscar,
+  IconoCampana,
+  IconoCarrito,
+  IconoCerrar,
+  IconoLuna,
+  IconoMenu,
+  IconoSol,
+} from './iconos';
 import { Logo } from './marca';
 import { Contador } from './ui';
 
@@ -283,6 +292,49 @@ export async function Header({
           <button type="submit" className={estilos.buscadorBoton}>
             <IconoBuscar tamanio={18} />
             <span className="solo-lectores">Buscar</span>
+          </button>
+        </form>
+
+        {/*
+          EL INTERRUPTOR DE TEMA.
+
+          ⚠️ SON DOS BOTONES SIEMPRE RENDERIZADOS Y EL CSS ELIGE CUAL SE VE, la
+          misma tecnica que ya usa el boton de menu acá abajo con sus dos
+          iconos. No es capricho: sin JavaScript no hay forma de que el servidor
+          sepa si quien mira tiene el sistema en claro o en oscuro, así que con
+          la preferencia en "automático" un único botón no podría saber qué
+          ofrecer. Con los dos puestos, la decisión la toma el `@media`, que sí
+          lo sabe. Cada uno manda un valor FIJO —no alterna—, así que tampoco
+          hay estado que se pueda desincronizar.
+
+          ⚠️ VIVE FUERA DE `.acciones` PORQUE `.acciones` SE ESCONDE ABAJO DE
+          900px. El tema tiene que poder cambiarse desde el teléfono, que es
+          donde más molesta una pantalla blanca de noche.
+
+          ⚠️ EL TEXTO ACCESIBLE VA EN EL BOTON Y DICE LA ACCION, no el estado:
+          "Cambiar a modo claro" es lo que va a pasar si se aprieta. Los iconos
+          son decorativos y ya vienen `aria-hidden`.
+        */}
+        <form action={elegirTema} className={estilos.tema}>
+          <button
+            type="submit"
+            name="tema"
+            value="claro"
+            data-para="claro"
+            className={estilos.temaBoton}
+          >
+            <IconoSol tamanio={20} />
+            <span className="solo-lectores">Cambiar a modo claro</span>
+          </button>
+          <button
+            type="submit"
+            name="tema"
+            value="oscuro"
+            data-para="oscuro"
+            className={estilos.temaBoton}
+          >
+            <IconoLuna tamanio={20} />
+            <span className="solo-lectores">Cambiar a modo oscuro</span>
           </button>
         </form>
 

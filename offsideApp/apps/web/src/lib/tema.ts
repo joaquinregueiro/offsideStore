@@ -17,10 +17,26 @@ import { cookies } from 'next/headers';
  * que dependa de JS sería la primera pieza que no cumple esa regla.
  */
 
-/** Las tres opciones. `auto` es no tener preferencia: manda el sistema. */
+/** Las tres opciones. `auto` delega en el sistema operativo. */
 export type Tema = 'auto' | 'claro' | 'oscuro';
 
 export const TEMAS: readonly Tema[] = ['auto', 'claro', 'oscuro'];
+
+/**
+ * EL TEMA DE QUIEN TODAVIA NO ELIGIO NADA.
+ *
+ * ⚠️ ES OSCURO POR DECISION DEL DUEÑO, NO `auto`, Y LA DIFERENCIA SE VE EN LA
+ * PRIMERA VISITA. Con `auto`, quien llega con el sistema en claro —que es la
+ * mayoria de los escritorios— veria el sitio claro y no se enteraria nunca de
+ * que hay un modo oscuro. Con este default, el sitio se presenta oscuro y el
+ * interruptor de la barra ofrece el otro.
+ *
+ * ⚠️ `auto` SIGUE EXISTIENDO Y AHORA ES UNA ELECCION, no la ausencia de una.
+ * Por eso pasa a guardarse en la cookie: antes "sin preferencia" y "seguir al
+ * sistema" eran lo mismo y alcanzaba con borrar; ahora son cosas distintas y
+ * hay que poder decir "quiero seguir al sistema" y que se recuerde.
+ */
+const TEMA_POR_DEFECTO: Tema = 'oscuro';
 
 /** Cómo se llama la preferencia en el navegador de quien visita. */
 export const COOKIE_DE_TEMA = 'offside_tema';
@@ -36,29 +52,33 @@ function esTema(valor: string | undefined): valor is Tema {
 }
 
 /**
- * Qué tema pidió esta persona.
+ * Qué tema corresponde: el elegido, o el default si todavía no eligió.
  *
- * ⚠️ UN VALOR DESCONOCIDO ES `auto`, NO UN ERROR. La cookie la puede editar
- * cualquiera desde su propio navegador, así que su contenido es entrada de
- * borde como cualquier otra: se valida contra la lista y lo que no está en la
- * lista se descarta en silencio. No hay nada que reportarle a nadie —es su
+ * ⚠️ UN VALOR DESCONOCIDO CAE EN EL DEFAULT, NO ES UN ERROR. La cookie la puede
+ * editar cualquiera desde su propio navegador, así que su contenido es entrada
+ * de borde como cualquier otra: se valida contra la lista y lo que no está en
+ * la lista se descarta en silencio. No hay nada que reportarle a nadie —es su
  * navegador— y romper la página entera por una cookie mal escrita sería
  * convertir un capricho en una caída.
  */
 export async function temaElegido(): Promise<Tema> {
   const valor = (await cookies()).get(COOKIE_DE_TEMA)?.value;
 
-  return esTema(valor) ? valor : 'auto';
+  return esTema(valor) ? valor : TEMA_POR_DEFECTO;
 }
 
 /**
  * El atributo que va en el `<html>`.
  *
- * ⚠️ `auto` NO ESCRIBE ATRIBUTO, y eso es justamente lo que lo hace `auto`: sin
- * `data-tema`, la única regla que decide es el `@media (prefers-color-scheme)`
- * de `tokens.css`. Escribir `data-tema="auto"` no rompería nada hoy, pero
- * invita a que mañana alguien escriba un selector para ese valor y duplique la
- * lógica del sistema operativo a mano.
+ * ⚠️ SOLO `auto` NO ESCRIBE ATRIBUTO, y eso es justamente lo que lo hace `auto`:
+ * sin `data-tema`, la única regla que decide es el `@media
+ * (prefers-color-scheme)` de `tokens.css`. Escribir `data-tema="auto"` no
+ * rompería nada hoy, pero invita a que mañana alguien escriba un selector para
+ * ese valor y duplique la lógica del sistema operativo a mano.
+ *
+ * ⚠️ EL DEFAULT SÍ ESCRIBE ATRIBUTO, y es lo que hace que el default sea el
+ * default. Quien no eligió nada recibe `data-tema="oscuro"`, así que ve oscuro
+ * aunque su sistema esté en claro. Dejarlo sin atributo sería volver a `auto`.
  */
 export async function atributoDeTema(): Promise<{ 'data-tema'?: Tema }> {
   const tema = await temaElegido();
@@ -66,16 +86,16 @@ export async function atributoDeTema(): Promise<{ 'data-tema'?: Tema }> {
   return tema === 'auto' ? {} : { 'data-tema': tema };
 }
 
-/** Guarda la preferencia. La usa la Server Action del pie. */
+/**
+ * Guarda la preferencia. La usan el interruptor de la barra y el del pie.
+ *
+ * ⚠️ LAS TRES SE GUARDAN, INCLUSO `auto`. Antes `auto` borraba la cookie,
+ * porque "sin preferencia" y "seguir al sistema" eran lo mismo. Con el default
+ * en oscuro dejaron de serlo: sin cookie el sitio es oscuro, así que borrar
+ * sería lo contrario de lo que pidió quien eligió automático.
+ */
 export async function guardarTema(tema: Tema): Promise<void> {
   const almacen = await cookies();
-
-  if (tema === 'auto') {
-    // Sin preferencia no hay nada que guardar: se borra y vuelve a mandar el sistema.
-    almacen.delete(COOKIE_DE_TEMA);
-
-    return;
-  }
 
   almacen.set(COOKIE_DE_TEMA, tema, {
     path: '/',

@@ -36,8 +36,14 @@ describe('preferencia de tema', () => {
     almacen.clear();
   });
 
-  it('sin cookie, el tema es automatico', async () => {
-    await expect(temaElegido()).resolves.toBe('auto');
+  /**
+   * ⚠️ EL DEFAULT ES OSCURO, NO `auto`, por decision del dueño. Con `auto`,
+   * quien llega con el sistema en claro —la mayoria de los escritorios— no se
+   * enteraria nunca de que hay un modo oscuro.
+   */
+  it('sin cookie, el tema es oscuro', async () => {
+    await expect(temaElegido()).resolves.toBe('oscuro');
+    await expect(atributoDeTema()).resolves.toEqual({ 'data-tema': 'oscuro' });
   });
 
   it('devuelve el tema guardado', async () => {
@@ -54,28 +60,28 @@ describe('preferencia de tema', () => {
    * por una cookie mal escrita seria convertir un capricho en una caida.
    */
   it.each(['negro', 'DARK', '', 'oscuro ', '<script>', '1'])(
-    'un valor invalido (%j) cae en automatico',
+    'un valor invalido (%j) cae en el default',
     async (basura) => {
       almacen.set(COOKIE_DE_TEMA, basura);
 
-      await expect(temaElegido()).resolves.toBe('auto');
+      await expect(temaElegido()).resolves.toBe('oscuro');
     },
   );
 
   /**
-   * ⚠️ "AUTOMATICO" BORRA, NO GUARDA LA PALABRA "auto". Si la guardara, alguien
-   * que elige automatico quedaria con una cookie que hay que interpretar, y el
-   * dia que cambie el default tendria el viejo pegado. Sin preferencia no hay
-   * nada que recordar.
+   * ⚠️ "AUTOMATICO" SE GUARDA, NO BORRA, Y ESTE TEST FIJA EXACTAMENTE ESO.
+   * Mientras el default fue `auto`, borrar la cookie y elegir automatico eran
+   * lo mismo. Con el default en oscuro dejaron de serlo: si `auto` borrara,
+   * quien pide seguir al sistema quedaria en oscuro fijo, que es lo contrario
+   * de lo que pidio.
    */
-  it('elegir automatico borra la preferencia', async () => {
+  it('elegir automatico se guarda y no vuelve al default', async () => {
     await guardarTema('claro');
-    expect(almacen.has(COOKIE_DE_TEMA)).toBe(true);
-
     await guardarTema('auto');
 
-    expect(almacen.has(COOKIE_DE_TEMA)).toBe(false);
+    expect(almacen.get(COOKIE_DE_TEMA)).toBe('auto');
     await expect(temaElegido()).resolves.toBe('auto');
+    await expect(atributoDeTema()).resolves.toEqual({});
   });
 
   /**
@@ -86,6 +92,7 @@ describe('preferencia de tema', () => {
    * para ese valor y duplique a mano la logica del sistema operativo.
    */
   it('automatico no escribe atributo y los otros dos si', async () => {
+    await guardarTema('auto');
     await expect(atributoDeTema()).resolves.toEqual({});
 
     await guardarTema('oscuro');
