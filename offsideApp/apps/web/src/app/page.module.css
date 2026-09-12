@@ -1221,7 +1221,8 @@
  */
 .catalogo .tituloSeccion,
 .promocionadas .tituloSeccion,
-.explorarInterior .tituloSeccion {
+.explorarInterior .tituloSeccion,
+.garantiasInterior .tituloSeccion {
   margin: 0;
   font-size: var(--display-3);
 }

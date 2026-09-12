@@ -858,10 +858,24 @@ export default async function Home({
             adentro mediria contra una caja que no scrollea nunca y la lista
             quedaria clavada en `opacity: 0`.
           */}
+          {/*
+            ⚠️ EL TITULO ES VISIBLE, Y ANTES NO EXISTIA. La seccion se anunciaba
+            con `aria-label="Cómo funciona"`, o sea que el nombre lo tenia el
+            lector de pantalla y NADIE MAS: en pantalla era una banda calida a
+            sangre, de 93px de aire arriba y abajo, con un filete suelto y tres
+            fichas en el medio. Sin rotulo no se lee como una seccion, se lee
+            como un bloque de color con cosas adentro —que es exactamente lo que
+            reporto el dueño—.
+
+            ⚠️ `aria-labelledby` REEMPLAZA AL `aria-label`: teniendo un titulo de
+            verdad, un `aria-label` encima lo PISA para quien usa lector de
+            pantalla, y entonces el titulo que todos ven no seria el nombre de la
+            seccion. Se apunta al `<h2>` y las dos audiencias oyen lo mismo.
+          */}
           <section
             className={`${estilos.garantias} sup-calida`}
             id="como-funciona"
-            aria-label="Cómo funciona"
+            aria-labelledby="como-funciona-titulo"
           >
             <div
               className={`${estilos.garantiasPatron} patron-vivo diagonales-vivas`}
@@ -869,6 +883,13 @@ export default async function Home({
             />
 
             <div className={estilos.garantiasInterior}>
+              <p className={estilos.seccionEtiqueta}>En tres puntos</p>
+              <h2
+                id="como-funciona-titulo"
+                className={`${estilos.tituloSeccion} display display-3`}
+              >
+                Cómo funciona Offside
+              </h2>
               <hr className={`regla regla-acento revela-linea ${estilos.reglaSeccion}`} />
               <ul className={`${estilos.garantiasLista} revela-grilla-materia`}>
                 {GARANTIAS.map((garantia) => (
@@ -879,7 +900,14 @@ export default async function Home({
                     <span className={estilos.garantiaIcono} aria-hidden="true">
                       {garantia.icono}
                     </span>
-                    <h2 className={estilos.garantiaTitulo}>{garantia.titulo}</h2>
+                    {/*
+                      ⚠️ `<h3>` Y NO `<h2>`: ahora la seccion tiene su propio
+                      `<h2>`, asi que cada ficha cuelga de el. Con los cuatro al
+                      mismo nivel, un lector de pantalla anunciaba "Identidad
+                      declarada" como hermana de la seccion y no como parte de
+                      ella, y el indice de encabezados quedaba plano.
+                    */}
+                    <h3 className={estilos.garantiaTitulo}>{garantia.titulo}</h3>
                     <p className={estilos.garantiaDetalle}>{garantia.detalle}</p>
                   </li>
                 ))}
