@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "check:css": "node scripts/chequeo-css.mjs",
     "check:inline": "node scripts/chequeo-inline.mjs",
+    "check:tema": "node scripts/chequeo-tema.mjs",
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -31,7 +32,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "verify": "npm run format:check && npm run check:css && npm run check:inline && npm run lint && npm run typecheck && npm run test"
+    "verify": "npm run format:check && npm run check:css && npm run check:inline && npm run check:tema && npm run lint && npm run typecheck && npm run test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

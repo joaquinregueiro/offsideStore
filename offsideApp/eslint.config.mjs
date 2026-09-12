@@ -19,6 +19,15 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/coverage/**',
       '**/migrations/**',
+      /*
+       * ⚠️ NO ES CODIGO DEL PROYECTO: es un fragmento para PEGAR EN LA CONSOLA
+       * del navegador con la app corriendo. No se importa desde ningun lado, no
+       * entra en ningun `tsconfig` y no lo ejecuta node, asi que el servicio de
+       * tipos de `typescript-eslint` no tiene proyecto contra el cual
+       * analizarlo. El resto de `scripts/` son `.mjs` que si corren con node y
+       * esos si se lintean (ver mas abajo).
+       */
+      'scripts/auditor-de-pantalla.js',
       // `docs/` y `design/` viven fuera de offsideApp/, no hace falta ignorarlas.
     ],
   },

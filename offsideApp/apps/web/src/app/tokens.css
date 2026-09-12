@@ -395,7 +395,7 @@ body {
    * final del archivo). El body tiene que dejar pasar la malla y el grano, que
    * se pintan en sus pseudo-elementos por DEBAJO del contenido.
    */
-  color: var(--color-tinta);
+  color: var(--texto);
   font-family: var(--fuente-texto);
   font-size: var(--texto-md);
   line-height: var(--interlineado-texto);
@@ -714,6 +714,28 @@ a:hover {
    * solo). Nadie podia subir el nivel en un lugar sin subirlo a mano en los
    * otros diez. Con superficies nombradas, se sube una vez.
    */
+  /**
+   * LA TINTA DE LA PAGINA. Es el token que hace posible el modo oscuro.
+   *
+   * ⚠️ NO ES UN ALIAS DECORATIVO DE `--color-tinta`, Y LA DIFERENCIA ES TODA LA
+   * ARQUITECTURA DEL TEMA. `--color-tinta` es un color de la IDENTIDAD: el
+   * verde casi negro de la marca. Se usa para dos cosas opuestas —como texto
+   * sobre claro y como FONDO de los bloques oscuros—, y por eso no se puede dar
+   * vuelta: hay tres `background: var(--color-tinta)` reales en el repo y en
+   * oscuro quedarian papel con texto papel, que es la mina que documenta el
+   * contrato de superficies mas abajo.
+   *
+   * `--texto` es un ROL: "la tinta que corresponde al fondo de la pagina". En
+   * claro vale Tinta; en oscuro vale papel. Los 50 lugares que escribian
+   * `color: var(--color-tinta)` sobre una superficie que se da vuelta pasaron a
+   * este token; los 9 que lo escriben sobre un relleno FIJO de marca —el globo
+   * Amarillo Cambio, el boton verde, `::selection`— se quedaron con Tinta,
+   * porque su fondo tampoco se da vuelta.
+   */
+  --texto: var(--color-tinta);
+  /** El fondo de la pagina. Companiero de `--texto`: los dos se dan vuelta juntos. */
+  --fondo-pagina: var(--color-papel);
+
   --superficie-0: var(--color-papel);
   --superficie-1: var(--color-blanco);
   /** Un escalon por debajo del papel: agrupa sin encerrar. Tinta 14.71:1. */
@@ -1472,12 +1494,19 @@ html {
    */
   overflow-x: clip;
   /** El fondo va en `html` para que el pseudo de `body` pueda pintar ENCIMA. */
-  background-color: var(--color-papel);
+  background-color: var(--fondo-pagina);
   /** Sin esto, pasar de una pantalla con scroll a una sin scroll corre todo 15px. */
   scrollbar-gutter: stable;
   /** Un ancla nunca queda debajo de la barra adherida. */
   scroll-padding-top: calc(var(--alto-barra) + var(--espacio-4));
-  /** El sitio es claro: sin esto un navegador en modo oscuro pinta los selects. */
+  /**
+   * ⚠️ EL DEFAULT SIGUE SIENDO CLARO Y EL TEMA OSCURO LO PISA DESDE `:root`.
+   * Esto vale (0,0,1) y las reglas del tema valen (0,1,0) y (0,1,1), asi que
+   * ganan por especificidad y no por orden de archivo. `color-scheme` no es
+   * decorativo: es lo que hace que el navegador pinte los `<select>`, las
+   * barras de scroll y el autocompletado en el modo correcto. Sin el, en
+   * oscuro quedan controles blancos en una pagina oscura.
+   */
   color-scheme: light;
 }
 
@@ -2379,7 +2408,7 @@ dd {
   border: 1px solid var(--vidrio-claro-borde);
   border-radius: var(--radio-grande);
   box-shadow: var(--luz-superior), var(--sombra-2), var(--glow-suave);
-  color: var(--color-tinta);
+  color: var(--texto);
 
   /**
    * ⚠️ MAS HONDOS QUE LOS DE PAPEL, Y ES UN NUMERO: el vidrio puede vivir
@@ -2580,4 +2609,157 @@ dd {
 /** Solo el borde de luz, sin halo: para un chip o una fila seleccionada. */
 .borde-luz {
   box-shadow: 0 0 0 1px var(--borde-luz);
+}
+
+/* ============================================================= modo oscuro */
+
+/**
+ * MODO OSCURO
+ * =============================================================================
+ *
+ * ⚠️ NO ES UNA PALETA NUEVA: ES EL CONTRATO DE `.sup-noche` APLICADO A LA RAIZ.
+ * El sistema ya tenia un tema oscuro completo y MEDIDO —`--sup-fosa`,
+ * `--sup-noche-alta`, `--color-sobre-oscuro`, `--linea-control-oscura`, los
+ * ocho tokens de boton— porque el pie, los pliegos editoriales y el bloque de
+ * cierre son oscuros desde el rediseño. Lo que faltaba no era el color: era
+ * poder poner la pagina entera en ese modo. Por eso acá casi no hay valores
+ * nuevos; hay ALIAS a los que ya estaban probados sobre fondo oscuro.
+ *
+ * ⚠️ EL BLOQUE ESTA DUPLICADO A PROPOSITO Y HAY UN CHEQUEO QUE LO FIJA. Son dos
+ * situaciones distintas —seguir al sistema operativo, y una eleccion explicita
+ * de la persona— y CSS no tiene forma de compartir un cuerpo entre un `@media`
+ * y un selector de atributo: no existe `@extend` ni mixins, y la alternativa
+ * ("space toggles") es ilegible. Se acepta la duplicacion y se acota como el
+ * resto del proyecto acota las duplicaciones inevitables: `chequeo-tema.mjs`
+ * falla si los dos bloques dejan de declarar exactamente los mismos tokens.
+ *
+ * ⚠️ EL `:not([data-tema='claro'])` ES LO QUE HACE QUE "CLARO" SEA UNA ELECCION
+ * DE VERDAD. Sin el, quien tiene el sistema en oscuro y elige claro en Offside
+ * seguiria viendo oscuro, porque el `@media` ganaria igual. Con el, el atributo
+ * apaga la regla del sistema.
+ *
+ * ⚠️ `--color-tinta` Y `--color-blanco` NO SE TOCAN, igual que en las
+ * superficies. Lo que se da vuelta es `--texto` y la familia de superficies.
+ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='claro']) {
+    color-scheme: dark;
+
+    /**
+     * ⚠️ LA PAGINA ES `--sup-fosa` Y NO `--sup-noche`, y la diferencia importa:
+     * `--sup-noche` ES `--color-tinta`, o sea el mismo color con el que los
+     * bloques oscuros se pintan a si mismos. Con la pagina en ese valor, un
+     * `<Pliego>` noche sobre la pagina seria invisible —el bloque y su fondo
+     * serian el mismo color— y el sitio perderia la alternancia de planos que
+     * le da ritmo. La fosa es un escalon mas honda, asi que noche sigue
+     * leyendose como un bloque APOYADO encima.
+     */
+    --fondo-pagina: var(--sup-fosa);
+    --texto: var(--color-sobre-oscuro);
+
+    --superficie-0: var(--sup-noche);
+    --superficie-1: var(--sup-noche-alta);
+    --superficie-2: rgb(250 250 247 / 0.05);
+    --superficie-marca: rgb(63 189 119 / 0.12);
+    --superficie-calida: rgb(245 239 174 / 0.1);
+
+    --color-neutro-texto: var(--color-sobre-oscuro-2);
+    --color-neutro-tenue: var(--color-sobre-oscuro-tenue);
+    --color-neutro-apagado: var(--color-sobre-oscuro-tenue);
+    --color-neutro-borde: var(--linea-tenue-oscura);
+    --color-neutro-suave: rgb(250 250 247 / 0.06);
+    --linea-tenue: var(--linea-tenue-oscura);
+    --linea-control: var(--linea-control-oscura);
+    --linea-marca: var(--verde-400);
+
+    --texto-fuerte: var(--color-sobre-oscuro);
+    --marca-texto: var(--verde-400);
+    --marca-borde: var(--verde-400);
+    --etiqueta-texto: var(--color-sobre-oscuro-2);
+
+    /** El anillo de foco verde sobre verde oscuro no se ve. */
+    --color-foco: var(--color-cambio);
+    /** Sobre oscuro el naranja SI es texto (7.26:1): no hace falta el hondo. */
+    --color-alerta: var(--color-naranja);
+    --alerta-texto: var(--color-naranja);
+    --alerta-lavado: rgb(255 144 45 / 0.16);
+    --enlace: var(--verde-400);
+
+    --patron-color: rgb(250 250 247 / 0.08);
+    --destello: var(--destello-oscuro);
+    --malla-papel: var(--malla-noche);
+    --grano-fuerza: var(--grano-fuerza-oscuro);
+    --luz-superior: var(--luz-superior-oscura);
+
+    /**
+     * ⚠️ EL VIDRIO CLARO PASA A SER OSCURO. Es una pastilla translucida pensada
+     * para apoyarse sobre una foto o sobre la portada; en modo oscuro, blanco
+     * al 82% sobre la pagina es un parche que encandila.
+     */
+    --vidrio-claro-fondo: var(--vidrio-oscuro-fondo);
+    --vidrio-claro-borde: var(--vidrio-oscuro-borde);
+    --vidrio-claro-solido: var(--vidrio-oscuro-solido);
+
+    --boton-primario-fondo: var(--color-cambio);
+    --boton-primario-texto: var(--color-tinta);
+    --boton-primario-fondo-activo: var(--color-papel);
+    --boton-secundario-fondo: transparent;
+    --boton-secundario-borde: var(--linea-control-oscura);
+    --boton-secundario-texto: var(--color-sobre-oscuro);
+    --boton-secundario-fondo-activo: rgb(250 250 247 / 0.12);
+    --boton-secundario-texto-activo: var(--color-cambio);
+  }
+}
+
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
+
+  --fondo-pagina: var(--sup-fosa);
+  --texto: var(--color-sobre-oscuro);
+
+  --superficie-0: var(--sup-noche);
+  --superficie-1: var(--sup-noche-alta);
+  --superficie-2: rgb(250 250 247 / 0.05);
+  --superficie-marca: rgb(63 189 119 / 0.12);
+  --superficie-calida: rgb(245 239 174 / 0.1);
+
+  --color-neutro-texto: var(--color-sobre-oscuro-2);
+  --color-neutro-tenue: var(--color-sobre-oscuro-tenue);
+  --color-neutro-apagado: var(--color-sobre-oscuro-tenue);
+  --color-neutro-borde: var(--linea-tenue-oscura);
+  --color-neutro-suave: rgb(250 250 247 / 0.06);
+  --linea-tenue: var(--linea-tenue-oscura);
+  --linea-control: var(--linea-control-oscura);
+  --linea-marca: var(--verde-400);
+
+  --texto-fuerte: var(--color-sobre-oscuro);
+  --marca-texto: var(--verde-400);
+  --marca-borde: var(--verde-400);
+  --etiqueta-texto: var(--color-sobre-oscuro-2);
+
+  --color-foco: var(--color-cambio);
+  --color-alerta: var(--color-naranja);
+  --alerta-texto: var(--color-naranja);
+  --alerta-lavado: rgb(255 144 45 / 0.16);
+  --enlace: var(--verde-400);
+
+  --patron-color: rgb(250 250 247 / 0.08);
+  --destello: var(--destello-oscuro);
+  --malla-papel: var(--malla-noche);
+  --grano-fuerza: var(--grano-fuerza-oscuro);
+  --luz-superior: var(--luz-superior-oscura);
+
+  --vidrio-claro-fondo: var(--vidrio-oscuro-fondo);
+  --vidrio-claro-borde: var(--vidrio-oscuro-borde);
+  --vidrio-claro-solido: var(--vidrio-oscuro-solido);
+
+  --boton-primario-fondo: var(--color-cambio);
+  --boton-primario-texto: var(--color-tinta);
+  --boton-primario-fondo-activo: var(--color-papel);
+  --boton-secundario-fondo: transparent;
+  --boton-secundario-borde: var(--linea-control-oscura);
+  --boton-secundario-texto: var(--color-sobre-oscuro);
+  --boton-secundario-fondo-activo: rgb(250 250 247 / 0.12);
+  --boton-secundario-texto-activo: var(--color-cambio);
 }

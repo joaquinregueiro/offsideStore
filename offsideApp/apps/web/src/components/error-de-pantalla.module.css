@@ -84,7 +84,7 @@
 
 .titulo {
   margin: 0;
-  color: var(--color-tinta);
+  color: var(--texto);
 }
 
 .detalle {

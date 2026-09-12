@@ -317,13 +317,103 @@
  * estilos. Los blobs del pie no llegan aca: `.sup-fosa` pinta su fondo opaco
  * por encima de la capa de blobs.
  */
-.legalTexto {
+/**
+ * ⚠️ LA TIRA LEGAL PASA A SER UNA FILA DE DOS. El texto a la izquierda y el
+ * interruptor de tema a la derecha, y en teléfono uno debajo del otro. El
+ * `max-width` y el centrado se mudan acá: antes los llevaba el párrafo, que
+ * ahora es solo una de las dos mitades.
+ */
+.legalFila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-4);
   max-width: var(--ancho-contenido);
   margin: 0 auto;
   padding: var(--espacio-5) var(--espacio-6);
+}
+
+.legalTexto {
+  /*
+   * ⚠️ `min-width: 0` Y `flex: 1 1 30ch`: sin una base en ch, el párrafo se
+   * queda en una sola línea larguísima y empuja al interruptor fuera de la
+   * fila; con la base, se parte cuando corresponde y el interruptor baja solo.
+   */
+  flex: 1 1 30ch;
+  min-width: 0;
+  margin: 0;
   font-size: var(--texto-xs);
   /* Con `.sup-fosa` este token vale #8fa79a: 7.00:1. */
   color: var(--color-neutro-apagado);
+}
+
+/* ------------------------------------------------- interruptor de tema */
+
+.tema {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.temaRotulo {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-amplio);
+  color: var(--color-neutro-texto);
+}
+
+/**
+ * ⚠️ ES UN RIEL CON BORDE, no tres botones sueltos: los tres juntos tienen que
+ * leerse como UN control de tres posiciones. Sin el marco, "Automático / Claro
+ * / Oscuro" parecen tres enlaces del pie.
+ */
+.temaOpciones {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-pastilla);
+}
+
+.temaOpcion,
+.temaOpcionActiva {
+  /**
+   * ⚠️ 28px Y NO `--alto-control`: es un control secundario de pie de página y
+   * los 44px de un botón lo convertirían en la pieza más pesada de la tira. Los
+   * 24px que exige WCAG 2.5.8 se cumplen con holgura.
+   */
+  min-height: 28px;
+  padding: 0 var(--espacio-3);
+  border: 0;
+  border-radius: var(--radio-pastilla);
+  background: transparent;
+  color: var(--color-neutro-texto);
+  font-family: inherit;
+  font-size: var(--texto-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--transicion-rapida) var(--curva),
+    color var(--transicion-rapida) var(--curva);
+}
+
+.temaOpcion:hover {
+  background-color: var(--color-neutro-suave);
+  color: var(--texto-fuerte, var(--color-tinta));
+}
+
+/**
+ * ⚠️ EL ACTIVO NO SE DISTINGUE SOLO POR COLOR. Lleva fondo, texto propio Y más
+ * peso: quien no distingue el verde del gris tiene que poder ver cuál está
+ * elegido. En el marcado, además, lo dice `aria-pressed`.
+ */
+.temaOpcionActiva {
+  background-color: var(--superficie-1);
+  color: var(--texto-fuerte, var(--color-tinta));
+  font-weight: var(--peso-semi);
 }
 
 @media (max-width: 480px) {

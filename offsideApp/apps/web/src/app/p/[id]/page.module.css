@@ -775,12 +775,12 @@
 /** El icono es forma, no informacion: el texto de al lado dice lo mismo. */
 .sello svg {
   margin-top: 2px;
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
 }
 
 .sello strong {
   /* #10231a sobre blanco #ffffff = 16.44:1. */
-  color: var(--color-tinta);
+  color: var(--texto);
   font-weight: var(--peso-semi);
 }
 
@@ -1082,7 +1082,7 @@
   font-size: var(--texto-2xl);
   font-variant-numeric: tabular-nums;
   /* #10231a sobre blanco #ffffff = 16.44:1. */
-  color: var(--color-tinta);
+  color: var(--texto);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1287,7 +1287,7 @@
 
 .guardarBoton:hover {
   border-color: var(--color-cancha);
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
 }
 
 .guardarBoton:focus-visible {
@@ -1337,14 +1337,14 @@
   margin: 0;
   font-weight: var(--peso-semi);
   line-height: var(--interlineado-lectura);
-  color: var(--color-tinta);
+  color: var(--texto);
   /* Una pregunta puede traer una URL larga sin espacios. */
   overflow-wrap: anywhere;
 }
 
 .preguntaMarca {
   display: inline-flex;
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
 }
 
 /**
@@ -1443,7 +1443,7 @@
   margin: 0;
   font-size: var(--texto-lg);
   font-weight: var(--peso-semi);
-  color: var(--color-tinta);
+  color: var(--texto);
   overflow-wrap: anywhere;
 }
 

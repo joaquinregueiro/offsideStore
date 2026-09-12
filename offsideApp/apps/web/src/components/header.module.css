@@ -417,7 +417,7 @@ header.barra::before {
 
 .saltar:focus {
   transform: translateY(0);
-  color: var(--color-tinta);
+  color: var(--texto);
 }
 
 /* ------------------------------------------------------------------ layout */
@@ -601,7 +601,7 @@ header.barra::before {
   padding: var(--espacio-3) var(--espacio-3) var(--espacio-3) var(--espacio-5);
   border: none;
   background: transparent;
-  color: var(--color-tinta);
+  color: var(--texto);
   font-family: var(--fuente-texto);
   /*
    * ⚠️ 16px Y NO 13px. iOS Safari hace ZOOM sobre cualquier campo de menos de
@@ -618,9 +618,20 @@ header.barra::before {
   line-height: calc(var(--alto-control) - var(--espacio-3) * 2);
 }
 
+/**
+ * ⚠️ SE MEZCLA DESDE `--texto` Y NO DESDE `--color-tinta`, y es lo que lo salva
+ * en oscuro. El buscador es una isla que se da vuelta con el tema —de blanco a
+ * `--sup-noche-alta`—, pero la ayuda estaba escrita con Tinta fija: medido en
+ * el navegador, quedaba en **1.42:1**, o sea tinta oscura sobre un campo
+ * oscuro. Era el unico `::placeholder` del sitio que no salia de un token que
+ * se remapea; los otros tres usan `--color-neutro-tenue` y se dieron vuelta
+ * solos.
+ *
+ * Claro: #6b7771 sobre blanco, 4.66:1. Oscuro: papel al 62% compone #a3afa9
+ * sobre #16362a, 5.5:1. La proporcion no cambia, cambia de que lado se mezcla.
+ */
 .buscador::placeholder {
-  /* Ver la nota de isla clara arriba: #6b7771 sobre blanco, 4.66:1. */
-  color: color-mix(in srgb, var(--color-tinta) 62%, transparent);
+  color: color-mix(in srgb, var(--texto) 62%, transparent);
   opacity: 1;
 }
 
@@ -898,7 +909,7 @@ header.barra::before {
 
 .enlaceDestacado:hover,
 .enlaceDestacado:focus-visible {
-  color: var(--color-tinta);
+  color: var(--texto);
   border-color: var(--color-cambio);
   box-shadow: var(--glow-cambio);
   translate: 0 -1px;

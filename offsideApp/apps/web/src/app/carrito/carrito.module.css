@@ -119,7 +119,7 @@
 
 .grupoTitulo svg {
   flex: none;
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
 }
 
 .lineas {
@@ -269,7 +269,7 @@
   padding: 0 var(--espacio-3);
   font: inherit;
   font-size: var(--texto-base);
-  color: var(--color-tinta);
+  color: var(--texto);
   background: var(--superficie-1);
   border: 1px solid var(--linea-control);
   border-radius: var(--radio-chico);
@@ -358,7 +358,7 @@
   font-size: var(--texto-xl);
   letter-spacing: var(--tracking-titulo);
   font-variant-numeric: tabular-nums;
-  color: var(--color-tinta);
+  color: var(--texto);
 }
 
 /* ------------------------------------------------------------- el cierre */
@@ -499,7 +499,7 @@
 
 .ordenNumero svg {
   flex: none;
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
 }
 
 .ordenTotal {

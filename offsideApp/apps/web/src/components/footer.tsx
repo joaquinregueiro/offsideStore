@@ -1,5 +1,8 @@
 import Link from 'next/link';
 
+import { elegirTema } from '@/app/acciones';
+import { temaElegido, type Tema } from '@/lib/tema';
+
 import estilos from './footer.module.css';
 import { Logo } from './marca';
 
@@ -37,7 +40,23 @@ import { Logo } from './marca';
  * luz → tira legal en fosa. Ninguno se escribe a mano: son clases del sistema
  * (`sup-*`, `escena-luz`, `blobs`, `patron-vivo`, `con-grano`).
  */
-export function Footer() {
+/**
+ * ⚠️ EL ORDEN NO ES ALFABETICO: va de menos a mas compromiso. "Automatico"
+ * primero porque es el default y el que no hay que explicar.
+ */
+const OPCIONES_DE_TEMA: readonly { valor: Tema; texto: string }[] = [
+  { valor: 'auto', texto: 'Automático' },
+  { valor: 'claro', texto: 'Claro' },
+  { valor: 'oscuro', texto: 'Oscuro' },
+];
+
+export async function Footer() {
+  /*
+   * ⚠️ EL PIE SE VUELVE ASINCRONO Y ESO NO LO SACA DEL SERVIDOR: sigue siendo un
+   * Server Component, solo que ahora lee una cookie. Es el unico lugar del pie
+   * que depende de quien mira, y el sitio ya es `force-dynamic` entero.
+   */
+  const tema = await temaElegido();
   return (
     /*
       Mismo criterio que la barra: el pie es el otro borde fijo de la pagina, y
@@ -188,10 +207,51 @@ export function Footer() {
           nadie mira el año de un copyright. Lo que si importa —quien opera el
           sitio y con que reglas— es lo que va escrito.
         */}
-        <p className={estilos.legalTexto}>
-          Offside Store — marketplace de camisetas de fútbol. Los pagos se procesan con Mercado
-          Pago; cada vendedor cobra en su propia cuenta.
-        </p>
+        <div className={estilos.legalFila}>
+          <p className={estilos.legalTexto}>
+            Offside Store — marketplace de camisetas de fútbol. Los pagos se procesan con Mercado
+            Pago; cada vendedor cobra en su propia cuenta.
+          </p>
+
+          {/*
+            EL INTERRUPTOR DE TEMA.
+
+            ⚠️ SON TRES BOTONES EN UN SOLO `<form>`, NO UN `<select>` NI UN
+            INTERRUPTOR DE DOS ESTADOS. Tres, porque "seguir al sistema" es una
+            opcion de verdad y no el hueco entre las otras dos: sin ella, quien
+            tiene el telefono en automatico pierde el cambio de la noche apenas
+            toca una vez. Botones y no `<select>`, porque un desplegable sin
+            JavaScript necesita ademas un boton de aplicar, y serian dos gestos
+            para lo que es uno.
+
+            ⚠️ FUNCIONA SIN JAVASCRIPT, que es la regla de todo el sitio: el
+            navegador hace un POST nativo y Next vuelve a renderizar ESTA misma
+            pantalla con la cookie ya puesta.
+
+            ⚠️ EL ESTADO SE DICE CON `aria-pressed` Y NO SOLO CON COLOR, para
+            que lo sepa quien usa un lector de pantalla y quien no distingue
+            colores.
+          */}
+          <form action={elegirTema} className={estilos.tema}>
+            <span className={estilos.temaRotulo} id="tema-rotulo">
+              Tema
+            </span>
+            <div className={estilos.temaOpciones} role="group" aria-labelledby="tema-rotulo">
+              {OPCIONES_DE_TEMA.map(({ valor, texto }) => (
+                <button
+                  key={valor}
+                  type="submit"
+                  name="tema"
+                  value={valor}
+                  aria-pressed={tema === valor}
+                  className={tema === valor ? estilos.temaOpcionActiva : estilos.temaOpcion}
+                >
+                  {texto}
+                </button>
+              ))}
+            </div>
+          </form>
+        </div>
       </div>
     </footer>
   );

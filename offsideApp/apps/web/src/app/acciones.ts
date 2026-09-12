@@ -8,6 +8,7 @@ import { rutaInternaSegura } from '@/lib/formato';
 import type { EstadoFormulario } from '@/lib/formulario';
 import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
 import { requireVerifiedSessionUser } from '@/lib/session';
+import { guardarTema, TEMAS, type Tema } from '@/lib/tema';
 import { toggleFavorite } from '@/modules/favorites/services/favorite.service';
 import { askQuestion } from '@/modules/questions/services/question.service';
 import { reportListing } from '@/modules/reports/services/report.service';
@@ -193,4 +194,38 @@ export async function reportarPublicacion(
   }
 
   return { ok: 'Recibimos tu reporte. Lo revisa el equipo de moderación.' };
+}
+
+/**
+ * ELEGIR EL TEMA. Claro, oscuro, o seguir al sistema.
+ *
+ * ⚠️ NO EXIGE SESION, Y ES LA DIFERENCIA CON TODAS LAS DEMAS ACCIONES DE ESTE
+ * ARCHIVO. Las otras escriben filas a nombre de alguien; esta guarda una
+ * preferencia de visualizacion en el navegador de quien la pide, en su propia
+ * cookie. Pedir cuenta para poder bajar el brillo dejaria afuera justo a quien
+ * llega por primera vez, que es quien mas mira la vitrina.
+ *
+ * ⚠️ TAMPOCO CONSUME RATE LIMIT. Lo que protege el limitador es el trabajo del
+ * servidor y las filas de la base: esto no escribe ninguna y todo su efecto
+ * vive en el navegador de quien apreto. Apretarlo mil veces le cuesta a esa
+ * persona, no al sitio.
+ *
+ * ⚠️ NO REDIRIGE NI REVALIDA A MANO. Sin JavaScript, el navegador hace un POST
+ * nativo a la ruta donde esta el pie y Next vuelve a renderizar ESA pantalla
+ * con la cookie ya puesta: se vuelve exactamente a donde se estaba, sin pasar
+ * por una URL intermedia y sin perder el scroll. Un `redirect()` acá lo unico
+ * que agregaria es un salto.
+ *
+ * ⚠️ UN VALOR QUE NO ESTA EN LA LISTA NO HACE NADA. El cuerpo del POST lo
+ * escribe quien quiera, asi que se valida en el borde como cualquier entrada;
+ * pero un tema invalido no es un error que reportar —no hay pantalla donde
+ * mostrarlo— sino una accion sin efecto.
+ */
+export async function elegirTema(formData: FormData): Promise<void> {
+  const pedido = formData.get('tema');
+
+  if (typeof pedido !== 'string') return;
+  if (!(TEMAS as readonly string[]).includes(pedido)) return;
+
+  await guardarTema(pedido as Tema);
 }

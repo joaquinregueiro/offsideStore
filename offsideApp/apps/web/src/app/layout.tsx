@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 
+import { atributoDeTema } from '@/lib/tema';
+
 import './tokens.css';
 /*
  * ⚠️ EL ORDEN IMPORTA POR DOS RAZONES, NO POR UNA:
@@ -158,9 +160,21 @@ export const viewport: Viewport = {
  * `background-attachment: fixed` porque en iOS un fondo fijo sobre el body se
  * repinta en cada cuadro de scroll y el sitio se arrastra.
  */
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  /*
+   * ⚠️ EL TEMA SE RESUELVE ACA, EN EL SERVIDOR, Y POR ESO NO HAY FOGONAZO. El
+   * atributo sale ya escrito en el HTML, asi que la PRIMERA pintura del
+   * navegador ya es la del tema elegido. Aplicarlo desde el cliente pintaria la
+   * pagina clara y la daria vuelta un instante despues: un flash blanco en cada
+   * carga, justo para quien eligio oscuro porque la luz le molesta.
+   *
+   * ⚠️ SIN PREFERENCIA NO SE ESCRIBE NADA y manda el `@media
+   * (prefers-color-scheme)` de `tokens.css`. Ver `lib/tema.ts`.
+   */
+  const tema = await atributoDeTema();
+
   return (
-    <html lang="es-AR" className={`${bigNoodle.variable} ${inter.variable}`}>
+    <html lang="es-AR" className={`${bigNoodle.variable} ${inter.variable}`} {...tema}>
       <body>{children}</body>
     </html>
   );

@@ -655,7 +655,7 @@
   font-weight: var(--peso-semi);
   text-transform: uppercase;
   letter-spacing: var(--tracking-amplio);
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
 }
 
 .antetitulo::before {
@@ -754,7 +754,7 @@
  * encima: **14.71:1**. El unico naranja es el filo superior, que es FORMA.
  */
 .tarjetaCabeceraAlerta {
-  color: var(--color-tinta);
+  color: var(--texto);
   border-top: 4px solid var(--color-naranja);
 }
 
@@ -953,7 +953,7 @@
   min-height: var(--alto-control);
   font-size: var(--texto-sm);
   font-weight: var(--peso-semi);
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
   cursor: pointer;
   list-style: none;
 }

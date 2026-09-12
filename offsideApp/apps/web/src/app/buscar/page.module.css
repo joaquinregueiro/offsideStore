@@ -551,7 +551,7 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
   /* #0b5a34 sobre blanco: 8.31:1 ✅ */
-  color: var(--color-tiempo-extra);
+  color: var(--marca-texto, var(--color-tiempo-extra));
   cursor: pointer;
   user-select: none;
   list-style: none;
@@ -803,7 +803,7 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-etiqueta);
   /* #0f7a45 sobre blanco: 5.40:1 ✅ */
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
   cursor: pointer;
   transition:
     background-color var(--transicion-rapida) var(--curva),
@@ -950,7 +950,7 @@
 .opcion:focus-visible,
 .opcionActiva:hover,
 .opcionActiva:focus-visible {
-  color: var(--color-tiempo-extra);
+  color: var(--marca-texto, var(--color-tiempo-extra));
 }
 
 /**
@@ -960,7 +960,7 @@
  */
 .opcionActiva {
   font-weight: var(--peso-semi);
-  color: var(--color-tiempo-extra);
+  color: var(--marca-texto, var(--color-tiempo-extra));
 }
 
 .opcionActiva::after {
@@ -1043,7 +1043,7 @@
   font-family: var(--fuente-titulo);
   font-size: var(--texto-xl);
   letter-spacing: var(--tracking-titulo);
-  color: var(--color-tinta);
+  color: var(--texto);
   margin-right: var(--espacio-1);
 }
 
@@ -1086,7 +1086,7 @@
   border-radius: var(--radio);
   background: var(--superficie-1);
   /* #0b5a34 sobre blanco: 8.31:1 ✅ */
-  color: var(--color-tiempo-extra);
+  color: var(--marca-texto, var(--color-tiempo-extra));
   font-size: var(--texto-sm);
   white-space: nowrap;
   transition:
@@ -1177,7 +1177,7 @@
  */
 .vacioTitulo {
   margin: 0;
-  color: var(--color-tinta);
+  color: var(--texto);
 }
 
 .vacioTexto {

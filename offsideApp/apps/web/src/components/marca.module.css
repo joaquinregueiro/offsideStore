@@ -25,7 +25,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--espacio-3);
-  color: var(--color-cancha);
+  color: var(--marca-texto, var(--color-cancha));
   transition: color var(--dur-hover) var(--curva);
 }
 
