@@ -114,8 +114,7 @@ header.barra {
   box-shadow:
     var(--luz-superior-oscura),
     0 0 0 1px rgb(var(--luz-papel) / 0.12),
-    var(--sombra-2),
-    0 10px 36px -14px rgb(var(--luz-cambio) / 0.28);
+    var(--sombra-2);
 
   /**
    * ⚠️ ARREGLA UN TOKEN QUE `.sup-cancha` HEREDA: define `--linea-control` como
@@ -217,9 +216,7 @@ header.barra::before {
   border-radius: inherit;
   background-color: var(--vidrio-solido);
   background-image: linear-gradient(var(--eje), transparent 0%, rgb(7 59 34 / 0.5) 100%);
-  box-shadow:
-    var(--sombra-3),
-    0 12px 40px -12px rgb(var(--luz-cambio) / 0.35);
+  box-shadow: var(--sombra-3);
 }
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
@@ -825,7 +822,6 @@ header.barra::before {
   transform: scaleX(0);
   transform-origin: 0 50%;
   background-image: var(--acento-barra);
-  box-shadow: 0 0 10px rgb(var(--luz-cambio) / 0.7);
   transition: transform var(--dur-media) var(--curva-corte);
 }
 
@@ -881,7 +877,6 @@ header.barra::before {
   border: 1px solid rgb(var(--luz-cambio) / 0.75);
   border-radius: var(--radio-pastilla);
   color: var(--color-cambio);
-  box-shadow: 0 0 18px -6px rgb(var(--luz-cambio) / 0.5);
   transition:
     color var(--dur-media) var(--curva-seca),
     border-color var(--dur-hover) var(--curva),
@@ -916,7 +911,6 @@ header.barra::before {
 
 .enlaceDestacado:active {
   translate: 0 1px;
-  box-shadow: 0 0 10px -4px rgb(var(--luz-cambio) / 0.4);
 }
 
 /* ------------------------------------------------------------- campanita */

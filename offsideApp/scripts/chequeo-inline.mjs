@@ -29,7 +29,7 @@
  * intención— en vez de bajarle el estándar al chequeo.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SRC = fileURLToPath(new URL('../apps/web/src/', import.meta.url));
@@ -204,9 +204,24 @@ for (const hoja of hojas) {
    * importa, asi que su `.etiqueta` se comparaba contra la `.etiqueta` de otro
    * modulo. Era el unico hallazgo que quedaba, y era ese error.
    */
-  const carpeta = hoja.slice(0, hoja.lastIndexOf('/'));
-  const nombre = hoja.slice(hoja.lastIndexOf('/') + 1);
-  const importa = new RegExp(`import\\s+estilos\\s+from\\s+'[^']*${nombre.replace('.', '\\.')}'`);
+  /*
+   * ⚠️ `dirname`/`basename`, NO cortar por '/'. `hoja` viene de `join()`, que
+   * en Windows separa con backslash: `lastIndexOf('/')` daba -1 y `nombre`
+   * terminaba siendo la RUTA ABSOLUTA ENTERA. Como ademas se interpola en una
+   * RegExp, el primer modulo con parentesis en la ruta
+   * —`app/(admin)/admin.module.css`— armaba una expresion con un parentesis sin
+   * cerrar y el script moria con "Unmatched ')'". En Linux no pasa: alli el
+   * separador ya es '/'.
+   */
+  const carpeta = dirname(hoja);
+  const nombre = basename(hoja);
+  /*
+   * ⚠️ SE ESCAPA EL NOMBRE ENTERO. `.replace('.', ...)` sin bandera global
+   * solo escapa el PRIMER punto, y cualquier metacaracter del nombre entraba
+   * crudo a la expresion. Un nombre de archivo no es una expresion regular.
+   */
+  const escapado = nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const importa = new RegExp(`import\\s+estilos\\s+from\\s+'[^']*${escapado}'`);
   const vecinos = archivos(carpeta, /\.tsx$/).filter((archivo) =>
     importa.test(readFileSync(archivo, 'utf8')),
   );

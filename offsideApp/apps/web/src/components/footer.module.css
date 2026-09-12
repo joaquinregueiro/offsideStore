@@ -40,11 +40,11 @@
   border-radius: var(--radio-panel) var(--radio-panel) 0 0;
   overflow: clip;
   /*
-   * Luz ambiente hacia ARRIBA: un panel oscuro apoyado sobre papel proyecta
-   * un halo verde tenue sobre lo que tiene encima. Es lo que lo despega del
-   * papel sin una linea.
+   * ⚠️ SIN LUZ AMBIENTE (2026-09-11). Habia un halo verde de 80px hacia arriba
+   * para despegar el pie del papel. No hace falta: es un panel OSCURO sobre
+   * papel claro, asi que su propio fondo ya lo separa. El halo solo se leia
+   * como efecto.
    */
-  box-shadow: 0 -24px 80px -40px rgb(var(--luz-verde) / 0.4);
 }
 
 /**
@@ -243,7 +243,6 @@
   margin-bottom: var(--espacio-3);
   border-radius: var(--radio-pastilla);
   background-image: var(--acento-pie);
-  box-shadow: 0 0 12px -1px rgb(var(--luz-marca) / 0.6);
 }
 
 .columnaTitulo {

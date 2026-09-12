@@ -1221,7 +1221,6 @@
   border-radius: var(--radio-pastilla);
   transform-origin: left center;
   background-image: var(--degradado-acento);
-  box-shadow: 0 0 12px -1px rgb(var(--luz-marca) / 0.55);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1309,7 +1308,6 @@ span.mascaraCifra {
   height: 3px;
   border-radius: var(--radio-pastilla);
   background-image: var(--degradado-acento);
-  box-shadow: 0 0 12px -1px rgb(var(--luz-marca) / 0.5);
 }
 
 .filaTotal .filaConcepto {
@@ -1445,7 +1443,6 @@ span.mascaraCifra {
 .pasoHecho::before {
   background-color: transparent;
   background-image: linear-gradient(180deg, var(--verde-500) 0%, var(--color-cancha) 100%);
-  box-shadow: 0 0 10px rgb(var(--luz-marca) / 0.6);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1932,7 +1929,6 @@ span.mascaraCifra {
 /** Un tramo ya recorrido se enciende. Es forma: no lleva texto encima. */
 .pasoBreveHecho:not(:last-child)::after {
   background-image: var(--degradado-acento);
-  box-shadow: 0 0 8px rgb(var(--luz-marca) / 0.5);
 }
 
 /** NUMERO EN ROMBO — el mismo motivo que `Pasos` y que las etiquetas. */
@@ -2252,7 +2248,6 @@ span.mascaraCifra {
   transform-origin: left center;
   transform: scaleX(0);
   background-image: var(--nav-acento, var(--degradado-acento));
-  box-shadow: 0 0 10px -1px rgb(var(--luz-marca) / 0.5);
   transition: transform var(--transicion) var(--curva-corte);
 }
 
@@ -2448,7 +2443,6 @@ span.mascaraCifra {
   pointer-events: none;
   transform-origin: left center;
   background-image: var(--degradado-acento);
-  box-shadow: 0 0 10px rgb(var(--luz-marca) / 0.5);
 }
 
 /**
@@ -2938,7 +2932,6 @@ span.mascaraCifra {
 .contador:hover,
 .contador:focus-visible {
   background-color: rgb(var(--luz-papel) / 0.1);
-  box-shadow: 0 0 18px -6px rgb(var(--luz-marca) / 0.6);
 }
 
 .contadorIcono {

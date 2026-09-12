@@ -128,8 +128,7 @@
   box-shadow:
     0 0 0 1px var(--linea-tenue, #e4e6de),
     var(--luz-superior, inset 0 1px 0 rgb(255 255 255 / 0.9)),
-    var(--sombra-1),
-    0 20px 44px -26px rgb(var(--luz-marca, 22 163 92) / 0.22);
+    var(--sombra-1);
 
   transition:
     transform var(--dur-hover, 320ms) var(--curva-viva, cubic-bezier(0.22, 1.28, 0.36, 1)),
@@ -948,7 +947,6 @@
     --degradado-acento,
     linear-gradient(96deg, #0f7a45 0%, #16a35c 55%, #f5efae 100%)
   );
-  box-shadow: 0 0 10px -2px rgb(var(--luz-marca, 22 163 92) / 0.55);
   transition: transform var(--dur-hover, 320ms) var(--curva-viva, cubic-bezier(0.22, 1.28, 0.36, 1));
 }
 

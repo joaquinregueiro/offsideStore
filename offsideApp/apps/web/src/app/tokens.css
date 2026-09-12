@@ -1157,33 +1157,50 @@ a:hover {
   --sombra-tinte: 16 35 26;
   --sombra-tinte-verde: 11 90 52;
 
-  /** Hairline de apoyo. Separa sin ocupar layout como haria un `border`. */
-  --sombra-0: 0 0 0 1px rgb(var(--sombra-tinte) / 0.05);
-  /** Apoyado: ficha en reposo, input, etiqueta maciza. */
-  --sombra-1:
-    0 1px 2px rgb(var(--sombra-tinte) / 0.05), 0 4px 12px -2px rgb(var(--sombra-tinte) / 0.08);
+  /**
+   * ⚠️ ESCALA ATENUADA (2026-09-11). Pedido del owner: "sacá las sombras, son
+   * muchas y es poco formal; las paginas serias no tienen tanto efecto".
+   *
+   * LA REGLA QUE LA GOBIERNA: una sombra solo se justifica cuando algo esta de
+   * VERDAD por encima de la pagina. Lo que esta en reposo se define con una
+   * LINEA, no con una nube. Por eso `--sombra-0` —el hairline— sube un punto y
+   * pasa a ser la definicion principal de una ficha, y los niveles bajos caen a
+   * una sola capa corta.
+   *
+   * Los niveles ALTOS sobreviven, atenuados: un modal o un menu que tapa la
+   * pagina necesita separarse de lo que tapa, y quitarle la sombra no lo vuelve
+   * sobrio, lo vuelve confuso. Lo que se fue es el desenfoque de 80-160px, que
+   * es lo que se leia como efecto.
+   */
+
+  /** Hairline de apoyo. AHORA carga la definicion que antes ponia la sombra. */
+  --sombra-0: 0 0 0 1px rgb(var(--sombra-tinte) / 0.07);
+  /** Apoyado: ficha en reposo, input, etiqueta maciza. Una capa, y corta. */
+  --sombra-1: 0 1px 2px rgb(var(--sombra-tinte) / 0.05);
   /** Levantado: ficha con el mouse encima, panel, menu. */
   --sombra-2:
-    0 2px 4px rgb(var(--sombra-tinte) / 0.05), 0 10px 24px -6px rgb(var(--sombra-tinte) / 0.12),
-    0 24px 48px -16px rgb(var(--sombra-tinte) / 0.14);
+    0 1px 2px rgb(var(--sombra-tinte) / 0.05), 0 4px 10px -4px rgb(var(--sombra-tinte) / 0.08);
   /** Flotando: barra despegada, popover, ficha elevada. */
   --sombra-3:
-    0 2px 6px rgb(var(--sombra-tinte) / 0.06), 0 16px 36px -10px rgb(var(--sombra-tinte) / 0.16),
-    0 40px 80px -24px rgb(var(--sombra-tinte) / 0.2);
-  /** Superpuesto: algo que tapa la pagina. */
+    0 2px 4px rgb(var(--sombra-tinte) / 0.06), 0 8px 20px -8px rgb(var(--sombra-tinte) / 0.1);
+  /** Superpuesto: algo que tapa la pagina. Acá la sombra SI informa. */
   --sombra-4:
-    0 4px 8px rgb(var(--sombra-tinte) / 0.07), 0 24px 48px -12px rgb(var(--sombra-tinte) / 0.18),
-    0 60px 110px -30px rgb(var(--sombra-tinte) / 0.24);
+    0 4px 8px -2px rgb(var(--sombra-tinte) / 0.08),
+    0 16px 32px -12px rgb(var(--sombra-tinte) / 0.14);
   --sombra-5:
-    0 6px 12px rgb(var(--sombra-tinte) / 0.09), 0 36px 72px -16px rgb(var(--sombra-tinte) / 0.22),
-    0 90px 160px -40px rgb(var(--sombra-tinte) / 0.3);
+    0 6px 12px -3px rgb(var(--sombra-tinte) / 0.1),
+    0 24px 48px -16px rgb(var(--sombra-tinte) / 0.18);
 
   /** Pozo: interior de un input, riel de progreso, marco de foto vacio. */
   --sombra-hundida:
-    inset 0 1px 3px rgb(var(--sombra-tinte) / 0.1), inset 0 0 0 1px rgb(var(--sombra-tinte) / 0.04);
+    inset 0 1px 2px rgb(var(--sombra-tinte) / 0.07), inset 0 0 0 1px rgb(var(--sombra-tinte) / 0.04);
 
-  /** Sombra AMBIENTE de color: un panel grande apoyado sobre una escena verde proyecta verde. */
-  --sombra-color: 0 30px 70px -28px rgb(var(--sombra-tinte-verde) / 0.38);
+  /**
+   * ⚠️ APAGADA. Era una sombra AMBIENTE de color —un panel proyectando verde—.
+   * Una sombra teñida no transmite altura: transmite efecto, que es justo lo
+   * que se saco. El token queda para no romper los 2 usos que lo leen.
+   */
+  --sombra-color: 0 0 rgb(0 0 0 / 0);
 
   /**
    * ⚠️ SOBRE FONDO OSCURO UNA SOMBRA NO EXISTE —negro sobre negro—. Lo que
@@ -1193,9 +1210,13 @@ a:hover {
    */
   --luz-superior: inset 0 1px 0 rgb(255 255 255 / 0.9);
   --luz-superior-oscura: inset 0 1px 0 rgb(250 250 247 / 0.12);
-  --sombra-oscura:
-    var(--luz-superior-oscura), 0 24px 60px -20px rgb(0 0 0 / 0.6),
-    0 0 44px -10px rgb(63 189 119 / 0.22);
+  /**
+   * ⚠️ SIN EL HALO VERDE de la tercera capa (2026-09-11): era luz de color, o
+   * sea adorno. La linea de luz de arriba SE MANTIENE y ahora hace casi todo el
+   * trabajo, que es lo correcto: sobre fondo oscuro una sombra no existe
+   * —negro sobre negro— y lo que separa una ficha es su canto iluminado.
+   */
+  --sombra-oscura: var(--luz-superior-oscura), 0 12px 28px -12px rgb(0 0 0 / 0.45);
 
   /* ---------------------------------------------------------- tipografia */
   /**
@@ -2035,32 +2056,53 @@ dd {
     rgb(var(--luz-marca) / 0.95) 0.88turn,
     transparent 1turn
   );
-  --glow-marca:
-    0 0 0 1px rgb(var(--luz-marca) / 0.38), 0 0 18px -2px rgb(var(--luz-marca) / 0.55),
-    0 0 56px -6px rgb(var(--luz-marca) / 0.45);
-  --glow-marca-fuerte:
-    0 0 0 1px rgb(var(--luz-marca) / 0.5), 0 0 28px 0 rgb(var(--luz-marca) / 0.6),
-    0 0 90px -4px rgb(var(--luz-marca) / 0.55);
-  /** El de una ficha en hover: acompaña a la sombra, no la reemplaza. */
-  --glow-suave:
-    0 0 0 1px rgb(var(--luz-marca) / 0.22), 0 0 26px -4px rgb(var(--luz-marca) / 0.3),
-    0 22px 52px -20px rgb(var(--luz-marca) / 0.35);
-  --glow-foco: 0 0 0 4px rgb(var(--luz-foco) / 0.32), 0 0 22px 2px rgb(var(--luz-foco) / 0.5);
-  /** Para SVG e iconos: un `filter` que sigue la silueta. Estatico. */
-  --glow-drop-marca: drop-shadow(0 0 6px rgb(var(--luz-marca) / 0.7))
-    drop-shadow(0 0 18px rgb(var(--luz-marca) / 0.45));
+  /**
+   * =========================================================================
+   * ⚠️ LOS GLOWS ESTAN APAGADOS (2026-09-11)
+   * =========================================================================
+   *
+   * Eran lo que mas se leia como efecto: halos de color de hasta 90px alrededor
+   * de fichas, botones e iconos. Un halo de color no dice nada sobre la
+   * jerarquia de un objeto —no es altura ni distancia—, solo llama la atencion.
+   *
+   * ⚠️ SE NEUTRALIZAN A UNA SOMBRA TRANSPARENTE, **NUNCA A `none`**. Varios se
+   * consumen dentro de una lista (`box-shadow: var(--sombra-3), var(--glow-suave)`)
+   * y `none` dentro de una lista **invalida la declaracion entera**: no se
+   * apagaria el glow, se apagaria tambien la sombra que lo acompaña, y el objeto
+   * perderia su elevacion sin que nadie lo pida.
+   *
+   * Los tokens SE MANTIENEN en vez de borrarse y editar los 60 usos: asi
+   * volverlos a encender —o graduarlos— es cambiar una linea.
+   */
+  --glow-marca: 0 0 rgb(0 0 0 / 0);
+  --glow-marca-fuerte: 0 0 rgb(0 0 0 / 0);
+  --glow-suave: 0 0 rgb(0 0 0 / 0);
+  /**
+   * ⚠️ APAGAR ESTO NO TOCA LA ACCESIBILIDAD DEL FOCO. El indicador real es
+   * `outline: 3px solid var(--color-foco)` con 3px de offset, declarado en
+   * `:focus-visible` y INTACTO. Este token era el halo que lo acompañaba, y el
+   * propio comentario del bloque de foco ya lo llamaba "adorno".
+   */
+  --glow-foco: 0 0 rgb(0 0 0 / 0);
+  /** Para SVG e iconos. Apagado con un `drop-shadow` transparente, por lo mismo. */
+  --glow-drop-marca: drop-shadow(0 0 0 rgb(0 0 0 / 0));
   /**
    * GLOW DE TEXTO para una cifra destacada: `text-shadow` difuso y tenue. A 16px
    * de desenfoque y alfa 0.3 lo que se compone junto al glifo no mueve el
    * contraste medido. Nunca se anima: un importe no late.
    */
-  --glow-texto: 0 0 16px rgb(var(--luz-marca) / 0.3);
+  /** ⚠️ Apagado: una cifra no necesita brillar para leerse como importante. */
+  --glow-texto: 0 0 rgb(0 0 0 / 0);
   /** Borde de luz de 1px con alfa. DECORATIVO: el borde de un control sigue siendo `--linea-control`. */
   --borde-luz: rgb(var(--luz-marca) / 0.45);
+  /**
+   * Sombra del CTA. ⚠️ Se le quita la tercera capa —el halo de luz de marca— y
+   * se acortan las otras dos. Un boton primario ya destaca por color y peso; el
+   * resplandor lo volvia un objeto de otra pagina.
+   */
   --sombra-marca:
-    0 4px 10px -2px rgb(var(--sombra-tinte-verde) / 0.25),
-    0 18px 40px -10px rgb(var(--sombra-tinte-verde) / 0.42),
-    0 0 32px -4px rgb(var(--luz-marca) / 0.4);
+    0 1px 2px rgb(var(--sombra-tinte-verde) / 0.12),
+    0 6px 14px -6px rgb(var(--sombra-tinte-verde) / 0.2);
 }
 
 :root {
@@ -2096,12 +2138,9 @@ dd {
 
   /* ------------------------------------------------------ glow explicito */
   /** Para cuando se quiere UNA luz sin importar la superficie (`.glow-cambio`). */
-  --glow-cancha:
-    0 0 0 1px rgb(var(--luz-verde) / 0.38), 0 0 18px -2px rgb(var(--luz-verde) / 0.55),
-    0 0 56px -6px rgb(var(--luz-cancha) / 0.5);
-  --glow-cambio:
-    0 0 0 1px rgb(var(--luz-cambio) / 0.5), 0 0 18px -2px rgb(var(--luz-cambio) / 0.55),
-    0 0 56px -6px rgb(var(--luz-cambio) / 0.4);
+  /** ⚠️ Apagados por la misma razon que el resto de la familia. */
+  --glow-cancha: 0 0 rgb(0 0 0 / 0);
+  --glow-cambio: 0 0 rgb(0 0 0 / 0);
   --borde-luz-cambio: rgb(var(--luz-cambio) / 0.55);
 
   /* ---------------------------------------------------- gradientes vivos */

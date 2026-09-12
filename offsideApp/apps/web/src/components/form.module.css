@@ -347,7 +347,6 @@
   border-radius: var(--radio-pastilla);
   transform-origin: left center;
   background-image: var(--degradado-vivo);
-  box-shadow: 0 0 14px rgb(var(--luz-marca) / 0.45);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -425,7 +424,6 @@
   border-radius: inherit;
   transform-origin: left center;
   background-image: var(--degradado-vivo);
-  box-shadow: 0 0 12px rgb(var(--luz-marca) / 0.6);
 }
 
 /**
@@ -567,7 +565,6 @@
   border-radius: var(--radio-pastilla);
   transform-origin: left center;
   background-image: var(--degradado-vivo);
-  box-shadow: 0 0 12px rgb(var(--luz-marca) / 0.5);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1068,7 +1065,6 @@
   transform: scaleX(var(--llenado, 0));
   transform-origin: left center;
   background: var(--color-cancha);
-  box-shadow: 0 0 8px rgb(var(--luz-verde) / 0.55);
   transition: transform var(--transicion) var(--curva-seca);
 }
 
@@ -1088,7 +1084,6 @@
  */
 .contadorApretado .medidorLleno {
   background: var(--color-alerta);
-  box-shadow: 0 0 8px rgb(var(--luz-alerta) / 0.6);
 }
 
 .contadorCifra {
@@ -1655,7 +1650,6 @@
   border-radius: 0 0 var(--radio-pastilla) var(--radio-pastilla);
   transform-origin: left center;
   background-image: var(--degradado-vivo);
-  box-shadow: 0 0 12px rgb(var(--luz-marca) / 0.5);
 }
 
 .grupo + .grupo {
