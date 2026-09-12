@@ -6,6 +6,8 @@ import { elegirTema } from '@/app/acciones';
 import { capabilitiesFor } from '@/lib/permissions';
 import { getSessionUser } from '@/lib/session';
 
+import { CajonDeCuenta } from './cajon';
+
 import { countCartItems } from '@/modules/cart/services/cart.service';
 import { countUnread } from '@/modules/notifications/services/inapp-notification.service';
 
@@ -250,6 +252,15 @@ export async function Header({
       </a>
 
       <div className={estilos.contenido}>
+        {/*
+          ⚠️ VA PRIMERO, ANTES DE LA MARCA. Las tres rayitas a la izquierda son
+          una convencion que la gente ya conoce; ponerlas despues del logo las
+          convierte en un boton mas de la fila. El cajon que abren lleva las
+          secciones de la cuenta, que hasta ahora solo existian ADENTRO de
+          `/cuenta` y `/vendedor`.
+        */}
+        <CajonDeCuenta />
+
         <Link
           href="/"
           className={estilos.marca}

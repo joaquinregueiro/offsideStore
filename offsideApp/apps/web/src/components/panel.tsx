@@ -137,7 +137,13 @@ export const conteosDelPanel = cache(async (user: PublicUser): Promise<ConteosDe
   };
 });
 
-interface ItemDelPanel {
+/**
+ * ⚠️ EXPORTADO PARA QUE EL CAJON LATERAL LO REUSE. Las seis secciones se
+ * definen UNA vez: si el cajon armara su propia lista, el dia que se agregue
+ * una seccion aparecería en la barra y no en el cajon —o al reves—, que es
+ * exactamente el problema que este panel vino a resolver.
+ */
+export interface ItemDelPanel {
   clave: SeccionDelPanel;
   texto: string;
   detalle: string;
@@ -149,7 +155,7 @@ interface ItemDelPanel {
   soloVendedor?: boolean;
 }
 
-function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): ItemDelPanel[] {
+export function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): ItemDelPanel[] {
   const todos: ItemDelPanel[] = [
     {
       clave: 'cuenta',

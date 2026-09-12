@@ -1,0 +1,229 @@
+/* =============================================================================
+ * CAJON DE CUENTA — la barra lateral que abren las tres rayitas
+ * =============================================================================
+ *
+ * ⚠️ SIN UNA LINEA DE JAVASCRIPT. Es un `<details>`: el navegador ya sabe
+ * abrirlo y cerrarlo con teclado y con lector de pantalla, y anda con JS
+ * apagado, como el resto del sitio. Un cajon con estado en React obligaria a
+ * volver Client Component a la barra —y con ella a la sesion entera—.
+ * ========================================================================== */
+
+.cajon {
+  /*
+   * ⚠️ `position: static`, NO relative. El panel de adentro es `fixed` y tiene
+   * que anclarse al VIEWPORT, no a este contenedor: si el `<details>` creara un
+   * contexto de posicionamiento, el cajon se abriria adentro de la barra —de
+   * 56px de alto— en vez de ocupar la pantalla.
+   */
+  display: flex;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------ las rayitas -- */
+
+.boton {
+  /*
+   * ⚠️ `list-style: none` MAS el pseudo de WebKit. El triangulito que el
+   * navegador le pone a un `<summary>` se saca distinto en cada motor, y con uno
+   * solo de los dos aparece una flechita al lado de las rayas.
+   */
+  list-style: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px: el minimo tactil que el resto de la barra ya respeta. */
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radio);
+  cursor: pointer;
+  color: var(--color-papel);
+  transition: background-color var(--dur-hover) var(--curva-seca);
+}
+
+.boton::-webkit-details-marker {
+  display: none;
+}
+
+.boton:hover {
+  background-color: rgb(var(--luz-papel) / 0.12);
+}
+
+/*
+ * ⚠️ EL FONDO QUE CIERRA, Y ES PARTE DEL `<summary>` A PROPOSITO. Un panel
+ * abierto que solo se cierra con su propio boton es una trampa en telefono:
+ * la gente toca al costado esperando que se vaya. Como esto es el `summary`,
+ * tocarlo ALTERNA el `<details>`, o sea que cierra — sin JavaScript.
+ *
+ * ⚠️ Va DEBAJO del panel en z-index; si quedara encima, taparia los enlaces.
+ */
+.cajon[open] .boton::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-menu);
+  background-color: rgb(11 18 14 / 0.5);
+}
+
+/* --------------------------------------------------------------- el panel -- */
+
+.panel {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  /* `min()` para que en un telefono de 320 siga quedando pagina a la vista. */
+  inline-size: min(320px, 86vw);
+  z-index: calc(var(--z-menu) + 1);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: var(--espacio-5) var(--espacio-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+ * ⚠️ LA ENTRADA VA ADENTRO DE LA MEDIA QUERY, no afuera con una duracion que la
+ * regla global pueda aplastar. Quien pide menos movimiento recibe el panel ya
+ * puesto, no un panel a medio camino.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .cajon[open] .panel {
+    animation: entraCajon var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+@keyframes entraCajon {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+/* ------------------------------------------------------------ encabezado -- */
+
+.quien {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block-end: var(--espacio-4);
+  border-block-end: 1px solid rgb(var(--luz-papel) / 0.14);
+}
+
+.nombre {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-titulo);
+  color: var(--color-papel);
+}
+
+.correo {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+  /* Un correo largo no puede ensanchar el cajon ni desbordarlo. */
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- enlaces -- */
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-block-size: 44px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio);
+  color: var(--color-papel);
+  text-decoration: none;
+  transition: background-color var(--dur-hover) var(--curva-seca);
+}
+
+.item:hover {
+  background-color: rgb(var(--luz-papel) / 0.1);
+}
+
+.icono {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--color-cambio);
+}
+
+.texto {
+  flex: 1;
+  font-size: var(--texto-sm);
+}
+
+/*
+ * ⚠️ SOLO LOS NUMEROS QUE PIDEN UNA ACCION. Es la misma regla del panel: un
+ * contador que nunca baja a cero deja de significar algo.
+ */
+.dato {
+  flex-shrink: 0;
+  min-inline-size: 22px;
+  padding: 2px 7px;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: var(--texto-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ pie -- */
+
+.pie {
+  margin-block-start: auto;
+  padding-block-start: var(--espacio-4);
+  border-block-start: 1px solid rgb(var(--luz-papel) / 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.nota {
+  margin: 0;
+  font-size: var(--texto-xs);
+  line-height: 1.5;
+  color: var(--color-neutro-tenue);
+}
+
+/*
+ * ⚠️ HAY QUE RESETEAR EL BOTON, no alcanza con darle color. "Salir" es un
+ * `<button>` dentro de un `<form>` —porque cerrar sesion es una MUTACION y no
+ * puede ir en un enlace—, y un boton sin resetear se dibuja con el estilo del
+ * navegador: fondo claro y borde, o sea una pastilla blanca en un cajon oscuro.
+ * Se detecto viendolo, no leyendolo.
+ */
+.salir {
+  appearance: none;
+  inline-size: 100%;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio);
+  color: var(--color-papel);
+  font-size: var(--texto-sm);
+  text-align: start;
+  text-decoration: none;
+}
+
+.salir:hover {
+  background-color: rgb(var(--luz-papel) / 0.1);
+}
