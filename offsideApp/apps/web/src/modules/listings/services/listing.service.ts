@@ -680,6 +680,21 @@ export async function countMyListings(user: PublicUser): Promise<ResumenDePublic
 }
 
 /** Una entrada de catalogo tal como la vitrina la muestra: sin alias ni banderas internas. */
+/**
+ * Una entrada de catalogo por su slug, para `/club/[slug]` y `/marca/[slug]`.
+ *
+ * ⚠️ DEVUELVE `null` EN VEZ DE LANZAR: la pantalla decide el 404. Un slug que no
+ * existe es una URL vieja o mal tipeada, no un error del sistema.
+ */
+export async function entradaDeCatalogoPorSlug(
+  catalogo: catalogRepo.NombreDeCatalogo,
+  slug: string,
+): Promise<EntradaDeCatalogo | null> {
+  const fila = await catalogRepo.findActiveBySlug(catalogo, slug);
+
+  return fila === undefined ? null : { id: fila.id, nombre: fila.name, slug: fila.slug };
+}
+
 export interface EntradaDeCatalogo {
   id: string;
   nombre: string;

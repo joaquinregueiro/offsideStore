@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 /**
  * Acceso a los catalogos controlados (ERD §8, `product-specification.md` §4.3).
@@ -59,6 +59,34 @@ export async function findActive(catalogo: NombreDeCatalogo, db?: Database): Pro
 }
 
 /**
+ * Una entrada ACTIVA por su slug, para las pantallas de catalogo.
+ *
+ * ⚠️ SE BUSCA POR SLUG Y NO POR ID PORQUE ES UNA URL PUBLICA. `/club/river-plate`
+ * se comparte, se lee y lo indexa un buscador; `/club/9c60fd3e-…` no significa
+ * nada para nadie y cambia si algun dia se resiembra el catalogo. El slug ya es
+ * UNIQUE en las seis tablas (ERD §8), asi que no hizo falta tocar el esquema.
+ *
+ * ⚠️ FILTRA POR `is_active` IGUAL QUE `findActive`: dar de baja una entrada tiene
+ * que apagar tambien su pantalla, no dejarla indexada con un catalogo que ya no
+ * se ofrece.
+ */
+export async function findActiveBySlug(
+  catalogo: NombreDeCatalogo,
+  slug: string,
+  db?: Database,
+): Promise<CatalogRow | undefined> {
+  const tabla = TABLAS[catalogo];
+
+  const [fila] = await conn(db)
+    .select({ id: tabla.id, name: tabla.name, slug: tabla.slug, aliases: tabla.aliases })
+    .from(tabla)
+    .where(and(eq(tabla.slug, slug), eq(tabla.isActive, true)))
+    .limit(1);
+
+  return fila;
+}
+
+/**
  * Nombres y alias de las entradas que referencia una publicacion.
  *
  * ⚠️ ESTO ES LO QUE ALIMENTA PS-024. El indice de busqueda tiene que contener
@@ -107,20 +135,28 @@ export async function textoDeCatalogos(
   return partes.join(' ');
 }
 
-/** Nombres de varias entradas de un catalogo, para mostrar facetas. */
-export async function nombresPorId(
+/**
+ * Nombre y slug de varias entradas, por id.
+ *
+ * ⚠️ DEVUELVE TAMBIEN EL SLUG, y no es de adorno: es lo que deja que una faceta
+ * enlace a `/club/river-plate` en vez de a `/buscar?club=<uuid>`. Sin el, los
+ * unicos enlaces internos a las pantallas de catalogo serian los del sitemap, y
+ * una pagina a la que no apunta nadie desde adentro del sitio arranca sin
+ * ninguna señal para el buscador.
+ */
+export async function entradasPorId(
   catalogo: NombreDeCatalogo,
   ids: string[],
   db?: Database,
-): Promise<Map<string, string>> {
+): Promise<Map<string, { name: string; slug: string }>> {
   if (ids.length === 0) return new Map();
 
   const tabla = TABLAS[catalogo];
 
   const filas = await conn(db)
-    .select({ id: tabla.id, name: tabla.name })
+    .select({ id: tabla.id, name: tabla.name, slug: tabla.slug })
     .from(tabla)
     .where(inArray(tabla.id, ids));
 
-  return new Map(filas.map((fila) => [fila.id, fila.name]));
+  return new Map(filas.map((fila) => [fila.id, { name: fila.name, slug: fila.slug }]));
 }

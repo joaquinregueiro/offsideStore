@@ -144,18 +144,48 @@ interface Atajo {
   valor: string;
   etiqueta: string;
   cantidad?: number;
+  /** Slug de la entrada, cuando existe: habilita el enlace a `/club/…` o `/marca/…`. */
+  slug?: string;
 }
 
 const desdeFaceta = (faceta: Faceta): Atajo => ({
   valor: faceta.valor,
   etiqueta: faceta.etiqueta,
   cantidad: faceta.cantidad,
+  ...(faceta.slug === undefined ? {} : { slug: faceta.slug }),
 });
 
 const desdeCatalogo = (entrada: EntradaDeCatalogo): Atajo => ({
   valor: entrada.id,
   etiqueta: entrada.nombre,
+  slug: entrada.slug,
 });
+
+/**
+ * Los catalogos que tienen pantalla propia. Temporada no: son 135 y no hay
+ * ninguna razon para que "2014/15" tenga su propia URL indexable.
+ */
+const RUTA_DE_CATALOGO: Record<string, string | undefined> = { club: 'club', marca: 'marca' };
+
+/**
+ * A donde lleva un atajo.
+ *
+ * ⚠️ A LA PANTALLA DE CATALOGO CUANDO EXISTE, Y NO ES COSMETICA DE URL.
+ * `/club/river-plate` es una pagina indexable con su propio titulo; el enlace
+ * interno que la apunta es lo que le dice al buscador que existe y cuanto
+ * importa. Con `/buscar?club=<uuid>` esa señal no existia.
+ *
+ * ⚠️ CAE A `/buscar` SIN SLUG, y ese caso es real: las facetas de talle o
+ * condicion no son filas de catalogo, y una entrada recien sembrada puede llegar
+ * sin slug si algun dia se afloja el UNIQUE. Un enlace roto es peor que uno feo.
+ */
+const hrefDeAtajo = (clave: string, atajo: Atajo): string => {
+  const ruta = RUTA_DE_CATALOGO[clave];
+
+  return ruta !== undefined && atajo.slug !== undefined
+    ? `/${ruta}/${atajo.slug}`
+    : `/buscar?${clave}=${atajo.valor}`;
+};
 
 /**
  * Las facetas reales si alcanzan; si no, un tramo del catalogo.
@@ -363,7 +393,7 @@ function Banda({
                   de pantalla anuncia— conserva el comportamiento normal.
                 */}
                 <Link
-                  href={`/buscar?${clave}=${valor.valor}`}
+                  href={hrefDeAtajo(clave, valor)}
                   className={estilos.bandaEnlace}
                   tabIndex={copia > 0 ? -1 : undefined}
                   prefetch={copia > 0 ? false : 'auto'}
@@ -1125,7 +1155,7 @@ export default async function Home({
                       {grupo.valores.map((valor) => (
                         <li key={valor.valor}>
                           <Link
-                            href={`/buscar?${grupo.clave}=${valor.valor}`}
+                            href={hrefDeAtajo(grupo.clave, valor)}
                             className={`${estilos.ficha} sup-ficha eleva destello icono-vivo`}
                             transitionTypes={['barrido']}
                           >

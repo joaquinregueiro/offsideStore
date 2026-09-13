@@ -58,6 +58,14 @@ export interface Faceta {
   /** Como se muestra. Para categoria es el nombre; para el resto, el valor. */
   etiqueta: string;
   cantidad: number;
+  /**
+   * Slug de la entrada de catalogo, cuando la faceta ES un catalogo.
+   *
+   * ⚠️ OPCIONAL PORQUE NO TODA FACETA LO TIENE: talle, condicion, tipo y manga
+   * son valores de enum, no filas con slug. Lo usan los atajos de la portada
+   * para enlazar a `/club/river-plate` en vez de a `/buscar?club=<uuid>`.
+   */
+  slug?: string;
 }
 
 export interface SearchResponse {
@@ -231,16 +239,21 @@ async function conNombres(
   facetas: searchRepo.FacetCount[],
 ): Promise<Faceta[]> {
   const recortadas = facetas.slice(0, searchRepo.MAX_VALORES_POR_FACETA);
-  const nombres = await catalogRepo.nombresPorId(
+  const entradas = await catalogRepo.entradasPorId(
     catalogo,
     recortadas.map((f) => f.valor),
   );
 
-  return recortadas.map((f) => ({
-    valor: f.valor,
-    etiqueta: nombres.get(f.valor) ?? f.valor,
-    cantidad: f.cantidad,
-  }));
+  return recortadas.map((f) => {
+    const entrada = entradas.get(f.valor);
+
+    return {
+      valor: f.valor,
+      etiqueta: entrada?.name ?? f.valor,
+      cantidad: f.cantidad,
+      ...(entrada === undefined ? {} : { slug: entrada.slug }),
+    };
+  });
 }
 
 function comoFaceta(f: searchRepo.FacetCount): Faceta {

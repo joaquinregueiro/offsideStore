@@ -1,0 +1,137 @@
+/**
+ * Pantalla de catalogo (`/club/[slug]`, `/marca/[slug]`).
+ *
+ * ⚠️ NO INVENTA UNA GRILLA NUEVA: usa los MISMOS numeros que la vitrina y la
+ * busqueda (`auto-fill`, minimo 220px, 150px en telefono). Si las tarjetas se
+ * vieran de otro tamaño acá, la misma camiseta cambiaria de forma segun por
+ * donde se llegue.
+ */
+
+.pagina {
+  padding-block: var(--espacio-bloque) var(--espacio-seccion);
+}
+
+.interior {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+
+.encabezado {
+  margin-bottom: var(--espacio-bloque);
+}
+
+.titulo {
+  margin: 0;
+  text-transform: uppercase;
+  /* Un nombre de club largo no puede empujar la pagina a 320px. */
+  overflow-wrap: anywhere;
+}
+
+.bajada {
+  margin: var(--espacio-4) 0 0;
+  max-width: 62ch;
+  font-size: var(--texto-md);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.cuenta {
+  margin: var(--espacio-3) 0 0;
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--espacio-6);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .grilla {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    gap: var(--espacio-4);
+  }
+}
+
+/* ------------------------------------------------------------ paginacion */
+
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-4);
+  margin-top: var(--espacio-bloque);
+}
+
+/** 44px de area tactil (WCAG 2.5.5): es el control que mas se toca acá. */
+.paginaEnlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-control);
+  padding-inline: var(--espacio-4);
+  border: 1px solid var(--linea-control);
+  border-radius: var(--radio);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semi);
+  color: var(--marca-texto, var(--color-tiempo-extra));
+}
+
+.paginaEnlace:hover,
+.paginaEnlace:focus-visible {
+  border-color: var(--marca-borde, var(--color-cancha));
+  background-color: var(--superficie-marca);
+}
+
+.paginaActual {
+  font-size: var(--texto-sm);
+  color: var(--color-neutro-texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------- estado vacio */
+
+.vacio {
+  border: 1px solid var(--linea-tenue);
+  border-radius: var(--radio-ficha);
+  background-color: var(--superficie-1);
+  padding: var(--espacio-8) var(--espacio-5);
+  text-align: center;
+}
+
+.vacioTitulo {
+  margin: 0;
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  color: var(--texto-fuerte, var(--color-tinta));
+  overflow-wrap: anywhere;
+}
+
+.vacioDetalle {
+  margin: var(--espacio-3) auto 0;
+  max-width: 52ch;
+  font-size: var(--texto-sm);
+  line-height: var(--interlineado-lectura);
+  color: var(--color-neutro-texto);
+}
+
+.vacioAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-6);
+}
+
+/* --------------------------------------------------------- mas filtros */
+
+.masFiltros {
+  margin: var(--espacio-bloque) 0 0;
+  font-size: var(--texto-sm);
+}
