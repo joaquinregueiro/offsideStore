@@ -1328,6 +1328,29 @@ Comandos (desde `offsideApp/`): `npm run dev`, `build`, `verify`
 (format + lint + typecheck + test), `test`, `docker:up`, `db:generate`,
 `db:migrate`. Detalle en `offsideApp/docs-implementation/setup-local.md`.
 
+**Descubrimiento y navegación — ✅ (2026-09-13)**: pantallas de catálogo
+`/club/[slug]` y `/marca/[slug]`, `sitemap.xml`, `robots.txt` y barra inferior en
+teléfono. Detalle en
+`offsideApp/docs-implementation/descubrimiento-2026-09-13.md`.
+
+⚠️ **SIN TOCAR EL ERD**: las seis tablas de catálogo ya tenían `slug` UNIQUE
+(§8), así que la URL legible no costó una migración. Las landings **no son un
+buscador nuevo**: llaman a `searchListings` con un filtro fijo, así que usan el
+mismo filtro de visibilidad que la vitrina.
+
+⚠️ **La barra inferior va FUERA del `<header>`, y eso es lo que la hace
+funcionar**: la barra de arriba es de vidrio, y un ancestro con `backdrop-filter`
+crea un bloque contenedor para sus descendientes `position: fixed`. Adentro del
+header se dibujaba **tapando el buscador** en vez de al pie. Además la barra de
+compra de la ficha se despega `--alto-nav-inferior`: con `bottom: 0` el botón de
+comprar quedaba tapado por los iconos. Las dos cosas se vieron **mirando
+capturas**; ningún chequeo automático las habría encontrado.
+
+⚠️ **`--window-size` de Chromium headless NO fija el viewport.** Una captura a
+375px sugirió que el header desbordaba y se estuvo a punto de reportar un bug
+inexistente: medido, `desborda: false`. Lo que sirve es renderizar la página
+dentro de un iframe de ancho fijo y medir desde afuera.
+
 ### Decisiones técnicas tomadas sin cobertura documental
 
 `docs/` no define gestor de paquetes, framework de tests, CI ni librería de
@@ -1401,3 +1424,16 @@ estructural (sacarle `force-dynamic` a la ficha, o middleware para las
 guardadas); mitigarlo sólo para SEO es un `noindex`. El porqué quedó escrito en
 `generateMetadata` para que nadie repita el atajo, y el detalle en
 `offsideApp/docs-implementation/qa-produccion-2026-09-13.md`.
+
+⚠️ **"Vistos recientemente" no existe, y es una decisión pendiente 🟡, no un
+olvido.** Las tres salidas chocan con la arquitectura: `localStorage` obliga a un
+Client Component y al **primer fetch de datos del lado del cliente** de la app;
+una cookie no se puede escribir durante el render de un GET; y una tabla propia
+es cambio de ERD (ARQUITECTÓNICO). La otra mitad —favoritos más visibles— sí está
+hecha: Favoritos quedó a un toque en la barra inferior.
+
+⚠️ **El titular de la ficha se lee con poco contraste en MODO OSCURO.** El `<h1>`
+compone `titular-degradado` y sobre la superficie oscura casi no se despega del
+fondo. Es preexistente y **está visto, no medido**: falta pasarle la fórmula WCAG
+y, si confirma, ajustar el degradado en oscuro como ya se hizo con los otros
+tokens. Detectado el 2026-09-13 al revisar capturas.
