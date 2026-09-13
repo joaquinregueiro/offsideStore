@@ -1374,3 +1374,21 @@ exactamente el escenario de RISK-F1. Lo que **falta confirmar 🔵** es qué hac
 Mercado Pago en ese caso —rechaza, deja la cuenta en negativo, o depende del
 esquema—; hasta saberlo no se puede escribir el manejo correcto. Los refunds
 tampoco se probaron nunca contra Mercado Pago real.
+
+⚠️ **Soft-404: una publicación inexistente responde `200`, no `404`** (detectado
+el 2026-09-13). Las rutas guardadas hacen lo mismo: redirigen bien en el
+navegador, pero con `200` y un `<meta refresh>` en vez de un `3xx`. En las
+privadas casi no importa —no se indexan y **está verificado que no hay fuga de
+datos**—; en `/p/[id]` sí, porque el enlace de una camiseta circula por WhatsApp
+y sobrevive a la venta, así que un buscador indexa como viva una publicación que
+ya no existe.
+
+**No es un retoque local.** Se probaron tres caminos contra un build de
+producción —`notFound()` en `generateMetadata`, sólo en la pantalla, y sacando el
+`loading.tsx` de la ruta— y los tres siguen dando `200`: en Next 16 la metadata
+**también se transmite** y, con el sitio entero en `force-dynamic`, el shell ya
+salió para cuando cualquiera de las dos resuelve. Corregirlo pide una decisión
+estructural (sacarle `force-dynamic` a la ficha, o middleware para las
+guardadas); mitigarlo sólo para SEO es un `noindex`. El porqué quedó escrito en
+`generateMetadata` para que nadie repita el atajo, y el detalle en
+`offsideApp/docs-implementation/qa-produccion-2026-09-13.md`.
