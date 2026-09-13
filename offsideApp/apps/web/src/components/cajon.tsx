@@ -9,7 +9,13 @@ import { conteosDelPanel, itemsDelPanel } from './panel';
 import estilos from './cajon.module.css';
 
 /**
- * CAJON DE CUENTA: las tres rayitas de la izquierda y la barra lateral que abren.
+ * CAJON DE CUENTA: las tres rayitas de la izquierda y el panel que despliegan.
+ *
+ * ⚠️ SE DESPLIEGA HACIA ABAJO, COLGADO DE LA BARRA, no al costado. El primer
+ * intento era un panel lateral y llego a produccion roto: `header.barra` tiene
+ * `backdrop-filter`, que crea bloque contenedor para los `position: fixed`, asi
+ * que el panel quedo atrapado adentro de la barra. El detalle esta en
+ * `cajon.module.css`.
  *
  * ⚠️ ES LA MISMA NAVEGACION QUE EL PANEL DEL AREA PRIVADA, DISPONIBLE DESDE
  * CUALQUIER PANTALLA. Hasta ahora las seis secciones de la cuenta sólo existían

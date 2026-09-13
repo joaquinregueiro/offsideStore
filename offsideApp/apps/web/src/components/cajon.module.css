@@ -1,20 +1,36 @@
 /* =============================================================================
- * CAJON DE CUENTA — la barra lateral que abren las tres rayitas
+ * CAJON DE CUENTA — el panel que abren las tres rayitas de la izquierda
  * =============================================================================
  *
+ * ⚠️ SE DESPLIEGA HACIA ABAJO, COLGADO DE LA BARRA. NO es un panel al costado, y
+ * el primer intento —que si lo era— llego a produccion ROTO: quedaba ATRAPADO
+ * ADENTRO DE LA BARRA, del alto exacto de la barra y con su propia barra de
+ * scroll.
+ *
+ * LA CAUSA: `header.barra` tiene `backdrop-filter` (el vidrio), y un
+ * `backdrop-filter` **crea un bloque contenedor para los descendientes
+ * `position: fixed`**. O sea que el panel nunca se posiciono contra el viewport:
+ * se posiciono contra la barra, y `inset-block: 0` lo dejo de 110px de alto.
+ * Lo mismo le pasaba al fondo oscuro que cerraba al tocar afuera —tampoco puede
+ * escapar de la barra—, asi que esa pieza se va.
+ *
+ * La salida es la que el menu de telefono de esta misma barra ya usaba desde
+ * antes —`position: absolute` colgado de `top: 100%`—, que ademas es lo que se
+ * pidio.
+ *
  * ⚠️ SIN UNA LINEA DE JAVASCRIPT. Es un `<details>`: el navegador ya sabe
- * abrirlo y cerrarlo con teclado y con lector de pantalla, y anda con JS
- * apagado, como el resto del sitio. Un cajon con estado en React obligaria a
- * volver Client Component a la barra —y con ella a la sesion entera—.
+ * abrirlo con teclado y anunciarlo a un lector de pantalla, y anda con JS
+ * apagado. Manejarlo con estado de React volveria Client Component a la barra
+ * entera, y con ella se iria la sesion al bundle.
  * ========================================================================== */
 
 .cajon {
   /*
-   * ⚠️ `position: static`, NO relative. El panel de adentro es `fixed` y tiene
-   * que anclarse al VIEWPORT, no a este contenedor: si el `<details>` creara un
-   * contexto de posicionamiento, el cajon se abriria adentro de la barra —de
-   * 56px de alto— en vez de ocupar la pantalla.
+   * ⚠️ ACA SI SE QUIERE EL CONTEXTO DE POSICIONAMIENTO: el panel cuelga de este
+   * `<details>`, no del viewport. Es el cambio exacto respecto del intento que
+   * fallo.
    */
+  position: relative;
   display: flex;
   align-items: center;
 }
@@ -37,7 +53,7 @@
   block-size: 44px;
   border-radius: var(--radio);
   cursor: pointer;
-  color: var(--color-papel);
+  color: var(--color-sobre-cancha);
   transition: background-color var(--dur-hover) var(--curva-seca);
 }
 
@@ -45,58 +61,60 @@
   display: none;
 }
 
-.boton:hover {
-  background-color: rgb(var(--luz-papel) / 0.12);
-}
-
-/*
- * ⚠️ EL FONDO QUE CIERRA, Y ES PARTE DEL `<summary>` A PROPOSITO. Un panel
- * abierto que solo se cierra con su propio boton es una trampa en telefono:
- * la gente toca al costado esperando que se vaya. Como esto es el `summary`,
- * tocarlo ALTERNA el `<details>`, o sea que cierra — sin JavaScript.
- *
- * ⚠️ Va DEBAJO del panel en z-index; si quedara encima, taparia los enlaces.
- */
-.cajon[open] .boton::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-menu);
-  background-color: rgb(11 18 14 / 0.5);
+.boton:hover,
+.cajon[open] .boton {
+  background-color: rgb(var(--luz-papel) / 0.14);
 }
 
 /* --------------------------------------------------------------- el panel -- */
 
 .panel {
-  position: fixed;
-  inset-block: 0;
+  position: absolute;
+  /* Cuelga del borde inferior de la barra, alineado a su izquierda. */
+  inset-block-start: 100%;
   inset-inline-start: 0;
-  /* `min()` para que en un telefono de 320 siga quedando pagina a la vista. */
-  inline-size: min(320px, 86vw);
-  z-index: calc(var(--z-menu) + 1);
+  margin-block-start: var(--espacio-3);
+  z-index: var(--z-menu);
+
+  /*
+   * ⚠️ `min()` CONTRA EL ANCHO DE LA VENTANA. A 320px un panel de 300 fijo se
+   * sale de la pantalla y empuja el `<body>`: el desborde horizontal es el
+   * defecto que mas veces volvio en este frontend.
+   */
+  inline-size: min(300px, calc(100vw - 2 * var(--espacio-5)));
+
+  /*
+   * Que no tape la pantalla entera en un telefono apaisado. Con mas secciones
+   * de las que entran, el panel scrollea solo.
+   */
+  max-block-size: min(70vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 
   display: flex;
   flex-direction: column;
   gap: var(--espacio-4);
-  padding: var(--espacio-5) var(--espacio-4);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding: var(--espacio-4);
+  border-radius: var(--radio-ficha);
+  /* Sobre fondo oscuro una sombra no separa: lo hace el canto iluminado. */
+  box-shadow: var(--sombra-oscura);
 }
 
 /*
  * ⚠️ LA ENTRADA VA ADENTRO DE LA MEDIA QUERY, no afuera con una duracion que la
  * regla global pueda aplastar. Quien pide menos movimiento recibe el panel ya
- * puesto, no un panel a medio camino.
+ * puesto, no a medio camino.
  */
 @media (prefers-reduced-motion: no-preference) {
   .cajon[open] .panel {
-    animation: entraCajon var(--dur-media) var(--curva-corte) both;
+    animation: bajaCajon var(--dur-media) var(--curva-corte) both;
   }
 }
 
-@keyframes entraCajon {
+@keyframes bajaCajon {
   from {
-    transform: translateX(-100%);
+    transform: translateY(-8px);
+    opacity: 0;
   }
 }
 
@@ -106,7 +124,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-block-end: var(--espacio-4);
+  padding-block-end: var(--espacio-3);
   border-block-end: 1px solid rgb(var(--luz-papel) / 0.14);
 }
 
@@ -121,7 +139,7 @@
 .correo {
   font-size: var(--texto-xs);
   color: var(--color-neutro-tenue);
-  /* Un correo largo no puede ensanchar el cajon ni desbordarlo. */
+  /* Un correo largo no puede ensanchar el panel ni desbordarlo. */
   overflow-wrap: anywhere;
 }
 
@@ -164,8 +182,8 @@
 }
 
 /*
- * ⚠️ SOLO LOS NUMEROS QUE PIDEN UNA ACCION. Es la misma regla del panel: un
- * contador que nunca baja a cero deja de significar algo.
+ * ⚠️ SOLO LOS NUMEROS QUE PIDEN UNA ACCION. Es la misma regla del panel lateral:
+ * un contador que nunca baja a cero deja de significar algo.
  */
 .dato {
   flex-shrink: 0;
@@ -183,8 +201,7 @@
 /* ------------------------------------------------------------------ pie -- */
 
 .pie {
-  margin-block-start: auto;
-  padding-block-start: var(--espacio-4);
+  padding-block-start: var(--espacio-3);
   border-block-start: 1px solid rgb(var(--luz-papel) / 0.14);
   display: flex;
   flex-direction: column;
@@ -202,8 +219,7 @@
  * ⚠️ HAY QUE RESETEAR EL BOTON, no alcanza con darle color. "Salir" es un
  * `<button>` dentro de un `<form>` —porque cerrar sesion es una MUTACION y no
  * puede ir en un enlace—, y un boton sin resetear se dibuja con el estilo del
- * navegador: fondo claro y borde, o sea una pastilla blanca en un cajon oscuro.
- * Se detecto viendolo, no leyendolo.
+ * navegador: fondo claro y borde, o sea una pastilla blanca en un panel oscuro.
  */
 .salir {
   appearance: none;
@@ -221,7 +237,6 @@
   color: var(--color-papel);
   font-size: var(--texto-sm);
   text-align: start;
-  text-decoration: none;
 }
 
 .salir:hover {
