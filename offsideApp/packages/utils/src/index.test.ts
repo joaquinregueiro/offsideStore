@@ -1,6 +1,35 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertNever, exponentialBackoff, isDefined, TimeoutError, withTimeout } from './index';
+import {
+  assertNever,
+  esUuid,
+  exponentialBackoff,
+  isDefined,
+  TimeoutError,
+  withTimeout,
+} from './index';
+
+describe('esUuid', () => {
+  it('acepta un UUID en minusculas y en mayusculas', () => {
+    expect(esUuid('123e4567-e89b-12d3-a456-426614174000')).toBe(true);
+    expect(esUuid('123E4567-E89B-12D3-A456-426614174000')).toBe(true);
+  });
+
+  it('rechaza lo que PostgreSQL no puede castear a uuid', () => {
+    // El caso real: `/p/<basura>` llegaba a una columna `uuid` y la consulta
+    // fallaba con `invalid input syntax for type uuid` en vez de dar 404.
+    expect(esUuid('no-existe-id-invalido')).toBe(false);
+    expect(esUuid('')).toBe(false);
+    // Bien formado pero incompleto, y con un caracter no hexadecimal.
+    expect(esUuid('123e4567-e89b-12d3-a456')).toBe(false);
+    expect(esUuid('123e4567-e89b-12d3-a456-42661417400g')).toBe(false);
+  });
+
+  it('rechaza un UUID con espacios alrededor', () => {
+    // Sin anclas, un `.test()` daria true y el espacio llegaria a la base.
+    expect(esUuid(' 123e4567-e89b-12d3-a456-426614174000 ')).toBe(false);
+  });
+});
 
 describe('isDefined', () => {
   it('filtra null y undefined', () => {

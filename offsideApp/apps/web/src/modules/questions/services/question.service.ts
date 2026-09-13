@@ -1,4 +1,5 @@
 import { getDatabase } from '@offside/database';
+import { esUuid } from '@offside/utils';
 
 import type { PublicUser } from '../../auth/services/auth.service';
 import { parseSettingValue } from '../../config/services/settings-registry';
@@ -250,6 +251,17 @@ export async function hideQuestion(user: PublicUser, questionId: string): Promis
 
 /** Preguntas visibles en la ficha (abiertas y respondidas). No exige sesion. */
 export async function listPublicQuestions(listingId: string): Promise<PublicQuestion[]> {
+  /*
+   * ⚠️ MISMA GUARDA QUE `findPublicListing`, Y HACE FALTA APARTE. La ficha pide
+   * la publicacion y sus preguntas EN PARALELO, asi que un id mal formado llega
+   * a las dos: aunque la publicacion ya devuelva null sin tocar la base,
+   * `listing_questions.listing_id` es `uuid` y esta consulta seguia fallando con
+   * `invalid input syntax for type uuid`. El error quedaba tapado por el
+   * `.catch()` de la pantalla, o sea que no rompia nada y por eso no se veia:
+   * solo ensuciaba el log en cada visita a una URL con basura.
+   */
+  if (!esUuid(listingId)) return [];
+
   const rows = await questionRepo.findPublicByListingId(listingId);
 
   return rows.map(toPublicQuestion);

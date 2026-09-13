@@ -1,4 +1,5 @@
 import type { Database } from '@offside/database';
+import { esUuid } from '@offside/utils';
 
 import type { PublicUser } from '../../auth/services/auth.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
@@ -498,6 +499,16 @@ export interface PublicListingDetail extends CatalogListing {
  * tenga un enlace viejo no deberia poder ver lo que la vitrina esconde.
  */
 export async function findPublicListing(id: string): Promise<PublicListingDetail | null> {
+  /*
+   * ⚠️ UN ID QUE NO ES UUID ES "NO ENCONTRADO", NO UNA EXCEPCION. `listings.id`
+   * es `uuid` y PostgreSQL RECHAZA la comparacion contra un texto mal formado
+   * (`invalid input syntax for type uuid`). Sin esta guarda, `/p/cualquier-cosa`
+   * no devolvia la ficha de "no encontrada": tiraba un error de base que quedaba
+   * registrado en el log del servidor, y encima gastaba la consulta para eso.
+   * Verificado contra un build de produccion.
+   */
+  if (!esUuid(id)) return null;
+
   const row = await listingRepo.findPublicById(id);
   if (row === undefined) return null;
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { CSSProperties, ReactNode } from 'react';
+import { cache, type CSSProperties, type ReactNode } from 'react';
 
 import { Footer } from '@/components/footer';
 import { AreaDeTexto, CampoOculto, Formulario, Seleccion } from '@/components/form';
@@ -96,14 +96,41 @@ const TOPE_DE_RESENAS = 3;
  */
 const URL_BASE = (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
+/**
+ * La publicacion de este pedido, UNA SOLA VEZ.
+ *
+ * ⚠️ `generateMetadata` Y LA PANTALLA PIDEN LA MISMA FILA. Sin `cache()` de
+ * React eran dos consultas identicas —con su join y sus imagenes— en cada
+ * visita a la ficha, que es la pantalla mas visitada y la mas compartida del
+ * sitio. `cache()` dedupe por argumento y dura lo que dura el pedido.
+ */
+const publicacion = cache(findPublicListing);
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const listing = await findPublicListing(id);
+  const listing = await publicacion(id);
 
+  /*
+   * ⚠️ ACA NO VA UN `notFound()`, Y ESTA MEDIDO POR QUE. La tentacion es
+   * decidir el 404 en `generateMetadata` para que el status salga bien: esta
+   * funcion parece correr antes del primer byte. En Next 16 NO es asi —la
+   * metadata tambien se transmite—, y con el sitio entero en `force-dynamic` el
+   * shell ya salio para cuando cualquiera de las dos funciones resuelve.
+   *
+   * Verificado contra un build de produccion, tres veces: con `notFound()` aca,
+   * con `notFound()` solo en la pantalla y hasta sacando el `loading.tsx` de
+   * esta ruta, una publicacion inexistente responde **200** igual. O sea que
+   * mover el 404 aca no cambia el status y encima le saca el titulo propio a la
+   * pantalla de "no encontrada".
+   *
+   * El soft-404 queda ENTONCES SIN RESOLVER y esta reportado: corregirlo pide
+   * una decision estructural (como resuelve la ficha antes de transmitir), no un
+   * retoque de esta funcion.
+   */
   if (listing === null) return { title: 'Publicación no encontrada' };
 
   /*
@@ -215,7 +242,8 @@ export default async function DetalleDePublicacion({
 }) {
   const { id } = await params;
   const [listing, user, preguntas, preguntasHabilitadas, params2] = await Promise.all([
-    findPublicListing(id),
+    /* Ya resuelta y cacheada por `generateMetadata`: no vuelve a la base. */
+    publicacion(id),
     getSessionUser(),
     /*
       ⚠️ LAS PREGUNTAS NO PUEDEN VOLTEAR LA FICHA. Son un bloque accesorio de la

@@ -27,6 +27,28 @@ export function isDefined<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
 
+/**
+ * Forma de un UUID, en cualquier version.
+ *
+ * No se valida la version ni la variante a proposito: el objetivo es que la
+ * comparacion contra una columna `uuid` no explote, no auditar que UUID es.
+ */
+const FORMA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Si una cadena tiene forma de UUID.
+ *
+ * ⚠️ ES UNA GUARDA DE FORMA, NO DE EXISTENCIA, Y EVITA UN ERROR DE BASE. Las PK
+ * del ERD son `uuid` (CLAUDE.md §6) y PostgreSQL no compara un `uuid` contra
+ * texto mal formado: RECHAZA la consulta con `invalid input syntax for type
+ * uuid`. O sea que un id con basura no devuelve "no encontrado", tira una
+ * excepcion. Quien reciba un id desde afuera —una URL, un formulario— filtra
+ * por aca antes de ir a la base.
+ */
+export function esUuid(value: string): boolean {
+  return FORMA_UUID.test(value);
+}
+
 /** Espera `ms` milisegundos. Pensado para backoff de reintentos. */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
