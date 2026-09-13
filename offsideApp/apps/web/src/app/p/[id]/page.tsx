@@ -12,6 +12,7 @@ import {
   IconoCamion,
   IconoEtiqueta,
   IconoFavorito,
+  IconoIntercambio,
   IconoLlave,
   IconoPregunta,
   IconoTilde,
@@ -44,6 +45,7 @@ import {
 } from '@/lib/formato';
 import { getSessionUser } from '@/lib/session';
 import { isFeatureEnabled } from '@/modules/config/services/setting-store.service';
+import { getDisputeWindowDays } from '@/modules/disputes/services/dispute-settings.service';
 import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
 import { findPublicListing, relatedListings } from '@/modules/listings/services/listing.service';
 import {
@@ -314,21 +316,30 @@ export default async function DetalleDePublicacion({
    * —recomputa si la fila no existe—, así que un vendedor sin ningún hecho no
    * rompe nada: devuelve todo en cero, que es la verdad.
    */
-  const [reputacion, nivel, horasDeRespuesta, resenas, relacionadas] = await Promise.all([
-    getSellerReputation(listing.sellerId).catch((error: unknown) => {
-      console.error('[ficha] no se pudo leer la reputación del vendedor', error);
+  const [reputacion, nivel, horasDeRespuesta, resenas, relacionadas, diasDeReclamo] =
+    await Promise.all([
+      getSellerReputation(listing.sellerId).catch((error: unknown) => {
+        console.error('[ficha] no se pudo leer la reputación del vendedor', error);
 
-      return null;
-    }),
-    getTierProgress(listing.sellerId).catch(() => null),
-    averageAnswerHours(listing.sellerId).catch(() => null),
-    listSellerReviews(listing.sellerId, 1).catch(() => null),
-    /*
+        return null;
+      }),
+      getTierProgress(listing.sellerId).catch(() => null),
+      averageAnswerHours(listing.sellerId).catch(() => null),
+      listSellerReviews(listing.sellerId, 1).catch(() => null),
+      /*
       ⚠️ SE BLINDA SOLA (devuelve listas vacias ante cualquier fallo), asi que
       no lleva `.catch()` aca: el Service ya es el que no puede voltear la ficha.
     */
-    relatedListings(listing.id),
-  ]);
+      relatedListings(listing.id),
+      /*
+      ⚠️ EL PLAZO SALE DEL CONFIG STORE, NO DEL CODIGO. `dispute_window_days` es
+      ⚙️ CONFIGURABLE (CLAUDE.md §12): escribir "7 dias" acá lo clavaria, y el
+      dia que el owner lo cambie la ficha mentiria sobre un plazo que decide si
+      alguien recupera su plata. Si no se puede leer, la linea no se muestra:
+      prometer un plazo equivocado es peor que no nombrarlo.
+    */
+      getDisputeWindowDays().catch(() => null),
+    ]);
 
   /**
    * ⚠️ ES LA COMPARACIÓN QUE FALTABA. Sin `sellerId` la ficha no podía saber si
@@ -908,6 +919,41 @@ export default async function DetalleDePublicacion({
                       verifica.
                     </span>
                   </p>
+
+                  {/*
+                    SI ALGO SALE MAL (DEC-009 / SH-002).
+
+                    ⚠️ ESTO YA EXISTIA Y NO SE DECIA EN NINGUN LADO. Los reclamos
+                    y las disputas estan implementados desde el 2026-09-11 —con
+                    ventana, estados y resolucion por una persona—, pero la
+                    unica pantalla donde alguien decide transferirle plata a un
+                    desconocido no los nombraba. La funcionalidad que no se ve
+                    no genera confianza.
+
+                    ⚠️ NO DICE "COMPRA PROTEGIDA" NI "TE DEVOLVEMOS LA PLATA", Y
+                    ES LA DECISION QUE MAS IMPORTA DE ESTE BLOQUE. Offside NO
+                    retiene los fondos —DEC-019 se cerro en negativo: Mercado
+                    Pago le acredita al vendedor al aprobarse el pago— y los
+                    reembolsos todavia no se probaron contra Mercado Pago real.
+                    Prometer una devolucion garantizada en la pantalla de la
+                    decision seria exactamente la clase de sello inventado que
+                    este sitio no usa. Lo que SI es verdad y es comprobable:
+                    existe el reclamo, tiene plazo, y lo mira una persona.
+
+                    ⚠️ "UNA PERSONA DE OFFSIDE" ES LITERAL: resolver exige la
+                    capacidad `disputes:resolve` y ademas quien resuelve NO puede
+                    ser parte de esa orden.
+                  */}
+                  {diasDeReclamo !== null && (
+                    <p className={estilos.sello}>
+                      <IconoIntercambio tamanio={20} />
+                      <span>
+                        ¿No llega o no es lo que decía la publicación? Tenés{' '}
+                        <strong>{cantidadLegible(diasDeReclamo, 'día')}</strong> para abrir un
+                        reclamo desde Mis compras, y lo revisa una persona de Offside.
+                      </span>
+                    </p>
+                  )}
 
                   {user === null && (
                     <p className={estilos.sello}>

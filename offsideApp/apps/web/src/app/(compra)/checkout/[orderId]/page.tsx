@@ -14,8 +14,16 @@ import {
   FilaDeAcciones,
   Migas,
 } from '@/components/ui';
-import { estadoDeEnvio, estadoDeOrden, fecha, precio, tonoDeOrden } from '@/lib/formato';
+import {
+  cantidad as cantidadLegible,
+  estadoDeEnvio,
+  estadoDeOrden,
+  fecha,
+  precio,
+  tonoDeOrden,
+} from '@/lib/formato';
 import { getSessionUser, requireVerifiedSessionUser } from '@/lib/session';
+import { getDisputeWindowDays } from '@/modules/disputes/services/dispute-settings.service';
 import { coverUrls } from '@/modules/listings/services/listing.service';
 import { getMyOrder, getMyOrderDetail } from '@/modules/orders/services/order.service';
 
@@ -120,6 +128,14 @@ export default async function Checkout({
   if (order === null) notFound();
 
   const portadas = await coverUrls(order.items.map((item) => item.listingId));
+
+  /*
+   * ⚠️ EL PLAZO DE RECLAMO SALE DEL CONFIG STORE (`dispute_window_days` ⚙️), no
+   * del codigo: escribirlo acá lo clavaria y el dia que el owner lo cambie el
+   * checkout mentiria sobre el plazo que decide si alguien recupera su plata.
+   * Si no se puede leer, la linea no se muestra.
+   */
+  const diasDeReclamo = await getDisputeWindowDays().catch(() => null);
 
   const pendiente = order.status === 'PENDING_PAYMENT';
   const vencida =
@@ -447,6 +463,30 @@ export default async function Checkout({
               <IconoAutenticado tamanio={16} />
               <span>Te llevamos a Mercado Pago. Offside no ve los datos de tu tarjeta.</span>
             </p>
+
+            {/*
+              QUE PASA SI ALGO SALE MAL, DICHO ANTES DE PAGAR (DEC-009 / SH-002).
+
+              ⚠️ ES EL ULTIMO MOMENTO EN QUE SIRVE DECIRLO. Los reclamos existen
+              desde el 2026-09-11 y esta pantalla —donde se aprieta el boton que
+              mueve la plata— no los nombraba: quien dudaba abandonaba sin saber
+              que hay una salida.
+
+              ⚠️ NO DICE "COMPRA PROTEGIDA". Offside no retiene los fondos
+              (DEC-019, cerrada en negativo) y los reembolsos no se probaron
+              contra Mercado Pago real. Se nombra el mecanismo que SI existe —el
+              reclamo, con su plazo y una persona que lo mira—, no una garantia
+              que el sistema no puede cumplir.
+            */}
+            {diasDeReclamo !== null && (
+              <p className={estilos.notaPago}>
+                <IconoIntercambio tamanio={16} />
+                <span>
+                  Si no llega o no es lo que decía la publicación, tenés{' '}
+                  {cantidadLegible(diasDeReclamo, 'día')} para abrir un reclamo desde Mis compras.
+                </span>
+              </p>
+            )}
           </div>
         )}
 
