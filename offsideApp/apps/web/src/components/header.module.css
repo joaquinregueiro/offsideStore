@@ -1378,3 +1378,133 @@ header.barra::before {
     border-bottom: 1px solid CanvasText;
   }
 }
+
+/* ==================================================== barra inferior (movil) */
+
+/**
+ * `.acciones` movida al pulgar. Ver el comentario del JSX en `header.tsx`.
+ *
+ * ⚠️ ESCONDIDA POR DEFECTO Y ENCENDIDA EN LA MISMA MEDIA QUERY QUE APAGA
+ * `.acciones` (900px). Escrita al reves —visible por defecto y oculta arriba de
+ * 900— quedaria visible un instante en escritorio antes de que aplique el CSS, y
+ * ademas serian dos numeros que hay que acordarse de mantener iguales.
+ */
+.navInferior {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .navInferior {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: var(--z-barra, 100);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+
+    /*
+     * ⚠️ EL ALTO ES UN TOKEN PORQUE OTRA PANTALLA LO NECESITA. La barra de compra
+     * de la ficha esta pegada al fondo (`sticky; bottom: 0`): sin este numero
+     * compartido, la barra inferior la taparia y el boton de comprar —el unico
+     * de esa pantalla— quedaria abajo de la navegacion. Se declara acá, en el
+     * unico componente que la dibuja, y se consume desde `p/[id]`.
+     */
+    min-height: var(--alto-nav-inferior);
+
+    /*
+     * ⚠️ `env(safe-area-inset-bottom)` NO ES DECORACION EN UN IPHONE: sin el, la
+     * fila de iconos queda debajo de la barra de gestos del sistema y los dos
+     * ultimos se vuelven casi intocables.
+     */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    background-color: var(--sup-noche, var(--color-tinta));
+    border-top: 1px solid rgb(var(--luz-papel) / 0.14);
+    box-shadow: 0 -8px 24px -16px rgb(0 0 0 / 0.6);
+  }
+
+  /*
+   * ⚠️ EL DOCUMENTO SE CORRE PARA ARRIBA LO QUE MIDE LA BARRA. Sin esto la barra
+   * tapa el final del pie y la ultima fila de cualquier grilla: se puede
+   * scrollear hasta abajo y aun asi no llegar al contenido.
+   */
+  body {
+    padding-bottom: calc(var(--alto-nav-inferior) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/**
+ * ⚠️ 44px DE ALTO REAL Y EL ANCHO REPARTIDO EN PARTES IGUALES (WCAG 2.5.5). Son
+ * los objetivos que mas se tocan del sitio y estan en el borde de la pantalla,
+ * que es donde peor se apunta.
+ */
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--alto-control);
+  padding: var(--espacio-2) var(--espacio-1);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  letter-spacing: var(--tracking-etiqueta);
+  text-align: center;
+  /* Papel sobre noche: 15.72:1. */
+  color: var(--color-sobre-oscuro);
+  transition: color var(--transicion-rapida) var(--curva);
+}
+
+.navItem:hover,
+.navItem:focus-visible {
+  color: var(--color-cambio);
+}
+
+/**
+ * ⚠️ LA SECCION ACTIVA SE DICE CON COLOR **Y** CON UNA MARCA ARRIBA. Solo con
+ * color no lo distingue quien no separa matices, y `aria-current` —que es lo que
+ * anuncia un lector de pantalla— cuelga del mismo atributo, asi que las tres
+ * señales no se pueden desincronizar.
+ */
+.navItem[aria-current] {
+  color: var(--color-cambio);
+}
+
+.navItem[aria-current]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 28px;
+  height: 3px;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cambio);
+}
+
+.navItem {
+  position: relative;
+}
+
+/** El icono y su globo: el globo se ancla al icono, no a la celda entera. */
+.navIcono {
+  position: relative;
+  display: inline-flex;
+}
+
+.navGlobo {
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 4px;
+  border-radius: var(--radio-pastilla);
+  /* Tinta sobre Amarillo Cambio: 13.97:1. */
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: 10px;
+  font-weight: var(--peso-semi);
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

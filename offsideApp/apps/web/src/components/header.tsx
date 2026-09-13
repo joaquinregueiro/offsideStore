@@ -16,10 +16,14 @@ import {
   IconoBuscar,
   IconoCampana,
   IconoCarrito,
+  IconoCasa,
   IconoCerrar,
+  IconoFavorito,
+  IconoLlave,
   IconoLuna,
   IconoMenu,
   IconoSol,
+  IconoTienda,
 } from './iconos';
 import { Logo } from './marca';
 import { Contador } from './ui';
@@ -240,73 +244,74 @@ export async function Header({
       scroll y la cinta del filo). El vidrio, el radio y la sombra los pone el
       modulo encima.
     */
-    <header className={`${estilos.barra} sup-cancha`} style={{ viewTransitionName: 'barra' }}>
-      {/*
+    <>
+      <header className={`${estilos.barra} sup-cancha`} style={{ viewTransitionName: 'barra' }}>
+        {/*
         ⚠️ SALTAR AL CONTENIDO. Quien navega con teclado o con lector de pantalla
         tenia que recorrer la marca, el buscador y cinco enlaces en CADA
         pantalla antes de llegar a lo que vino a leer. Es invisible hasta que
         recibe el foco (WCAG 2.4.1).
       */}
-      <a href="#contenido" className={estilos.saltar}>
-        Saltar al contenido
-      </a>
+        <a href="#contenido" className={estilos.saltar}>
+          Saltar al contenido
+        </a>
 
-      <div className={estilos.contenido}>
-        {/*
+        <div className={estilos.contenido}>
+          {/*
           ⚠️ VA PRIMERO, ANTES DE LA MARCA. Las tres rayitas a la izquierda son
           una convencion que la gente ya conoce; ponerlas despues del logo las
           convierte en un boton mas de la fila. El cajon que abren lleva las
           secciones de la cuenta, que hasta ahora solo existian ADENTRO de
           `/cuenta` y `/vendedor`.
         */}
-        <CajonDeCuenta />
+          <CajonDeCuenta />
 
-        <Link
-          href="/"
-          className={estilos.marca}
-          aria-label="Offside Store — inicio"
-          transitionTypes={['retrocede']}
-        >
-          <Logo invertido />
-        </Link>
+          <Link
+            href="/"
+            className={estilos.marca}
+            aria-label="Offside Store — inicio"
+            transitionTypes={['retrocede']}
+          >
+            <Logo invertido />
+          </Link>
 
-        {/*
+          {/*
           ⚠️ ES UN <form> CON GET, no un campo con JavaScript. Asi la busqueda
           viaja en la URL: se puede compartir, guardar en favoritos y volver con
           el boton atras. Y funciona sin JS, como el resto del sitio.
         */}
-        <form action="/buscar" method="get" className={estilos.buscadorForm} role="search">
-          <label htmlFor="busqueda-global" className="solo-lectores">
-            Buscar publicaciones
-          </label>
-          <input
-            id="busqueda-global"
-            className={estilos.buscador}
-            type="search"
-            name="q"
-            placeholder="Buscar camiseta, club, temporada…"
-            /*
+          <form action="/buscar" method="get" className={estilos.buscadorForm} role="search">
+            <label htmlFor="busqueda-global" className="solo-lectores">
+              Buscar publicaciones
+            </label>
+            <input
+              id="busqueda-global"
+              className={estilos.buscador}
+              type="search"
+              name="q"
+              placeholder="Buscar camiseta, club, temporada…"
+              /*
               ⚠️ EL CAMPO CONSERVA LO QUE SE BUSCO. Antes se vaciaba: en
               `/buscar?q=river` el titulo decia "Resultados para river" y el
               buscador estaba en blanco, asi que afinar la busqueda obligaba a
               escribir todo de nuevo. Solo la pantalla de busqueda pasa el
               valor; en el resto la barra arranca vacia, que es lo correcto.
             */
-            defaultValue={consulta}
-          />
-          {/*
+              defaultValue={consulta}
+            />
+            {/*
             ⚠️ EL BOTON DE LUPA NO ES DECORACION. En escritorio se puede apretar
             Enter; en un telefono el teclado virtual muestra "ir" y mucha gente
             no lo asocia con buscar. Ademas es el unico control de la barra que
             confirma que el campo hace algo.
           */}
-          <button type="submit" className={estilos.buscadorBoton}>
-            <IconoBuscar tamanio={18} />
-            <span className="solo-lectores">Buscar</span>
-          </button>
-        </form>
+            <button type="submit" className={estilos.buscadorBoton}>
+              <IconoBuscar tamanio={18} />
+              <span className="solo-lectores">Buscar</span>
+            </button>
+          </form>
 
-        {/*
+          {/*
           EL INTERRUPTOR DE TEMA.
 
           ⚠️ SON DOS BOTONES SIEMPRE RENDERIZADOS Y EL CSS ELIGE CUAL SE VE, la
@@ -326,51 +331,51 @@ export async function Header({
           "Cambiar a modo claro" es lo que va a pasar si se aprieta. Los iconos
           son decorativos y ya vienen `aria-hidden`.
         */}
-        <form action={elegirTema} className={estilos.tema}>
-          <button
-            type="submit"
-            name="tema"
-            value="claro"
-            data-para="claro"
-            className={estilos.temaBoton}
-          >
-            <IconoSol tamanio={20} />
-            <span className="solo-lectores">Cambiar a modo claro</span>
-          </button>
-          <button
-            type="submit"
-            name="tema"
-            value="oscuro"
-            data-para="oscuro"
-            className={estilos.temaBoton}
-          >
-            <IconoLuna tamanio={20} />
-            <span className="solo-lectores">Cambiar a modo oscuro</span>
-          </button>
-        </form>
+          <form action={elegirTema} className={estilos.tema}>
+            <button
+              type="submit"
+              name="tema"
+              value="claro"
+              data-para="claro"
+              className={estilos.temaBoton}
+            >
+              <IconoSol tamanio={20} />
+              <span className="solo-lectores">Cambiar a modo claro</span>
+            </button>
+            <button
+              type="submit"
+              name="tema"
+              value="oscuro"
+              data-para="oscuro"
+              className={estilos.temaBoton}
+            >
+              <IconoLuna tamanio={20} />
+              <span className="solo-lectores">Cambiar a modo oscuro</span>
+            </button>
+          </form>
 
-        <nav className={estilos.acciones} aria-label="Principal">
-          {enlaces('barra')}
-        </nav>
+          <nav className={estilos.acciones} aria-label="Principal">
+            {enlaces('barra')}
+          </nav>
 
-        <details className={estilos.menu}>
-          <summary className={estilos.menuBoton}>
-            {/*
+          <details className={estilos.menu}>
+            <summary className={estilos.menuBoton}>
+              {/*
               ⚠️ LOS DOS ICONOS SE RENDERIZAN SIEMPRE y `[open]` decide cual se
               ve. Rotar tres rayas 90° da tres rayas verticales, que no
               significan nada; y cambiar el marcado necesitaria JavaScript. Los
               dos son decorativos: el texto accesible es el `.solo-lectores` de
               abajo, que no se duplica.
             */}
-            <span className={estilos.menuIcono} data-icono="abrir">
-              <IconoMenu tamanio={22} />
-            </span>
-            <span className={estilos.menuIcono} data-icono="cerrar">
-              <IconoCerrar tamanio={22} />
-            </span>
-            <span className="solo-lectores">Menú</span>
-          </summary>
-          {/*
+              <span className={estilos.menuIcono} data-icono="abrir">
+                <IconoMenu tamanio={22} />
+              </span>
+              <span className={estilos.menuIcono} data-icono="cerrar">
+                <IconoCerrar tamanio={22} />
+              </span>
+              <span className="solo-lectores">Menú</span>
+            </summary>
+            {/*
             ⚠️ `sup-noche` ES LO QUE DA EL SALTO DE TONO CONTRA LA BARRA, y
             `escena-luz` es lo que habilita los blobs que se VEN: sobre noche
             pelada el presupuesto de alfa es un lavado (4% / 2%) y con la escena
@@ -379,24 +384,115 @@ export async function Header({
             apertura cuenta hijos por orden y los enlaces tienen que ser los
             primeros.
           */}
-          <nav className={`${estilos.menuPanel} sup-noche escena-luz`} aria-label="Menú">
-            {enlaces('menu')}
-            <div className={`${estilos.menuLuz} blobs`} aria-hidden="true">
-              <i className="blob blob-cancha blob-grande" />
-              <i className="blob blob-cambio blob-chico" />
-            </div>
-          </nav>
-        </details>
-      </div>
+            <nav className={`${estilos.menuPanel} sup-noche escena-luz`} aria-label="Menú">
+              {enlaces('menu')}
+              <div className={`${estilos.menuLuz} blobs`} aria-hidden="true">
+                <i className="blob blob-cancha blob-grande" />
+                <i className="blob blob-cambio blob-chico" />
+              </div>
+            </nav>
+          </details>
+        </div>
 
-      {/*
+        {/*
         CINTA DE LA BANDERA en el filo inferior, en TODOS los viewports: las
         diagonales de la bandera del juez de linea como una tira de luz entre
         las dos esquinas redondeadas de la isla. Una cinta de 6px sobrevive a
         los 320px porque no compite con nada.
       */}
-      <div className={`${estilos.cinta} patron-vivo`} aria-hidden="true" />
-    </header>
+        <div className={`${estilos.cinta} patron-vivo`} aria-hidden="true" />
+      </header>
+
+      {/*
+        BARRA INFERIOR — solo en telefono (≤900px), que es donde `.acciones` se
+        esconde.
+
+        ⚠️ NO ES UNA NAVEGACION NUEVA NI DUPLICA AL CAJON: es `.acciones` movida
+        al pulgar. En escritorio esos enlaces viven arriba a la derecha; abajo de
+        900px `header.module.css` los apaga y quedaban a DOS toques —abrir el
+        menu y despues tocar—, incluido el carrito, que es el camino a la compra.
+        Esta barra los pone a uno. El cajon de la izquierda sigue siendo el de la
+        cuenta y no se toca: son cosas distintas, y por eso "Cuenta" NO esta acá.
+
+        ⚠️ EL QUINTO LUGAR ES FAVORITOS PORQUE HOY NO SE ALCANZA DESDE NINGUN
+        LADO en un toque, y en un marketplace de segunda mano es el motor del
+        regreso: quien guarda una camiseta vuelve a verla.
+
+        ⚠️ CAMBIA CON LA SESION, igual que `enlaces()`. Sin sesion, Favoritos y
+        Carrito llevarian al login: en vez de ofrecer dos puertas que rebotan, se
+        ofrece la puerta —Ingresar— y listo.
+
+        ⚠️ VIVE ADENTRO DEL `Header` Y NO DEL LAYOUT, y es lo que la hace posible
+        sin JavaScript: el Header ya recibe `seccion` —asi que `aria-current` sale
+        gratis— y ya leyo la sesion y el contador del carrito. Puesta en el
+        layout habria que pasar todo eso de nuevo, o peor, resolver la ruta con
+        `usePathname`, que convierte la barra en Client Component y manda la
+        sesion al bundle.
+      */}
+      {/*
+        ⚠️ VA FUERA DEL `<header>`, Y ESO NO ES ORDEN: ES LO QUE HACE QUE FUNCIONE.
+        La barra de arriba es de vidrio (`backdrop-filter`), y un ancestro con
+        `backdrop-filter` CREA UN BLOQUE CONTENEDOR para sus descendientes
+        `position: fixed`. Adentro del header, esta barra se anclaba al header en
+        vez de al viewport: se dibujaba pegada debajo de la barra superior,
+        tapando el buscador, en vez de al pie de la pantalla. Se vio en una
+        captura a 375px; ningun chequeo automatico lo habria encontrado.
+
+        Sigue saliendo de este componente —que ya tiene la sesion, el contador y
+        `seccion`— pero como hermano del header, no como hijo.
+      */}
+      <nav className={estilos.navInferior} aria-label="Accesos rápidos">
+        <Link href="/" className={estilos.navItem} {...actual('explorar')}>
+          <IconoCasa tamanio={22} />
+          <span>Inicio</span>
+        </Link>
+        <Link href="/buscar" className={estilos.navItem} transitionTypes={['barrido']}>
+          <IconoBuscar tamanio={22} />
+          <span>Buscar</span>
+        </Link>
+        <Link
+          href={user === null ? '/vendedor/empezar' : '/vendedor/publicaciones/nueva'}
+          className={estilos.navItem}
+          transitionTypes={['barrido']}
+          {...actual('vender')}
+        >
+          <IconoTienda tamanio={22} />
+          <span>Vender</span>
+        </Link>
+
+        {user === null ? (
+          <Link href="/ingresar" className={estilos.navItem} transitionTypes={['avanza']}>
+            <IconoLlave tamanio={22} />
+            <span>Ingresar</span>
+          </Link>
+        ) : (
+          <>
+            <Link
+              href="/cuenta/favoritos"
+              className={estilos.navItem}
+              transitionTypes={['barrido']}
+            >
+              <IconoFavorito tamanio={22} />
+              <span>Favoritos</span>
+            </Link>
+            <Link href="/carrito" className={estilos.navItem} transitionTypes={['barrido']}>
+              {/*
+                ⚠️ EL GLOBO NO ES SOLO COLOR: lleva el numero, y con 0 no se
+                dibuja. Un punto sin cifra al lado de un carrito obliga a entrar
+                para saber si hay algo.
+              */}
+              <span className={estilos.navIcono}>
+                <IconoCarrito tamanio={22} />
+                {enElCarrito > 0 && (
+                  <span className={estilos.navGlobo}>{enElCarrito > 9 ? '9+' : enElCarrito}</span>
+                )}
+              </span>
+              <span>Carrito</span>
+            </Link>
+          </>
+        )}
+      </nav>
+    </>
   );
 }
 

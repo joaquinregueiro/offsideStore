@@ -1376,6 +1376,14 @@ a:hover {
    * entero falla. Verificado en `header.module.css`.
    */
   --alto-barra: 84px;
+  /*
+   * Alto de la barra inferior de telefono (`header.module.css`).
+   *
+   * ⚠️ ES UN TOKEN Y NO UN NUMERO SUELTO PORQUE LO LEEN TRES LUGARES: la barra
+   * misma, el `padding-bottom` del documento y la barra de compra de la ficha,
+   * que se despega del fondo justo esta cantidad para no quedar tapada.
+   */
+  --alto-nav-inferior: 60px;
 
   /* --------------------------------------------------------- movimiento */
   /** Duraciones CON ROL. El nombre dice para que sirve, no cuanto dura. */

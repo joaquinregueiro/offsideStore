@@ -970,7 +970,19 @@
  */
 .barraAccion {
   position: sticky;
-  bottom: 0;
+  /*
+   * ⚠️ SE DESPEGA DEL FONDO LO QUE MIDE LA BARRA INFERIOR, Y NO ES UN AJUSTE
+   * FINO: abajo de 900px `header.module.css` dibuja una barra de navegacion
+   * `fixed` al pie. Con `bottom: 0` esta tarjeta quedaba JUSTO DEBAJO de ella y
+   * el boton de comprar —la unica accion de la pantalla— terminaba tapado por
+   * los iconos de navegacion. El token vive en `tokens.css` porque lo leen los
+   * tres lugares que dependen del mismo numero.
+   *
+   * Arriba de 900px la barra inferior no existe y `--alto-nav-inferior` se
+   * neutraliza en la media query de escritorio, asi que la tarjeta vuelve a
+   * apoyarse en el fondo.
+   */
+  bottom: calc(var(--alto-nav-inferior) + env(safe-area-inset-bottom, 0px));
   z-index: var(--z-pegado);
   pointer-events: none;
 }
@@ -1017,6 +1029,8 @@
  */
 @media (min-width: 901px) {
   .barraAccion {
+    /* Arriba de 900px no hay barra inferior que esquivar. */
+    bottom: 0;
     max-width: var(--ancho-contenido);
     margin: 0 auto;
     padding: 0 var(--canal) var(--espacio-6);
