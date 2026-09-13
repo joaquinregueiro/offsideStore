@@ -69,7 +69,7 @@ export default async function EditarDireccion({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="cuenta">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Mi cuenta"

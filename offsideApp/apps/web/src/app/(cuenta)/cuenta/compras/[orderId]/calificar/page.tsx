@@ -75,7 +75,7 @@ export default async function Calificar({ params }: { params: Promise<{ orderId:
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="compras">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo={`Orden ${detalle.orderNumber}`}

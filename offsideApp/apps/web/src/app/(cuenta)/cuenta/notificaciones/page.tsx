@@ -96,7 +96,7 @@ export default async function MisAvisos({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="cuenta">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Mi cuenta"

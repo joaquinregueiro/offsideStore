@@ -145,7 +145,7 @@ export default async function MisPublicaciones({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="publicaciones">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa
             rotulo="Publicaciones"

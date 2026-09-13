@@ -143,7 +143,7 @@ export default async function MisVentas({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="publicaciones">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa rotulo="Publicaciones" titulo="Mis ventas" chica />
 

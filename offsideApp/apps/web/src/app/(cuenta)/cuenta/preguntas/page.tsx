@@ -39,7 +39,7 @@ export default async function MisPreguntas() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="preguntas">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Preguntas"

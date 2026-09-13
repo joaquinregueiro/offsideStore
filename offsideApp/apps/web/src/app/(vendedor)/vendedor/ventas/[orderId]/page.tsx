@@ -82,7 +82,7 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="publicaciones">
+      <PanelDeCuenta>
         <main id="contenido">
           <Migas
             items={[

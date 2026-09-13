@@ -1,38 +1,28 @@
 import { cache } from 'react';
 import type { ReactNode } from 'react';
 
-import {
-  Panel,
-  Solapas,
-  conteosDelPanel,
-  type SeccionDelPanel,
-  type Solapa,
-} from '@/components/panel';
+import { Panel, Solapas, type SeccionDelPanel, type Solapa } from '@/components/panel';
 import type { PublicUser } from '@/modules/auth/services/auth.service';
 import { getMySellerProfile } from '@/modules/sellers/services/seller.service';
 
 /**
- * El armazón del área privada, resuelto una sola vez.
+ * El armazón del área privada y sus solapas.
  *
- * ⚠️ EXISTE PARA QUE NINGUNA PANTALLA TENGA QUE ARMAR LA BARRA. Son veinte
- * pantallas repartidas en dos grupos de rutas: si cada una pidiera los conteos,
- * resolviera si la persona es vendedora y decidiera qué solapas dibujar, la
- * barra terminaría distinta en cada una —que es exactamente lo que pasaba con
- * el riel de pestañas que esto reemplaza, donde algunas mostraban el contador y
- * otras no—.
+ * ⚠️ LA BARRA LATERAL DE SECCIONES SE FUE (2026-09-12). Las mismas seis
+ * secciones estaban a la vez en el cajón de las tres rayitas y como columna al
+ * costado de cada pantalla privada: la misma navegación dos veces, y 15.5rem de
+ * ancho menos para el historial de compras y el inventario, que son listas.
  *
- * ⚠️ NO VIVE EN EL `layout.tsx`, y no es por comodidad: para marcar la sección
- * activa hay que saber la ruta, y saberla en un layout obliga a `usePathname`,
- * que es un hook. Eso convertiría el layout —y con él la barra superior y el
- * pie— en Client Component, y mandaría la sesión entera al bundle. Cada
- * pantalla ya sabe dónde está parada: lo pasa por prop.
+ * ⚠️ `PanelDeCuenta` SOBREVIVE COMO ARMAZON, y no es inercia: es lo que les da a
+ * las 31 pantallas privadas el mismo ancho máximo y el mismo canal lateral. Lo
+ * que dejó de hacer es CONSULTAR: antes resolvía los conteos y el perfil de
+ * vendedor en cada una de esas pantallas sólo para dibujar los numeritos de la
+ * barra. Eso hoy lo paga el cajón, una vez.
  *
- * ⚠️ SON DOS COMPONENTES Y NO UNO, para que la pantalla conserve el ORDEN de su
- * propio contenido. El armazón envuelve; las solapas se ponen donde
- * corresponde, debajo del encabezado y dentro del `<main>`. Con un solo
- * componente que dibujara las dos cosas, las solapas quedarían ARRIBA del
- * título de la pantalla y fuera del `<main>`, o sea que el enlace de saltar al
- * contenido se saltearía el `<h1>`.
+ * ⚠️ LAS SOLAPAS SE QUEDAN Y SIGUEN SIENDO DOS COMPONENTES. Son el segundo nivel
+ * —Historial / Reclamos / Reseñas— y el cajón no las reemplaza. Van DENTRO del
+ * `<main>`, debajo del encabezado: si el armazón las dibujara, quedarían arriba
+ * del `<h1>` y el enlace de saltar al contenido se saltearía el título.
  */
 
 /** ¿Esta persona vende? Se pregunta en las dos mitades: se resuelve una vez. */
@@ -100,23 +90,9 @@ const ETIQUETAS: Record<SeccionDelPanel, string> = {
   vender: 'Vender',
 };
 
-/** El armazón: barra lateral a la izquierda, la pantalla a la derecha. */
-export async function PanelDeCuenta({
-  user,
-  seccion,
-  children,
-}: {
-  user: PublicUser;
-  seccion: SeccionDelPanel;
-  children: ReactNode;
-}) {
-  const [conteos, esVendedor] = await Promise.all([conteosDelPanel(user), esVendedora(user)]);
-
-  return (
-    <Panel seccion={seccion} conteos={conteos} esVendedor={esVendedor}>
-      {children}
-    </Panel>
-  );
+/** El armazón: ancho, centrado y aire para toda pantalla privada. */
+export function PanelDeCuenta({ children }: { children: ReactNode }) {
+  return <Panel>{children}</Panel>;
 }
 
 /** El segundo nivel. Va DENTRO del `<main>`, debajo del encabezado. */

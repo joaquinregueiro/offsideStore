@@ -22,30 +22,22 @@ import {
 import estilos from './panel.module.css';
 
 /**
- * BARRA LATERAL DEL AREA PRIVADA.
+ * LAS SECCIONES DEL AREA PRIVADA — su definicion y el armazon de las pantallas.
  *
- * ⚠️ ES UNA SOLA PARA COMPRAR Y PARA VENDER, y ese es el cambio de fondo. Antes
- * habia dos paneles separados —`/cuenta` con nueve pestañas y `/vendedor` con
- * once— y la misma persona, que compra y vende con la misma cuenta (BS-021),
- * tenia que saber en cual de los dos estaba parada para encontrar sus
- * preguntas. Entrar a una seccion hacia desaparecer las de la otra: veinte
- * destinos repartidos en dos rieles horizontales que no se veian entre si.
+ * ⚠️ ACA YA NO SE DIBUJA NINGUNA BARRA LATERAL (2026-09-12). Las seis secciones
+ * se veian DOS veces al mismo tiempo: en el cajon de las tres rayitas y otra vez
+ * como columna al costado de cada pantalla privada. Repetir la misma navegacion
+ * a 20cm de distancia no ayuda a orientarse, y ademas le comia 15.5rem de ancho
+ * a listas que los necesitan —el historial de compras, el inventario—.
  *
- * ⚠️ SEIS SECCIONES, NI UNA MAS. Un riel de once pestañas no es navegacion: es
- * una lista. Las seis son las cosas que alguien viene a hacer —mirar su cuenta,
- * vender, gestionar lo que publica, contestar preguntas, ver lo que compro,
- * mirar lo que guardo— y lo demas son SOLAPAS adentro de cada una.
+ * ⚠️ LAS SEIS SECCIONES SIGUEN VIVIENDO ACA, en `itemsDelPanel`. Las consume el
+ * cajon. Si se definieran alla, este archivo y el cajon podrian divergir —que es
+ * el problema que el panel unico vino a resolver en primer lugar—.
  *
- * ⚠️ ES NAVEGACION, NO ESTADO: seis `<a>` a seis URLs. Se comparten, vuelven con
- * el boton atras y andan sin JavaScript. La seccion activa la pasa cada
- * pantalla —saberla acá obligaria a `usePathname`, que es un hook, y volveria
- * Client Component a todo el layout— y se marca con `aria-current="page"`, que
- * es a la vez la señal visual y la accesible: no se pueden desincronizar.
- *
- * ⚠️ EN TELEFONO NO ES UNA BARRA LATERAL: es una fila que se desliza. Una
- * columna de 240px al costado de una pantalla de 375 deja 120px para el
- * contenido. Se ordena solo con `grid-template-columns` y una media query, sin
- * duplicar el marcado.
+ * ⚠️ LAS SOLAPAS SE QUEDAN. Son el segundo nivel DENTRO de una seccion
+ * (Historial / Reclamos / Reseñas), no la navegacion principal: el cajon no las
+ * reemplaza, y sin ellas esas pantallas quedan sin forma de llegar a sus
+ * hermanas.
  */
 
 export type SeccionDelPanel =
@@ -138,15 +130,14 @@ export const conteosDelPanel = cache(async (user: PublicUser): Promise<ConteosDe
 });
 
 /**
- * ⚠️ EXPORTADO PARA QUE EL CAJON LATERAL LO REUSE. Las seis secciones se
- * definen UNA vez: si el cajon armara su propia lista, el dia que se agregue
- * una seccion aparecería en la barra y no en el cajon —o al reves—, que es
- * exactamente el problema que este panel vino a resolver.
+ * ⚠️ LA UNICA DEFINICION DE LAS SEIS SECCIONES. Hoy las consume el cajon de las
+ * tres rayitas y nadie mas; vive aca —y no adentro del cajon— porque es la lista
+ * del AREA PRIVADA, no de un componente de la barra, y `SeccionDelPanel` y las
+ * solapas de cada seccion se definen contra ella.
  */
 export interface ItemDelPanel {
   clave: SeccionDelPanel;
   texto: string;
-  detalle: string;
   href: string;
   icono: ReactNode;
   /** Numero que pide una accion. `null` o `0` no se dibuja. */
@@ -160,7 +151,6 @@ export function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): It
     {
       clave: 'cuenta',
       texto: 'Mi cuenta',
-      detalle: 'Tus datos, direcciones y avisos',
       href: '/cuenta',
       icono: <IconoTienda tamanio={20} />,
       dato: conteos.sinLeer,
@@ -174,14 +164,12 @@ export function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): It
        * vendedor, el guard de esa pantalla lo manda al alta, que es el unico
        * paso que le falta.
        */
-      detalle: 'Publicá una prenda ahora',
       href: '/vendedor/publicaciones/nueva',
       icono: <IconoEtiqueta tamanio={20} />,
     },
     {
       clave: 'publicaciones',
       texto: 'Publicaciones',
-      detalle: 'Lo que publicaste y lo que vendiste',
       href: '/vendedor/publicaciones',
       icono: <IconoCamiseta tamanio={20} />,
       dato: conteos.ventasPorDespachar,
@@ -190,7 +178,6 @@ export function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): It
     {
       clave: 'preguntas',
       texto: 'Preguntas',
-      detalle: 'Las que te hacen y las que hacés',
       href: '/cuenta/preguntas',
       icono: <IconoPregunta tamanio={20} />,
       dato: conteos.preguntasSinResponder,
@@ -198,7 +185,6 @@ export function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): It
     {
       clave: 'compras',
       texto: 'Compras',
-      detalle: 'Historial, reclamos y reseñas',
       href: '/cuenta/compras',
       icono: <IconoCarrito tamanio={20} />,
       dato: conteos.comprasEnCurso,
@@ -206,7 +192,6 @@ export function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): It
     {
       clave: 'favoritos',
       texto: 'Favoritos',
-      detalle: 'Lo que guardaste para después',
       href: '/cuenta/favoritos',
       icono: <IconoFavorito tamanio={20} />,
     },
@@ -216,86 +201,28 @@ export function itemsDelPanel(conteos: ConteosDelPanel, esVendedor: boolean): It
 }
 
 /**
- * El armazon de todas las pantallas privadas: barra lateral + contenido.
+ * El armazon de las pantallas privadas: ancho, centrado y aire.
  *
- * ⚠️ LA BARRA VA EN UN `<nav>` PROPIO Y EL CONTENIDO EN EL `<main>`, que lo pone
- * la pantalla. Meter el `<main>` acá obligaria a que cada pantalla no lo
- * escribiera, y basta con que una se olvide para tener dos `<main>` —que fue un
- * bug real de este proyecto—.
+ * ⚠️ QUEDA COMO CONTENEDOR AUNQUE YA NO TENGA BARRA. Es lo que les da a las 31
+ * pantallas privadas el mismo ancho maximo y el mismo canal lateral; si cada una
+ * se lo pusiera sola, alcanzaria con que una se olvidara para que se viera
+ * distinta.
+ *
+ * ⚠️ NO PONE EL `<main>`, y no es un olvido: lo escribe cada pantalla. Ponerlo
+ * aca obligaria a que ninguna lo escribiera, y basta con que una se equivoque
+ * para tener dos `<main>` —que fue un bug real de este proyecto—.
  */
-export function Panel({
-  seccion,
-  conteos,
-  esVendedor,
-  children,
-}: {
-  seccion: SeccionDelPanel;
-  conteos: ConteosDelPanel;
-  esVendedor: boolean;
-  children: ReactNode;
-}) {
-  const items = itemsDelPanel(conteos, esVendedor);
-
-  return (
-    <div className={estilos.armazon}>
-      <nav className={estilos.barra} aria-label="Tu cuenta">
-        <ul className={estilos.lista}>
-          {items.map((item) => {
-            const activo = item.clave === seccion;
-            const dato = item.dato ?? 0;
-
-            return (
-              <li key={item.clave}>
-                <Link
-                  href={item.href}
-                  className={activo ? estilos.itemActivo : estilos.item}
-                  aria-current={activo ? 'page' : undefined}
-                  transitionTypes={['barrido']}
-                >
-                  <span className={estilos.itemIcono} aria-hidden="true">
-                    {item.icono}
-                  </span>
-                  <span className={estilos.itemTexto}>
-                    <span className={estilos.itemNombre}>{item.texto}</span>
-                    <span className={estilos.itemDetalle}>{item.detalle}</span>
-                  </span>
-                  {dato > 0 && (
-                    <span className={estilos.itemDato}>
-                      {dato > 99 ? '99+' : dato}
-                      <span className="solo-lectores"> pendientes</span>
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-
-        {!esVendedor && (
-          /*
-           * ⚠️ A QUIEN NO VENDE NO SE LE ESCONDE LA MITAD DEL PANEL SIN DECIR
-           * NADA. "Publicaciones" no aparece porque no tiene ninguna; el
-           * renglon explica que existe y como llegar, en vez de dejar un hueco
-           * que se lee como una funcionalidad rota.
-           */
-          <p className={estilos.barraNota}>
-            ¿Querés vender? Con tu misma cuenta podés. Verificás tu identidad una vez y publicás.
-          </p>
-        )}
-      </nav>
-
-      <div className={estilos.contenido}>{children}</div>
-    </div>
-  );
+export function Panel({ children }: { children: ReactNode }) {
+  return <div className={estilos.armazon}>{children}</div>;
 }
 
 /**
  * SOLAPAS de una seccion: el segundo nivel, adentro del contenido.
  *
  * ⚠️ NO SON LA NAVEGACION PRINCIPAL Y POR ESO NO SE VEN COMO TAL. Son enlaces
- * de texto con un filete abajo, sin marco ni sombra ni glow: la barra lateral
- * ya dice donde estas parado, y dos rieles compitiendo por la misma jerarquia
- * es lo que hacia que la pantalla anterior no se entendiera.
+ * de texto con un filete abajo, sin marco ni sombra ni glow: el titulo de la
+ * pantalla ya dice donde estas parado, y dos rieles compitiendo por la misma
+ * jerarquia es lo que hacia que la pantalla anterior no se entendiera.
  */
 export interface Solapa {
   clave: string;

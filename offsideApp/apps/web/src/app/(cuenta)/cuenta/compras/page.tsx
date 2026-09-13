@@ -87,7 +87,7 @@ export default async function MisCompras({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="compras">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Compras"

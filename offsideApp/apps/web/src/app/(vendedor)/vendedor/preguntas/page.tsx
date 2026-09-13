@@ -45,7 +45,7 @@ export default async function PreguntasDelVendedor() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="preguntas">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa
             rotulo="Preguntas"

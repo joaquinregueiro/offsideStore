@@ -52,7 +52,7 @@ export default async function MisFavoritos({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="favoritos">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Favoritos"

@@ -58,7 +58,7 @@ export default async function EditarPublicacion({ params }: { params: Promise<{ 
   if (publicacion.status === 'deleted') {
     return (
       <Pantalla>
-        <PanelDeCuenta user={user} seccion="publicaciones">
+        <PanelDeCuenta>
           <main id="contenido">
             <Chapa
               rotulo="Inventario"
@@ -89,7 +89,7 @@ export default async function EditarPublicacion({ params }: { params: Promise<{ 
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="publicaciones">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa
             rotulo="Inventario"

@@ -279,7 +279,7 @@ export default async function FichaDeCompra({ params }: { params: Promise<{ orde
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="compras">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo={`Orden ${detalle.orderNumber}`}

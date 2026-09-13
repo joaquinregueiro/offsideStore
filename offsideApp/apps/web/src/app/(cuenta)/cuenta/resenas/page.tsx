@@ -36,7 +36,7 @@ export default async function MisResenas() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="compras">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Compras"

@@ -87,7 +87,7 @@ export default async function FichaDeReclamo({ params }: { params: Promise<{ id:
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="compras">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo={`Orden ${reclamo.orderNumber}`}
