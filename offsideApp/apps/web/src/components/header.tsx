@@ -12,15 +12,7 @@ import { countCartItems } from '@/modules/cart/services/cart.service';
 import { countUnread } from '@/modules/notifications/services/inapp-notification.service';
 
 import estilos from './header.module.css';
-import {
-  IconoBuscar,
-  IconoCampana,
-  IconoCarrito,
-  IconoCerrar,
-  IconoLuna,
-  IconoMenu,
-  IconoSol,
-} from './iconos';
+import { IconoBuscar, IconoCampana, IconoCarrito, IconoLuna, IconoSol } from './iconos';
 import { Logo } from './marca';
 import { Contador } from './ui';
 
@@ -102,41 +94,27 @@ export async function Header({
    * telefono es una fila de texto como las demas, porque una fila de ancho
    * completo con un icono solo se ve rota.
    */
-  const carrito = (donde: 'barra' | 'menu'): ReactNode =>
-    enElCarrito === 0 && donde === 'menu' ? null : donde === 'barra' ? (
-      <Contador
-        href="/carrito"
-        icono={<IconoCarrito tamanio={20} />}
-        texto="Carrito"
-        cantidad={enElCarrito}
-        className={estilos.contadorBarra}
-      />
-    ) : (
-      <Link href="/carrito" className={estilos.enlace} transitionTypes={['barrido']}>
-        Carrito
-        <span className={estilos.globoMenu}>{enElCarrito > 99 ? '99+' : enElCarrito}</span>
-      </Link>
-    );
+  const carrito = (): ReactNode => (
+    <Contador
+      href="/carrito"
+      icono={<IconoCarrito tamanio={20} />}
+      texto="Carrito"
+      cantidad={enElCarrito}
+      className={estilos.contadorBarra}
+    />
+  );
 
-  const campanita = (donde: 'barra' | 'menu'): ReactNode =>
-    donde === 'barra' ? (
-      <Contador
-        href="/cuenta/notificaciones"
-        icono={<IconoCampana tamanio={20} />}
-        texto="Notificaciones"
-        cantidad={noLeidas}
-        className={estilos.contadorBarra}
-      />
-    ) : (
-      <Link href="/cuenta/notificaciones" className={estilos.enlace} transitionTypes={['barrido']}>
-        Notificaciones
-        {noLeidas > 0 && (
-          <span className={estilos.globoMenu}>{noLeidas > 99 ? '99+' : noLeidas}</span>
-        )}
-      </Link>
-    );
+  const campanita = (): ReactNode => (
+    <Contador
+      href="/cuenta/notificaciones"
+      icono={<IconoCampana tamanio={20} />}
+      texto="Notificaciones"
+      cantidad={noLeidas}
+      className={estilos.contadorBarra}
+    />
+  );
 
-  const enlaces = (donde: 'barra' | 'menu'): ReactNode =>
+  const enlaces = (): ReactNode =>
     user === null ? (
       <>
         <Link
@@ -201,8 +179,8 @@ export async function Header({
             Admin
           </Link>
         )}
-        {carrito(donde)}
-        {campanita(donde)}
+        {carrito()}
+        {campanita()}
         {/*
           Salir es una MUTACION —invalida la sesion en la base—, asi que va en
           un `<form>` con POST, no en un enlace. Un GET que cambia estado se
@@ -350,43 +328,16 @@ export async function Header({
         </form>
 
         <nav className={estilos.acciones} aria-label="Principal">
-          {enlaces('barra')}
+          {enlaces()}
         </nav>
 
-        <details className={estilos.menu}>
-          <summary className={estilos.menuBoton}>
-            {/*
-              ⚠️ LOS DOS ICONOS SE RENDERIZAN SIEMPRE y `[open]` decide cual se
-              ve. Rotar tres rayas 90° da tres rayas verticales, que no
-              significan nada; y cambiar el marcado necesitaria JavaScript. Los
-              dos son decorativos: el texto accesible es el `.solo-lectores` de
-              abajo, que no se duplica.
-            */}
-            <span className={estilos.menuIcono} data-icono="abrir">
-              <IconoMenu tamanio={22} />
-            </span>
-            <span className={estilos.menuIcono} data-icono="cerrar">
-              <IconoCerrar tamanio={22} />
-            </span>
-            <span className="solo-lectores">Menú</span>
-          </summary>
-          {/*
-            ⚠️ `sup-noche` ES LO QUE DA EL SALTO DE TONO CONTRA LA BARRA, y
-            `escena-luz` es lo que habilita los blobs que se VEN: sobre noche
-            pelada el presupuesto de alfa es un lavado (4% / 2%) y con la escena
-            sube a 10% / 6%, con los tokens de texto remapeados a los que aguantan
-            ese punto (`tokens.css`). Los blobs van ULTIMOS: el escalonado de
-            apertura cuenta hijos por orden y los enlaces tienen que ser los
-            primeros.
-          */}
-          <nav className={`${estilos.menuPanel} sup-noche escena-luz`} aria-label="Menú">
-            {enlaces('menu')}
-            <div className={`${estilos.menuLuz} blobs`} aria-hidden="true">
-              <i className="blob blob-cancha blob-grande" />
-              <i className="blob blob-cambio blob-chico" />
-            </div>
-          </nav>
-        </details>
+        {/*
+          ⚠️ ACA ESTABA EL SEGUNDO MENU (2026-09-12). Era otro `<details>` con
+          los enlaces globales, visible solo en telefono. Con el cajon de la
+          izquierda quedaban DOS botones de tres rayitas, uno en cada punta de la
+          barra, sin nada que dijera cual era cual. Sus enlaces se fusionaron en
+          el cajon, que ahora es el unico menu del sitio.
+        */}
       </div>
 
       {/*

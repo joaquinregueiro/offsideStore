@@ -1,37 +1,36 @@
 import Link from 'next/link';
 
 import { salir } from '@/app/(auth)/acciones';
+import { capabilitiesFor } from '@/lib/permissions';
 import { getSessionUser } from '@/lib/session';
 import { getMySellerProfile } from '@/modules/sellers/services/seller.service';
 
-import { IconoMenu } from './iconos';
+import { IconoBuscar, IconoCampana, IconoCarrito, IconoLlave, IconoMenu } from './iconos';
 import { conteosDelPanel, itemsDelPanel } from './panel';
 import estilos from './cajon.module.css';
 
 /**
- * CAJON DE CUENTA: las tres rayitas de la izquierda y el panel que despliegan.
+ * CAJON: las tres rayitas de la izquierda y el panel que despliegan.
+ *
+ * ⚠️ ES EL UNICO MENU DEL SITIO (2026-09-12). Antes eran dos: este a la
+ * izquierda con las secciones de la cuenta, y otro `<details>` a la derecha con
+ * los enlaces globales. En un telefono quedaban DOS botones de tres rayitas, uno
+ * en cada punta, sin nada que dijera cual era cual. Se fusionaron acá.
  *
  * ⚠️ SE DESPLIEGA HACIA ABAJO, COLGADO DE LA BARRA, no al costado. El primer
- * intento era un panel lateral y llego a produccion roto: `header.barra` tiene
- * `backdrop-filter`, que crea bloque contenedor para los `position: fixed`, asi
- * que el panel quedo atrapado adentro de la barra. El detalle esta en
+ * intento era un panel lateral y llegó a producción roto: `header.barra` tiene
+ * `backdrop-filter`, que crea bloque contenedor para los `position: fixed`, así
+ * que el panel quedó atrapado adentro de la barra. El detalle está en
  * `cajon.module.css`.
  *
- * ⚠️ ES LA MISMA NAVEGACION QUE EL PANEL DEL AREA PRIVADA, DISPONIBLE DESDE
- * CUALQUIER PANTALLA. Hasta ahora las seis secciones de la cuenta sólo existían
- * ADENTRO de `/cuenta` y `/vendedor`: desde la vitrina, la ficha de un producto
- * o el carrito no había forma de llegar a "Mis compras" sin pasar por el menú
- * de la barra. Esto las pone a un toque en todo el sitio.
+ * ⚠️ LAS SECCIONES DE LA CUENTA NO SE REDEFINEN ACA: salen de `itemsDelPanel`,
+ * la misma función que dibuja la barra lateral del área privada. Si se
+ * definieran dos veces, agregar una sección la haría aparecer en un lado y no en
+ * el otro —que es justamente el problema que ese panel vino a resolver—.
  *
- * ⚠️ LAS SECCIONES NO SE REDEFINEN ACA: salen de `itemsDelPanel`, que es la
- * misma función que dibuja la barra lateral del área privada. Si se definieran
- * dos veces, agregar una sección la haría aparecer en un lado y no en el otro
- * —que es justamente el problema que ese panel vino a resolver—.
- *
- * ⚠️ SIN JAVASCRIPT. Es un `<details>`, como el menú de teléfono de la barra: el
- * navegador ya sabe abrirlo con teclado y anunciarlo a un lector de pantalla.
- * Manejarlo con estado de React volvería Client Component a toda la barra, y con
- * ella se iría la sesión al bundle.
+ * ⚠️ SIN JAVASCRIPT. Es un `<details>`: el navegador ya sabe abrirlo con teclado
+ * y anunciarlo a un lector de pantalla. Manejarlo con estado de React volvería
+ * Client Component a toda la barra, y con ella se iría la sesión al bundle.
  */
 export async function CajonDeCuenta() {
   const user = await getSessionUser();
@@ -46,10 +45,10 @@ export async function CajonDeCuenta() {
           deja de anunciar si está abierto o cerrado, que es la mitad de la
           información.
         */}
-        <span className="solo-lectores">Tu cuenta y menú</span>
+        <span className="solo-lectores">Menú y tu cuenta</span>
       </summary>
 
-      <nav className={`${estilos.panel} sup-noche`} aria-label="Tu cuenta">
+      <nav className={`${estilos.panel} sup-noche`} aria-label="Menú">
         {user === null ? <Invitado /> : <Sesion user={user} />}
       </nav>
     </details>
@@ -61,7 +60,7 @@ export async function CajonDeCuenta() {
  *
  * ⚠️ UN CAJON CON "Mis compras" Y "Favoritos" PARA ALGUIEN QUE NO ENTRO es una
  * promesa que termina en la pantalla de login. Se ofrece lo único que se puede
- * hacer: entrar o crear la cuenta.
+ * hacer: explorar, entrar o crear la cuenta.
  */
 function Invitado() {
   return (
@@ -72,6 +71,14 @@ function Invitado() {
       </div>
 
       <ul className={estilos.lista}>
+        <li>
+          <Link href="/buscar" className={estilos.item}>
+            <span className={estilos.icono} aria-hidden="true">
+              <IconoBuscar tamanio={20} />
+            </span>
+            <span className={estilos.texto}>Explorar</span>
+          </Link>
+        </li>
         <li>
           <Link href="/ingresar" className={estilos.item}>
             <span className={estilos.texto}>Ingresar</span>
@@ -95,6 +102,7 @@ function Invitado() {
 async function Sesion({ user }: { user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>> }) {
   const [conteos, esVendedor] = await Promise.all([conteosDelPanel(user), vende(user.id)]);
   const items = itemsDelPanel(conteos, esVendedor);
+  const esAdmin = capabilitiesFor(user.adminRole).length > 0;
 
   return (
     <>
@@ -132,6 +140,70 @@ async function Sesion({ user }: { user: NonNullable<Awaited<ReturnType<typeof ge
             </li>
           );
         })}
+      </ul>
+
+      {/*
+        ⚠️ SEGUNDO GRUPO, SEPARADO POR UNA LINEA, y la separación no es adorno.
+        Arriba está TU CUENTA —cosas tuyas, con pendientes—; acá lo que es del
+        SITIO. Mezclados en una sola lista, "Explorar" quedaba entre "Compras" y
+        "Favoritos" como si fuera otra sección de la cuenta.
+
+        No se repiten "Mi cuenta" ni "Vender": ya son dos de las seis secciones
+        de arriba. Eso es exactamente lo que el menú de la derecha duplicaba.
+      */}
+      <ul className={`${estilos.lista} ${estilos.grupo}`}>
+        <li>
+          <Link href="/buscar" className={estilos.item}>
+            <span className={estilos.icono} aria-hidden="true">
+              <IconoBuscar tamanio={20} />
+            </span>
+            <span className={estilos.texto}>Explorar</span>
+          </Link>
+        </li>
+        <li>
+          <Link href="/carrito" className={estilos.item}>
+            <span className={estilos.icono} aria-hidden="true">
+              <IconoCarrito tamanio={20} />
+            </span>
+            <span className={estilos.texto}>Carrito</span>
+            {conteos.enElCarrito > 0 && (
+              <span className={estilos.dato}>
+                {conteos.enElCarrito > 99 ? '99+' : conteos.enElCarrito}
+                <span className="solo-lectores"> en el carrito</span>
+              </span>
+            )}
+          </Link>
+        </li>
+        <li>
+          <Link href="/cuenta/notificaciones" className={estilos.item}>
+            <span className={estilos.icono} aria-hidden="true">
+              <IconoCampana tamanio={20} />
+            </span>
+            <span className={estilos.texto}>Notificaciones</span>
+            {conteos.sinLeer > 0 && (
+              <span className={estilos.dato}>
+                {conteos.sinLeer > 99 ? '99+' : conteos.sinLeer}
+                <span className="solo-lectores"> sin leer</span>
+              </span>
+            )}
+          </Link>
+        </li>
+        {esAdmin && (
+          /*
+            El acceso al back-office aparece SOLO para quien tiene alguna
+            capacidad. No es una medida de seguridad —cada pantalla y cada Server
+            Action exigen la suya—, sino la única forma de llegar sin escribir la
+            URL a mano.
+          */
+          <li>
+            <Link href="/admin" className={estilos.item}>
+              <span className={estilos.icono} aria-hidden="true">
+                <IconoLlave tamanio={20} />
+              </span>
+              <span className={estilos.texto}>Admin</span>
+            </Link>
+          </li>
+        )}
       </ul>
 
       <div className={estilos.pie}>

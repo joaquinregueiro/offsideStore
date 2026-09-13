@@ -154,6 +154,16 @@
   gap: 2px;
 }
 
+/*
+ * Segundo grupo: lo que es del SITIO, separado de lo que es TUYO por una linea.
+ * Sin la separacion, "Explorar" quedaba entre "Compras" y "Favoritos" como si
+ * fuera otra seccion de la cuenta.
+ */
+.grupo {
+  padding-block-start: var(--espacio-3);
+  border-block-start: 1px solid rgb(var(--luz-papel) / 0.14);
+}
+
 .item {
   display: flex;
   align-items: center;

@@ -57,7 +57,7 @@
  * las hojas, que en Next App Router no es un contrato estable entre `dev` y
  * `build`: si ganara `.sup-cancha`, la barra dejaria de acompañar el scroll y
  * volveria a ser verde opaco sin que nada avisara. Tipo + clase da (0,1,1) y no
- * depende del orden. Lo mismo vale para `.barra .cinta` y `.menu .menuPanel`.
+ * depende del orden. Lo mismo vale para `.barra .cinta`.
  */
 
 header.barra {
@@ -171,18 +171,6 @@ header.barra::before {
   display: none;
 }
 
-/**
- * ⚠️ CON EL MENU ABIERTO LAS ESQUINAS DE ABAJO SE ENDEREZAN: el panel sale por
- * debajo con las suyas redondeadas, y barra + panel se leen como UN objeto que
- * se desplego. La especificidad de `:has()` es la de su argumento mas
- * especifico —`.menu[open]`, (0,2,0)— asi que le gana a `header.barra` sin
- * `!important`.
- */
-.barra:has(.menu[open]) {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
 /* --------------------------------------------------- la barra se densifica */
 
 /**
@@ -234,20 +222,6 @@ header.barra::before {
       animation-range: 0 160px;
     }
   }
-}
-
-/**
- * ⚠️ CON EL MENU ABIERTO, LA BARRA SE DENSIFICA SI O SI. El panel es
- * `.sup-noche`; con la barra todavia en vidrio claro, panel y barra se leen
- * como dos bloques que no tienen nada que ver.
- *
- * ⚠️ `animation: none` NO ES REDUNDANTE. Una animacion en curso gana el cascade
- * sobre cualquier declaracion normal por mas especifica que sea: sin sacarla,
- * el `opacity: 1` no se aplicaria mientras la barra este arriba de todo.
- */
-.barra:has(.menu[open])::after {
-  animation: none;
-  opacity: 1;
 }
 
 /**
@@ -1020,314 +994,11 @@ header.barra::before {
   color: var(--color-cambio);
 }
 
-/** En el menu de telefono el conteo va al lado del texto, como pastilla. */
-.globoMenu {
-  margin-left: auto;
-  min-width: 22px;
-  padding: 1px var(--espacio-2);
-  border-radius: var(--radio-pastilla);
-  background-color: var(--color-cambio);
-  color: var(--color-tinta);
-  font-size: var(--texto-xs);
-  font-weight: var(--peso-semi);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ------------------------------------------------------ menu de telefono */
-
-/**
- * Escondido en escritorio: ahi los enlaces se ven todos.
- *
- * ⚠️ QUEDA `static` A PROPOSITO: asi el bloque contenedor del panel es la BARRA
- * (que es `sticky`, o sea posicionada) y el panel sale a lo ancho de la isla en
- * vez de colgar del boton.
- */
-.menu {
-  display: none;
-  margin-left: auto;
-}
-
-.menuBoton {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--alto-control);
-  height: var(--alto-control);
-  /*
-   * ⚠️ EL BORDE ES `--linea-control`, que en esta barra vale
-   * `--color-sobre-cancha`: **4.94:1** sobre el vidrio. WCAG 1.4.11 exige 3:1
-   * para el contorno de algo que se aprieta, y este es el UNICO control visible
-   * del menu en telefono.
-   */
-  border: 1px solid var(--linea-control);
-  border-radius: var(--radio);
-  background-color: rgb(var(--luz-papel) / 0.06);
-  color: var(--color-papel);
-  cursor: pointer;
-  /* Saca el triangulito que el navegador pone por defecto en un <summary>. */
-  list-style: none;
-  transition:
-    background-color var(--dur-hover) var(--curva),
-    border-color var(--dur-hover) var(--curva),
-    box-shadow var(--dur-hover) var(--curva),
-    color var(--dur-hover) var(--curva),
-    transform var(--dur-instante) var(--curva-seca);
-}
-
-.menuBoton::-webkit-details-marker {
-  display: none;
-}
-
-/*
- * ⚠️ `:focus-visible` VA EN LA MISMA LISTA QUE `:hover`: quien navega con
- * teclado tiene que ver el mismo cambio de superficie. El fondo se OSCURECE
- * (Verde 900 al 35%: la luz se resta) y la luz va afuera, en `--glow-marca`,
- * que adentro de `.sup-cancha` es Amarillo Cambio.
- */
-.menuBoton:hover,
-.menuBoton:focus-visible,
-.menu[open] .menuBoton {
-  border-color: var(--color-cambio);
-  color: var(--color-cambio);
-  background-color: rgb(7 59 34 / 0.35);
-  box-shadow: var(--glow-marca);
-}
-
-.menuBoton:active {
-  transform: translateY(1px);
-}
-
-/**
- * CRUCE DE ICONOS: hamburguesa ↔ cruz, SIN JAVASCRIPT.
- *
- * ⚠️ NO SE ROTA EL ICONO DE MENU. Girar tres rayas 90° da tres rayas
- * verticales, que no significan nada. Se renderizan los dos iconos apilados y
- * `[open]` decide cual esta a la vista, con `opacity` + `rotate` y la curva pop.
- */
-.menuIcono {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    opacity var(--transicion) var(--curva),
-    transform var(--dur-hover) var(--curva-pop);
-}
-
-.menuIcono[data-icono='cerrar'] {
-  opacity: 0;
-  transform: rotate(-90deg) scale(0.6);
-}
-
-.menu[open] .menuIcono[data-icono='abrir'] {
-  opacity: 0;
-  transform: rotate(90deg) scale(0.6);
-}
-
-.menu[open] .menuIcono[data-icono='cerrar'] {
-  opacity: 1;
-  transform: rotate(0) scale(1);
-}
-
-/**
- * PANEL DESPLEGADO.
- *
- * ⚠️ `.menu .menuPanel` Y NO `.menuPanel` A SECAS. El panel lleva la clase
- * global `.sup-noche`, que declara `position: relative` con especificidad
- * (0,1,0) — la misma que `.menuPanel`. Si ganara `.sup-noche`, el panel
- * entraria en flujo dentro del `<details>` y **empujaria la barra hacia abajo
- * al abrirse**.
- *
- * ⚠️ EL FONDO Y LOS NEUTROS SALEN DE `.sup-noche` + `.escena-luz`: la malla, el
- * filo de luz que lo separa de la barra, los neutros para oscuro y el
- * presupuesto de blobs de noche (verde-500 al 10%, Cambio al 6%: medido en
- * `tokens.css`, sobre-oscuro-2 6.81 · verde-400 5.10 · borde 3.43). Los blobs
- * flotan DETRAS de los enlaces en un hijo propio con `border-radius: inherit`,
- * para que no asomen por las esquinas redondeadas.
- *
- * ⚠️ NO LLEVA `overflow: clip`: recortaria el `outline` del foco de los enlaces
- * y el halo `--glow-suave` del propio panel.
- */
-.menu .menuPanel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  z-index: var(--z-menu);
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--espacio-1);
-  padding: var(--espacio-4) var(--espacio-4) var(--espacio-6);
-  border-radius: 0 0 var(--radio-barra) var(--radio-barra);
-  box-shadow: var(--sombra-4), var(--glow-suave);
-}
-
-.menuLuz {
-  border-radius: inherit;
-}
-
-/*
- * Dentro del panel cada enlace es una FILA redondeada con area tactil completa
- * y luz propia en hover: se corre 4px hacia la derecha (`translate`, aparte de
- * `transform`) y gana un fondo de papel al 6% —sobre el peor punto de la
- * escena, #234b37, el papel sigue en 7.91 y Cambio en 7.03—.
- * `:global` no hace falta: son las mismas clases de este modulo.
- */
-.menuPanel .enlace,
-.menuPanel .enlaceBoton,
-.menuPanel .enlaceDestacado {
-  display: flex;
-  align-items: center;
-  min-height: var(--alto-control);
-  padding: 0 var(--espacio-4);
-  border-radius: var(--radio);
-  font-size: var(--texto-base);
-  width: 100%;
-  translate: 0 0;
-  transition:
-    color var(--dur-hover) var(--curva),
-    background-color var(--dur-hover) var(--curva),
-    box-shadow var(--dur-hover) var(--curva),
-    translate var(--dur-hover) var(--curva-viva);
-}
-
-.menuPanel .enlace:hover,
-.menuPanel .enlace:focus-visible,
-.menuPanel .enlaceBoton:hover,
-.menuPanel .enlaceBoton:focus-visible {
-  background-color: rgb(var(--luz-papel) / 0.06);
-  translate: 4px 0;
-  text-shadow: none;
-}
-
-/* En una fila de ancho completo el subrayado del hover no aporta: sobra. */
-.menuPanel .enlace::after,
-.menuPanel .enlaceBoton::after {
-  display: none;
-}
-
-/**
- * La seccion activa en el panel: un filete de Cambio a la izquierda (inset, asi
- * sigue el radio) y un lavado amarillo al 8%, que no baja el contraste de un
- * texto amarillo por debajo de 7.
- */
-.menuPanel .enlace[aria-current] {
-  background-color: rgb(var(--luz-cambio) / 0.08);
-  box-shadow: inset 3px 0 0 var(--color-cambio);
-}
-
-.menuPanel .enlaceDestacado {
-  justify-content: center;
-  margin-top: var(--espacio-3);
-  border: 1px solid rgb(var(--luz-cambio) / 0.75);
-  border-radius: var(--radio-pastilla);
-}
-
-.menuPanel .enlaceDestacado:hover,
-.menuPanel .enlaceDestacado:focus-visible {
-  translate: 0 -1px;
-}
-
-.menuPanel form {
-  width: 100%;
-}
-
-/**
- * APERTURA DE VERDAD: EL PANEL CAE EN SU LUGAR Y LOS ENLACES ENTRAN EN ESCALON.
- *
- * ⚠️ NO SE USA LA GLOBAL `.desplegable`. Esa anima `block-size` de
- * `::details-content`, y aca el panel es `position: absolute`: el pseudo mide 0
- * SIEMPRE, asi que no habria nada que revelar.
- *
- * ⚠️ EL PANEL ENTERO ENTRA CON `menuAbre` (opacidad + 10px + escala 0.98, curva
- * viva) y no con un telon: un telon opaco necesitaba holguras negativas que en
- * una caja redondeada asoman por las esquinas. Compositor puro, y termina en
- * `transform: none`, asi que el `translate` de los hijos convive.
- *
- * ⚠️ EL ESCALONADO CUELGA DE `[open]`, NO DE LA GLOBAL `.escalona`. Con la
- * clase suelta, la animacion corre una sola vez al montar y en la segunda
- * apertura el panel aparece ya armado. Los blobs van ULTIMOS en el marcado para
- * no correr la cuenta de `--i` de los enlaces.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .menu[open] .menuPanel {
-    animation: menuAbre var(--dur-media) var(--curva-viva) both;
-  }
-
-  .menu[open] .menuPanel > * {
-    animation: menuEntra var(--transicion-lenta) var(--curva-viva) both;
-    animation-delay: calc(var(--paso-escalon) * var(--i, 0) + 60ms);
-  }
-
-  .menuPanel > *:nth-child(1) {
-    --i: 0;
-  }
-  .menuPanel > *:nth-child(2) {
-    --i: 1;
-  }
-  .menuPanel > *:nth-child(3) {
-    --i: 2;
-  }
-  .menuPanel > *:nth-child(4) {
-    --i: 3;
-  }
-  .menuPanel > *:nth-child(n + 5) {
-    --i: 4;
-  }
-}
-
-/*
- * ⚠️ EL CIERRE TAMBIEN TIENE QUE VERSE. Sin esto, al sacar `[open]` el navegador
- * pone `content-visibility: hidden` en el acto y el panel desaparece de golpe.
- * `allow-discrete` le da a la salida los 180ms que necesita. Sin soporte de
- * `::details-content` no pasa nada malo: cierra instantaneo.
- */
-@supports selector(::details-content) {
-  @media (prefers-reduced-motion: no-preference) {
-    .menu::details-content {
-      opacity: 0;
-      transition:
-        opacity var(--transicion) var(--curva-salida),
-        content-visibility var(--transicion) allow-discrete;
-    }
-
-    .menu[open]::details-content {
-      opacity: 1;
-    }
-  }
-}
-
-@keyframes menuAbre {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes menuEntra {
-  from {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
-}
-
 /* --------------------------------------------------------------- telefono */
 
 @media (max-width: 900px) {
   .acciones {
     display: none;
-  }
-
-  .menu {
-    display: block;
   }
 
   /*
@@ -1367,11 +1038,6 @@ header.barra::before {
   .enlace[aria-current] {
     text-decoration: underline;
     text-underline-offset: 4px;
-  }
-
-  .buscadorForm,
-  .menuPanel {
-    border: 1px solid CanvasText;
   }
 
   .barra .cinta {
