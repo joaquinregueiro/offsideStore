@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, count, desc, eq, gte, inArray, ne, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 
 import { TIPOS_QUE_BLOQUEAN_VENTA } from '../../trust/services/sanction-rules';
 
@@ -526,6 +526,127 @@ export async function findPublicBySellerId(
     .orderBy(...ordenDeVitrina(opciones.promotedFirst === true))
     .limit(opciones.limite)
     .offset(opciones.offset);
+}
+
+/**
+ * Otras publicaciones visibles DEL MISMO VENDEDOR, sin la que se esta mirando.
+ *
+ * ⚠️ USA `VISIBLE_EN_VITRINA`, IGUAL QUE TODO LO DEMAS. Ofrecer desde la ficha
+ * algo que la vitrina esconde —pausado, agotado, de un vendedor de vacaciones—
+ * seria prometer lo que la compra despues rechaza.
+ */
+export async function findMoreFromSeller(
+  sellerId: string,
+  excluirListingId: string,
+  limite: number,
+  db?: Database,
+): Promise<CatalogListingRow[]> {
+  return conn(db)
+    .select(COLUMNAS_DE_CATALOGO)
+    .from(schema.listings)
+    .innerJoin(schema.sellerProfiles, eq(schema.listings.sellerId, schema.sellerProfiles.id))
+    .innerJoin(
+      schema.mercadopagoAccounts,
+      eq(schema.mercadopagoAccounts.sellerId, schema.sellerProfiles.id),
+    )
+    .where(
+      and(
+        eq(schema.listings.sellerId, sellerId),
+        ne(schema.listings.id, excluirListingId),
+        ...VISIBLE_EN_VITRINA,
+      ),
+    )
+    .orderBy(...ordenDeVitrina(false))
+    .limit(limite);
+}
+
+/** Con que parecerse. Todas opcionales: los catalogos no son obligatorios al publicar. */
+export interface SimilarTo {
+  listingId: string;
+  sellerId: string;
+  categoryId: string;
+  clubId: string | null;
+  nationalTeamId: string | null;
+  brandId: string | null;
+}
+
+/**
+ * Publicaciones parecidas a una dada, de OTROS vendedores.
+ *
+ * ⚠️ EXCLUYE AL PROPIO VENDEDOR A PROPOSITO. La ficha muestra sus otras
+ * publicaciones en una seccion aparte; sin esta exclusion, las mismas camisetas
+ * aparecerian dos veces en la misma pantalla, una debajo de la otra.
+ *
+ * ⚠️ EL PARECIDO SE PUNTUA, NO SE FILTRA DURO. Exigir mismo club Y misma marca
+ * deja la seccion vacia apenas el catalogo es chico —que es hoy—; puntuar
+ * devuelve siempre lo mas cercano que haya. El club pesa mas que la marca
+ * porque en una camiseta es lo que la gente busca: quien mira una de River
+ * quiere otra de River antes que otra Adidas.
+ *
+ * ⚠️ TIENE QUE COINCIDIR EN ALGO. Sin el `OR` del `where`, con una publicacion
+ * sin ningun catalogo cargado la consulta devolveria el catalogo entero
+ * ordenado por nada, que no es "similares": es "cualquier cosa".
+ */
+export async function findSimilar(
+  a: SimilarTo,
+  limite: number,
+  db?: Database,
+): Promise<CatalogListingRow[]> {
+  const coincide: SQL[] = [eq(schema.listings.categoryId, a.categoryId)];
+  if (a.clubId !== null) coincide.push(eq(schema.listings.clubId, a.clubId));
+  if (a.nationalTeamId !== null)
+    coincide.push(eq(schema.listings.nationalTeamId, a.nationalTeamId));
+  if (a.brandId !== null) coincide.push(eq(schema.listings.brandId, a.brandId));
+
+  /*
+   * El puntaje: club y seleccion valen 3, la marca 2 y la categoria 1. Se suma,
+   * asi que una de River marca Adidas de la misma categoria puntua 6 y una
+   * Adidas cualquiera puntua 3.
+   *
+   * ⚠️ LOS TERMINOS SE ARMAN EN JS, NO CON UN `IS NOT NULL` EN SQL. La version
+   * anterior emitia `... and ${a.clubId} is not null`, y un parametro SUELTO
+   * comparado contra NULL no le dice a PostgreSQL de que tipo es: la consulta
+   * moria con `could not determine data type of parameter`. Aca ya se sabe cual
+   * de los cuatro vino cargado, asi que el que es null simplemente no genera
+   * termino. De paso desaparece el `is not distinct from`: comparar por
+   * igualdad contra un valor NO nulo ya trata bien a las filas con la columna en
+   * NULL (`NULL = 'x'` es NULL, y el `case` cae en el `else`).
+   */
+  const terminos: SQL[] = [
+    sql`(case when ${schema.listings.categoryId} = ${a.categoryId} then 1 else 0 end)`,
+  ];
+  if (a.clubId !== null) {
+    terminos.push(sql`(case when ${schema.listings.clubId} = ${a.clubId} then 3 else 0 end)`);
+  }
+  if (a.nationalTeamId !== null) {
+    terminos.push(
+      sql`(case when ${schema.listings.nationalTeamId} = ${a.nationalTeamId} then 3 else 0 end)`,
+    );
+  }
+  if (a.brandId !== null) {
+    terminos.push(sql`(case when ${schema.listings.brandId} = ${a.brandId} then 2 else 0 end)`);
+  }
+
+  const puntaje = sql<number>`(${sql.join(terminos, sql` + `)})`;
+
+  return conn(db)
+    .select(COLUMNAS_DE_CATALOGO)
+    .from(schema.listings)
+    .innerJoin(schema.sellerProfiles, eq(schema.listings.sellerId, schema.sellerProfiles.id))
+    .innerJoin(
+      schema.mercadopagoAccounts,
+      eq(schema.mercadopagoAccounts.sellerId, schema.sellerProfiles.id),
+    )
+    .where(
+      and(
+        ne(schema.listings.id, a.listingId),
+        ne(schema.listings.sellerId, a.sellerId),
+        or(...coincide),
+        ...VISIBLE_EN_VITRINA,
+      ),
+    )
+    .orderBy(desc(puntaje), desc(schema.listings.createdAt))
+    .limit(limite);
 }
 
 /** Cuantas publicaciones visibles tiene un vendedor, para paginar su tienda. */

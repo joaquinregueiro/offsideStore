@@ -538,6 +538,71 @@ export async function findPublicListing(id: string): Promise<PublicListingDetail
   };
 }
 
+/** Lo que la ficha ofrece despues de la publicacion que se esta mirando. */
+export interface RelatedListings {
+  /** Otras del MISMO vendedor. Aprovecha un envio ya iniciado. */
+  delVendedor: CatalogListing[];
+  /** Parecidas, de OTROS vendedores. */
+  similares: CatalogListing[];
+}
+
+/**
+ * Cuantas entran en cada fila. Cuatro es exactamente una fila de la grilla en
+ * escritorio: dos filas de "relacionadas" empujarian las preguntas —que son el
+ * ultimo bloque antes de decidir— fuera de la pantalla.
+ */
+const TOPE_DE_RELACIONADAS = 4;
+
+/**
+ * Que mas mirar a partir de una publicacion (SS-020 / PS-021).
+ *
+ * ⚠️ LA FICHA ERA UN CALLEJON SIN SALIDA. Terminaba en las preguntas: quien no
+ * se decidia por ESA camiseta no tenia a donde ir sin volver atras. Es la
+ * palanca de conversion mas comun del rubro y no existia.
+ *
+ * ⚠️ NUNCA VOLTEA LA FICHA. Devuelve listas vacias ante cualquier fallo, igual
+ * que las preguntas y la reputacion: es un bloque accesorio de la pantalla mas
+ * compartida del sitio, y lo que la sostiene es la publicacion.
+ *
+ * ⚠️ LAS PORTADAS DE LAS DOS LISTAS SALEN EN UNA SOLA CONSULTA. Pedirlas por
+ * seccion serian dos viajes para lo mismo, y de a una serian ocho.
+ */
+export async function relatedListings(listingId: string): Promise<RelatedListings> {
+  const vacio: RelatedListings = { delVendedor: [], similares: [] };
+
+  if (!esUuid(listingId)) return vacio;
+
+  try {
+    const row = await listingRepo.findById(listingId);
+    if (row === undefined) return vacio;
+
+    const [delVendedor, similares] = await Promise.all([
+      listingRepo.findMoreFromSeller(row.sellerId, row.id, TOPE_DE_RELACIONADAS),
+      listingRepo.findSimilar(
+        {
+          listingId: row.id,
+          sellerId: row.sellerId,
+          categoryId: row.categoryId,
+          clubId: row.clubId,
+          nationalTeamId: row.nationalTeamId,
+          brandId: row.brandId,
+        },
+        TOPE_DE_RELACIONADAS,
+      ),
+    ]);
+
+    const portadas = await coverImages([...delVendedor, ...similares].map((fila) => fila.id));
+    const conPortada = (filas: listingRepo.CatalogListingRow[]): CatalogListing[] =>
+      filas.map((fila) => toCatalogListing(fila, portadas.get(fila.id) ?? null));
+
+    return { delVendedor: conPortada(delVendedor), similares: conPortada(similares) };
+  } catch (error) {
+    console.error('[listings] no se pudieron leer las relacionadas', error);
+
+    return vacio;
+  }
+}
+
 /** Una pagina del catalogo publico de un vendedor. */
 export interface SellerCatalogPage {
   listings: CatalogListing[];

@@ -1141,6 +1141,15 @@ migrada y el icono dibujado), perfil público del vendedor (SS-020 ✅), el filt
 de precio de la búsqueda (`precioMin`/`precioMax` llegan hasta el SQL sin control
 en pantalla) y `srcset` (se generan tres variantes y siempre se sirve una).
 
+> **Los cuatro ya están hechos** (verificado el 2026-09-13 contra un build de
+> producción). Favoritos y el perfil del vendedor llegaron con el trabajo del
+> 09-11; el filtro de precio y el orden también —`/buscar` dibuja los dos campos
+> numéricos y los cuatro enlaces de orden—; y `srcset` se cerró el 09-13. Esta
+> lista quedó como estaba y por eso **indujo a un hallazgo falso**: se reportó el
+> filtro de precio como faltante cuando ya funcionaba. Se deja el párrafo
+> original y esta nota encima, en vez de borrarlo, para que se vea que la lista
+> era de una fecha y no del estado de hoy.
+
 **Rediseño visual completo — ✅ (2026-09-10, segunda parte del día)**: el dueño
 miró el sitio y dijo que era "horrible, superestática, cero animaciones, cero
 dinamismo, cero estética". **79 archivos.** Detalle en

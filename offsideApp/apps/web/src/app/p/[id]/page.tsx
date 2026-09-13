@@ -16,6 +16,7 @@ import {
   IconoPregunta,
   IconoTilde,
 } from '@/components/iconos';
+import { ListingCard, type EstadoDeFavorito } from '@/components/listing-card';
 import { FotoCompartida, Pantalla } from '@/components/movimiento';
 import {
   Aviso,
@@ -44,7 +45,7 @@ import {
 import { getSessionUser } from '@/lib/session';
 import { isFeatureEnabled } from '@/modules/config/services/setting-store.service';
 import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
-import { findPublicListing } from '@/modules/listings/services/listing.service';
+import { findPublicListing, relatedListings } from '@/modules/listings/services/listing.service';
 import {
   averageAnswerHours,
   listPublicQuestions,
@@ -313,7 +314,7 @@ export default async function DetalleDePublicacion({
    * —recomputa si la fila no existe—, así que un vendedor sin ningún hecho no
    * rompe nada: devuelve todo en cero, que es la verdad.
    */
-  const [reputacion, nivel, horasDeRespuesta, resenas] = await Promise.all([
+  const [reputacion, nivel, horasDeRespuesta, resenas, relacionadas] = await Promise.all([
     getSellerReputation(listing.sellerId).catch((error: unknown) => {
       console.error('[ficha] no se pudo leer la reputación del vendedor', error);
 
@@ -322,6 +323,11 @@ export default async function DetalleDePublicacion({
     getTierProgress(listing.sellerId).catch(() => null),
     averageAnswerHours(listing.sellerId).catch(() => null),
     listSellerReviews(listing.sellerId, 1).catch(() => null),
+    /*
+      ⚠️ SE BLINDA SOLA (devuelve listas vacias ante cualquier fallo), asi que
+      no lleva `.catch()` aca: el Service ya es el que no puede voltear la ficha.
+    */
+    relatedListings(listing.id),
   ]);
 
   /**
@@ -344,8 +350,23 @@ export default async function DetalleDePublicacion({
   /** Las tres últimas, no las veinte: la ficha no es el perfil del vendedor. */
   const ultimasResenas = resenas?.items.slice(0, TOPE_DE_RESENAS) ?? [];
 
-  const guardada =
-    user === null ? false : (await favoriteIdsOf(user, [listing.id])).has(listing.id);
+  /*
+   * ⚠️ UNA SOLA CONSULTA PARA LA FICHA Y PARA LAS RELACIONADAS. Las tarjetas de
+   * abajo llevan el mismo corazon que las de la vitrina; pedirlo por seccion
+   * serian tres viajes a la base para la misma respuesta.
+   */
+  const idsRelacionados = [...relacionadas.delVendedor, ...relacionadas.similares].map(
+    (item) => item.id,
+  );
+  const guardados =
+    user === null ? new Set<string>() : await favoriteIdsOf(user, [listing.id, ...idsRelacionados]);
+  const guardada = guardados.has(listing.id);
+
+  /** Estado del corazon de una tarjeta relacionada, o nada si no hay sesion. */
+  const favoritoDe = (id: string): EstadoDeFavorito | undefined =>
+    user === null
+      ? undefined
+      : { activo: guardados.has(id), volverA: `/p/${listing.id}#relacionadas` };
   const avisoDeFavorito = params2.aviso === 'favorito';
   const volverAqui = `/p/${listing.id}#acciones`;
 
@@ -1133,6 +1154,78 @@ export default async function DetalleDePublicacion({
               </div>
             </div>
           </section>
+
+          {/*
+            QUE MAS MIRAR.
+
+            ⚠️ HASTA HOY LA FICHA ERA UN CALLEJON SIN SALIDA: terminaba en las
+            preguntas, y quien no se decidia por ESTA camiseta tenia que volver
+            atras. Es la palanca de conversion mas comun del rubro y no existia.
+
+            ⚠️ VA DESPUES DE LAS PREGUNTAS, NO ANTES. Las preguntas son el
+            ultimo bloque de la DECISION sobre esta prenda; ofrecer otras antes
+            de que termine de mirar esta es competirle a la propia compra.
+
+            ⚠️ SON DOS SECCIONES SEPARADAS Y CADA UNA SE MUESTRA SOLO SI TIENE
+            ALGO. Un rotulo sobre una fila vacia parece una funcionalidad rota, y
+            el Service ya excluye al vendedor de las "parecidas" para que la
+            misma camiseta no aparezca dos veces en la misma pantalla.
+          */}
+          {(relacionadas.delVendedor.length > 0 || relacionadas.similares.length > 0) && (
+            <div className={estilos.relacionadas} id="relacionadas">
+              <div className={estilos.relacionadasInterior}>
+                {relacionadas.delVendedor.length > 0 && (
+                  <section aria-labelledby="mas-del-vendedor">
+                    <h2
+                      id="mas-del-vendedor"
+                      className={`display display-3 ${estilos.tituloRelacionadas}`}
+                    >
+                      Más de {listing.sellerDisplayName}
+                    </h2>
+                    {/*
+                      ⚠️ NO ES SOLO "MAS CATALOGO": comprarle otra cosa al MISMO
+                      vendedor aprovecha un envio que ya se esta por hacer, y
+                      DEC-026 parte el carrito en una orden por vendedor. Es la
+                      unica recomendacion de esta pantalla que le ahorra plata a
+                      quien compra.
+                    */}
+                    <ul className={`${estilos.grillaRelacionadas} enfoca-hermanos`}>
+                      {relacionadas.delVendedor.map((item) => (
+                        <li key={item.id}>
+                          <ListingCard listing={item} favorito={favoritoDe(item.id)} />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                {relacionadas.similares.length > 0 && (
+                  <section aria-labelledby="parecidas">
+                    <h2
+                      id="parecidas"
+                      className={`display display-3 ${estilos.tituloRelacionadas}`}
+                    >
+                      Parecidas a esta
+                    </h2>
+                    {/*
+                      ⚠️ "PARECIDAS" Y NO "TE PUEDE INTERESAR". Lo segundo insinua
+                      que Offside sabe algo de quien mira —no hay historial, no
+                      hay perfil, no hay nada que lo respalde—; lo primero
+                      describe lo que la consulta hace de verdad: mismo club,
+                      seleccion, marca o categoria.
+                    */}
+                    <ul className={`${estilos.grillaRelacionadas} enfoca-hermanos`}>
+                      {relacionadas.similares.map((item) => (
+                        <li key={item.id}>
+                          <ListingCard listing={item} favorito={favoritoDe(item.id)} />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            </div>
+          )}
 
           {/*
             ⚠️ ESTA ES LA UNICA ACCION DE COMPRA DE LA PANTALLA Y ES UN SOLO NODO

@@ -1524,3 +1524,81 @@ describe('catalogos y alias (PS-023 / PS-024, DEC-041)', () => {
     expect(despues.facetas.talle).toHaveLength(0);
   });
 });
+
+/**
+ * "Que mas mirar" al pie de la ficha.
+ *
+ * ⚠️ ESTE BLOQUE EXISTE POR UN BUG QUE LLEGO A CORRER. La consulta de parecidas
+ * puntuaba el parecido con `... and ${valor} is not null` y un parametro SUELTO
+ * comparado contra NULL no le dice a PostgreSQL de que tipo es: moria con
+ * `could not determine data type of parameter`. Como las dos consultas van en un
+ * `Promise.all` y el Service esta blindado, el fallo dejaba las DOS listas
+ * vacias, sin romper la ficha y sin mas rastro que una linea en el log. En
+ * pantalla se veia como "todavia no lo hicimos".
+ */
+describe('relacionadas de la ficha', () => {
+  it('trae otras del mismo vendedor, sin la que se esta mirando', async () => {
+    const seller = await vendedor('rel-mismo');
+    const mirando = await publicacionActiva(seller);
+    const otra = await publicacionActiva(seller);
+
+    const { delVendedor } = await listingService.relatedListings(mirando.id);
+    const ids = delVendedor.map((l) => l.id);
+
+    expect(ids).toContain(otra.id);
+    expect(ids).not.toContain(mirando.id);
+  });
+
+  it('⚠️ sin club ni marca cargados NO falla: devuelve igual las del vendedor', async () => {
+    // Es el caso exacto que rompia: `camiseta()` no carga catalogos, asi que
+    // club, seleccion y marca son NULL. Antes esto vaciaba las dos listas.
+    const seller = await vendedor('rel-sin-catalogo');
+    const mirando = await publicacionActiva(seller);
+    const otra = await publicacionActiva(seller);
+
+    const { delVendedor } = await listingService.relatedListings(mirando.id);
+
+    expect(delVendedor.map((l) => l.id)).toContain(otra.id);
+  });
+
+  it('⚠️ las parecidas son de OTROS vendedores: no repiten las de arriba', async () => {
+    // Las dos secciones se muestran juntas en la misma pantalla; si "parecidas"
+    // incluyera al propio vendedor, la misma camiseta apareceria dos veces.
+    const mio = await vendedor('rel-propio');
+    const ajeno = await vendedor('rel-ajeno');
+    const mirando = await publicacionActiva(mio);
+    const otraMia = await publicacionActiva(mio);
+    const deOtro = await publicacionActiva(ajeno);
+
+    const { similares } = await listingService.relatedListings(mirando.id);
+    const ids = similares.map((l) => l.id);
+
+    expect(ids).toContain(deOtro.id);
+    expect(ids).not.toContain(otraMia.id);
+    expect(ids).not.toContain(mirando.id);
+  });
+
+  it('⚠️ no ofrece lo que la vitrina esconde (ERD §9.1)', async () => {
+    // Ofrecer desde la ficha algo pausado o agotado seria prometer lo que la
+    // compra despues rechaza.
+    const seller = await vendedor('rel-invisible');
+    const mirando = await publicacionActiva(seller);
+    const pausada = await publicacionActiva(seller);
+
+    await getDatabase()
+      .update(schema.listings)
+      .set({ status: 'paused' })
+      .where(eq(schema.listings.id, pausada.id));
+
+    const { delVendedor } = await listingService.relatedListings(mirando.id);
+
+    expect(delVendedor.map((l) => l.id)).not.toContain(pausada.id);
+  });
+
+  it('un id que no es UUID devuelve vacio, sin tocar la base', async () => {
+    const rel = await listingService.relatedListings('no-es-un-uuid');
+
+    expect(rel.delVendedor).toEqual([]);
+    expect(rel.similares).toEqual([]);
+  });
+});

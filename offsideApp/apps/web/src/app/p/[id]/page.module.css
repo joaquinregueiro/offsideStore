@@ -1502,3 +1502,59 @@
   font-size: var(--texto-sm);
   font-weight: var(--peso-semi);
 }
+
+/* --------------------------------------------------------- relacionadas */
+
+/**
+ * QUE MAS MIRAR — "Mas de <vendedor>" y "Parecidas a esta".
+ *
+ * ⚠️ NO LLEVA SUPERFICIE PROPIA. Es catalogo, igual que la vitrina: un plano
+ * teñido lo leeria como "otra cosa" —una publicidad—, y lo que hay abajo son
+ * las mismas fichas que en la home. Lo que separa las dos secciones es el
+ * rotulo, no el fondo.
+ *
+ * ⚠️ EL `padding-bottom` ES GENEROSO A PROPOSITO. Abajo vive la barra de compra
+ * pegada (`position: sticky; bottom: 0`): sin aire, la ultima fila de tarjetas
+ * queda debajo de la franja en telefono y no se puede tocar.
+ */
+.relacionadas {
+  padding-block: var(--espacio-seccion) calc(var(--espacio-seccion) + var(--alto-control) * 2);
+}
+
+.relacionadasInterior {
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding-inline: var(--canal);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-seccion);
+}
+
+.tituloRelacionadas {
+  margin: 0 0 var(--espacio-bloque);
+  font-size: var(--display-3);
+  text-transform: uppercase;
+  /* Un nombre de vendedor largo no puede empujar la pagina a 320px. */
+  overflow-wrap: anywhere;
+}
+
+/**
+ * ⚠️ ES LA MISMA GRILLA QUE LA VITRINA, con los mismos numeros: `auto-fill` con
+ * minimo de 220px y 150px en telefono. Si las tarjetas se vieran de otro tamaño
+ * acá, la misma camiseta cambiaria de forma segun por donde se llegue.
+ */
+.grillaRelacionadas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--espacio-6);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .grillaRelacionadas {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    gap: var(--espacio-4);
+  }
+}
