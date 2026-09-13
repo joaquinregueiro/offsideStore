@@ -922,6 +922,7 @@ export default async function Buscar({
                               stock: item.stock,
                               sellerDisplayName: item.sellerDisplayName,
                               coverUrl: item.coverUrl,
+                              coverSrcSet: item.coverSrcSet,
                             }}
                             promocionada={item.promocionada}
                             favorito={favoritoDe(item.id)}

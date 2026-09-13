@@ -5,7 +5,7 @@ import type { PublicUser } from '../../auth/services/auth.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../listings.errors';
-import { createStorage } from '../infrastructure/storage/index';
+import { coverImages, srcSetDe, urlDeVariante, type Portada } from './listing-cover.service';
 import * as catalogRepo from '../repositories/catalog.repository';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
@@ -365,6 +365,16 @@ export interface CatalogListing {
    * La vitrina tiene que saber pintar esa fila igual.
    */
   coverUrl: string | null;
+  /**
+   * Las tres variantes de la portada como `srcset`, o `null` si no hay foto.
+   *
+   * ⚠️ EXISTE PORQUE `coverUrl` SOLA DESPERDICIA ANCHO DE BANDA. Se generan
+   * `thumb` (400), `medium` (800) y `large` (1600) y la grilla servia SIEMPRE
+   * la de 800, para fichas que en un telefono se ven a 150px. El navegador
+   * elige con esto; `coverUrl` se queda como respaldo para quien no entienda
+   * `srcset`.
+   */
+  coverSrcSet: string | null;
 }
 
 /**
@@ -379,7 +389,7 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
 
   // Las portadas salen en UNA consulta para toda la pagina, no una por fila:
   // pedirlas de a una seria el problema N+1.
-  const portadas = await coverUrls(filas.map((row) => row.id));
+  const portadas = await coverImages(filas.map((row) => row.id));
 
   return filas.map((row) => toCatalogListing(row, portadas.get(row.id) ?? null));
 }
@@ -391,7 +401,7 @@ export async function listPublicCatalog(limite?: number): Promise<CatalogListing
  */
 function toCatalogListing(
   row: listingRepo.CatalogListingRow,
-  coverUrl: string | null,
+  portada: Portada | null,
 ): CatalogListing {
   return {
     id: row.id,
@@ -402,7 +412,8 @@ function toCatalogListing(
     condition: row.condition,
     stock: row.stock,
     sellerDisplayName: row.sellerDisplayName,
-    coverUrl,
+    coverUrl: portada?.url ?? null,
+    coverSrcSet: portada?.srcSet ?? null,
   };
 }
 
@@ -426,38 +437,18 @@ function toCatalogListing(
  * buscar por id; devolver una lista lo obligaria a recorrerla por cada fila.
  */
 export async function coverUrls(listingIds: string[]): Promise<Map<string, string>> {
-  const imagenes = await imageRepo.findByListingIds(listingIds);
-  const portadas = new Map<string, string>();
+  const portadas = await coverImages(listingIds);
 
-  for (const imagen of imagenes) {
-    // Vienen ordenadas por posicion: la primera de cada listing es la portada.
-    if (portadas.has(imagen.listingId)) continue;
-
-    const url = urlDeVariante(imagen, 'medium');
-    if (url !== null) portadas.set(imagen.listingId, url);
-  }
-
-  return portadas;
+  return new Map([...portadas].map(([id, portada]) => [id, portada.url]));
 }
 
 /**
- * URL de una variante.
- *
- * ⚠️ `variants` guarda CLAVES, no URLs: el dominio publico es configuracion y
- * puede cambiar, asi que la direccion se compone al leer. Un valor que ya sea
- * absoluto se devuelve tal cual —las primeras filas guardaron URLs completas—.
+ * ⚠️ SE RE-EXPORTAN PARA NO MOVERLE EL API A NADIE. `coverImages` y `Portada`
+ * viven en `listing-cover.service` por un ciclo de imports (ver ese archivo),
+ * pero las pantallas y los otros modulos vienen pidiendole las portadas a
+ * `listing.service` desde siempre.
  */
-function urlDeVariante(imagen: imageRepo.ListingImageRow, variante: string): string | null {
-  const variants =
-    imagen.variants !== null && typeof imagen.variants === 'object'
-      ? (imagen.variants as Record<string, string>)
-      : {};
-
-  const guardado = variants[variante] ?? imagen.storageKey;
-  if (guardado === undefined || guardado === '') return imagen.url ?? null;
-
-  return /^https?:\/\//.test(guardado) ? guardado : createStorage().publicUrl(guardado);
-}
+export { coverImages, type Portada };
 
 /** Ficha publica de una publicacion. */
 export interface PublicListingDetail extends CatalogListing {
@@ -468,7 +459,7 @@ export interface PublicListingDetail extends CatalogListing {
   /** Cuantas unidades quedan. La ficha lo usa para avisar si queda poco. */
   stock: number;
   /** Galeria completa, en orden. Vacia si la publicacion no tiene fotos. */
-  images: { url: string; alt: string | null }[];
+  images: { url: string; srcSet: string | null; alt: string | null }[];
   /**
    * Quien vende.
    *
@@ -532,10 +523,17 @@ export async function findPublicListing(id: string): Promise<PublicListingDetail
     shipping: shippingSummaryFor(row),
     // La ficha usa la variante grande; la portada del detalle es la primera.
     coverUrl: imagenes[0] === undefined ? null : urlDeVariante(imagenes[0], 'medium'),
+    coverSrcSet: imagenes[0] === undefined ? null : srcSetDe(imagenes[0]),
+    /*
+     * ⚠️ LA GALERIA TAMBIEN VIAJA CON `srcset`. Eran hasta ocho fotos servidas
+     * SIEMPRE en `large` (1600px) —en la ficha, que es la pantalla mas
+     * compartida y la que mas se abre desde un telefono—. `large` sigue siendo
+     * el `src` de respaldo; el navegador elige con el resto.
+     */
     images: imagenes.flatMap((imagen) => {
       const url = urlDeVariante(imagen, 'large');
 
-      return url === null ? [] : [{ url, alt: imagen.alt }];
+      return url === null ? [] : [{ url, srcSet: srcSetDe(imagen), alt: imagen.alt }];
     }),
   };
 }
@@ -574,7 +572,7 @@ export async function listPublicSellerCatalog(
     listingRepo.countPublicBySellerId(sellerId),
   ]);
 
-  const portadas = await coverUrls(filas.map((fila) => fila.id));
+  const portadas = await coverImages(filas.map((fila) => fila.id));
 
   return {
     listings: filas.map((fila) => toCatalogListing(fila, portadas.get(fila.id) ?? null)),

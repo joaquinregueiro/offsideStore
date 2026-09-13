@@ -136,7 +136,12 @@ export function ListingCard({
           {listing.coverUrl === null ? (
             <div className={estilos.patron} data-foto aria-hidden="true" />
           ) : (
-            <Foto compartida={compartirFoto} id={listing.id} url={listing.coverUrl} />
+            <Foto
+              compartida={compartirFoto}
+              id={listing.id}
+              url={listing.coverUrl}
+              srcSet={listing.coverSrcSet}
+            />
           )}
 
           {/*
@@ -267,10 +272,37 @@ export function ListingCard({
  * la misma etiqueta aparecia dos veces y el dia que alguien le agregue un
  * `srcset` se lo pone a una sola.
  */
-function Foto({ compartida, id, url }: { compartida: boolean; id: string; url: string }) {
+function Foto({
+  compartida,
+  id,
+  url,
+  srcSet,
+}: {
+  compartida: boolean;
+  id: string;
+  url: string;
+  srcSet: string | null;
+}) {
   const imagen = (
     /* eslint-disable-next-line @next/next/no-img-element */
-    <img className={estilos.foto} src={url} alt="" loading="lazy" decoding="async" />
+    <img
+      className={estilos.foto}
+      src={url}
+      /*
+        ⚠️ `sizes` DESCRIBE LA GRILLA REAL, y sin el `srcset` no sirve de nada:
+        el navegador asume que la imagen ocupa TODO el ancho de la pantalla y
+        elige siempre la mas grande, o sea el problema que se vino a arreglar.
+        Los cortes salen de `page.module.css`: a 600px o menos la grilla baja el
+        `minmax` a 150px y entran dos columnas (~45vw cada una); mas arriba las
+        fichas rondan los 220-300px y dejan de crecer con el viewport.
+      */
+      {...(srcSet === null
+        ? {}
+        : { srcSet, sizes: '(max-width: 600px) 45vw, (max-width: 900px) 30vw, 260px' })}
+      alt=""
+      loading="lazy"
+      decoding="async"
+    />
   );
 
   return compartida ? <FotoCompartida id={id}>{imagen}</FotoCompartida> : imagen;

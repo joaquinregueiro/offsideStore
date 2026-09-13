@@ -21,7 +21,7 @@ import { getSessionUser } from '@/lib/session';
 import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
 import {
   catalogoDeLaVitrina,
-  coverUrls,
+  coverImages,
   listPublicCatalog,
   type CatalogListing,
   type EntradaDeCatalogo,
@@ -275,7 +275,7 @@ async function promocionadasDeLaVitrina(): Promise<CatalogListing[]> {
     const filas = await listPromotedCatalog(TOPE_DE_PROMOCIONADAS);
     if (filas.length === 0) return [];
 
-    const portadas = await coverUrls(filas.map((fila) => fila.id));
+    const portadas = await coverImages(filas.map((fila) => fila.id));
 
     return filas.map((fila) => ({
       id: fila.id,
@@ -286,7 +286,8 @@ async function promocionadasDeLaVitrina(): Promise<CatalogListing[]> {
       condition: fila.condition,
       stock: fila.stock,
       sellerDisplayName: fila.sellerDisplayName,
-      coverUrl: portadas.get(fila.id) ?? null,
+      coverUrl: portadas.get(fila.id)?.url ?? null,
+      coverSrcSet: portadas.get(fila.id)?.srcSet ?? null,
     }));
   } catch (error) {
     console.error('[home] no se pudieron leer las promocionadas', error);

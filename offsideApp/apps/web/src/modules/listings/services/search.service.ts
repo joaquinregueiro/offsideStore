@@ -4,9 +4,8 @@ import { getSearchRankWeights } from '../../config/services/image-settings.servi
 import * as catalogRepo from '../repositories/catalog.repository';
 import type * as listingRepo from '../repositories/listing.repository';
 import * as listingRepoRuntime from '../repositories/listing.repository';
-import * as imageRepo from '../repositories/listing-image.repository';
 import * as searchRepo from '../repositories/search.repository';
-import { createStorage } from '../infrastructure/storage/index';
+import { coverImages } from './listing-cover.service';
 import { getRankingSettings } from './listing-settings.service';
 import { shippingSummaryFor, type ShippingSummary } from './shipping-declaration';
 
@@ -39,6 +38,8 @@ export interface SearchResult {
   stock: number;
   sellerDisplayName: string;
   coverUrl: string | null;
+  /** Las variantes de la portada. Ver `listing-cover.service`. */
+  coverSrcSet: string | null;
   /**
    * Si esta promocionada AHORA.
    *
@@ -253,26 +254,14 @@ function comoFaceta(f: searchRepo.FacetCount): Faceta {
  * una seria el problema N+1.
  */
 async function conPortadas(filas: searchRepo.SearchRow[]): Promise<SearchResult[]> {
-  const imagenes = await imageRepo.findByListingIds(filas.map((f) => f.id));
-  const storage = createStorage();
-  const portadas = new Map<string, string>();
-
-  for (const imagen of imagenes) {
-    if (portadas.has(imagen.listingId)) continue;
-
-    const variants =
-      imagen.variants !== null && typeof imagen.variants === 'object'
-        ? (imagen.variants as Record<string, string>)
-        : {};
-    const guardado = variants.medium ?? imagen.storageKey;
-
-    if (guardado !== undefined && guardado !== '') {
-      portadas.set(
-        imagen.listingId,
-        /^https?:\/\//.test(guardado) ? guardado : storage.publicUrl(guardado),
-      );
-    }
-  }
+  /*
+   * ⚠️ ANTES ESTO ESTABA COPIADO DE `listing.service`, Y LA COPIA COSTABA. La
+   * resolucion de la portada vive ahora en `listing-cover.service`, que las dos
+   * importan: con dos copias, agregarle `srcset` a la vitrina dejaba la busqueda
+   * sirviendo siempre 800px y nada fallaba —la misma camiseta pesaba distinto
+   * segun por donde se llegara—.
+   */
+  const portadas = await coverImages(filas.map((f) => f.id));
 
   const ahora = Date.now();
 
@@ -287,7 +276,8 @@ async function conPortadas(filas: searchRepo.SearchRow[]): Promise<SearchResult[
     shipping: shippingSummaryFor(fila),
     stock: fila.stock,
     sellerDisplayName: fila.sellerDisplayName,
-    coverUrl: portadas.get(fila.id) ?? null,
+    coverUrl: portadas.get(fila.id)?.url ?? null,
+    coverSrcSet: portadas.get(fila.id)?.srcSet ?? null,
   }));
 }
 

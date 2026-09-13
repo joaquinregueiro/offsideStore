@@ -543,6 +543,22 @@ export default async function DetalleDePublicacion({
                             <img
                               className={estilos.foto}
                               src={imagen.url}
+                              /*
+                                ⚠️ HASTA OCHO FOTOS SE SERVIAN SIEMPRE EN 1600px,
+                                en la pantalla que mas se abre desde un telefono.
+                                `sizes` describe el mosaico real: en escritorio la
+                                columna de fotos es media pantalla y la portada
+                                ocupa el ancho entero de esa columna; en telefono
+                                cada diapositiva llena el viewport.
+                              */
+                              {...(imagen.srcSet === null
+                                ? {}
+                                : {
+                                    srcSet: imagen.srcSet,
+                                    sizes: esPortada
+                                      ? '(max-width: 900px) 100vw, 50vw'
+                                      : '(max-width: 900px) 90vw, 25vw',
+                                  })}
                               alt={imagen.alt ?? `${listing.title} — foto ${indice + 1}`}
                               loading={esPortada ? 'eager' : 'lazy'}
                               /*
