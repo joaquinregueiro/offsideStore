@@ -765,6 +765,16 @@ interface DefinicionDePublicacion {
   colores: Colores;
   patron: Patron;
   numero: number;
+  /**
+   * Jugador estampado (`listings.player_name`). Opcional a proposito: la
+   * mayoria de las camisetas que se venden son lisas, y el seed tiene que
+   * reflejar esa mezcla para que la busqueda por jugador se pruebe contra un
+   * catalogo realista y no contra uno donde todas lo tienen.
+   *
+   * Cuando esta, el numero estampado es `numero` —el mismo que ya se dibuja en
+   * la foto—, asi que la ficha y la imagen no se contradicen.
+   */
+  jugador?: string;
   /** Estado final buscado. `sold_out` se alcanza vendiendo la ultima unidad. */
   estado: 'active' | 'paused' | 'draft';
 }
@@ -813,6 +823,7 @@ const PUBLICACIONES_CONECTADO: DefinicionDePublicacion[] = [
     colores: AZUL_ORO,
     patron: 'banda',
     numero: 10,
+    jugador: 'Riquelme',
     estado: 'active',
   },
   {
@@ -857,6 +868,7 @@ const PUBLICACIONES_CONECTADO: DefinicionDePublicacion[] = [
     colores: CELESTE,
     patron: 'celeste-blanca',
     numero: 10,
+    jugador: 'Messi',
     estado: 'active',
   },
   {
@@ -1373,6 +1385,8 @@ function inputDePublicacion(
     condition: def.condicion,
     kitType: def.kitType,
     sleeve: def.manga,
+    playerName: def.jugador ?? null,
+    playerNumber: def.jugador === undefined ? null : def.numero,
     clubId: idDeCatalogo(catalogos.clubes, def.club, 'el club'),
     nationalTeamId: idDeCatalogo(catalogos.selecciones, def.seleccion, 'la seleccion'),
     brandId: idDeCatalogo(catalogos.marcas, def.marca, 'la marca'),
@@ -1461,6 +1475,8 @@ async function publicarSinOperar(
       condition: input.condition,
       kitType: input.kitType,
       sleeve: input.sleeve,
+      playerName: input.playerName ?? null,
+      playerNumber: input.playerNumber ?? null,
       clubId: input.clubId ?? null,
       nationalTeamId: input.nationalTeamId ?? null,
       brandId: input.brandId ?? null,

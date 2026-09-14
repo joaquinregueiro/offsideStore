@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
 
+import { Campo, Formulario } from '@/components/form';
 import { Pantalla } from '@/components/movimiento';
 import { BotonEnlace, Definiciones, InsigniaDeNivel } from '@/components/ui';
 import { nivelDeUsuario } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
+import { TOPE_NOMBRE_VISIBLE } from '@/modules/users/services/profile.service';
+
+import { guardarNombreVisible } from '../../acciones';
 
 import { ChapaDeCuenta } from '../../chapa';
 import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
@@ -13,15 +17,21 @@ export const metadata: Metadata = { title: 'Mis datos' };
 export const dynamic = 'force-dynamic';
 
 /**
- * MIS DATOS — la cuenta, en solo lectura.
+ * MIS DATOS — la cuenta.
  *
- * ⚠️ ESTÁ EN SOLO LECTURA PORQUE NO EXISTE LA ACCIÓN PARA EDITARLA, no porque se
- * haya decidido que no se edite. El módulo `users` tiene `identity.service.ts`
- * (señales de verificación) y `user-history.service.ts` (hechos); no hay ningún
- * Service que actualice `users.display_name` ni el email. Escribir esa mutación
- * desde una pantalla sería saltear el dominio y dejar sin auditar un cambio de
- * identidad —el nombre visible es lo que ve el vendedor al despachar—. Queda
- * reportado como faltante.
+ * ⚠️ EL NOMBRE VISIBLE YA SE EDITA. Esta pantalla estuvo en solo lectura porque
+ * no existía el Service, no porque se hubiera decidido que no se editara:
+ * `users` tenía `identity.service.ts` (señales de verificación) y
+ * `user-history.service.ts` (hechos), y nada que actualizara
+ * `users.display_name`. Ahora ese Service existe (`profile.service.ts`) y
+ * AUDITA el cambio, que es lo que faltaba: el nombre visible es lo que ve el
+ * vendedor al despachar, así que cambiarlo es identidad, no preferencia.
+ *
+ * ⚠️ EL EMAIL SIGUE SIN EDITARSE, Y NO ES EL MISMO CASO. Es la credencial de
+ * ingreso y el destino de los tokens: cambiarlo pide reverificar la dirección
+ * nueva ANTES de soltar la vieja —si no, un typo deja la cuenta muerta, que es
+ * exactamente el agujero que cerró el reenvío de verificación— y decidir qué
+ * pasa con las sesiones abiertas. Es trabajo de `auth`, no un UPDATE.
  *
  * ⚠️ NO HAY BORRADO DE CUENTA, Y NO ES UN OLVIDO. Borrar una cuenta toca
  * obligaciones legales de conservación —órdenes, pagos, facturación— que
@@ -52,11 +62,42 @@ export default async function MisDatos() {
           <SolapasDeCuenta user={user} seccion="cuenta" activa="datos" />
 
           <section className={`${estilos.bloque} sup-ficha entraBloque`}>
+            <h2 className={estilos.bloqueTitulo}>Tu nombre visible</h2>
+            {/*
+            ⚠️ SE DICE PARA QUÉ SIRVE, NO SÓLO CÓMO SE LLAMA. «Nombre visible»
+            no le dice a nadie dónde aparece; saber que lo lee quien te despacha
+            es lo que hace que valga la pena completarlo bien.
+
+            ⚠️ NO ES EL NOMBRE DE LA TIENDA. El del vendedor vive en
+            `seller_profiles.display_name` y se edita en su propio panel: son
+            dos campos distintos en dos tablas distintas, y confundirlos haría
+            que alguien renombre su tienda creyendo que cambia su nombre.
+          */}
+            <p className={estilos.nota}>
+              Es el nombre con el que te ven quienes te venden —lo leen para despachar tu compra— y
+              el que figura en tus preguntas. No es el nombre de tu tienda: ese se cambia desde el
+              panel de vendedor.
+            </p>
+
+            <Formulario accion={guardarNombreVisible} enviar="Guardar" bloque={false}>
+              <Campo
+                nombre="displayName"
+                etiqueta="Nombre visible"
+                requerido={false}
+                maximo={TOPE_NOMBRE_VISIBLE}
+                defaultValue={user.displayName ?? ''}
+                autoComplete="name"
+                placeholder="Cómo querés que te llamen"
+                ayuda="Podés dejarlo vacío. Si lo vaciás, dejamos de mostrarlo."
+              />
+            </Formulario>
+          </section>
+
+          <section className={`${estilos.bloque} sup-ficha`}>
             <h2 className={estilos.bloqueTitulo}>La cuenta</h2>
             <Definiciones
               columnas={2}
               items={[
-                { termino: 'Nombre visible', valor: user.displayName ?? 'Sin nombre cargado' },
                 { termino: 'Email', valor: user.email },
                 {
                   /*
@@ -90,15 +131,17 @@ export default async function MisDatos() {
           <section className={`${estilos.bloque} sup-ficha`}>
             <h2 className={estilos.bloqueTitulo}>Lo que todavía no se puede hacer acá</h2>
             {/*
-            ⚠️ ESTA SECCIÓN EXISTE PARA NO MENTIR POR OMISIÓN. Una pantalla
-            llamada "Mis datos" sin un solo campo editable se lee como una
-            pantalla rota; decir qué falta y por qué es lo único honesto mientras
-            los Services no existan.
+            ⚠️ ESTA SECCIÓN EXISTE PARA NO MENTIR POR OMISIÓN, y sigue haciendo
+            falta AUNQUE el nombre ya se edite: una pantalla con un campo
+            editable y dos que no, sin decirlo, se lee como una pantalla a la
+            que le faltan botones. Decir qué falta y por qué es lo único honesto
+            mientras los Services no existan.
           */}
             <p className={estilos.nota}>
-              Todavía no se puede cambiar el nombre visible ni el email desde acá. Tampoco se puede
-              dar de baja la cuenta: eso toca obligaciones de conservación de las compras y los
-              pagos que están pendientes de definición.
+              Todavía no se puede cambiar el email: es con el que entrás y al que te mandamos los
+              enlaces, así que cambiarlo tiene que pasar por verificar la dirección nueva antes de
+              soltar la vieja. Tampoco se puede dar de baja la cuenta: eso toca obligaciones de
+              conservación de las compras y los pagos que están pendientes de definición.
             </p>
           </section>
         </main>

@@ -19,6 +19,7 @@ import { toggleFavorite } from '@/modules/favorites/services/favorite.service';
 import { markAllRead, markRead } from '@/modules/notifications/services/inapp-notification.service';
 import { cancelPendingByBuyer, confirmDelivered } from '@/modules/orders/services/order.service';
 import { createReview } from '@/modules/reviews/services/review.service';
+import { TOPE_NOMBRE_VISIBLE, updateDisplayName } from '@/modules/users/services/profile.service';
 
 /**
  * Server Actions del panel del comprador.
@@ -521,5 +522,54 @@ export async function marcarTodasLeidas(
 
   return {
     ok: cuantas === 0 ? 'No tenías avisos sin leer.' : 'Marcamos todos tus avisos como leídos.',
+  };
+}
+
+const nombreVisibleSchema = z.object({
+  /*
+   * ⚠️ `.optional()` Y NO `.min(2)`: vaciar el campo es una operacion valida
+   * —quien cargo su nombre real y se arrepiente tiene que poder sacarlo—, asi
+   * que la ausencia no puede ser un error de validacion. El minimo lo aplica el
+   * Service, y sólo cuando efectivamente vino algo.
+   */
+  displayName: z.string().trim().max(TOPE_NOMBRE_VISIBLE, 'Ese nombre es muy largo').optional(),
+});
+
+/**
+ * Cambia el nombre visible de la cuenta.
+ *
+ * ⚠️ NO RECIBE NINGUN IDENTIFICADOR DE USUARIO. El unico `user` posible es el
+ * de la sesion: si el formulario pudiera mandar un `userId`, esto seria una
+ * forma de renombrar la cuenta de cualquiera.
+ *
+ * ⚠️ SE REVALIDA LA RAIZ COMO LAYOUT porque el nombre visible aparece en la
+ * barra superior de TODAS las pantallas. Sin eso, quien lo cambia lo ve
+ * actualizado en «Mis datos» y sigue viendo el viejo arriba.
+ */
+export async function guardarNombreVisible(
+  _estado: EstadoCuenta,
+  formData: FormData,
+): Promise<EstadoCuenta> {
+  let nuevo: string | null;
+
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('account-profile', user.id);
+
+    const input = nombreVisibleSchema.parse({ displayName: texto(formData, 'displayName') });
+
+    nuevo = await updateDisplayName(user, input.displayName ?? null);
+  } catch (error) {
+    return respuestaDeError(error, {
+      ambito: 'cuenta',
+      formData,
+      preservar: ['displayName'],
+    });
+  }
+
+  revalidatePath('/', 'layout');
+
+  return {
+    ok: nuevo === null ? 'Sacamos tu nombre visible.' : 'Listo, guardamos tu nombre.',
   };
 }

@@ -16,10 +16,16 @@ import {
   pauseListing,
   resumeListing,
 } from '@/modules/listings/services/listing-editing.service';
-import { publishListing } from '@/modules/listings/services/listing.service';
+import {
+  NUMERO_JUGADOR_MAX,
+  NUMERO_JUGADOR_MIN,
+  TOPE_NOMBRE_JUGADOR,
+  publishListing,
+} from '@/modules/listings/services/listing.service';
 import {
   activateListing,
   deleteImage,
+  moveImage,
   uploadImage,
 } from '@/modules/listings/services/listing-image.service';
 import { promoteListing } from '@/modules/listings/services/promotion.service';
@@ -134,6 +140,8 @@ export async function habilitarVendedor(
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -178,6 +186,8 @@ export async function declararIdentidadFiscal(
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -259,6 +269,52 @@ export async function desconectarMercadoPago(
  */
 const PRECIO_MAXIMO_PESOS = 50_000_000;
 
+/**
+ * Jugador y numero estampados (ERD §9.1), compartidos por publicar y editar.
+ *
+ * ⚠️ SE DEFINEN UNA SOLA VEZ Y SE HACE SPREAD EN LOS DOS ESQUEMAS. Los dos
+ * formularios escriben las MISMAS columnas: si cada esquema trajera su propia
+ * copia, el dia que se ajuste el rango habria que acordarse de tocar las dos, y
+ * la que se olvida siempre es la segunda.
+ *
+ * ⚠️ EL TOPE Y EL RANGO SALEN DEL SERVICE, no de numeros escritos aca. La
+ * pantalla valida lo mismo que el dominio porque lee la misma constante.
+ *
+ * ⚠️ `z.coerce.number()` SOBRE UNA CADENA VACIA DA 0, Y 0 ES UN NUMERO DE
+ * CAMISETA VALIDO. Por eso el numero llega ya colapsado a `undefined` por
+ * `texto()` antes de entrar al esquema: un campo vacio tiene que significar "no
+ * tiene numero", nunca "lleva el 0".
+ */
+const CAMPOS_DEL_JUGADOR = {
+  playerName: z.string().trim().max(TOPE_NOMBRE_JUGADOR, 'Ese nombre es muy largo').optional(),
+  playerNumber: z.coerce
+    .number()
+    .int('El número tiene que ser entero')
+    .min(NUMERO_JUGADOR_MIN, 'El número no puede ser negativo')
+    .max(NUMERO_JUGADOR_MAX, `El número no puede pasar de ${NUMERO_JUGADOR_MAX}`)
+    .optional(),
+} as const;
+
+/**
+ * Jugador y numero que hay que ESCRIBIR al editar, con la misma distincion que
+ * `catalogoAEscribir`: "el campo no vino en el formulario" no es lo mismo que
+ * "el vendedor lo vacio".
+ *
+ * ⚠️ NO ES DEFENSA CONTRA UN BUG HIPOTETICO: es exactamente la forma del que se
+ * arreglo el 2026-09-09 con los cinco catalogos. Sin `has()`, cualquier
+ * formulario que llame a `editar` sin estos campos —el de otra pantalla, un
+ * POST parcial— borraria el jugador al guardar cualquier otra cosa.
+ */
+function jugadorAEscribir(
+  formData: FormData,
+  input: { playerName?: string | undefined; playerNumber?: number | undefined },
+): { playerName?: string | null; playerNumber?: number | null } {
+  return {
+    ...(formData.has('playerName') ? { playerName: input.playerName ?? null } : {}),
+    ...(formData.has('playerNumber') ? { playerNumber: input.playerNumber ?? null } : {}),
+  };
+}
+
 const publicarSchema = z.object({
   categoryId: z.string().uuid('Elegí una categoría'),
   title: z.string().trim().min(3, 'El título es muy corto').max(140),
@@ -278,6 +334,7 @@ const publicarSchema = z.object({
   // categoria (ERD §9.1).
   kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
   sleeve: z.enum(['short', 'long']).optional(),
+  ...CAMPOS_DEL_JUGADOR,
   // Referencias de catalogo. OPCIONALES: exigirlas dejaria afuera cualquier
   // camiseta cuyo club o marca no este sembrado, y el flujo de propuestas de
   // catalogo (DEC-041) todavia no existe.
@@ -333,6 +390,8 @@ export async function publicar(
       condition: texto(formData, 'condition'),
       kitType: texto(formData, 'kitType'),
       sleeve: texto(formData, 'sleeve'),
+      playerName: texto(formData, 'playerName'),
+      playerNumber: texto(formData, 'playerNumber'),
       clubId: texto(formData, 'clubId'),
       nationalTeamId: texto(formData, 'nationalTeamId'),
       brandId: texto(formData, 'brandId'),
@@ -355,6 +414,8 @@ export async function publicar(
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
+      playerName: input.playerName ?? null,
+      playerNumber: input.playerNumber ?? null,
       clubId: input.clubId ?? null,
       nationalTeamId: input.nationalTeamId ?? null,
       brandId: input.brandId ?? null,
@@ -408,6 +469,8 @@ export async function publicar(
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -508,6 +571,8 @@ export async function agregarFotos(
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -551,6 +616,8 @@ export async function borrarFoto(
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -562,6 +629,74 @@ export async function borrarFoto(
   revalidatePath('/vendedor/publicaciones');
 
   return { ok: 'Foto borrada.' };
+}
+
+const moverFotoSchema = borrarFotoSchema.extend({
+  /*
+   * ⚠️ ES UN ENUM CERRADO Y NO UN NUMERO DE POSICION. Si la accion recibiera
+   * "poné esta foto en la posicion 3", cualquiera podria mandar un numero
+   * ocupado por otra foto y hacer fallar la unicidad, o uno absurdo. Con tres
+   * verbos, el unico que decide a que numero va cada fila es el Service.
+   */
+  direccion: z.enum(['subir', 'bajar', 'portada']),
+});
+
+/**
+ * Reordena una foto (PS-011).
+ *
+ * ⚠️ NO AVISA CUANDO EL MOVIMIENTO NO TIENE EFECTO. `moveImage` devuelve
+ * `false` si la primera intenta subir o la ultima bajar, y eso NO es un error:
+ * la pantalla ya no dibuja esos botones, asi que llegar aca significa un POST
+ * directo o una carrera contra otra pestaña. En los dos casos el orden que ve
+ * el vendedor despues de recargar es el correcto, y una pantalla roja diciendo
+ * "no se pudo" solo asustaria.
+ */
+export async function moverFoto(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  let movida = false;
+
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('listing-update', user.id);
+
+    const input = moverFotoSchema.parse({
+      listingId: texto(formData, 'listingId'),
+      imageId: texto(formData, 'imageId'),
+      direccion: texto(formData, 'direccion'),
+    });
+
+    movida = await moveImage(user, input.listingId, input.imageId, input.direccion);
+  } catch (error) {
+    return respuestaDeError(error, {
+      ambito: 'vendedor',
+      formData,
+      preservar: [
+        'title',
+        'description',
+        'precioPesos',
+        'stock',
+        'sizeValue',
+        'playerName',
+        'playerNumber',
+        'displayName',
+        'bio',
+        'shippingPolicy',
+        'taxId',
+      ],
+    });
+  }
+
+  revalidatePath('/vendedor/publicaciones');
+
+  /*
+   * La vitrina y la ficha muestran la PORTADA, que es la primera por posicion:
+   * reordenar cambia lo que ve un comprador, no solo lo que ve el vendedor.
+   */
+  revalidatePath('/');
+
+  return movida ? { ok: 'Listo, cambiamos el orden.' } : {};
 }
 
 /* --------------------------------------------- editar / pausar / eliminar -- */
@@ -589,6 +724,7 @@ const editarSchema = z.object({
   condition: z.enum(['NUEVO', 'COMO_NUEVO', 'EXCELENTE', 'MUY_BUENO', 'BUENO', 'ACEPTABLE']),
   kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
   sleeve: z.enum(['short', 'long']).optional(),
+  ...CAMPOS_DEL_JUGADOR,
   // Referencias de catalogo. OPCIONALES: exigirlas dejaria afuera cualquier
   // camiseta cuyo club o marca no este sembrado, y el flujo de propuestas de
   // catalogo (DEC-041) todavia no existe.
@@ -664,6 +800,8 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       condition: texto(formData, 'condition'),
       kitType: texto(formData, 'kitType'),
       sleeve: texto(formData, 'sleeve'),
+      playerName: texto(formData, 'playerName'),
+      playerNumber: texto(formData, 'playerNumber'),
       clubId: texto(formData, 'clubId'),
       nationalTeamId: texto(formData, 'nationalTeamId'),
       brandId: texto(formData, 'brandId'),
@@ -680,6 +818,7 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
+      ...jugadorAEscribir(formData, input),
       ...catalogoAEscribir(formData, input),
     });
   } catch (error) {
@@ -692,6 +831,8 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -725,6 +866,8 @@ export async function pausar(_estado: EstadoVendedor, formData: FormData): Promi
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -759,6 +902,8 @@ export async function reactivar(
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',
@@ -800,6 +945,8 @@ export async function eliminar(
         'precioPesos',
         'stock',
         'sizeValue',
+        'playerName',
+        'playerNumber',
         'displayName',
         'bio',
         'shippingPolicy',

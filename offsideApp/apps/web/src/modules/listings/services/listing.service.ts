@@ -74,6 +74,44 @@ export async function findById(listingId: string): Promise<listingRepo.ListingRo
 /** Categoria que exige atributos especificos de camiseta (ERD §9.1). */
 const CATEGORIA_CAMISETA = 'camiseta';
 
+/**
+ * Tope del nombre del jugador. `player_name` es `text` sin limite en el ERD,
+ * asi que el techo lo pone la app: es el mismo criterio que `size_value` (20) y
+ * el titulo (140). Un nombre de jugador no llega a 60 caracteres ni con el
+ * apellido completo, y sin tope el campo es un lugar comodo para meter un
+ * parrafo que despues pesa `B` en el indice de busqueda.
+ */
+export const TOPE_NOMBRE_JUGADOR = 60;
+
+/**
+ * Rango del numero estampado. `player_number` es `integer` en el ERD y no
+ * tiene CHECK, asi que el rango lo valida la app —igual que `kit_type` y
+ * `sleeve` para camiseta—.
+ *
+ * ⚠️ EMPIEZA EN 0 Y NO EN 1: el 0 se usa de verdad (lo llevaron Ronaldo en el
+ * Corinthians y varios arqueros), y llega hasta 99 porque es el maximo que
+ * admiten los reglamentos que numeran de dos digitos. Un 0 valido obliga a que
+ * el resto del codigo compare contra `null`, NUNCA por falsedad.
+ */
+export const NUMERO_JUGADOR_MIN = 0;
+export const NUMERO_JUGADOR_MAX = 99;
+
+/**
+ * Normaliza el nombre del jugador tal como llega de un formulario.
+ *
+ * Vacio —o solo espacios— es `null`, no `''`: el ERD deja la columna anulable
+ * para decir "no tiene", y una cadena vacia seria un tercer valor que significa
+ * lo mismo. Ademas entra al `search_vector` con peso `B`, donde `coalesce` ya
+ * trata el null; una cadena vacia con espacios no aporta nada y ensucia.
+ */
+export function normalizarJugador(valor: string | null | undefined): string | null {
+  if (valor === null || valor === undefined) return null;
+
+  const limpio = valor.trim().replace(/\s+/g, ' ');
+
+  return limpio === '' ? null : limpio.slice(0, TOPE_NOMBRE_JUGADOR);
+}
+
 export interface PublishListingInput {
   categoryId: string;
   title: string;
@@ -85,6 +123,21 @@ export interface PublishListingInput {
   condition: listingRepo.ListingRow['condition'];
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
+  /**
+   * Jugador y numero estampados (ERD §9.1).
+   *
+   * ⚠️ NO SON UN CAMPO NUEVO: `player_name` y `player_number` estaban en el
+   * ERD desde la migracion inicial, tienen su indice trigram
+   * (`listings_player_name_trgm_idx`) y `player_name` YA PESA `B` EN EL
+   * `search_vector` (ver `search.repository.ts`). Es decir: toda la busqueda
+   * por jugador estaba construida y no habia forma de cargar el dato. Esto no
+   * agrega una funcion, la conecta.
+   *
+   * Opcionales de verdad: la mayoria de las camisetas que se venden son lisas,
+   * y exigir el jugador convertiria "no tiene" en "mentir algo".
+   */
+  playerName?: string | null;
+  playerNumber?: number | null;
   /**
    * Referencias de catalogo. Todas OPCIONALES: son las que alimentan las
    * facetas, pero exigirlas dejaria afuera cualquier camiseta cuyo club o marca
@@ -118,6 +171,9 @@ export interface PublicListing {
   /** Obligatorios para camiseta (ERD §9.1). El formulario de edicion los necesita. */
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
+  /** Jugador y numero. El formulario de edicion los necesita para mostrarlos. */
+  playerName: string | null;
+  playerNumber: number | null;
   categoryId: string;
   /**
    * Referencias de catalogo (ERD §8).
@@ -165,6 +221,8 @@ export function toPublicListing(row: listingRepo.ListingRow): PublicListing {
     condition: row.condition,
     kitType: row.kitType,
     sleeve: row.sleeve,
+    playerName: row.playerName,
+    playerNumber: row.playerNumber,
     categoryId: row.categoryId,
     shippingMode: row.shippingMode,
     shippingCostAmount: row.shippingCostAmount?.toString() ?? null,
@@ -239,6 +297,8 @@ export async function publishListing(
     condition: input.condition,
     kitType: input.kitType,
     sleeve: input.sleeve,
+    playerName: normalizarJugador(input.playerName),
+    playerNumber: input.playerNumber ?? null,
     clubId: input.clubId ?? null,
     nationalTeamId: input.nationalTeamId ?? null,
     brandId: input.brandId ?? null,
@@ -455,6 +515,9 @@ export interface PublicListingDetail extends CatalogListing {
   description: string | null;
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
+  /** Jugador y numero estampados. La ficha los muestra; casi siempre son null. */
+  playerName: string | null;
+  playerNumber: number | null;
   authenticity: listingRepo.ListingRow['authenticity'];
   /** Cuantas unidades quedan. La ficha lo usa para avisar si queda poco. */
   stock: number;
@@ -515,6 +578,8 @@ export async function findPublicListing(id: string): Promise<PublicListingDetail
     condition: row.condition,
     kitType: row.kitType,
     sleeve: row.sleeve,
+    playerName: row.playerName,
+    playerNumber: row.playerNumber,
     authenticity: row.authenticity,
     stock: row.stock,
     sellerDisplayName: row.sellerDisplayName,

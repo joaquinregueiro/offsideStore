@@ -5,7 +5,7 @@
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
 > Estado: marketplace operable de punta a punta —registro, publicación, compra y
 > cobro con Mercado Pago— con frontend propio, incluido el back-office (ver §19).
-> Última actualización: 2026-09-10.
+> Última actualización: 2026-09-14.
 
 ---
 
@@ -1307,9 +1307,17 @@ email de la cuenta, baja de cuenta (DEC-011 🔴) y overrides de configuración
 por ámbito editables. Los refunds tienen código y tests, pero **no se probaron
 contra Mercado Pago real**.
 
-Tests: **905** (545 unitarios + 360 de integración contra PostgreSQL y Redis
-reales). CI corre ambos, aplica las migraciones sobre una base vacía y verifica
-que no haya drift entre el schema de Drizzle y las migraciones.
+> **Tres de esa lista ya están hechos** (2026-09-14, ver la entrada de Fase 3 al
+> final de esta sección): **jugador y número en el formulario**, **reordenar
+> fotos** y **la edición del nombre visible** —no la del email, que sigue
+> pendiente por otro motivo—. Se deja el párrafo como estaba y esta nota encima,
+> con el mismo criterio que la lista del 09-10: para que se vea que la lista era
+> de una fecha y no del estado de hoy.
+
+Tests: **974 al 2026-09-14** (eran 905 acá; el resto llegó con las fases del
+09-13 y del 09-14). Unitarios y de integración contra PostgreSQL y Redis reales.
+CI corre ambos, aplica las migraciones sobre una base vacía y verifica que no
+haya drift entre el schema de Drizzle y las migraciones.
 ⚠️ Los fixtures **leen** las categorías que carga la migración `0004`; no crean
 las suyas. `categories.code` es UNIQUE y son un conjunto fijo, así que inventar
 una de test chocaba contra la fila real.
@@ -1350,6 +1358,69 @@ capturas**; ningún chequeo automático las habría encontrado.
 375px sugirió que el header desbordaba y se estuvo a punto de reportar un bug
 inexistente: medido, `desborda: false`. Lo que sirve es renderizar la página
 dentro de un iframe de ancho fijo y medir desde afuera.
+
+**Fase 3 — jugador, reordenar fotos y datos de la cuenta — ✅ (2026-09-14)**:
+tres huecos que se veían en el uso diario. Detalle en
+`offsideApp/docs-implementation/fase-3-2026-09-14.md`.
+
+⚠️ **JUGADOR Y NÚMERO NO ERAN UN CAMPO NUEVO: ERAN EL QUE FALTABA.**
+`listings.player_name` y `player_number` están en el ERD §9.1 desde la migración
+inicial, `listings_player_name_trgm_idx` existe, y `search.repository.ts` **ya
+pesaba `player_name` con `B` en el `search_vector`**. Toda la búsqueda por
+jugador estaba construida y ningún formulario podía cargar el dato. **Cero
+migraciones.**
+
+⚠️ **`player_number` TAMBIÉN ENTRÓ AL ÍNDICE, y no era opcional.**
+`websearch_to_tsquery` une los términos con **AND** y el respaldo de trigramas
+sólo compara contra el **título**: sin el número indexado, buscar `"Messi 10"`
+devolvía **cero resultados** con la camiseta cargada. Va al mismo peso `B`, así
+que **no agrega ninguna perilla**: los pesos siguen siendo los cuatro ⚙️ de
+DEC-042. Verificado en la app corriendo, no sólo en test.
+
+⚠️ **El 0 es un número de camiseta real** —Ronaldo en Corinthians, varios
+arqueros—, así que el rango es 0–99 y **todo compara contra `null`, nunca por
+falsedad**. Un `{playerNumber && …}` escondería el dato justo en el caso más raro
+y más vendible.
+
+⚠️ **REORDENAR FOTOS SON TRES UPDATES Y ESTÁ VERIFICADO CONTRA POSTGRESQL QUE UNO
+SOLO FALLA.** `listing_images` lleva `UNIQUE(listing_id, position)` **no
+diferible**: un `UPDATE … SET position = CASE …` que intercambie dos valores
+muere con violación de unicidad —se comprobó en una tabla temporal antes de
+escribir el comentario—. El paso por una posición temporal **negativa** libera el
+valor antes de reclamarlo; negativa y no `max + 1`, que es justo la posición que
+una subida concurrente está por tomar. Va en transacción: un corte a mitad
+dejaría una foto en la posición temporal, o sea **de portada para siempre**.
+
+⚠️ **«Portada» existe porque «subir» no alcanza**: llevar la octava foto al
+principio con flechas son siete envíos con sus siete recargas, y la portada es lo
+único de esa pantalla que cambia lo que ve un comprador. Las posiciones **no se
+renumeran** —el ERD sólo exige unicidad— así que es un solo UPDATE a `mínima − 1`,
+y el vecino se busca por índice de la lista ordenada, no por `position ± 1`: con
+huecos, la posición contigua puede no existir.
+
+⚠️ **`/cuenta/datos` estaba en solo lectura porque no existía el Service**, no
+porque se hubiera decidido que no se editara. Ahora `users/services/profile.service.ts`
+cambia `display_name` y **lo audita**: es lo que ve un vendedor al despachar, así
+que es identidad, no preferencia. Guardar lo mismo no escribe fila.
+⚠️ **El email sigue sin editarse y no es el mismo caso**: es la credencial de
+ingreso y el destino de los tokens, así que pide reverificar la dirección nueva
+**antes** de soltar la vieja —si no, un typo deja la cuenta muerta— y decidir qué
+pasa con las sesiones abiertas.
+
+⚠️ **LOS EMAILS DE ENGAGEMENT QUEDARON SIN HACER POR DOCUMENTACIÓN, NO POR
+TIEMPO.** La mitad in-app ya estaba en producción (`price_alert` a favoritos con
+umbral ⚙️, más el globo de no leídas). Convertirla en email choca con
+`notifications-and-engagement.md` §2, que marca 🟡 PENDIENTE las **preferencias
+opt-in/opt-out**, y **no hay ninguna tabla de preferencias en el ERD**. "Carrito
+abandonado" **no figura en ningún documento**: §16, no se inventa.
+
+⚠️ **EL MEDIDOR DE DESBORDE DIO UN FALSO POSITIVO Y LO ATAJÓ UNA PANTALLA DE
+CONTROL.** `documentElement.scrollWidth > clientWidth` marcaba desborde a 320px en
+las cuatro pantallas medidas —incluida una que no se tocó—. El `<html>` lleva
+`overflow-x: clip`, y con `clip` **no se crea contenedor de scroll**: `scrollWidth`
+reporta la extensión sin recortar aunque la página no se desplace. La medida buena
+es `window.scrollTo(9999, 0)` y leer `window.scrollX`: **0 en las cinco rutas, a
+375 y a 320**. Mismo tipo de casi-error que el `--window-size` de arriba.
 
 ### Decisiones técnicas tomadas sin cobertura documental
 

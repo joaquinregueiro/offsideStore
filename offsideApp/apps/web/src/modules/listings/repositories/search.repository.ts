@@ -89,6 +89,19 @@ export interface SearchRow {
  * pesa cada categoria es ⚙️ configurable y se aplica al CONSULTAR, no al
  * indexar. Por eso cambiar los pesos no obliga a reindexar nada.
  */
+/**
+ * ⚠️ `player_number` ENTRA AL INDICE Y NO ES UN ADORNO. `websearch_to_tsquery`
+ * une los terminos con **AND**, y el respaldo de trigramas sólo compara contra
+ * el TITULO: sin el numero en el vector, buscar `"Messi 10"` devolveria **cero
+ * resultados** aunque la camiseta este cargada con los dos datos. O sea que el
+ * campo del formulario seria informacion que se escribe y no se puede
+ * recuperar, y peor: una busqueda natural quedaria rota justo para las
+ * publicaciones mejor cargadas.
+ *
+ * Va al MISMO peso `B` que el nombre del jugador porque es el mismo hecho
+ * —que dice la camiseta—, no una categoria nueva: los pesos {D,C,B,A} son
+ * ⚙️ del Config Store (DEC-042) y esto no agrega ninguno.
+ */
 export async function reindexListing(
   listingId: string,
   textoDeCatalogos: string,
@@ -99,7 +112,7 @@ export async function reindexListing(
        SET search_vector =
              setweight(to_tsvector('spanish', unaccent(coalesce(title, ''))), 'A')
           || setweight(to_tsvector('spanish', unaccent(${textoDeCatalogos})), 'A')
-          || setweight(to_tsvector('spanish', unaccent(coalesce(player_name, '') || ' ' || coalesce(model, ''))), 'B')
+          || setweight(to_tsvector('spanish', unaccent(coalesce(player_name, '') || ' ' || coalesce(player_number::text, '') || ' ' || coalesce(model, ''))), 'B')
           || setweight(to_tsvector('spanish', unaccent(coalesce(description, ''))), 'C')
      WHERE id = ${listingId}
   `);

@@ -16,7 +16,13 @@ import { requireSellerSessionUser } from '@/lib/session';
 import { PanelDeCuenta } from '../../../../(cuenta)/panel';
 import { getImageSettings } from '@/modules/config/services/image-settings.service';
 import { getShippingSettings } from '@/modules/listings/services/listing-settings.service';
-import { listActiveCategories, listCatalogs } from '@/modules/listings/services/listing.service';
+import {
+  NUMERO_JUGADOR_MAX,
+  NUMERO_JUGADOR_MIN,
+  TOPE_NOMBRE_JUGADOR,
+  listActiveCategories,
+  listCatalogs,
+} from '@/modules/listings/services/listing.service';
 import {
   allowedShippingModes,
   shippingModeLabel,
@@ -281,6 +287,47 @@ export default async function NuevaPublicacion() {
                       { valor: 'short', etiqueta: 'Cortas' },
                       { valor: 'long', etiqueta: 'Largas' },
                     ]}
+                  />
+                </div>
+
+                {/*
+                ⚠️ EL JUGADOR NO ES UN CAMPO NUEVO: ES EL QUE FALTABA. La columna
+                `player_name` está en el ERD desde la migración inicial, tiene su
+                índice trigram y YA PESA `B` en el `search_vector` —o sea que
+                toda la búsqueda por jugador estaba construida y no había un solo
+                formulario capaz de cargar el dato—. Esto lo conecta.
+
+                ⚠️ VA DESPUÉS DEL TIPO Y LAS MANGAS, NO ARRIBA. Es opcional y la
+                mayoría de las camisetas son lisas: puesto primero, invita a
+                inventar un jugador que la prenda no tiene.
+              */}
+                <SubtituloDeGrupo>Si está estampada</SubtituloDeGrupo>
+
+                <div className={estilos.par}>
+                  <Campo
+                    nombre="playerName"
+                    etiqueta="Jugador"
+                    requerido={false}
+                    maximo={TOPE_NOMBRE_JUGADOR}
+                    placeholder="Riquelme"
+                    ayuda="Sólo si la camiseta lleva un nombre estampado. Se usa para que la encuentren buscándolo."
+                  />
+                  {/*
+                  ⚠️ `min={0}` Y NO `min={1}`: EL 0 ES UN NÚMERO REAL. Lo usaron
+                  Ronaldo en Corinthians y varios arqueros. Si el rango empezara
+                  en 1, esa camiseta no se podría publicar como es.
+                */}
+                  <Campo
+                    nombre="playerNumber"
+                    etiqueta="Número"
+                    tipo="number"
+                    requerido={false}
+                    min={NUMERO_JUGADOR_MIN}
+                    max={NUMERO_JUGADOR_MAX}
+                    step={1}
+                    inputMode="numeric"
+                    placeholder="10"
+                    ayuda={`Del ${NUMERO_JUGADOR_MIN} al ${NUMERO_JUGADOR_MAX}. Dejalo vacío si no lleva número.`}
                   />
                 </div>
               </GrupoDeCampos>

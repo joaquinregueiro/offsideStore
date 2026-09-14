@@ -242,6 +242,7 @@ export function Formulario({
   variante = 'primario',
   tamanio = 'grande',
   bloque = true,
+  etiquetaDelBoton,
   pie,
   clasePie,
   children,
@@ -262,6 +263,21 @@ export function Formulario({
    */
   tamanio?: TamanioBoton;
   bloque?: boolean;
+  /**
+   * `aria-label` del boton de envio, cuando `enviar` no alcanza para saber
+   * sobre QUE actua.
+   *
+   * ⚠️ NO ES DECORACION DE ACCESIBILIDAD: en la galeria de fotos hay hasta
+   * ocho tarjetas iguales, cada una con sus botones de subir, bajar y portada.
+   * Sin esto, un lector de pantalla lee "Subir, Bajar, Portada" ocho veces
+   * seguidas sin decir nunca de que foto se trata, y el orden de las fotos
+   * —que es justamente lo que estos botones cambian— queda inoperable.
+   *
+   * ⚠️ NO PISA EL TEXTO VISIBLE. `enviar` sigue siendo lo que se ve; esto es lo
+   * que se ESCUCHA, y tiene que empezar con el mismo texto para que quien usa
+   * control por voz pueda decir "subir" y que funcione.
+   */
+  etiquetaDelBoton?: string | undefined;
   /**
    * Contenido que se pega AL BOTON DE ENVIAR, adentro del `<form>`.
    *
@@ -363,6 +379,7 @@ export function Formulario({
         tamanio={tamanio}
         bloque={bloque}
         cargando={pending}
+        {...(etiquetaDelBoton === undefined ? {} : { 'aria-label': etiquetaDelBoton })}
         className={variante === 'primario' ? clases('luz-filo', bloque && 'respira') : undefined}
       >
         {pending ? 'Enviando…' : enviar}

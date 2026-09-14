@@ -254,6 +254,12 @@ export interface InsertListingValues {
   condition: ListingRow['condition'];
   kitType: ListingRow['kitType'];
   sleeve: ListingRow['sleeve'];
+  /**
+   * Jugador y numero estampados (ERD §9.1, columnas `player_name` /
+   * `player_number`). Opcionales: la mayoria de las camisetas son lisas.
+   */
+  playerName: string | null;
+  playerNumber: number | null;
   moderationStatus: ListingRow['moderationStatus'];
   /** Envio declarado (delta §11), ya validado por el Service. */
   shippingMode: string;
@@ -288,6 +294,8 @@ export async function insertListing(
       condition: values.condition,
       kitType: values.kitType,
       sleeve: values.sleeve,
+      playerName: values.playerName,
+      playerNumber: values.playerNumber,
       clubId: values.clubId ?? null,
       nationalTeamId: values.nationalTeamId ?? null,
       brandId: values.brandId ?? null,
@@ -388,6 +396,9 @@ export interface UpdateListingValues {
   condition?: ListingRow['condition'];
   kitType?: ListingRow['kitType'];
   sleeve?: ListingRow['sleeve'];
+  /** Jugador y numero. `null` los borra; `undefined` los conserva. */
+  playerName?: string | null;
+  playerNumber?: number | null;
   categoryId?: string;
   status?: ListingRow['status'];
   /** Envio declarado, ya validado por el Service. Van juntos o no van. */
@@ -669,6 +680,8 @@ export interface PublicListingDetailRow extends CatalogListingRow {
   description: string | null;
   kitType: ListingRow['kitType'];
   sleeve: ListingRow['sleeve'];
+  playerName: string | null;
+  playerNumber: number | null;
   authenticity: ListingRow['authenticity'];
   sellerId: string;
   /** `users.username`, para enlazar a `/tienda/[username]`. Puede no tener. */
@@ -698,6 +711,8 @@ export async function findPublicById(
       description: schema.listings.description,
       kitType: schema.listings.kitType,
       sleeve: schema.listings.sleeve,
+      playerName: schema.listings.playerName,
+      playerNumber: schema.listings.playerNumber,
       authenticity: schema.listings.authenticity,
       sellerId: schema.listings.sellerId,
       sellerUsername: schema.users.username,

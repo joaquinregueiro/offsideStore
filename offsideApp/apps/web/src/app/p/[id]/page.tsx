@@ -1022,6 +1022,24 @@ export default async function DetalleDePublicacion({
                   <Dato etiqueta="Tipo">{tipoDeCamiseta(listing.kitType)}</Dato>
                 )}
                 {listing.sleeve !== null && <Dato etiqueta="Mangas">{manga(listing.sleeve)}</Dato>}
+                {/*
+                  ⚠️ EL JUGADOR Y EL NUMERO SE COMPARAN CONTRA `null`, NUNCA POR
+                  FALSEDAD. `playerNumber` puede ser 0 —lo llevaron Ronaldo en
+                  Corinthians y varios arqueros—, y un `{listing.playerNumber &&
+                  ...}` esconderia esa camiseta justo cuando el dato es mas raro
+                  y mas vale la pena mostrarlo.
+
+                  ⚠️ VAN COMO DOS FILAS SEPARADAS y no como "Riquelme #10": la
+                  ficha tecnica es una grilla de pares, y quien busca por numero
+                  —los coleccionistas de arqueros, por ejemplo— tiene que poder
+                  leerlo solo.
+                */}
+                {listing.playerName !== null && (
+                  <Dato etiqueta="Jugador">{listing.playerName}</Dato>
+                )}
+                {listing.playerNumber !== null && (
+                  <Dato etiqueta="Número">{listing.playerNumber}</Dato>
+                )}
                 <Dato etiqueta="Unidades">
                   {listing.stock === 1 ? 'Última unidad' : `${listing.stock} disponibles`}
                 </Dato>

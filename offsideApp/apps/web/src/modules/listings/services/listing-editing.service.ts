@@ -7,7 +7,7 @@ import * as errors from '../listings.errors';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
 import { getShippingSettings } from './listing-settings.service';
-import { toPublicListing, type PublicListing } from './listing.service';
+import { normalizarJugador, toPublicListing, type PublicListing } from './listing.service';
 import { reindex } from './search.service';
 import { validateShippingDeclaration, type ShippingMode } from './shipping-declaration';
 
@@ -55,6 +55,15 @@ export interface EditListingInput {
   condition?: listingRepo.ListingRow['condition'];
   kitType?: listingRepo.ListingRow['kitType'];
   sleeve?: listingRepo.ListingRow['sleeve'];
+  /**
+   * Jugador y numero estampados.
+   *
+   * ⚠️ `undefined` CONSERVA, `null` BORRA, igual que los catalogos y el envio.
+   * `player_name` pesa `B` en el `search_vector`, asi que tocarlo obliga a
+   * reindexar —y este Service ya reindexa siempre—.
+   */
+  playerName?: string | null;
+  playerNumber?: number | null;
   /** Referencias de catalogo. Cambiarlas obliga a reindexar: llevan alias. */
   clubId?: string | null;
   nationalTeamId?: string | null;
@@ -141,7 +150,19 @@ export async function editListing(
    * columna lo que alguien haya mandado por POST.
    */
   const { shippingMode: _modoCrudo, shippingCostAmount: _costoCrudo, ...resto } = input;
-  const cambios = envio === undefined ? resto : { ...resto, ...envio };
+
+  /*
+   * ⚠️ EL NOMBRE DEL JUGADOR SE NORMALIZA CON LA MISMA FUNCION QUE AL PUBLICAR.
+   * Si aca se escribiera el crudo, una publicacion editada guardaria `'  '` o
+   * un nombre sin recortar donde la publicada guarda `null`, y el indice de
+   * busqueda diria dos cosas distintas para el mismo dato.
+   */
+  const conJugador =
+    input.playerName === undefined
+      ? resto
+      : { ...resto, playerName: normalizarJugador(input.playerName) };
+
+  const cambios = envio === undefined ? conJugador : { ...conJugador, ...envio };
 
   const actualizada = await getDatabase().transaction(async (tx) => {
     const fila = await listingRepo.updateListing(listing.id, cambios, tx);

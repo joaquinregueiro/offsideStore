@@ -41,6 +41,18 @@ const publishListingSchema = z.object({
   // categoria (ERD §9.1).
   kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
   sleeve: z.enum(['short', 'long']).optional(),
+  /**
+   * Jugador y numero estampados (ERD §9.1). Opcionales: la mayoria de las
+   * camisetas son lisas. El rango del numero lo fija el Service, que es donde
+   * vive la constante; aca solo se exige que sea un entero.
+   */
+  playerName: z.string().trim().max(listingService.TOPE_NOMBRE_JUGADOR).optional(),
+  playerNumber: z
+    .number()
+    .int()
+    .min(listingService.NUMERO_JUGADOR_MIN)
+    .max(listingService.NUMERO_JUGADOR_MAX)
+    .optional(),
 });
 
 /**
@@ -68,6 +80,8 @@ export async function publishListing(request: Request): Promise<NextResponse> {
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
+      playerName: input.playerName ?? null,
+      playerNumber: input.playerNumber ?? null,
     });
 
     return ok({ listing }, 201);

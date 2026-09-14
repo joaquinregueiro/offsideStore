@@ -194,6 +194,13 @@ export type RateLimitScope =
   | 'question-ask'
   | 'question-answer'
   | 'address-write'
+  /*
+   * Datos de la propia cuenta. Cuenta aparte de `address-write` aunque las dos
+   * vivan en el panel del comprador: corregir la libreta de direcciones antes
+   * de una compra no puede dejar sin poder arreglar el nombre visible, que es
+   * lo que ve quien despacha esa misma compra.
+   */
+  | 'account-profile'
   | 'notification-read'
   | 'cart-write'
   | 'seller-profile'

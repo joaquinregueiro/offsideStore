@@ -1636,6 +1636,27 @@
   box-shadow: var(--sombra-1);
 }
 
+/**
+ * LOS BOTONES DE LA TARJETA, AGRUPADOS A LA DERECHA DEL NUMERO DE ORDEN.
+ *
+ * ⚠️ VAN EN UN CONTENEDOR PROPIO Y NO SUELTOS EN EL `figcaption`. El pie es un
+ * flex con `space-between` para separar el numero de la accion; con cuatro
+ * hermanos directos, ese `space-between` los reparte a lo ancho y el numero
+ * deja de ser un extremo. Agrupados, siguen siendo dos bloques.
+ *
+ * ⚠️ `flex-wrap` PORQUE SON HASTA CUATRO EN UNA TARJETA DE ~220px. Envuelven a
+ * dos filas antes que desbordar: un elemento flex no se encoge por debajo de su
+ * min-content, y `.boton` lleva `white-space: nowrap`, asi que sin envolver
+ * empujarian la grilla entera —el mismo desborde de la vitrina del 2026-09-10—.
+ */
+.miniaturaAcciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}
+
 .miniaturaOrden {
   color: var(--color-neutro-tenue);
   font-variant-numeric: tabular-nums;

@@ -1126,6 +1126,144 @@ describe('fotos de la publicacion (PS-010 / ERD §9.2)', () => {
 
     expect(await imageService.listImages(listing.id)).toHaveLength(0);
   });
+
+  describe('reordenar (PS-011)', () => {
+    /** Publicacion con `cuantas` fotos, devueltas en orden. */
+    async function conFotos(clave: string, cuantas: number) {
+      const seller = await vendedor(clave);
+      const listing = await listingService.publishListing(seller, await camiseta());
+
+      for (let i = 0; i < cuantas; i += 1) {
+        await imageService.uploadImage(seller, {
+          listingId: listing.id,
+          bytes: await foto(),
+          alt: `foto-${i}`,
+        });
+      }
+
+      return { seller, listing, imagenes: await imageService.listImages(listing.id) };
+    }
+
+    const alts = (imagenes: { alt: string | null }[]) => imagenes.map((i) => i.alt);
+
+    it('⚠️ intercambia dos posiciones sin violar el UNIQUE(listing_id, position)', async () => {
+      // ES EL PUNTO ENTERO DE `swapPositions`. El indice unico NO es diferible:
+      // un solo UPDATE que intercambie dos valores falla fila por fila. Si este
+      // test pasa, los tres pasos por la posicion temporal funcionan.
+      const { seller, listing, imagenes } = await conFotos('fotos-swap', 3);
+
+      expect(alts(imagenes)).toEqual(['foto-0', 'foto-1', 'foto-2']);
+
+      const movida = await imageService.moveImage(seller, listing.id, imagenes[2]!.id, 'subir');
+
+      expect(movida).toBe(true);
+      expect(alts(await imageService.listImages(listing.id))).toEqual([
+        'foto-0',
+        'foto-2',
+        'foto-1',
+      ]);
+    });
+
+    it('bajar es el movimiento inverso', async () => {
+      const { seller, listing, imagenes } = await conFotos('fotos-bajar', 3);
+
+      await imageService.moveImage(seller, listing.id, imagenes[0]!.id, 'bajar');
+
+      expect(alts(await imageService.listImages(listing.id))).toEqual([
+        'foto-1',
+        'foto-0',
+        'foto-2',
+      ]);
+    });
+
+    it('⚠️ «portada» lleva la ultima al principio en UN paso', async () => {
+      // Es el motivo por el que existe como movimiento aparte: con flechas
+      // serian siete envios y siete recargas para una galeria de ocho.
+      const { seller, listing, imagenes } = await conFotos('fotos-portada', 4);
+
+      const movida = await imageService.moveImage(seller, listing.id, imagenes[3]!.id, 'portada');
+
+      expect(movida).toBe(true);
+      expect(alts(await imageService.listImages(listing.id))).toEqual([
+        'foto-3',
+        'foto-0',
+        'foto-1',
+        'foto-2',
+      ]);
+    });
+
+    it('⚠️ funciona aunque las posiciones tengan HUECOS', async () => {
+      // Borrar una foto del medio NO renumera: el ERD sólo exige unicidad. Si
+      // el Service buscara el vecino como `position ± 1`, aca no encontraria
+      // nada y el boton no haria nada sin explicar por que.
+      const { seller, listing, imagenes } = await conFotos('fotos-huecos', 3);
+
+      await imageService.deleteImage(seller, listing.id, imagenes[1]!.id);
+
+      const quedan = await imageService.listImages(listing.id);
+      expect(quedan.map((i) => i.position)).toEqual([0, 2]);
+
+      await imageService.moveImage(seller, listing.id, quedan[1]!.id, 'subir');
+
+      expect(alts(await imageService.listImages(listing.id))).toEqual(['foto-2', 'foto-0']);
+    });
+
+    it('las puntas devuelven false y NO tiran error', async () => {
+      const { seller, listing, imagenes } = await conFotos('fotos-puntas', 2);
+
+      expect(await imageService.moveImage(seller, listing.id, imagenes[0]!.id, 'subir')).toBe(
+        false,
+      );
+      expect(await imageService.moveImage(seller, listing.id, imagenes[0]!.id, 'portada')).toBe(
+        false,
+      );
+      expect(await imageService.moveImage(seller, listing.id, imagenes[1]!.id, 'bajar')).toBe(
+        false,
+      );
+
+      // Y el orden quedo intacto.
+      expect(alts(await imageService.listImages(listing.id))).toEqual(['foto-0', 'foto-1']);
+    });
+
+    it('⚠️ reordenar cambia la PORTADA que ve un comprador', async () => {
+      // La portada no es una columna: es la primera por posicion, y es la foto
+      // de la vitrina y de la busqueda. Si esto no cambiara, reordenar seria
+      // una preferencia privada del vendedor en vez de una decision de venta.
+      const { seller, listing, imagenes } = await conFotos('fotos-vitrina', 3);
+
+      await getDatabase()
+        .update(schema.listings)
+        .set({ status: 'active' })
+        .where(eq(schema.listings.id, listing.id));
+
+      const antes = await listingService.findPublicListing(listing.id);
+      expect(antes?.images.map((i) => i.alt)).toEqual(['foto-0', 'foto-1', 'foto-2']);
+
+      await imageService.moveImage(seller, listing.id, imagenes[2]!.id, 'portada');
+
+      const despues = await listingService.findPublicListing(listing.id);
+      expect(despues?.images.map((i) => i.alt)).toEqual(['foto-2', 'foto-0', 'foto-1']);
+      expect(despues?.coverUrl).toBe(antes?.images[2]?.url.replace('-large.', '-medium.'));
+    });
+
+    it('no se puede reordenar la publicacion de otro vendedor', async () => {
+      const { listing, imagenes } = await conFotos('fotos-ajena-duena', 2);
+      const intruso = await vendedor('fotos-ajena-intruso');
+
+      await expect(
+        imageService.moveImage(intruso, listing.id, imagenes[1]!.id, 'subir'),
+      ).rejects.toThrow();
+    });
+
+    it('una imagen de otra publicacion es NOT_FOUND', async () => {
+      const { seller, listing } = await conFotos('fotos-imagen-ajena-a', 1);
+      const otra = await conFotos('fotos-imagen-ajena-b', 1);
+
+      await expect(
+        imageService.moveImage(seller, listing.id, otra.imagenes[0]!.id, 'subir'),
+      ).rejects.toThrow();
+    });
+  });
 });
 
 describe('editar y ciclo de vida (SS-040 / SS-050 / SS-051)', () => {
@@ -1600,5 +1738,135 @@ describe('relacionadas de la ficha', () => {
 
     expect(rel.delVendedor).toEqual([]);
     expect(rel.similares).toEqual([]);
+  });
+});
+
+describe('jugador y numero estampados (ERD §9.1)', () => {
+  let searchService: typeof SearchService;
+
+  beforeAll(async () => {
+    searchService = await import('./services/search.service');
+  });
+
+  /** Publicacion activa e indexada, con el titulo y los overrides que se pidan. */
+  async function publicadaConJugador(seller: PublicUser, overrides: Record<string, unknown>) {
+    const listing = await publicacionActiva(seller, overrides);
+    await searchService.reindex(listing.id);
+
+    return listing;
+  }
+
+  it('se guardan al publicar y vuelven en la ficha', async () => {
+    const seller = await vendedor('jug-publica');
+    const listing = await publicacionActiva(seller, {
+      playerName: 'Riquelme',
+      playerNumber: 10,
+    });
+
+    expect(listing.playerName).toBe('Riquelme');
+    expect(listing.playerNumber).toBe(10);
+
+    const ficha = await listingService.findPublicListing(listing.id);
+    expect(ficha?.playerName).toBe('Riquelme');
+    expect(ficha?.playerNumber).toBe(10);
+  });
+
+  it('⚠️ el numero 0 SE GUARDA: es un numero de camiseta real, no un vacio', async () => {
+    // Lo llevaron Ronaldo en Corinthians y varios arqueros. Si en algun lado se
+    // comparara por falsedad en vez de contra `null`, este dato desapareceria
+    // justo en el caso mas raro y mas vendible.
+    const seller = await vendedor('jug-cero');
+    const listing = await publicacionActiva(seller, { playerName: 'Ronaldo', playerNumber: 0 });
+
+    const ficha = await listingService.findPublicListing(listing.id);
+
+    expect(ficha?.playerNumber).toBe(0);
+    expect(ficha?.playerNumber).not.toBeNull();
+  });
+
+  it('una camiseta lisa los deja en null', async () => {
+    const seller = await vendedor('jug-lisa');
+    const listing = await publicacionActiva(seller);
+
+    const ficha = await listingService.findPublicListing(listing.id);
+
+    expect(ficha?.playerName).toBeNull();
+    expect(ficha?.playerNumber).toBeNull();
+  });
+
+  it('⚠️ el nombre vacio se guarda como null, no como cadena vacia', async () => {
+    // El ERD deja la columna anulable para decir "no tiene". Una cadena vacia
+    // seria un tercer valor que significa lo mismo, y encima entra al
+    // `search_vector`.
+    const seller = await vendedor('jug-vacio');
+    const listing = await publicacionActiva(seller, { playerName: '   ' });
+
+    expect(listing.playerName).toBeNull();
+  });
+
+  it('⚠️ "Messi 10" encuentra la camiseta: el numero TAMBIEN esta en el indice', async () => {
+    // Es el motivo por el que `player_number` entra al `search_vector`.
+    // `websearch_to_tsquery` une los terminos con AND y el respaldo de
+    // trigramas sólo mira el TITULO: sin el numero indexado, esta busqueda
+    // —que es la natural— devolveria CERO resultados con el dato cargado.
+    const seller = await vendedor('jug-busca');
+    const buscada = await publicadaConJugador(seller, {
+      title: 'Camiseta titular retro',
+      playerName: 'Messi',
+      playerNumber: 10,
+    });
+
+    const porNombre = await searchService.searchListings({ texto: 'Messi' });
+    expect(porNombre.resultados.map((r) => r.id)).toContain(buscada.id);
+
+    const porAmbos = await searchService.searchListings({ texto: 'Messi 10' });
+    expect(porAmbos.resultados.map((r) => r.id)).toContain(buscada.id);
+  });
+
+  it('editar los cambia y reindexa', async () => {
+    const seller = await vendedor('jug-edita');
+    const listing = await publicadaConJugador(seller, {
+      title: 'Camiseta para reestampar',
+      playerName: 'Messi',
+      playerNumber: 10,
+    });
+
+    const edit = await import('./services/listing-editing.service');
+    await edit.editListing(seller, listing.id, { playerName: 'Maradona', playerNumber: 10 });
+
+    const ficha = await listingService.findPublicListing(listing.id);
+    expect(ficha?.playerName).toBe('Maradona');
+
+    const { resultados } = await searchService.searchListings({ texto: 'Maradona' });
+    expect(resultados.map((r) => r.id)).toContain(listing.id);
+  });
+
+  it('⚠️ editar SIN mandar los campos NO los borra', async () => {
+    // Es la forma exacta del bug de los cinco catalogos del 2026-09-09:
+    // `undefined` conserva, `null` borra. Corregir un typo en el titulo no
+    // puede llevarse puesto el jugador.
+    const seller = await vendedor('jug-conserva');
+    const listing = await publicacionActiva(seller, { playerName: 'Riquelme', playerNumber: 10 });
+
+    const edit = await import('./services/listing-editing.service');
+    await edit.editListing(seller, listing.id, { title: 'Titulo corregido' });
+
+    const ficha = await listingService.findPublicListing(listing.id);
+
+    expect(ficha?.playerName).toBe('Riquelme');
+    expect(ficha?.playerNumber).toBe(10);
+  });
+
+  it('editar con null SI los borra', async () => {
+    const seller = await vendedor('jug-borra');
+    const listing = await publicacionActiva(seller, { playerName: 'Riquelme', playerNumber: 10 });
+
+    const edit = await import('./services/listing-editing.service');
+    await edit.editListing(seller, listing.id, { playerName: null, playerNumber: null });
+
+    const ficha = await listingService.findPublicListing(listing.id);
+
+    expect(ficha?.playerName).toBeNull();
+    expect(ficha?.playerNumber).toBeNull();
   });
 });

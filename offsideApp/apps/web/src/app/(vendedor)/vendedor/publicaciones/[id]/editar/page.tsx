@@ -16,7 +16,13 @@ import { Aviso, BotonEnlace, Seccion } from '@/components/ui';
 import { estadoDePublicacion, precio, tonoDePublicacion } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
 import { PanelDeCuenta } from '../../../../../(cuenta)/panel';
-import { listCatalogs, listMyListings } from '@/modules/listings/services/listing.service';
+import {
+  NUMERO_JUGADOR_MAX,
+  NUMERO_JUGADOR_MIN,
+  TOPE_NOMBRE_JUGADOR,
+  listCatalogs,
+  listMyListings,
+} from '@/modules/listings/services/listing.service';
 
 import { editar } from '../../../../acciones';
 import { Chapa } from '../../../../chapa';
@@ -283,6 +289,50 @@ export default async function EditarPublicacion({ params }: { params: Promise<{ 
                       { valor: 'short', etiqueta: 'Cortas' },
                       { valor: 'long', etiqueta: 'Largas' },
                     ]}
+                  />
+                </div>
+
+                {/*
+                ⚠️ LOS DOS CAMPOS TIENEN QUE ESTAR EN ESTE FORMULARIO, no sólo en
+                el de publicar. Si estuvieran sólo allá, quien se equivoca al
+                estampar el nombre no tendría forma de corregirlo salvo borrando
+                la publicación y perdiendo su historial. Es la misma mitad que
+                faltó con los cinco selectores de catálogo el 2026-09-09.
+
+                ⚠️ VACIARLOS LOS BORRA DE VERDAD, y eso es deliberado: la acción
+                distingue "el campo no vino en el formulario" de "el vendedor lo
+                vació" con `formData.has()`. Sin esa distinción, corregir un typo
+                en el título borraría el jugador en silencio.
+              */}
+                <SubtituloDeGrupo>Si está estampada</SubtituloDeGrupo>
+
+                <div className={estilos.par}>
+                  <Campo
+                    nombre="playerName"
+                    etiqueta="Jugador"
+                    requerido={false}
+                    maximo={TOPE_NOMBRE_JUGADOR}
+                    defaultValue={publicacion.playerName ?? ''}
+                    placeholder="Riquelme"
+                    ayuda="Dejalo vacío si la camiseta es lisa. Vaciarlo lo borra."
+                  />
+                  {/*
+                  ⚠️ `?? ''` Y NO `?? 0`: el 0 es un número de camiseta válido,
+                  así que no puede ser también el valor de "no tiene". Un campo
+                  vacío es la única forma de decir que no lleva número.
+                */}
+                  <Campo
+                    nombre="playerNumber"
+                    etiqueta="Número"
+                    tipo="number"
+                    requerido={false}
+                    min={NUMERO_JUGADOR_MIN}
+                    max={NUMERO_JUGADOR_MAX}
+                    step={1}
+                    inputMode="numeric"
+                    defaultValue={publicacion.playerNumber ?? ''}
+                    placeholder="10"
+                    ayuda={`Del ${NUMERO_JUGADOR_MIN} al ${NUMERO_JUGADOR_MAX}.`}
                   />
                 </div>
               </GrupoDeCampos>

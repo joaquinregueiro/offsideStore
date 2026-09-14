@@ -130,3 +130,46 @@ export async function updatePosition(id: string, position: number, db?: Database
     .set({ position })
     .where(eq(schema.listingImages.id, id));
 }
+
+/**
+ * Posicion temporal para el intercambio. Ver `swapPositions`.
+ *
+ * ⚠️ ES NEGATIVA A PROPOSITO Y NO `max + 1`. `nextPosition` reparte desde 0
+ * hacia arriba, asi que ningun valor negativo puede estar ocupado; `max + 1`,
+ * en cambio, es exactamente la posicion que una subida concurrente esta por
+ * tomar, y el intercambio chocaria contra esa foto recien subida.
+ */
+const POSICION_TEMPORAL = -1;
+
+/**
+ * Intercambia la posicion de dos imagenes de la misma publicacion.
+ *
+ * ⚠️ SON TRES UPDATES Y NO UNO, Y NO ES POR COMODIDAD. La tabla lleva
+ * `UNIQUE(listing_id, position)` NO DIFERIBLE: PostgreSQL verifica el indice
+ * fila por fila, asi que un unico `UPDATE ... SET position = CASE ...` que
+ * intercambie dos valores FALLA a mitad de camino con violacion de unicidad.
+ * El paso por una posicion temporal libera el valor antes de reclamarlo.
+ *
+ * ⚠️ VA EN UNA TRANSACCION Y ESO ES LO QUE LO HACE SEGURO. Sin ella, un corte
+ * entre el primer y el tercer UPDATE dejaria una foto en la posicion temporal:
+ * la galeria la mostraria PRIMERA —o sea, de portada— para siempre. Dos
+ * reordenamientos simultaneos sobre la misma publicacion hacen fallar a uno por
+ * unicidad, que es lo correcto: se pierde la operacion, nunca el orden.
+ *
+ * La transaccion la abre este repositorio porque la razon de existir de los
+ * tres pasos es una restriccion de ESTA tabla: el Service no tiene por que
+ * saber que el indice no es diferible.
+ */
+export async function swapPositions(
+  aId: string,
+  aPosition: number,
+  bId: string,
+  bPosition: number,
+  db?: Database,
+): Promise<void> {
+  await conn(db).transaction(async (tx) => {
+    await updatePosition(aId, POSICION_TEMPORAL, tx);
+    await updatePosition(bId, aPosition, tx);
+    await updatePosition(aId, bPosition, tx);
+  });
+}

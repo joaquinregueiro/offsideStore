@@ -218,6 +218,72 @@ export async function activateListing(user: PublicUser, listingId: string): Prom
 }
 
 /**
+ * Hacia donde se mueve una foto en la galeria.
+ *
+ * `portada` no es un tercer sentido de lo mismo: mover la ultima de ocho al
+ * principio con `subir` son SIETE envios de formulario, cada uno con su
+ * recarga. La portada es el unico lugar de la galeria que cambia lo que ve un
+ * comprador —es la foto de la vitrina y de la busqueda—, asi que llegar ahi no
+ * puede costar siete pasos.
+ */
+export type DireccionDeFoto = 'subir' | 'bajar' | 'portada';
+
+/**
+ * Reordena una foto de la publicacion (PS-011).
+ *
+ * ⚠️ LA PORTADA ES LA PRIMERA POR POSICION, no una columna `is_cover`. El ERD
+ * §9.2 modela el orden con `position` y nada mas, asi que reordenar ES elegir
+ * portada. No se agrega ninguna columna.
+ *
+ * ⚠️ LAS POSICIONES NO SON CONSECUTIVAS Y NO SE RENUMERAN. El ERD sólo exige
+ * que sean UNICAS por publicacion —borrar una del medio ya dejaba huecos, y
+ * `nextPosition` toma el maximo, no la cantidad—. Por eso `portada` es un solo
+ * UPDATE a `minima - 1` en vez de reescribir las ocho filas: el orden relativo
+ * es lo unico que se lee, y una posicion negativa ordena igual de bien.
+ *
+ * Devuelve `false` si el movimiento no tiene efecto —la primera no puede subir,
+ * la ultima no puede bajar, la portada ya es portada—. No es un error: quien
+ * aprieta el boton de una punta merece que no pase nada, no una pantalla roja.
+ */
+export async function moveImage(
+  user: PublicUser,
+  listingId: string,
+  imageId: string,
+  direccion: DireccionDeFoto,
+): Promise<boolean> {
+  const listing = await requireOwnListing(user, listingId);
+
+  /*
+   * ⚠️ SE LEEN TODAS LAS FOTOS Y SE TRABAJA POR INDICE, no por `position ± 1`.
+   * Con huecos —que son normales despues de borrar— la posicion contigua puede
+   * no existir, y el movimiento se convertiria en un silencio inexplicable.
+   * El vecino es el ANTERIOR O SIGUIENTE DE LA LISTA ORDENADA, exista o no el
+   * numero intermedio.
+   */
+  const imagenes = await imageRepo.findByListingId(listing.id);
+  const indice = imagenes.findIndex((imagen) => imagen.id === imageId);
+  if (indice === -1) throw errors.imageNotFound();
+
+  const actual = imagenes[indice]!;
+
+  if (direccion === 'portada') {
+    if (indice === 0) return false;
+
+    const minima = imagenes[0]!.position;
+    await imageRepo.updatePosition(actual.id, minima - 1);
+
+    return true;
+  }
+
+  const vecino = imagenes[direccion === 'subir' ? indice - 1 : indice + 1];
+  if (vecino === undefined) return false;
+
+  await imageRepo.swapPositions(actual.id, actual.position, vecino.id, vecino.position);
+
+  return true;
+}
+
+/**
  * Borra una foto.
  *
  * ⚠️ NO REACOMODA LAS POSICIONES de las que quedan. El ERD sólo exige que sean

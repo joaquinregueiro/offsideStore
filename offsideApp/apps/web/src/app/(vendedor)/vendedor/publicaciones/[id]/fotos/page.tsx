@@ -11,7 +11,7 @@ import { getImageSettings } from '@/modules/config/services/image-settings.servi
 import { listMyListings } from '@/modules/listings/services/listing.service';
 import { listImages } from '@/modules/listings/services/listing-image.service';
 
-import { agregarFotos, borrarFoto } from '../../../../acciones';
+import { agregarFotos, borrarFoto, moverFoto } from '../../../../acciones';
 import { Chapa } from '../../../../chapa';
 import estilos from '../../../../vendedor.module.css';
 
@@ -213,24 +213,88 @@ export default async function FotosDeLaPublicacion({
                       <figcaption>
                         {/*
                         ⚠️ EL NUMERO DE ORDEN ES INFORMACION, NO ADORNO: la
-                        portada es la primera POR POSICION y no se puede
-                        reordenar todavía, así que saber en qué lugar está cada
-                        foto es lo que permite decidir cuál borrar.
+                        portada es la primera POR POSICION, así que el número
+                        dice literalmente qué va a ver un comprador primero.
                       */}
                         <span className={estilos.miniaturaOrden}>
                           {String(indice + 1).padStart(2, '0')}
                         </span>
 
-                        <Formulario
-                          accion={borrarFoto}
-                          enviar="Borrar"
-                          variante="peligro"
-                          tamanio="chico"
-                          bloque={false}
-                        >
-                          <CampoOculto nombre="listingId" valor={publicacion.id} />
-                          <CampoOculto nombre="imageId" valor={imagen.id} />
-                        </Formulario>
+                        {/*
+                        ⚠️ TRES ACCIONES Y NINGUNA NECESITA JAVASCRIPT. Arrastrar
+                        para reordenar es lo que haría un sitio con JS; acá los
+                        formularios hacen POST nativo, igual que el resto del
+                        sitio, y el orden queda guardado en la base —no en el
+                        navegador de quien lo movió—.
+
+                        ⚠️ «Portada» EXISTE PORQUE «Subir» NO ALCANZA. Llevar la
+                        octava foto al principio con flechas son siete envíos con
+                        sus siete recargas, y la portada es el único lugar de
+                        esta pantalla que cambia lo que ve un comprador.
+
+                        ⚠️ LOS BOTONES DE LAS PUNTAS NO SE DIBUJAN, no se
+                        deshabilitan: un botón deshabilitado invita a apretarlo y
+                        no explica nada. La primera no puede subir ni ser portada
+                        —ya lo es— y la última no puede bajar.
+                      */}
+                        <span className={estilos.miniaturaAcciones}>
+                          {indice > 0 && (
+                            <Formulario
+                              accion={moverFoto}
+                              enviar="Portada"
+                              etiquetaDelBoton={`Portada: usar la foto ${indice + 1}`}
+                              variante="secundario"
+                              tamanio="chico"
+                              bloque={false}
+                            >
+                              <CampoOculto nombre="listingId" valor={publicacion.id} />
+                              <CampoOculto nombre="imageId" valor={imagen.id} />
+                              <CampoOculto nombre="direccion" valor="portada" />
+                            </Formulario>
+                          )}
+
+                          {indice > 0 && (
+                            <Formulario
+                              accion={moverFoto}
+                              enviar="↑"
+                              etiquetaDelBoton={`Subir la foto ${indice + 1}`}
+                              variante="fantasma"
+                              tamanio="chico"
+                              bloque={false}
+                            >
+                              <CampoOculto nombre="listingId" valor={publicacion.id} />
+                              <CampoOculto nombre="imageId" valor={imagen.id} />
+                              <CampoOculto nombre="direccion" valor="subir" />
+                            </Formulario>
+                          )}
+
+                          {indice < imagenes.length - 1 && (
+                            <Formulario
+                              accion={moverFoto}
+                              enviar="↓"
+                              etiquetaDelBoton={`Bajar la foto ${indice + 1}`}
+                              variante="fantasma"
+                              tamanio="chico"
+                              bloque={false}
+                            >
+                              <CampoOculto nombre="listingId" valor={publicacion.id} />
+                              <CampoOculto nombre="imageId" valor={imagen.id} />
+                              <CampoOculto nombre="direccion" valor="bajar" />
+                            </Formulario>
+                          )}
+
+                          <Formulario
+                            accion={borrarFoto}
+                            enviar="Borrar"
+                            etiquetaDelBoton={`Borrar la foto ${indice + 1}`}
+                            variante="peligro"
+                            tamanio="chico"
+                            bloque={false}
+                          >
+                            <CampoOculto nombre="listingId" valor={publicacion.id} />
+                            <CampoOculto nombre="imageId" valor={imagen.id} />
+                          </Formulario>
+                        </span>
                       </figcaption>
                     </figure>
                   </li>
@@ -264,19 +328,14 @@ export default async function FotosDeLaPublicacion({
           </div>
 
           {/*
-          ⚠️ TODAVIA NO SE PUEDE REORDENAR. La portada es la primera por posición,
-          y borrar deja huecos que no se renumeran. Cambiar el orden necesita una
-          interfaz de arrastrar —o botones de subir/bajar— y no entra en esta
-          fase. Se dice, no se esconde.
-
-          ⚠️ Y SE DICE QUE BORRAR LA ULTIMA DE UNA ACTIVA SE RECHAZA: bajarla en
-          silencio sería dejar de vender sin enterarse.
+          ⚠️ SE SIGUE DICIENDO QUE BORRAR LA ULTIMA DE UNA ACTIVA SE RECHAZA:
+          bajarla en silencio sería dejar de vender sin enterarse.
         */}
           <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
             <p className={estilos.nota}>
-              La portada es la primera foto y por ahora no se puede reordenar: si querés otra
-              portada, borrá las que sobran y subilas en el orden que quieras. Si la publicación
-              está a la venta, borrar su única foto se rechaza — antes hay que pausarla.
+              La portada es la primera foto: es la que se ve en la vitrina y en la búsqueda. Movela
+              con «Portada» o con las flechas. Si la publicación está a la venta, borrar su única
+              foto se rechaza — antes hay que pausarla.
             </p>
           </div>
         </main>
