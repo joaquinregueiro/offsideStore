@@ -66,3 +66,58 @@ export function Logo({ invertido = false, alto = 26 }: { invertido?: boolean; al
     </span>
   );
 }
+
+/**
+ * LOCKUP DE IMAGEN — la marca completa en un solo archivo blanco.
+ *
+ * ⚠️ NO REEMPLAZA A `Logo`, CONVIVE CON EL. `Logo` sigue siendo bandera +
+ * wordmark de TEXTO y lo usan el pie, el panel de auth, los esqueletos y las
+ * pantallas de servicio. Esto es el lockup que el dueño entregó el 2026-09-15
+ * y que hoy usa SOLO la barra.
+ *
+ * ⚠️ LA TINTA ES BLANCA Y NO HAY VARIANTE OSCURA: sobre una superficie clara es
+ * INVISIBLE. Por eso vive en la barra, que es `.sup-cancha` en los dos temas
+ * —`tokens.css` no redefine `--color-cancha` ni en claro ni en oscuro—. Antes
+ * de ponerlo en otro lado hay que confirmar que ese lado sea oscuro.
+ *
+ * ⚠️ EL WORDMARK DEJA DE SER TEXTO, y arriba está escrito por qué eso era
+ * mejor: se seleccionaba, lo leía un lector de pantalla y escalaba con el zoom.
+ * Lo decidió el dueño. Lo que se conserva es el nombre accesible: el `<a>` de la
+ * barra ya declara `aria-label`, así que la imagen va con `alt=""` y no repite.
+ *
+ * ⚠️ ES SOLO LA PALABRA: ESTE LOCKUP NO TRAE LA BANDERA. O sea que la barra
+ * dejó de mostrar el isotipo, que era la única forma de marca que tenía. Fue
+ * decisión del dueño (reemplazó al lockup apilado del 2026-09-15, que a la
+ * altura de la barra dejaba la palabra en 45px de ancho). La bandera sigue
+ * viva en el pie, el panel de auth, los esqueletos y las pantallas de
+ * servicio, que usan `Logo`.
+ *
+ * ⚠️ LA RELACION ES 2.826 Y POR ESO ENTRA SIN TOCAR LA BARRA: a 44px de alto
+ * mide 124px de ancho, casi lo mismo que ocupaba `Logo` (bandera 26 + hueco 12
+ * + wordmark ~90). `--alto-barra` sigue siendo 84px = 16 + 44 + 16 + 6.
+ *
+ * ⚠️ EL PNG NO ES EL ARCHIVO CRUDO, y el recorte no es una optimización
+ * opcional: el original es un lienzo de 2600x2600 con la palabra en una banda
+ * de 2016x713 al medio, así que pedirle 44px de ALTO al archivo entero dejaría
+ * la palabra en 12px. Se recorta al contenido, se baja a 264px de alto (6x de
+ * los 44 a los que se muestra) y se guarda con paleta: 220 KB → 26 KB, sin
+ * diferencia visible al tamaño al que se usa.
+ */
+
+const LOCKUP_RELACION = 746 / 264;
+
+export function LogoLockup({ alto = 44 }: { alto?: number }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/marca/logo-offside.png"
+      // El `<a>` que lo envuelve ya declara `aria-label`: repetirlo lo duplica.
+      alt=""
+      width={Math.round(alto * LOCKUP_RELACION)}
+      height={alto}
+      className={estilos.lockup}
+      /* Enganche propio: NO es `isotipo`. Ver `header.module.css`. */
+      data-marca="lockup"
+    />
+  );
+}

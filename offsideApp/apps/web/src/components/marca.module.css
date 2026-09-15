@@ -70,3 +70,32 @@
    */
   transform: translateY(1px);
 }
+
+/**
+ * EL LOCKUP DE IMAGEN (ver `LogoLockup` en `marca.tsx`).
+ *
+ * ⚠️ NO LLEVA `transform-origin` DE ASTA. El de `.isotipo` es el gesto del juez
+ * levantando la bandera; aplicado a un lockup que incluye la palabra, lo que
+ * gira es el nombre de la marca. La barra lo anima distinto a propósito.
+ *
+ * ⚠️ EL HALO ES MAS CORTO QUE EL DE LA BANDERA. `drop-shadow` sigue la silueta,
+ * y acá la silueta son siete letras caladas: el mismo radio que sobre un PNG
+ * macizo de 26px se convierte en un resplandor alrededor de cada asta de cada
+ * letra.
+ *
+ * ⚠️ EL HALO SE REMAPEA A VERDE Y NO SE DEJA EN EL AMARILLO DE LA SUPERFICIE.
+ * `.sup-cancha` apunta `--luz-marca` a Amarillo Cambio, y eso es correcto para
+ * la bandera, que no tiene sombra propia. Este lockup SI la tiene: trae una
+ * sombra dura verde dibujada adentro del PNG. Un halo amarillo alrededor de una
+ * sombra verde son dos acentos peleándose en el mismo elemento; con
+ * `--luz-verde-clara` el halo se lee como continuación de la sombra del logo.
+ * Se remapea la variable, no se escribe el color: el que respira es el
+ * `@keyframes` de la barra, que lee `--luz-marca` y no sabe de este archivo.
+ */
+.lockup {
+  display: block;
+  /* No se deja encoger: el logo pierde su margen de proteccion enseguida. */
+  flex: none;
+  --luz-marca: var(--luz-verde-clara);
+  filter: drop-shadow(0 0 4px rgb(var(--luz-marca) / 0.3));
+}

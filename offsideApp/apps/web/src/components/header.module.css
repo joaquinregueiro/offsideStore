@@ -488,6 +488,44 @@ header.barra::before {
   text-shadow: 0 0 16px rgb(var(--luz-cambio) / 0.55);
 }
 
+/**
+ * EL LOCKUP DE IMAGEN — lo que hoy muestra la barra (`LogoLockup`).
+ *
+ * ⚠️ LAS REGLAS DE `[data-marca='isotipo']` Y `[data-marca='wordmark']` DE ARRIBA
+ * NO LE APLICAN, y quedan igual porque `Logo` sigue vivo en el pie, el panel de
+ * auth, los esqueletos y las pantallas de servicio. El lockup tiene enganche
+ * propio justamente para que la barra pueda animarlo distinto sin tocarlas.
+ *
+ * ⚠️ NO GIRA. El `rotate(-8deg)` del isotipo es la bandera que se levanta desde
+ * el asta; el lockup incluye la palabra, y una palabra inclinada no se lee como
+ * un gesto, se lee como un error de maquetado. Lo que responde al hover es una
+ * escala mínima: la marca acusa recibo sin moverse de su lugar.
+ *
+ * ⚠️ LA RESPIRACION SI SE CONSERVA —es la unica perpetua de la barra— pero con
+ * el halo mas corto que define `marca.module.css`, por lo mismo: la silueta de
+ * un lockup calado no es la de un PNG macizo.
+ */
+.marca [data-marca='lockup'] {
+  transition: transform var(--dur-hover) var(--curva-viva);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .marca [data-marca='lockup'] {
+    animation: marcaRespira var(--dur-respirar) var(--curva-flotar) infinite;
+    will-change: filter;
+  }
+}
+
+.marca:hover [data-marca='lockup'],
+.marca:focus-visible [data-marca='lockup'] {
+  transform: scale(1.04);
+}
+
+.marca:active [data-marca='lockup'] {
+  transform: scale(1.01);
+  transition-duration: var(--dur-instante);
+}
+
 @keyframes marcaRespira {
   0%,
   100% {

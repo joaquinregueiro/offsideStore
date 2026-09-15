@@ -13,7 +13,7 @@ import { countUnread } from '@/modules/notifications/services/inapp-notification
 
 import estilos from './header.module.css';
 import { IconoBuscar, IconoCampana, IconoCarrito, IconoLuna, IconoSol } from './iconos';
-import { Logo } from './marca';
+import { LogoLockup } from './marca';
 import { Contador } from './ui';
 
 /**
@@ -245,7 +245,7 @@ export async function Header({
           aria-label="Offside Store — inicio"
           transitionTypes={['retrocede']}
         >
-          <Logo invertido />
+          <LogoLockup />
         </Link>
 
         {/*
