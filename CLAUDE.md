@@ -1503,6 +1503,67 @@ una cookie no se puede escribir durante el render de un GET; y una tabla propia
 es cambio de ERD (ARQUITECTÓNICO). La otra mitad —favoritos más visibles— sí está
 hecha: Favoritos quedó a un toque en la barra inferior.
 
+**Barrido de modo oscuro — ✅ (2026-09-15)**: se midió el contraste de **lo que
+se pinta** en las **54 rutas**, con la app corriendo y el seed cargado, en los
+dos esquemas. **75 hallazgos bajo AA en oscuro → 0. En claro, 0 antes y
+después.** Detalle en
+`offsideApp/docs-implementation/barrido-modo-oscuro-2026-09-15.md`.
+
+⚠️ **UNA SOLA CAUSA RAÍZ, SEIS VECES: EL SISTEMA RESUELVE EL CONTRASTE POR
+SUPERFICIE Y ESO NO CUBRE EL TEMA.** `.sup-noche` y `.sup-cancha` declaran sus
+tokens de texto y funcionan, pero la mayoría del texto **no vive dentro de
+ninguna superficie**: se apoya en la página o en una ficha, y ahí el token cae en
+su respaldo, elegido para papel. Medido:
+
+| token                         | daba       | dónde                                       |
+| ----------------------------- | ---------- | ------------------------------------------- |
+| `--campo-texto`               | **1.25:1** | **todo `<input>` y `<textarea>` del sitio** |
+| `--alerta-texto` en cancha    | **1.08:1** | "Esperando pago" en la ficha de una orden   |
+| `--boton-fantasma-texto`      | **2.44:1** | **61 botones** (Editar, Fotos, Pausar…)     |
+| `--alerta-texto` en su lavado | 3.95:1     | "Última unidad" en la vitrina               |
+| `--color-sobre-oscuro-tenue`  | 4.42:1     | metadatos en una `.sup-2` dentro de ficha   |
+
+Es la misma familia que el `--degradado-titular` de abajo. **Ninguno lo ve el
+build, el typecheck, el lint ni `chequeo-css`**: la variable existe y resuelve;
+lo que está mal es el color que trae.
+
+⚠️ **`--naranja-claro: #ffab5e` es un token NUEVO y NO reemplaza al naranja de
+marca**, que sigue intacto para rellenos y bordes. Existe porque la tabla de
+contrastes de `tokens.css` mide el naranja contra los planos **pelados**, y una
+etiqueta de alerta no se apoya en el plano: se apoya en **su propio lavado al
+16%**, que aclara el fondo y le come el contraste.
+
+⚠️ **Los tokens nuevos NO pisan a las superficies**: `.sup-noche` y `.sup-cancha`
+están más cerca del elemento en el árbol y siguen ganando adentro de un pliego.
+Y el `#ad4e00` que `ui.module.css` fijaba en `.sup-cancha` pasó a ser
+`var(--alerta-sobre-cancha, #ad4e00)`: el respaldo deja el modo claro idéntico y
+el tema da vuelta el token.
+
+**`scripts/chequeo-contraste.mjs`, enganchado a `verify`**: estático, sin
+navegador, **33 pares** en los dos temas. ⚠️ **Cada fila es un defecto que ya
+ocurrió**, con su número al lado. ⚠️ **Se validó al revés**: revirtiendo cada
+token a su valor roto, el chequeo falla reproduciendo **el número exacto** que
+midió el navegador (1.25, 2.44, 3.34, 1.10, 3.95, 4.42, 1.08) — dos métodos
+independientes dando lo mismo. ⚠️ Y **declara lo que no pudo medir**
+(`--marca-texto` en claro vive como respaldo dentro de un módulo): un chequeo que
+calla lo que no midió es peor que no tenerlo.
+
+⚠️ **EL MEDIDOR TUVO CUATRO BUGS PROPIOS Y ES LA LECCIÓN DE LA SESIÓN.** La
+primera corrida dio 79 hallazgos; **nueve eran inventados**, y salieron
+contrastando el medidor contra los píxeles reales ANTES de tocar el sitio:
+`sobre()` forzaba el alfa a 1 (dos capas translúcidas se leían como papel
+opaco); no parseaba `color(srgb …)`, que es como Chromium devuelve el vidrio de
+la barra; ignoraba que un hijo hereda `color: transparent` de un padre con
+`background-clip: text`; y `backgroundClip` devuelve `border-box` con el `text`
+en `webkitBackgroundClip` —y con dos capas vale `'text, text'`—. Medir contraste
+de verdad es más difícil de lo que parece: **un número sin una segunda fuente
+que lo confirme no vale**.
+
+⚠️ **Lo que el barrido NO cubre**: los estados que no se pintan solos —`:hover`,
+`:focus-visible`, `:disabled`, un formulario con error— y las View Transitions.
+`--boton-fantasma-texto-activo` se corrigió porque el respaldo era un verde **aún
+más oscuro** que el de reposo, pero eso salió de leer el CSS, no de medirlo.
+
 ⚠️ ~~**El titular de la ficha se lee con poco contraste en MODO OSCURO.**~~ ✅
 **Medido y corregido el 2026-09-15.** Era peor y más amplio de lo anotado.
 

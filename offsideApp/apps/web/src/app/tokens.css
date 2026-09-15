@@ -809,9 +809,40 @@ a:hover {
   --sup-noche: var(--color-tinta);
   --sup-noche-alta: #16362a;
 
+  /**
+   * NARANJA DE ALERTA COMO TEXTO SOBRE OSCURO.
+   *
+   * ⚠️ NO ES `--color-naranja` Y NO LO REEMPLAZA. El naranja de marca sigue
+   * intacto para RELLENOS Y BORDES; este es su version legible cuando el
+   * naranja tiene que ser INFORMACION sobre un plano oscuro.
+   *
+   * ⚠️ EXISTE PORQUE LA TABLA DE ARRIBA NO CUBRE EL PEOR CASO. Ahi el naranja
+   * de marca se mide contra los planos PELADOS (7.96 / 7.26 / 5.82), pero una
+   * etiqueta de alerta no se apoya en el plano: se apoya en su propio lavado
+   * naranja al 16%, y ese lavado ACLARA el fondo. Sobre la superficie oscura
+   * mas clara —`--superficie-2` dentro de una ficha, #214034— el lavado compone
+   * #454d33 y el naranja de marca cae a **3.95:1**. Es "Última unidad" en la
+   * vitrina, medido con el sitio corriendo.
+   *
+   * #ffab5e da 4.78 ahi (0.28 de aire), 5.46 sobre el lavado en noche-alta y
+   * 9.64 sobre la pagina. Sigue leyendose naranja.
+   */
+  --naranja-claro: #ffab5e;
+
   --color-sobre-oscuro: var(--color-papel);
   --color-sobre-oscuro-2: #b3c6b8;
-  --color-sobre-oscuro-tenue: #8fa79a;
+  /**
+   * ⚠️ ERA #8fa79a Y DABA 4.42:1 SOBRE LA SUPERFICIE OSCURA MAS CLARA, que es
+   * `--superficie-2` apoyada sobre `--superficie-1` (#214034): una tarjeta
+   * `.sup-2` adentro de una ficha, que es un anidado legitimo y aparece en
+   * `/vendedor/reputacion`. Faltaban 0.08. #95ada0 da 4.75 ahi —0.25 de aire—,
+   * 5.49 sobre noche-alta y 7.52 sobre fosa, y sigue bien separado de
+   * `--color-sobre-oscuro-2` para que la jerarquia se lea.
+   *
+   * Aclararlo no puede romper nada: este token solo se usa como texto SOBRE
+   * oscuro, asi que subirle luz unicamente sube contraste.
+   */
+  --color-sobre-oscuro-tenue: #95ada0;
   --linea-control-oscura: #6f8f79;
   /** Decorativa sobre oscuro. NO es borde de control (1.4x:1). */
   --linea-tenue-oscura: rgb(250 250 247 / 0.14);
@@ -2716,11 +2747,61 @@ dd {
     --degradado-titular: var(--degradado-titular-claro);
     --degradado-titular-vivo: var(--degradado-titular-claro-vivo);
 
+    /**
+     * ⚠️ TRES TOKENS DE TEXTO QUE EL MODO OSCURO NO DABA VUELTA, y es el mismo
+     * agujero que tenian los titulares con gradiente: el sistema resuelve el
+     * contraste POR SUPERFICIE (`.sup-noche`, `.sup-cancha`…) y eso no cubre el
+     * TEMA. Un control o un boton apoyado en la pagina —sin ninguna clase de
+     * superficie— se quedaba con el valor pensado para papel.
+     *
+     * Medido en el navegador, con el sitio corriendo:
+     *
+     *   `--campo-texto` caia en `--color-tinta`: **1.25:1** dentro de un
+     *   `<input>` o un `<textarea>`, cuyo fondo es `--superficie-1` y en oscuro
+     *   vale noche-alta. O sea TODO formulario del sitio. Papel da 12.59.
+     *
+     *   `--boton-fantasma-texto` caia en `--color-cancha`: **2.44:1** sobre
+     *   noche-alta y 3.34 sobre la pagina — 61 botones en 22 pantallas.
+     *   `--verde-400` da 5.49 y 7.51, y es la traduccion fiel: es a lo que ya
+     *   pasan `--enlace` y `--marca-texto` en oscuro.
+     *
+     *   `--boton-fantasma-texto-activo` caia en `--color-tiempo-extra`, un
+     *   verde AUN MAS OSCURO: el estado de foco era menos legible que el de
+     *   reposo, justo cuando alguien esta tabulando.
+     *
+     * ⚠️ NO PISAN A LAS SUPERFICIES. `.sup-noche` y `.sup-cancha` declaran
+     * estos mismos tokens y estan MAS CERCA del elemento en el arbol, asi que
+     * siguen ganando adentro de un pliego. Esto solo cubre el hueco de afuera.
+     */
+    --campo-texto: var(--color-sobre-oscuro);
+    --boton-fantasma-texto: var(--verde-400);
+    --boton-fantasma-texto-activo: var(--color-cambio);
+
+    /**
+     * ⚠️ EL NARANJA QUEMADO DE LA PORTADA ES DE MODO CLARO Y SOBREVIVIA AL
+     * OSCURO. `ui.module.css` fija `--alerta-texto: #ad4e00` dentro de
+     * `.sup-cancha` porque ahi la etiqueta se apoya en el lavado naranja CLARO
+     * y en `--superficie-1`, que en modo claro es blanco. En oscuro las dos
+     * cosas cambian —el lavado pasa a naranja al 16% sobre el verde— y ese
+     * naranja quemado da **1.08:1**: la etiqueta "Esperando pago" de una orden
+     * era ilegible.
+     *
+     * Sobre ese verde con lavado no hay naranja que llegue (el vivo da 2.21) ni
+     * Amarillo Cambio (4.26, corto para 12px). Papel da **4.79** y es el unico
+     * que despeja AA; la etiqueta sigue leyendose como alerta por su anillo
+     * naranja, que no se toca.
+     */
+    --alerta-sobre-cancha: var(--color-papel);
+
     /** El anillo de foco verde sobre verde oscuro no se ve. */
     --color-foco: var(--color-cambio);
-    /** Sobre oscuro el naranja SI es texto (7.26:1): no hace falta el hondo. */
-    --color-alerta: var(--color-naranja);
-    --alerta-texto: var(--color-naranja);
+    /**
+     * ⚠️ VA `--naranja-claro`, NO EL NARANJA DE MARCA. Sobre los planos pelados
+     * el de marca alcanza, pero una etiqueta de alerta se apoya en su propio
+     * lavado, que aclara el fondo: ahi caia a 3.95:1. Ver `--naranja-claro`.
+     */
+    --color-alerta: var(--naranja-claro);
+    --alerta-texto: var(--naranja-claro);
     --alerta-lavado: rgb(255 144 45 / 0.16);
     --enlace: var(--verde-400);
 
@@ -2780,9 +2861,16 @@ dd {
   --degradado-titular: var(--degradado-titular-claro);
   --degradado-titular-vivo: var(--degradado-titular-claro-vivo);
 
+  /** Ver el bloque del `@media` para los numeros de cada uno. */
+  --campo-texto: var(--color-sobre-oscuro);
+  --boton-fantasma-texto: var(--verde-400);
+  --boton-fantasma-texto-activo: var(--color-cambio);
+  --alerta-sobre-cancha: var(--color-papel);
+
   --color-foco: var(--color-cambio);
-  --color-alerta: var(--color-naranja);
-  --alerta-texto: var(--color-naranja);
+  /** Ver `--naranja-claro`: el de marca cae a 3.95 sobre el lavado de alerta. */
+  --color-alerta: var(--naranja-claro);
+  --alerta-texto: var(--naranja-claro);
   --alerta-lavado: rgb(255 144 45 / 0.16);
   --enlace: var(--verde-400);
 

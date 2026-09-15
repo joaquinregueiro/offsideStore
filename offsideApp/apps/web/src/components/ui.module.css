@@ -209,7 +209,14 @@
    * da 5.01 ahi y 5.24 sobre el blanco de `--superficie-1`, que es el otro
    * fondo que le toca adentro de la portada.
    */
-  --alerta-texto: #ad4e00;
+  /**
+   * ⚠️ EL HEX ES EL DE MODO CLARO Y EL TOKEN LO DA VUELTA EL TEMA. El valor de
+   * abajo vale mientras el lavado de alerta y `--superficie-1` sean claros;
+   * en modo oscuro los dos cambian y `#ad4e00` pasa a dar 1.08:1, asi que
+   * `tokens.css` define `--alerta-sobre-cancha` en sus dos bloques oscuros.
+   * Sin ese indirecto, este hex se colaba al tema contrario.
+   */
+  --alerta-texto: var(--alerta-sobre-cancha, #ad4e00);
   --peligro-texto-relleno: var(--color-tinta);
   --etiqueta-texto: #5b6459;
 }
