@@ -280,7 +280,8 @@ describe('preguntar', () => {
 
     await questionService.askQuestion(comprador, listing.id, '¿Hace envios al interior?');
 
-    const [publica] = await questionService.listPublicQuestions(listing.id);
+    const { preguntas } = await questionService.listPublicQuestions(listing.id);
+    const [publica] = preguntas;
 
     expect(publica).toBeDefined();
     expect(JSON.stringify(publica)).not.toContain(comprador.id);
@@ -348,7 +349,7 @@ describe('preguntar', () => {
     ).rejects.toThrow(/teléfono/i);
 
     // No quedo ninguna fila: se rechaza en el borde, no se guarda para moderar.
-    expect(await questionService.listPublicQuestions(listing.id)).toHaveLength(0);
+    expect((await questionService.listPublicQuestions(listing.id)).total).toBe(0);
   });
 
   it('NO confunde un año ni un precio con un telefono', async () => {
@@ -405,7 +406,7 @@ describe('responder', () => {
       questionService.answerQuestion(comprador, pregunta.id, 'Me contesto solo'),
     ).rejects.toThrow();
 
-    const [sinTocar] = await questionService.listPublicQuestions(listing.id);
+    const [sinTocar] = (await questionService.listPublicQuestions(listing.id)).preguntas;
     expect(sinTocar?.answer).toBeNull();
   });
 
@@ -494,11 +495,11 @@ describe('ocultar (del vendedor)', () => {
 
     await questionService.hideQuestion(seller, pregunta.id);
 
-    expect(await questionService.listPublicQuestions(listing.id)).toHaveLength(0);
+    expect((await questionService.listPublicQuestions(listing.id)).total).toBe(0);
 
     // Pero la fila sigue: es evidencia de lo que se hablo antes de una compra.
     const mias = await questionService.listMyQuestions(comprador);
-    expect(mias[0]?.status).toBe('hidden');
+    expect(mias.preguntas[0]?.status).toBe('hidden');
   });
 });
 
@@ -551,7 +552,7 @@ describe('el cupo de preguntas abiertas', () => {
 
       // Y deja de verse en la ficha, sin borrar la fila.
       const publicas = await questionService.listPublicQuestions(listing.id);
-      expect(publicas.map((p) => p.id)).not.toContain(primera.id);
+      expect(publicas.preguntas.map((p) => p.id)).not.toContain(primera.id);
     } finally {
       await restaurar();
     }
@@ -600,7 +601,7 @@ describe('retirar (de quien pregunto)', () => {
       /no existe/i,
     );
 
-    expect(await questionService.listPublicQuestions(listing.id)).toHaveLength(1);
+    expect((await questionService.listPublicQuestions(listing.id)).total).toBe(1);
   });
 
   it('⚠️ NO SE PUEDE RETIRAR UNA YA RESPONDIDA: esa respuesta es de otro', async () => {
@@ -618,7 +619,7 @@ describe('retirar (de quien pregunto)', () => {
       /no existe/i,
     );
 
-    const [publica] = await questionService.listPublicQuestions(listing.id);
+    const [publica] = (await questionService.listPublicQuestions(listing.id)).preguntas;
     expect(publica?.answer).toBe('Ninguna, esta impecable');
   });
 });
@@ -633,13 +634,13 @@ describe('la bandeja del vendedor', () => {
     const segunda = await questionService.askQuestion(comprador, listing.id, '¿La segunda?');
 
     const pendientes = await questionService.listPendingForSeller(seller);
-    expect(pendientes.map((p) => p.id)).toEqual([primera.id, segunda.id]);
-    expect(pendientes[0]?.listingTitle).toBe(listing.title);
+    expect(pendientes.preguntas.map((p) => p.id)).toEqual([primera.id, segunda.id]);
+    expect(pendientes.preguntas[0]?.listingTitle).toBe(listing.title);
 
     await questionService.answerQuestion(seller, primera.id, 'Si');
 
     const despues = await questionService.listPendingForSeller(seller);
-    expect(despues.map((p) => p.id)).toEqual([segunda.id]);
+    expect(despues.preguntas.map((p) => p.id)).toEqual([segunda.id]);
   });
 
   it('⚠️ NO ARRASTRA LAS DE PUBLICACIONES ELIMINADAS, y el contador dice lo mismo', async () => {
@@ -659,8 +660,8 @@ describe('la bandeja del vendedor', () => {
     await listingEditing.deleteListing(seller, listing.id);
 
     const pendientes = await questionService.listPendingForSeller(seller);
-    expect(pendientes).toHaveLength(1);
-    expect(pendientes[0]?.listingTitle).toBe(viva.title);
+    expect(pendientes.preguntas).toHaveLength(1);
+    expect(pendientes.preguntas[0]?.listingTitle).toBe(viva.title);
     // El contador del cajon y la lista tienen que decir lo mismo.
     expect(await questionService.countPendingForSeller(seller)).toBe(1);
   });
@@ -674,6 +675,106 @@ describe('la bandeja del vendedor', () => {
     await listingEditing.pauseListing(seller, listing.id);
 
     expect(await questionService.countPendingForSeller(seller)).toBe(1);
+  });
+});
+
+describe('paginado', () => {
+  it('⚠️ LA FICHA NO TRAE TODAS: corta en una pagina y dice el total', async () => {
+    // Quien controla cuantas preguntas tiene una publicacion NO es quien la
+    // publico: cualquiera con sesion puede dejar las suyas. Sin techo, una ficha
+    // con cientos las traia todas de la base y las imprimia todas en el HTML de
+    // la pantalla que se comparte por WhatsApp.
+    const { user: seller } = await vendedor('pagina-ficha');
+    const comprador = await usuario('pagina-ficha-buyer');
+    const listing = await publicacionActiva(seller);
+
+    const cuantas = questionService.PREGUNTAS_POR_PAGINA_FICHA + 2;
+    for (let i = 0; i < cuantas; i += 1) {
+      // Se responde cada una para no chocar contra el cupo de abiertas ⚙️.
+      const q = await questionService.askQuestion(comprador, listing.id, `Pregunta numero ${i}`);
+      await questionService.answerQuestion(seller, q.id, `Respuesta numero ${i}`);
+    }
+
+    const primera = await questionService.listPublicQuestions(listing.id);
+    expect(primera.preguntas).toHaveLength(questionService.PREGUNTAS_POR_PAGINA_FICHA);
+    expect(primera.total).toBe(cuantas);
+    expect(primera.pagina).toBe(1);
+
+    const segunda = await questionService.listPublicQuestions(listing.id, 2);
+    expect(segunda.preguntas).toHaveLength(2);
+    expect(segunda.total).toBe(cuantas);
+
+    // ⚠️ SIN SOLAPAMIENTO NI HUECOS. El ORDER BY desempata por `id`: sin ese
+    // segundo criterio, dos preguntas del mismo instante podrian salir en las
+    // dos paginas —o en ninguna—.
+    const ids = new Set([...primera.preguntas, ...segunda.preguntas].map((p) => p.id));
+    expect(ids.size).toBe(cuantas);
+  });
+
+  it('una pagina inventada en la URL cae en la primera, no rompe', async () => {
+    // El numero llega de la URL: puede ser 0, negativo, decimal o basura.
+    const { user: seller } = await vendedor('pagina-mala');
+    const comprador = await usuario('pagina-mala-buyer');
+    const listing = await publicacionActiva(seller);
+    await questionService.askQuestion(comprador, listing.id, '¿Una sola?');
+
+    for (const mala of [0, -3, 1.5, Number.NaN]) {
+      const pagina = await questionService.listPublicQuestions(listing.id, mala);
+      expect(pagina.pagina).toBe(1);
+      expect(pagina.preguntas).toHaveLength(1);
+    }
+  });
+});
+
+describe('historial del vendedor', () => {
+  it('⚠️ SEPARA LA COLA DE TRABAJO DEL ARCHIVO, y en ORDEN INVERSO', async () => {
+    // Las pendientes son trabajo: la mas VIEJA primero, orden de llegada. El
+    // historial es historia: la mas RECIENTE primero. Mezclarlos convertiria la
+    // bandeja en un archivo y las pendientes quedarian sepultadas.
+    const { user: seller } = await vendedor('historial');
+    const comprador = await usuario('historial-buyer');
+    const listing = await publicacionActiva(seller);
+
+    const primera = await questionService.askQuestion(comprador, listing.id, '¿La primera?');
+    const segunda = await questionService.askQuestion(comprador, listing.id, '¿La segunda?');
+    const tercera = await questionService.askQuestion(comprador, listing.id, '¿La tercera?');
+
+    await questionService.answerQuestion(seller, primera.id, 'Respuesta a la primera');
+    await questionService.answerQuestion(seller, segunda.id, 'Respuesta a la segunda');
+
+    const respondidas = await questionService.listAnsweredForSeller(seller);
+    expect(respondidas.total).toBe(2);
+    // Mas reciente primero: la segunda se respondio despues.
+    expect(respondidas.preguntas.map((p) => p.id)).toEqual([segunda.id, primera.id]);
+    expect(respondidas.preguntas[0]?.answer).toBe('Respuesta a la segunda');
+    expect(respondidas.preguntas[0]?.listingTitle).toBe(listing.title);
+
+    // Y la cola sigue teniendo solo lo que falta contestar.
+    const pendientes = await questionService.listPendingForSeller(seller);
+    expect(pendientes.preguntas.map((p) => p.id)).toEqual([tercera.id]);
+  });
+
+  it('⚠️ el historial TAMPOCO arrastra publicaciones eliminadas', async () => {
+    // Mismo predicado que la cola: si contaran distinto, una solapa mostraria
+    // preguntas sobre fichas que ya no existen y la otra no.
+    const { user: seller } = await vendedor('historial-elim');
+    const comprador = await usuario('historial-elim-buyer');
+    const listing = await publicacionActiva(seller);
+
+    const q = await questionService.askQuestion(comprador, listing.id, '¿Sobre la que se borra?');
+    await questionService.answerQuestion(seller, q.id, 'Respondida antes de borrarla');
+
+    expect((await questionService.listAnsweredForSeller(seller)).total).toBe(1);
+
+    await listingEditing.deleteListing(seller, listing.id);
+
+    expect((await questionService.listAnsweredForSeller(seller)).total).toBe(0);
+  });
+
+  it('⚠️ NO lo puede ver quien no es vendedor', async () => {
+    const comprador = await usuario('historial-sinperfil');
+
+    await expect(questionService.listAnsweredForSeller(comprador)).rejects.toThrow();
   });
 });
 

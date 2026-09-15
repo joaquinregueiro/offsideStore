@@ -44,6 +44,20 @@ function destinoDe(payload: unknown): string | null {
 
   const datos = payload as Record<string, unknown>;
 
+  /*
+   * ⚠️ UNA PREGUNTA NUEVA LLEVA A LA BANDEJA, NO A LA FICHA. Este caso va PRIMERO
+   * porque su payload trae también `listingId`, y la regla de abajo lo mandaba a
+   * `/p/{id}` — donde al dueño de la publicación se le dice, literalmente, que
+   * responda desde su bandeja. Un salto de más justo en la acción que su
+   * reputación mide.
+   *
+   * ⚠️ LA RESPUESTA (`question_answered`) SE QUEDA CON LA FICHA, y no es una
+   * inconsistencia: quien preguntó quiere leer la respuesta con la prenda
+   * delante —el precio, las fotos, el resto de las preguntas—, que es el
+   * contexto en el que va a decidir comprar.
+   */
+  if (datos.kind === 'question_asked') return '/vendedor/preguntas';
+
   if (typeof datos.orderId === 'string') {
     return rutaInternaSegura(`/cuenta/compras/${datos.orderId}`, '');
   }

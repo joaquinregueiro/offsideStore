@@ -26,6 +26,7 @@ import {
   InsigniaDeNivel,
   InsigniaDeReputacion,
   Migas,
+  Paginacion,
   Pliego,
   Precio,
 } from '@/components/ui';
@@ -162,6 +163,21 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode })
 const TOPE_DE_CANTIDAD = 10;
 
 /**
+ * Un entero de la URL, o `undefined`.
+ *
+ * ⚠️ NO VALIDA EL RANGO: de eso se encarga `normalizarPagina` en el Service, que
+ * es donde vive la regla. Aca solo se convierte texto a numero —lo que llega es
+ * `string | string[] | undefined` y puede ser cualquier cosa—.
+ */
+function numeroDeParametro(valor: string | string[] | undefined): number | undefined {
+  if (typeof valor !== 'string') return undefined;
+
+  const n = Number.parseInt(valor, 10);
+
+  return Number.isNaN(n) ? undefined : n;
+}
+
+/**
  * Preguntas y respuestas de la publicacion (BS-040).
  *
  * ⚠️ NUNCA DICE QUIEN PREGUNTO. `PublicQuestion` directamente no trae al autor, y
@@ -214,7 +230,16 @@ export default async function DetalleDePublicacion({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
-  const [listing, user, preguntas, preguntasHabilitadas, params2] = await Promise.all([
+  /*
+    ⚠️ LOS PARAMETROS SE LEEN ANTES DEL RESTO, y no por prolijidad: la pagina de
+    preguntas viaja en la URL y hay que saberla para pedirlas. Es el mismo
+    criterio que el resto del sitio —todo filtro y toda pagina van por GET, asi
+    se comparten, vuelven con el botón atrás y andan sin JavaScript—.
+  */
+  const params2 = await searchParams;
+  const paginaDePreguntas = numeroDeParametro(params2.preguntas);
+
+  const [listing, user, preguntas, preguntasHabilitadas] = await Promise.all([
     findPublicListing(id),
     getSessionUser(),
     /*
@@ -222,13 +247,12 @@ export default async function DetalleDePublicacion({
       pantalla más compartida del sitio: si la consulta falla, se pierde la
       sección y no la publicación.
     */
-    listPublicQuestions(id).catch((error: unknown) => {
+    listPublicQuestions(id, paginaDePreguntas).catch((error: unknown) => {
       console.error('[ficha] no se pudieron leer las preguntas', error);
 
-      return [] as PublicQuestion[];
+      return { preguntas: [], total: 0, pagina: 1, porPagina: 1 };
     }),
     isFeatureEnabled('questions').catch(() => false),
-    searchParams,
   ]);
 
   /**
@@ -940,12 +964,37 @@ export default async function DetalleDePublicacion({
                 Preguntas
               </h2>
 
-              {preguntas.length === 0 ? (
+              {preguntas.total === 0 ? (
                 <p className={estilos.sinPreguntas}>
                   Todavía nadie preguntó nada sobre esta publicación.
                 </p>
               ) : (
-                <Preguntas preguntas={preguntas} />
+                <>
+                  <Preguntas preguntas={preguntas.preguntas} />
+                  {/*
+                    ⚠️ LA PAGINACION CONSERVA EL RESTO DE LA URL. La ficha vuelve
+                    acá con `?aviso=favorito` después del corazón: un enlace que
+                    armara sólo `?preguntas=2` borraría ese aviso a mitad de
+                    camino. Es el mismo criterio que la búsqueda con sus filtros.
+                  */}
+                  <Paginacion
+                    actual={preguntas.pagina}
+                    total={Math.ceil(preguntas.total / preguntas.porPagina)}
+                    hrefDe={(n) => {
+                      const query = new URLSearchParams();
+                      for (const [clave, valor] of Object.entries(params2)) {
+                        if (typeof valor === 'string' && clave !== 'preguntas') {
+                          query.set(clave, valor);
+                        }
+                      }
+                      if (n > 1) query.set('preguntas', String(n));
+
+                      const cadena = query.toString();
+
+                      return `/p/${listing.id}${cadena === '' ? '' : `?${cadena}`}#preguntas-titulo`;
+                    }}
+                  />
+                </>
               )}
 
               {/*

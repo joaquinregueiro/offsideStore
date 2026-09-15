@@ -27,6 +27,40 @@ import * as questionRepo from '../repositories/question.repository';
  * MISMO error.
  */
 
+/**
+ * Tamaños de pagina.
+ *
+ * ⚠️ NO SON ⚙️ CONFIGURABLES, y es deliberado: cuantas preguntas entran en una
+ * pantalla es una decision de presentacion, no una regla de negocio. Lo que si
+ * es ⚙️ —cuantas puede tener abiertas una cuenta— ya vive en el Config Store.
+ *
+ * ⚠️ LA FICHA LLEVA MENOS QUE LAS BANDEJAS. Es la pantalla que se comparte por
+ * WhatsApp y la que mas pesa: ahi las preguntas son contexto para decidir una
+ * compra, no una lista para recorrer. Las bandejas SI son listas de trabajo.
+ */
+export const PREGUNTAS_POR_PAGINA_FICHA = 10;
+export const PREGUNTAS_POR_PAGINA = 20;
+
+/** Una pagina de preguntas: lo que la pantalla necesita para dibujar el pie. */
+export interface PaginaDePreguntas<T> {
+  preguntas: T[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+}
+
+/** Pagina valida: entero >= 1. Cualquier otra cosa es la primera. */
+export function normalizarPagina(pagina: number | undefined): number {
+  if (pagina === undefined || !Number.isInteger(pagina) || pagina < 1) return 1;
+
+  return pagina;
+}
+
+const ventana = (pagina: number, porPagina: number) => ({
+  limite: porPagina,
+  offset: (pagina - 1) * porPagina,
+});
+
 export const FEATURE_KEY = 'feature_questions';
 export const MAX_LENGTH_KEY = 'questions_max_length';
 export const MAX_OPEN_KEY = 'questions_max_open_per_user';
@@ -283,19 +317,83 @@ export async function withdrawQuestion(user: PublicUser, questionId: string): Pr
   if (retirada === undefined) throw errors.questionNotFound();
 }
 
-/** Preguntas visibles en la ficha (abiertas y respondidas). No exige sesion. */
-export async function listPublicQuestions(listingId: string): Promise<PublicQuestion[]> {
-  const rows = await questionRepo.findPublicByListingId(listingId);
+/**
+ * Preguntas visibles en la ficha (abiertas y respondidas). No exige sesion.
+ *
+ * ⚠️ PAGINA, Y EL TECHO NO ES COSMETICO. Quien controla cuantas preguntas tiene
+ * una publicacion NO es quien la publico: cualquiera con sesion puede dejar las
+ * suyas. Sin limite, una ficha con cientos de preguntas las traia todas de la
+ * base y las imprimia todas en el HTML de la pantalla mas compartida del sitio.
+ */
+export async function listPublicQuestions(
+  listingId: string,
+  pagina?: number,
+): Promise<PaginaDePreguntas<PublicQuestion>> {
+  const actual = normalizarPagina(pagina);
 
-  return rows.map(toPublicQuestion);
+  const [rows, total] = await Promise.all([
+    questionRepo.findPublicByListingId(listingId, ventana(actual, PREGUNTAS_POR_PAGINA_FICHA)),
+    questionRepo.countPublicByListingId(listingId),
+  ]);
+
+  return {
+    preguntas: rows.map(toPublicQuestion),
+    total,
+    pagina: actual,
+    porPagina: PREGUNTAS_POR_PAGINA_FICHA,
+  };
 }
 
 /** Cola de preguntas sin responder del vendedor autenticado, la mas vieja primero. */
-export async function listPendingForSeller(user: PublicUser): Promise<QuestionWithListing[]> {
+export async function listPendingForSeller(
+  user: PublicUser,
+  pagina?: number,
+): Promise<PaginaDePreguntas<QuestionWithListing>> {
   const seller = await requireOwnSellerProfile(user);
-  const rows = await questionRepo.findPendingBySellerId(seller.id);
+  const actual = normalizarPagina(pagina);
 
-  return rows.map(conListing);
+  const [rows, total] = await Promise.all([
+    questionRepo.findPendingBySellerId(seller.id, ventana(actual, PREGUNTAS_POR_PAGINA)),
+    questionRepo.countPendingBySellerId(seller.id),
+  ]);
+
+  return {
+    preguntas: rows.map(conListing),
+    total,
+    pagina: actual,
+    porPagina: PREGUNTAS_POR_PAGINA,
+  };
+}
+
+/**
+ * Las que el vendedor YA respondio.
+ *
+ * ⚠️ EXISTE PORQUE LA BANDEJA SOLO TENIA PENDIENTES. Para ver que habia
+ * contestado —y con que palabras, que es lo que importa cuando un comprador
+ * vuelve a preguntar lo mismo— habia que entrar publicacion por publicacion.
+ *
+ * ⚠️ NO REEMPLAZA A LA COLA NI SE MEZCLA CON ELLA. Son dos cosas distintas: una
+ * es trabajo por hacer y la otra es historia. Mezclarlas convertiria la bandeja
+ * en un archivo, que es justamente lo que el comentario original evitaba.
+ */
+export async function listAnsweredForSeller(
+  user: PublicUser,
+  pagina?: number,
+): Promise<PaginaDePreguntas<QuestionWithListing>> {
+  const seller = await requireOwnSellerProfile(user);
+  const actual = normalizarPagina(pagina);
+
+  const [rows, total] = await Promise.all([
+    questionRepo.findAnsweredBySellerId(seller.id, ventana(actual, PREGUNTAS_POR_PAGINA)),
+    questionRepo.countAnsweredBySellerId(seller.id),
+  ]);
+
+  return {
+    preguntas: rows.map(conListing),
+    total,
+    pagina: actual,
+    porPagina: PREGUNTAS_POR_PAGINA,
+  };
 }
 
 /** Cuantas sin responder. Para el numerito del panel. */
@@ -306,10 +404,23 @@ export async function countPendingForSeller(user: PublicUser): Promise<number> {
 }
 
 /** Las preguntas que hizo el usuario autenticado, mas nueva primero. */
-export async function listMyQuestions(user: PublicUser): Promise<QuestionWithListing[]> {
-  const rows = await questionRepo.findByAskerId(user.id);
+export async function listMyQuestions(
+  user: PublicUser,
+  pagina?: number,
+): Promise<PaginaDePreguntas<QuestionWithListing>> {
+  const actual = normalizarPagina(pagina);
 
-  return rows.map(conListing);
+  const [rows, total] = await Promise.all([
+    questionRepo.findByAskerId(user.id, ventana(actual, PREGUNTAS_POR_PAGINA)),
+    questionRepo.countByAskerId(user.id),
+  ]);
+
+  return {
+    preguntas: rows.map(conListing),
+    total,
+    pagina: actual,
+    porPagina: PREGUNTAS_POR_PAGINA,
+  };
 }
 
 /**

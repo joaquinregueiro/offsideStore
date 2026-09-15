@@ -57,6 +57,11 @@ const SOLAPAS: Partial<Record<SeccionDelPanel, Solapa[]>> = {
   preguntas: [
     { clave: 'hechas', texto: 'Las que hiciste', href: '/cuenta/preguntas' },
     { clave: 'recibidas', texto: 'Las que te hacen', href: '/vendedor/preguntas' },
+    {
+      clave: 'respondidas',
+      texto: 'Las que respondiste',
+      href: '/vendedor/preguntas?estado=respondidas',
+    },
   ],
   publicaciones: [
     { clave: 'publicaciones', texto: 'Mis publicaciones', href: '/vendedor/publicaciones' },
@@ -111,12 +116,16 @@ export async function SolapasDeCuenta({
   const deVendedor = esVendedor ? (SOLAPAS_DE_VENDEDOR[seccion] ?? []) : [];
 
   /*
-   * "Las que te hacen" es la bandeja del vendedor: a quien no vende no se le
-   * ofrece, porque nadie le pregunta nada.
+   * ⚠️ "Las que te hacen" y "Las que respondiste" son DEL VENDEDOR: a quien no
+   * vende no se le ofrecen, porque nadie le pregunta nada. Se filtran las dos
+   * por clave y no por posición —agregar una tercera solapa de vendedor y
+   * olvidarse de sumarla acá se la mostraría a todo el mundo—.
    */
+  const SOLO_VENDEDOR = new Set(['recibidas', 'respondidas']);
+
   const solapas =
     seccion === 'preguntas' && !esVendedor
-      ? propias.filter((s) => s.clave !== 'recibidas')
+      ? propias.filter((s) => !SOLO_VENDEDOR.has(s.clave))
       : [...propias, ...deVendedor];
 
   return <Solapas solapas={solapas} activa={activa} etiqueta={ETIQUETAS[seccion]} />;

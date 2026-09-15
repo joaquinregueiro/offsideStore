@@ -2106,6 +2106,25 @@
 }
 
 /**
+ * LA RESPUESTA YA DADA, EN EL HISTORIAL.
+ *
+ * ⚠️ MISMO TRATAMIENTO QUE LA RESPUESTA A UNA RESEÑA, y a proposito: en las dos
+ * pantallas es lo mismo —el texto del vendedor debajo del texto de otra
+ * persona—. Que se vean distinto obligaria a aprender dos veces lo mismo.
+ */
+.preguntaRespuesta {
+  margin-top: calc(var(--espacio-2) * -1);
+  padding: var(--espacio-4);
+  border-left: 3px solid var(--color-cancha);
+  border-radius: 0 var(--radio) var(--radio) 0;
+  background: var(--superficie-2);
+}
+
+.preguntaRespuesta .preguntaTexto {
+  margin-bottom: 0;
+}
+
+/**
  * OCULTAR UNA PREGUNTA VIVE EN SEGUNDO PLANO.
  *
  * ⚠️ NO ES UN BOTON AL LADO DE "RESPONDER". Es para insultos y spam, no es lo

@@ -30,6 +30,19 @@ const conn = (db?: Database): Database => db ?? getDatabase();
  */
 const publicacionVigente = () => ne(schema.listings.status, 'deleted');
 
+/**
+ * Ventana de una lista paginada.
+ *
+ * ⚠️ NINGUNA DE ESTAS LISTAS TENIA TECHO, y el volumen no lo controla quien
+ * mira: cualquiera puede dejar preguntas en una ficha ajena. Una publicacion
+ * con 500 preguntas las traia TODAS de la base y las imprimia TODAS en el HTML
+ * —y la ficha es la pantalla que se comparte por WhatsApp—.
+ */
+export interface Ventana {
+  limite: number;
+  offset: number;
+}
+
 /** Lo que hace falta saber de una publicacion para preguntar sobre ella. */
 export interface ListingForQuestionRow {
   id: string;
@@ -251,6 +264,14 @@ export async function withdraw(
   return row;
 }
 
+/** Lo que se ve en la ficha: abiertas y respondidas. Una sola definicion. */
+const publicasDe = (listingId: string) =>
+  and(
+    eq(schema.listingQuestions.listingId, listingId),
+    inArray(schema.listingQuestions.status, ['open', 'answered']),
+    isNull(schema.listingQuestions.deletedAt),
+  );
+
 /**
  * Preguntas visibles en la ficha: abiertas y respondidas, mas nueva primero.
  *
@@ -259,19 +280,26 @@ export async function withdraw(
  */
 export async function findPublicByListingId(
   listingId: string,
+  ventana: Ventana,
   db?: Database,
 ): Promise<QuestionRow[]> {
   return conn(db)
     .select()
     .from(schema.listingQuestions)
-    .where(
-      and(
-        eq(schema.listingQuestions.listingId, listingId),
-        inArray(schema.listingQuestions.status, ['open', 'answered']),
-        isNull(schema.listingQuestions.deletedAt),
-      ),
-    )
-    .orderBy(desc(schema.listingQuestions.createdAt), desc(schema.listingQuestions.id));
+    .where(publicasDe(listingId))
+    .orderBy(desc(schema.listingQuestions.createdAt), desc(schema.listingQuestions.id))
+    .limit(ventana.limite)
+    .offset(ventana.offset);
+}
+
+/** Cuantas preguntas visibles tiene la ficha. ⚠️ Mismo predicado que la lista. */
+export async function countPublicByListingId(listingId: string, db?: Database): Promise<number> {
+  const [fila] = await conn(db)
+    .select({ cantidad: count() })
+    .from(schema.listingQuestions)
+    .where(publicasDe(listingId));
+
+  return Number(fila?.cantidad ?? 0);
 }
 
 /** Una pregunta con el titulo de su publicacion, para las bandejas. */
@@ -292,25 +320,65 @@ export interface QuestionWithListingRow extends QuestionRow {
  * ⚠️ LAS PAUSADAS SI ENTRAN: esa publicacion puede volver y la respuesta va a
  * estar ahi cuando vuelva.
  */
+/** Preguntas de las publicaciones vigentes de un vendedor, en un estado. */
+const delVendedor = (sellerId: string, estado: QuestionStatus) =>
+  and(
+    eq(schema.listings.sellerId, sellerId),
+    eq(schema.listingQuestions.status, estado),
+    isNull(schema.listingQuestions.deletedAt),
+    publicacionVigente(),
+  );
+
 export async function findPendingBySellerId(
   sellerId: string,
+  ventana: Ventana,
   db?: Database,
 ): Promise<QuestionWithListingRow[]> {
   const filas = await conn(db)
     .select({ pregunta: schema.listingQuestions, listingTitle: schema.listings.title })
     .from(schema.listingQuestions)
     .innerJoin(schema.listings, eq(schema.listingQuestions.listingId, schema.listings.id))
-    .where(
-      and(
-        eq(schema.listings.sellerId, sellerId),
-        eq(schema.listingQuestions.status, 'open'),
-        isNull(schema.listingQuestions.deletedAt),
-        publicacionVigente(),
-      ),
-    )
-    .orderBy(asc(schema.listingQuestions.createdAt), asc(schema.listingQuestions.id));
+    .where(delVendedor(sellerId, 'open'))
+    .orderBy(asc(schema.listingQuestions.createdAt), asc(schema.listingQuestions.id))
+    .limit(ventana.limite)
+    .offset(ventana.offset);
 
   return filas.map((fila) => ({ ...fila.pregunta, listingTitle: fila.listingTitle }));
+}
+
+/**
+ * Las YA RESPONDIDAS del vendedor, la mas reciente primero.
+ *
+ * ⚠️ ORDEN INVERSO AL DE LAS PENDIENTES, y no es un descuido. Las pendientes son
+ * una COLA DE TRABAJO: se atienden por orden de llegada, la mas vieja primero.
+ * Esto es un HISTORIAL: se consulta para ver que se contesto recien, asi que va
+ * de lo nuevo a lo viejo, como toda la demas historia del sitio.
+ */
+export async function findAnsweredBySellerId(
+  sellerId: string,
+  ventana: Ventana,
+  db?: Database,
+): Promise<QuestionWithListingRow[]> {
+  const filas = await conn(db)
+    .select({ pregunta: schema.listingQuestions, listingTitle: schema.listings.title })
+    .from(schema.listingQuestions)
+    .innerJoin(schema.listings, eq(schema.listingQuestions.listingId, schema.listings.id))
+    .where(delVendedor(sellerId, 'answered'))
+    .orderBy(desc(schema.listingQuestions.answeredAt), desc(schema.listingQuestions.id))
+    .limit(ventana.limite)
+    .offset(ventana.offset);
+
+  return filas.map((fila) => ({ ...fila.pregunta, listingTitle: fila.listingTitle }));
+}
+
+export async function countAnsweredBySellerId(sellerId: string, db?: Database): Promise<number> {
+  const [fila] = await conn(db)
+    .select({ cantidad: count() })
+    .from(schema.listingQuestions)
+    .innerJoin(schema.listings, eq(schema.listingQuestions.listingId, schema.listings.id))
+    .where(delVendedor(sellerId, 'answered'));
+
+  return Number(fila?.cantidad ?? 0);
 }
 
 /**
@@ -322,33 +390,39 @@ export async function countPendingBySellerId(sellerId: string, db?: Database): P
     .select({ cantidad: count() })
     .from(schema.listingQuestions)
     .innerJoin(schema.listings, eq(schema.listingQuestions.listingId, schema.listings.id))
-    .where(
-      and(
-        eq(schema.listings.sellerId, sellerId),
-        eq(schema.listingQuestions.status, 'open'),
-        isNull(schema.listingQuestions.deletedAt),
-        publicacionVigente(),
-      ),
-    );
+    .where(delVendedor(sellerId, 'open'));
 
   return Number(fila?.cantidad ?? 0);
 }
 
 /** "Mis preguntas" de quien pregunta, mas nueva primero. Incluye las ocultas. */
+const hechasPor = (askerId: string) =>
+  and(eq(schema.listingQuestions.askerId, askerId), isNull(schema.listingQuestions.deletedAt));
+
 export async function findByAskerId(
   askerId: string,
+  ventana: Ventana,
   db?: Database,
 ): Promise<QuestionWithListingRow[]> {
   const filas = await conn(db)
     .select({ pregunta: schema.listingQuestions, listingTitle: schema.listings.title })
     .from(schema.listingQuestions)
     .innerJoin(schema.listings, eq(schema.listingQuestions.listingId, schema.listings.id))
-    .where(
-      and(eq(schema.listingQuestions.askerId, askerId), isNull(schema.listingQuestions.deletedAt)),
-    )
-    .orderBy(desc(schema.listingQuestions.createdAt), desc(schema.listingQuestions.id));
+    .where(hechasPor(askerId))
+    .orderBy(desc(schema.listingQuestions.createdAt), desc(schema.listingQuestions.id))
+    .limit(ventana.limite)
+    .offset(ventana.offset);
 
   return filas.map((fila) => ({ ...fila.pregunta, listingTitle: fila.listingTitle }));
+}
+
+export async function countByAskerId(askerId: string, db?: Database): Promise<number> {
+  const [fila] = await conn(db)
+    .select({ cantidad: count() })
+    .from(schema.listingQuestions)
+    .where(hechasPor(askerId));
+
+  return Number(fila?.cantidad ?? 0);
 }
 
 /**

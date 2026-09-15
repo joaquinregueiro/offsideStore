@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { CampoOculto, Formulario } from '@/components/form';
 import { IconoPregunta } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
-import { BotonEnlace, Confirmar, Etiqueta, EstadoVacio, Seccion } from '@/components/ui';
+import {
+  BotonEnlace,
+  Confirmar,
+  Etiqueta,
+  EstadoVacio,
+  Paginacion,
+  Seccion,
+} from '@/components/ui';
 import { cantidad, fecha } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import { listMyQuestions } from '@/modules/questions/services/question.service';
@@ -41,11 +48,33 @@ export const dynamic = 'force-dynamic';
  * vendedor contestó, esa respuesta ya es pública y no es de quien preguntó para
  * borrarla.
  */
-export default async function MisPreguntas() {
+export default async function MisPreguntas({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireVerifiedSessionUser('/cuenta/preguntas');
-  const preguntas = await listMyQuestions(user);
 
-  const sinResponder = preguntas.filter((pregunta) => pregunta.answer === null).length;
+  const params = await searchParams;
+  const pedida = typeof params.pagina === 'string' ? Number.parseInt(params.pagina, 10) : NaN;
+  const pagina = await listMyQuestions(user, Number.isNaN(pedida) ? undefined : pedida);
+
+  const preguntas = pagina.preguntas;
+  const totalPaginas = Math.ceil(pagina.total / pagina.porPagina);
+
+  /*
+    ⚠️ "SIN RESPONDER" ES `status === 'open'`, NO `answer === null`, y la
+    diferencia se ve en pantalla: una pregunta RETIRADA o que el vendedor ocultó
+    también tiene `answer` en null, así que contándolas así el encabezado decía
+    "1 sin responder" sobre una pregunta que esta misma persona acababa de
+    retirar —o sea, reclamándole al vendedor algo que ya nadie le puede
+    contestar—.
+
+    ⚠️ ES "EN ESTA PÁGINA", NO EN TOTAL. Contar todas las abiertas de la cuenta
+    exigiría otra consulta; el número que de verdad importa —el del cupo— lo
+    aplica `askQuestion`, no esta pantalla.
+  */
+  const sinResponder = preguntas.filter((pregunta) => pregunta.status === 'open').length;
 
   return (
     <Pantalla>
@@ -56,7 +85,7 @@ export default async function MisPreguntas() {
             titulo="Mis preguntas"
             detalle={
               <p className={estilos.chapaDetalle}>
-                {preguntas.length === 0
+                {pagina.total === 0
                   ? 'Todavía no preguntaste nada'
                   : sinResponder === 0
                     ? 'Todas respondidas'
@@ -67,7 +96,7 @@ export default async function MisPreguntas() {
 
           <SolapasDeCuenta user={user} seccion="preguntas" activa="hechas" />
 
-          {preguntas.length === 0 ? (
+          {pagina.total === 0 ? (
             <EstadoVacio
               titulo="No hiciste ninguna pregunta"
               icono={<IconoPregunta tamanio={40} />}
@@ -79,7 +108,7 @@ export default async function MisPreguntas() {
               <BotonEnlace href="/">Ver el catálogo</BotonEnlace>
             </EstadoVacio>
           ) : (
-            <Seccion titulo="Preguntas" dato={cantidad(preguntas.length, 'pregunta')}>
+            <Seccion titulo="Preguntas" dato={cantidad(pagina.total, 'pregunta')}>
               <ul className={`${estilos.lista} ${estilos.revela}`}>
                 {preguntas.map((pregunta) => (
                   <li key={pregunta.id} className={`${estilos.tarjetaTexto} sup-ficha eleva`}>
@@ -140,6 +169,12 @@ export default async function MisPreguntas() {
                   </li>
                 ))}
               </ul>
+
+              <Paginacion
+                actual={pagina.pagina}
+                total={totalPaginas}
+                hrefDe={(n) => (n > 1 ? `/cuenta/preguntas?pagina=${n}` : '/cuenta/preguntas')}
+              />
             </Seccion>
           )}
         </main>
