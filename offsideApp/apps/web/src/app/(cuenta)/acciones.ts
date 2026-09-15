@@ -18,6 +18,7 @@ import { openDispute } from '@/modules/disputes/services/dispute.service';
 import { toggleFavorite } from '@/modules/favorites/services/favorite.service';
 import { markAllRead, markRead } from '@/modules/notifications/services/inapp-notification.service';
 import { cancelPendingByBuyer, confirmDelivered } from '@/modules/orders/services/order.service';
+import { withdrawQuestion } from '@/modules/questions/services/question.service';
 import { createReview } from '@/modules/reviews/services/review.service';
 
 /**
@@ -293,6 +294,43 @@ export async function quitarDeFavoritos(
   revalidatePath('/cuenta/favoritos');
 
   return { ok: 'La sacamos de tus favoritos.' };
+}
+
+/* ======================================================== preguntas ======= */
+
+/**
+ * Retira una pregunta propia todavía sin responder.
+ *
+ * ⚠️ NO ES "BORRAR": la fila queda, sólo deja de verse en la ficha. Y lo que de
+ * verdad hace es DEVOLVERLE EL CUPO a quien preguntó — con
+ * `questions_max_open_per_user` lleno, esa persona no podía preguntar en ninguna
+ * publicación del sitio y el único que podía destrabarla era el vendedor que no
+ * le contestaba.
+ *
+ * ⚠️ CONSUME `question-ask`, el mismo cupo que preguntar, a propósito. Preguntar
+ * y retirar en bucle es la forma obvia de saltear el límite de preguntas
+ * abiertas; con el contador compartido, el bucle se queda sin nafta solo.
+ */
+export async function retirarPregunta(
+  _estado: EstadoCuenta,
+  formData: FormData,
+): Promise<EstadoCuenta> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('question-ask', user.id);
+
+    const { questionId } = z
+      .object({ questionId: z.string().uuid() })
+      .parse({ questionId: texto(formData, 'questionId') });
+
+    await withdrawQuestion(user, questionId);
+  } catch (error) {
+    return respuestaDeError(error, { ambito: 'cuenta' });
+  }
+
+  revalidatePath('/cuenta/preguntas');
+
+  return { ok: 'Listo, la retiramos. Ya no se ve en la publicación.' };
 }
 
 /* ====================================================== direcciones ======= */

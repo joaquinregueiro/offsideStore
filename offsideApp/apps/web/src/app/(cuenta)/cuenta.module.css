@@ -906,10 +906,27 @@
 }
 
 /** Sin respuesta todavia: es un hecho, no un error. Tono normal, nunca alerta. */
+/**
+ * "Todavia sin responder", con el boton de retirar debajo.
+ *
+ * ⚠️ ES UN CONTENEDOR, NO UN PARRAFO. Paso a `<div>` cuando debajo del texto se
+ * sumo "Retirar", y el `<p>` de adentro necesita su propio `margin: 0`: el
+ * proyecto NO resetea el margen de `p` globalmente, asi que el default del
+ * navegador —1em arriba y abajo— separaba el texto del boton mucho mas que el
+ * gap.
+ */
 .pendiente {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espacio-2);
   font-size: var(--texto-sm);
   color: var(--color-neutro-texto);
+}
+
+.pendiente > p {
+  margin: 0;
 }
 
 /* ------------------------------------------------------------- reclamos */

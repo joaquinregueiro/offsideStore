@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, asc, avg, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, avg, count, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 /**
  * Acceso a `listing_questions` (delta al ERD v1.3, 2026-09-10). Sin reglas
@@ -13,6 +13,22 @@ export type QuestionRow = typeof schema.listingQuestions.$inferSelect;
 export type QuestionStatus = 'open' | 'answered' | 'hidden';
 
 const conn = (db?: Database): Database => db ?? getDatabase();
+
+/**
+ * La publicacion no esta ELIMINADA.
+ *
+ * ⚠️ NO ES LO MISMO QUE "no se ve en la vitrina", y la diferencia importa. Una
+ * publicacion PAUSADA o AGOTADA puede volver: su pregunta sigue valiendo la pena
+ * responderla, porque la respuesta va a estar ahi cuando vuelva. Una ELIMINADA
+ * es terminal (`listing-editing.service`: `status = 'deleted'`, sin vuelta), su
+ * ficha ya no se muestra y la respuesta no la leeria nadie.
+ *
+ * ⚠️ SE MIRA `status`, NO `deleted_at`. Eliminar una publicacion es LOGICO y se
+ * implementa moviendo el `status`; la columna `deleted_at` de `listings` hoy no
+ * la escribe nadie. Filtrar por ella —lo intuitivo— no filtraria absolutamente
+ * nada.
+ */
+const publicacionVigente = () => ne(schema.listings.status, 'deleted');
 
 /** Lo que hace falta saber de una publicacion para preguntar sobre ella. */
 export interface ListingForQuestionRow {
@@ -90,16 +106,27 @@ export async function findGlobalSetting(key: string, db?: Database): Promise<unk
   return row?.value;
 }
 
-/** Cuantas preguntas SIN RESPONDER tiene abiertas una cuenta, en total. */
+/**
+ * Cuantas preguntas SIN RESPONDER tiene abiertas una cuenta, en total.
+ *
+ * ⚠️ NO CUENTA LAS DE PUBLICACIONES ELIMINADAS, y es la mitad de la valvula de
+ * escape del cupo. Este numero es lo unico que puede dejar a una persona sin
+ * poder preguntar EN TODO EL SITIO, y quien lo baja es el vendedor —respondiendo
+ * u ocultando—. Si el vendedor elimina la publicacion en vez de contestar, esa
+ * pregunta se vuelve incontestable y sin este filtro seguiria ocupando el cupo
+ * de quien pregunto **para siempre**, sin que ella pueda hacer nada.
+ */
 export async function countOpenByAskerId(askerId: string, db?: Database): Promise<number> {
   const [fila] = await conn(db)
     .select({ cantidad: count() })
     .from(schema.listingQuestions)
+    .innerJoin(schema.listings, eq(schema.listingQuestions.listingId, schema.listings.id))
     .where(
       and(
         eq(schema.listingQuestions.askerId, askerId),
         eq(schema.listingQuestions.status, 'open'),
         isNull(schema.listingQuestions.deletedAt),
+        publicacionVigente(),
       ),
     );
 
@@ -192,6 +219,39 @@ export async function hide(id: string, db?: Database): Promise<QuestionRow | und
 }
 
 /**
+ * Retira una pregunta: la esconde a pedido de QUIEN LA HIZO.
+ *
+ * ⚠️ EL `asker_id` VA EN EL WHERE, no se comprueba antes en el Service. Es la
+ * misma razon por la que `answer` condiciona a `status = 'open'`: una
+ * autorizacion que viaja en el WHERE no puede perderse entre la lectura y la
+ * escritura. Aca ademas es gratis, porque hay indice por `asker_id`.
+ *
+ * ⚠️ SOLO `open`. Una vez respondida, la respuesta del vendedor ya es publica y
+ * puede haber sido leida: retirarla seria borrar lo que dijo otra persona. Para
+ * eso esta `hide`, que es del dueño de la publicacion.
+ */
+export async function withdraw(
+  id: string,
+  askerId: string,
+  db?: Database,
+): Promise<QuestionRow | undefined> {
+  const [row] = await conn(db)
+    .update(schema.listingQuestions)
+    .set({ status: 'hidden' })
+    .where(
+      and(
+        eq(schema.listingQuestions.id, id),
+        eq(schema.listingQuestions.askerId, askerId),
+        eq(schema.listingQuestions.status, 'open'),
+        isNull(schema.listingQuestions.deletedAt),
+      ),
+    )
+    .returning();
+
+  return row;
+}
+
+/**
  * Preguntas visibles en la ficha: abiertas y respondidas, mas nueva primero.
  *
  * ⚠️ EL `ORDER BY` NO ES COSMETICO: responder hace un UPDATE y sin orden
@@ -222,6 +282,15 @@ export interface QuestionWithListingRow extends QuestionRow {
 /**
  * Preguntas sin responder sobre las publicaciones de un vendedor, la mas
  * vieja primero: es una cola de trabajo y se atiende en orden de llegada.
+ *
+ * ⚠️ NO ENTRAN LAS DE PUBLICACIONES ELIMINADAS. Sin este filtro la bandeja
+ * mostraba —y el numerito del cajon contaba— preguntas cuya ficha ya no existe:
+ * responderlas no las lee nadie, ocultarlas es trabajo por nada, y el contador
+ * NUNCA volvia a cero. Una cola de trabajo que no se puede vaciar deja de
+ * leerse, y con ella se pierden las preguntas que si importan.
+ *
+ * ⚠️ LAS PAUSADAS SI ENTRAN: esa publicacion puede volver y la respuesta va a
+ * estar ahi cuando vuelva.
  */
 export async function findPendingBySellerId(
   sellerId: string,
@@ -236,6 +305,7 @@ export async function findPendingBySellerId(
         eq(schema.listings.sellerId, sellerId),
         eq(schema.listingQuestions.status, 'open'),
         isNull(schema.listingQuestions.deletedAt),
+        publicacionVigente(),
       ),
     )
     .orderBy(asc(schema.listingQuestions.createdAt), asc(schema.listingQuestions.id));
@@ -243,6 +313,10 @@ export async function findPendingBySellerId(
   return filas.map((fila) => ({ ...fila.pregunta, listingTitle: fila.listingTitle }));
 }
 
+/**
+ * El numerito del cajon. ⚠️ MISMO PREDICADO QUE `findPendingBySellerId`: si
+ * contara distinto, el cajon diria "3 pendientes" y la bandeja mostraria dos.
+ */
 export async function countPendingBySellerId(sellerId: string, db?: Database): Promise<number> {
   const [fila] = await conn(db)
     .select({ cantidad: count() })
@@ -253,6 +327,7 @@ export async function countPendingBySellerId(sellerId: string, db?: Database): P
         eq(schema.listings.sellerId, sellerId),
         eq(schema.listingQuestions.status, 'open'),
         isNull(schema.listingQuestions.deletedAt),
+        publicacionVigente(),
       ),
     );
 

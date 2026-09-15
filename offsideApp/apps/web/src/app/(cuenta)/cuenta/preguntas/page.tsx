@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+import { CampoOculto, Formulario } from '@/components/form';
 import { IconoPregunta } from '@/components/iconos';
 import { Pantalla } from '@/components/movimiento';
-import { BotonEnlace, Etiqueta, EstadoVacio, Seccion } from '@/components/ui';
+import { BotonEnlace, Confirmar, Etiqueta, EstadoVacio, Seccion } from '@/components/ui';
 import { cantidad, fecha } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
 import { listMyQuestions } from '@/modules/questions/services/question.service';
 
+import { retirarPregunta } from '../../acciones';
 import { ChapaDeCuenta } from '../../chapa';
 import { PanelDeCuenta, SolapasDeCuenta } from '../../panel';
 import estilos from '../../cuenta.module.css';
@@ -30,6 +32,14 @@ export const dynamic = 'force-dynamic';
  * ⚠️ EL ENLACE VA A LA PUBLICACIÓN ACTUAL Y PUEDE TERMINAR EN 404 si el vendedor
  * la eliminó. El título que se muestra es el que trae `listMyQuestions`, así que
  * la pregunta sigue diciendo sobre qué era aunque la ficha ya no exista.
+ *
+ * ⚠️ "RETIRAR" ES LA ÚNICA ACCIÓN DE ESTA PANTALLA, Y NO ES DECORATIVA. Es lo
+ * que devuelve el cupo: con `questions_max_open_per_user` lleno de preguntas que
+ * nadie contestó, esta persona no puede preguntar en NINGUNA publicación, y
+ * hasta ahora el único que podía destrabarla era el vendedor que la dejó
+ * esperando. Sólo aparece en las que siguen sin responder: una vez que el
+ * vendedor contestó, esa respuesta ya es pública y no es de quien preguntó para
+ * borrarla.
  */
 export default async function MisPreguntas() {
   const user = await requireVerifiedSessionUser('/cuenta/preguntas');
@@ -87,12 +97,37 @@ export default async function MisPreguntas() {
                     <p className={estilos.texto}>{pregunta.question}</p>
 
                     {pregunta.answer === null ? (
-                      <p className={estilos.pendiente}>
-                        El vendedor todavía no respondió.{' '}
-                        {pregunta.status === 'hidden' && (
-                          <Etiqueta tono="neutro">La pregunta se ocultó</Etiqueta>
+                      <div className={estilos.pendiente}>
+                        {pregunta.status === 'hidden' ? (
+                          /*
+                            ⚠️ NO DICE QUIÉN LA OCULTÓ, porque la fila no lo
+                            guarda: `hidden` lo pone quien preguntó al retirarla
+                            o el vendedor al ocultarla, y no hay columna que los
+                            distinga. Antes decía "El vendedor todavía no
+                            respondió" también acá, que después de retirarla uno
+                            mismo se lee como si la acción no hubiera andado.
+                          */
+                          <Etiqueta tono="neutro">Ya no se ve en la publicación</Etiqueta>
+                        ) : (
+                          <>
+                            <p>El vendedor todavía no respondió.</p>
+                            <Confirmar
+                              etiqueta="Retirar"
+                              pregunta="Deja de verse en la publicación y podés volver a preguntar en otra. No se puede deshacer."
+                            >
+                              <Formulario
+                                accion={retirarPregunta}
+                                enviar="Sí, retirar"
+                                variante="peligro"
+                                tamanio="chico"
+                                bloque={false}
+                              >
+                                <CampoOculto nombre="questionId" valor={pregunta.id} />
+                              </Formulario>
+                            </Confirmar>
+                          </>
                         )}
-                      </p>
+                      </div>
                     ) : (
                       <div className={estilos.respuesta}>
                         <p className={estilos.respuestaRotulo}>

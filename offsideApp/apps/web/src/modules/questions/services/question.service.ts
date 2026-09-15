@@ -248,6 +248,41 @@ export async function hideQuestion(user: PublicUser, questionId: string): Promis
   await questionRepo.hide(question.id);
 }
 
+/**
+ * Retira una pregunta propia: deja de verse en la ficha y libera el cupo.
+ *
+ * ⚠️ ES LA VALVULA DE ESCAPE DEL CUPO, no una comodidad. `questions_max_open_per_user`
+ * puede dejar a una persona sin poder preguntar EN TODO EL SITIO, y hasta ahora
+ * el unico que podia bajar ese numero era el vendedor —respondiendo u
+ * ocultando—: quien preguntaba quedaba esperando algo que tal vez nunca pasa,
+ * sin ninguna accion disponible. El schema de `listing_questions` ya decia que
+ * `hidden` la pone "quien pregunto, el vendedor o moderacion"; de los tres,
+ * solo el vendedor tenia codigo.
+ *
+ * ⚠️ SOLO MIENTRAS ESTA SIN RESPONDER. Con respuesta, el texto del vendedor ya
+ * es publico y pudo haberlo leido cualquiera: retirarlo seria darle a quien
+ * pregunta un boton para borrar lo que dijo otro. Y una pregunta incomoda ya
+ * respondida es justamente la que mas le sirve al proximo comprador.
+ *
+ * ⚠️ NO AVISA AL VENDEDOR. Si estaba por responderla, la va a encontrar fuera de
+ * la bandeja; una notificacion por cada arrepentimiento es ruido en la unica
+ * campanita que tambien trae las ventas.
+ *
+ * ⚠️ NO BORRA LA FILA: la pregunta queda como evidencia de lo que se hablo antes
+ * de una compra, igual que al ocultarla el vendedor.
+ */
+export async function withdrawQuestion(user: PublicUser, questionId: string): Promise<void> {
+  const retirada = await questionRepo.withdraw(questionId, user.id);
+
+  /*
+   * ⚠️ UN SOLO ERROR PARA LOS TRES CASOS —no existe, no es tuya, ya no esta
+   * abierta—. Distinguirlos dejaria probar ids ajenos para averiguar cuales
+   * existen, que es lo mismo que evita `questionNotFound` en el lado del
+   * vendedor.
+   */
+  if (retirada === undefined) throw errors.questionNotFound();
+}
+
 /** Preguntas visibles en la ficha (abiertas y respondidas). No exige sesion. */
 export async function listPublicQuestions(listingId: string): Promise<PublicQuestion[]> {
   const rows = await questionRepo.findPublicByListingId(listingId);
