@@ -2686,6 +2686,36 @@ dd {
     --marca-borde: var(--verde-400);
     --etiqueta-texto: var(--color-sobre-oscuro-2);
 
+    /**
+     * ⚠️ LOS TITULARES CON GRADIENTE TAMBIEN SE DAN VUELTA, Y SIN ESTO QUEDAN
+     * CASI INVISIBLES. `.titular-degradado` elige su receta por SUPERFICIE
+     * (`.sup-noche`, `.sup-cancha`…), pero la mayoria de los titulares no vive
+     * adentro de ninguna: `Seccion`, `EstadoVacio` y los `<h1>` de la ficha, la
+     * tienda, las landings y la busqueda se apoyan directo en la PAGINA. En
+     * modo claro la pagina es papel y la receta clara vale; en modo oscuro la
+     * pagina pasa a fosa y esa MISMA receta se queda, o sea tinta sobre fosa.
+     *
+     * Medido: el primer stop daba **1.10:1** sobre la pagina en oscuro —contra
+     * un minimo de 3.0 para texto grande—, asi que el arranque de cada titular
+     * literalmente no se veia; recien se despegaba del fondo hacia el final del
+     * gradiente. Con la receta clara queda en **15.31:1**.
+     *
+     * ⚠️ SE DAN VUELTA LOS TOKENS Y NO SE AGREGAN SELECTORES, por dos motivos:
+     * es lo mismo que hace el resto de este bloque —dar vuelta `--texto` y la
+     * familia de superficies—, y las reglas `.sup-* .titular-*` referencian
+     * `--degradado-titular-claro` DIRECTAMENTE, asi que no las toca. En
+     * particular `.sup-cancha .titular-vivo` sigue yendo a la receta clara y no
+     * a la viva, que sobre Verde Cancha da 2.25 ❌.
+     *
+     * ⚠️ NO ES EL BUG DE `--patron-rombos`. Ahi el problema era declarar una
+     * custom property en `:root` con un `var()` adentro que se resolvia ahi y
+     * se heredaba ya sustituido. Aca eso es EXACTAMENTE lo que se busca: se
+     * redefine sobre el mismo `:root`, se sustituye ahi con la receta clara, y
+     * los descendientes heredan esa. Verificado en navegador.
+     */
+    --degradado-titular: var(--degradado-titular-claro);
+    --degradado-titular-vivo: var(--degradado-titular-claro-vivo);
+
     /** El anillo de foco verde sobre verde oscuro no se ve. */
     --color-foco: var(--color-cambio);
     /** Sobre oscuro el naranja SI es texto (7.26:1): no hace falta el hondo. */
@@ -2745,6 +2775,10 @@ dd {
   --marca-texto: var(--verde-400);
   --marca-borde: var(--verde-400);
   --etiqueta-texto: var(--color-sobre-oscuro-2);
+
+  /** Ver el bloque del `@media`: sin esto los titulares dan 1.10:1. */
+  --degradado-titular: var(--degradado-titular-claro);
+  --degradado-titular-vivo: var(--degradado-titular-claro-vivo);
 
   --color-foco: var(--color-cambio);
   --color-alerta: var(--color-naranja);

@@ -5,7 +5,7 @@
 > Raíz del repo: `C:\Users\tango\Documents\Proyects\Offside Store\`.
 > Estado: marketplace operable de punta a punta —registro, publicación, compra y
 > cobro con Mercado Pago— con frontend propio, incluido el back-office (ver §19).
-> Última actualización: 2026-09-14.
+> Última actualización: 2026-09-15.
 
 ---
 
@@ -1503,8 +1503,32 @@ una cookie no se puede escribir durante el render de un GET; y una tabla propia
 es cambio de ERD (ARQUITECTÓNICO). La otra mitad —favoritos más visibles— sí está
 hecha: Favoritos quedó a un toque en la barra inferior.
 
-⚠️ **El titular de la ficha se lee con poco contraste en MODO OSCURO.** El `<h1>`
-compone `titular-degradado` y sobre la superficie oscura casi no se despega del
-fondo. Es preexistente y **está visto, no medido**: falta pasarle la fórmula WCAG
-y, si confirma, ajustar el degradado en oscuro como ya se hizo con los otros
-tokens. Detectado el 2026-09-13 al revisar capturas.
+⚠️ ~~**El titular de la ficha se lee con poco contraste en MODO OSCURO.**~~ ✅
+**Medido y corregido el 2026-09-15.** Era peor y más amplio de lo anotado.
+
+- **No era "poco contraste": era 1.10:1**, contra un mínimo de 3.0 para texto
+  grande. El primer stop del gradiente es `--color-tinta` y la página en modo
+  oscuro es `--sup-fosa`: tinta sobre fosa. El arranque de cada titular
+  literalmente no se veía y recién se despegaba del fondo hacia el final.
+- **No era sólo la ficha.** `.titular-degradado` elige su receta por
+  SUPERFICIE (`.sup-noche`, `.sup-cancha`…), pero la mayoría de los titulares
+  no vive dentro de ninguna: `Seccion` y `EstadoVacio` —dos primitivas que usa
+  todo el sitio— más los `<h1>` de la ficha, la tienda, las landings de
+  club/marca y la búsqueda. `titular-vivo` (el `<h1>` del `Panel` de auth)
+  tenía el mismo defecto.
+- **La causa es de una línea**: los dos bloques del modo oscuro dan vuelta
+  `--texto` y la familia de superficies, pero **no daban vuelta los degradados
+  de titular**. Ahora sí: `--degradado-titular` y `--degradado-titular-vivo`
+  apuntan a sus recetas claras, y quedan en **15.31:1** y **7.51:1**.
+- ⚠️ **No hay bug espejo.** Las reglas `.sup-* .titular-*` referencian
+  `--degradado-titular-claro` DIRECTAMENTE, así que no las toca —en particular
+  `.sup-cancha .titular-vivo`, que sobre Verde Cancha debe seguir yendo a la
+  receta clara porque la viva da 2.25 ❌—. Y se revisaron los cinco fondos
+  claros escritos a mano que sobreviven al modo oscuro: son un punto de 5px,
+  una pastilla de navegación, el enlace de saltar al contenido y el buscador.
+  Ninguno puede contener un titular.
+- ⚠️ **NO es el bug de `--patron-rombos`**, aunque se le parezca. Ahí el
+  problema era declarar una custom property en `:root` con un `var()` adentro
+  que se resolvía ahí y se heredaba ya sustituido; acá eso es exactamente lo
+  que se busca. Verificado en navegador contra el `tokens.css` real, en los dos
+  esquemas y en las tres superficies.
