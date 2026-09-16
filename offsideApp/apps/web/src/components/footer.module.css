@@ -6,9 +6,13 @@
  * rectangulo de Tinta con una cinta arriba: correcto, editorial y exactamente
  * lo que el dueño rechazo —"muy cuadrado todo, sin glow"—. Ahora es un PANEL
  * que sube desde abajo con las esquinas superiores redondeadas a 28px, blobs de
- * luz verde y amarilla flotando detras de las columnas, una cinta de rombos que
- * brilla y por la que corre una banda de luz, filetes con halo, el claim con
- * gradiente vivo y enlaces que se corren al tocarlos. Los cuatro bloques
+ * luz verde y amarilla flotando detras de las columnas, filetes con halo, el
+ * claim con gradiente vivo y enlaces que se corren al tocarlos.
+ *
+ * ⚠️ LA CINTA DE ROMBOS SE SACO EL 2026-09-16, por decision del dueño, con su
+ * halo y la banda de luz que la recorria. El separador de arriba vuelve a ser
+ * `.sup-noche::before`, el filo de luz, que es para lo que existe y que la
+ * cinta le venia tapando con un `z-index: 2`. Los cuatro bloques
  * (`.contenido`) se revelan al llegar con scroll, no al cargar: el pie esta
  * siempre debajo del pliegue.
  *
@@ -23,8 +27,7 @@
  * 4.11 (texto GRANDE: el claim). Todo AA.
  *
  * ⚠️ `overflow: clip` EN `.pie` ES LO QUE HACE QUE LAS ESQUINAS REDONDEADAS
- * SEAN REALES: sin el, la cinta (primer hijo, cuadrada), el grano y los blobs
- * asomarian por fuera de la curva. `clip` y no `hidden`: `hidden` crea un
+ * SEAN REALES: sin el, el grano y los blobs asomarian por fuera de la curva. `clip` y no `hidden`: `hidden` crea un
  * contenedor de scroll. Nada del pie sale de su caja a proposito —no hay
  * desplegables ni popovers—, y los enlaces quedan a 24px del borde, asi que
  * ningun anillo de foco se recorta.
@@ -45,160 +48,6 @@
    * papel claro, asi que su propio fondo ya lo separa. El halo solo se leia
    * como efecto.
    */
-}
-
-/**
- * CINTA DE SECCION (identidad §05), AHORA COMO TIRA DE LUZ.
- *
- * ⚠️ ES LA TERCERA ESCALA DEL PATRON, no una decoracion suelta: bloque, textura
- * fina y cinta. En Amarillo Cambio sobre Verde Tiempo Extra (7.06:1), en su
- * escala real (28px): a 10px el rombo se lee como ruido gris; a 28 se lee como
- * la bandera. El rombo se corre un mosaico EXACTO cada 26s (`.patron-vivo` con
- * `--patron-paso`), asi que el bucle es invisible.
- *
- * ⚠️ BRILLA CON `box-shadow` ESTATICO —halo amarillo hacia abajo, sobre el
- * bloque oscuro— y por encima de los rombos corre una BANDA DE LUZ (`::after`,
- * `transform` puro, cada 9s). `.patron-vivo` ya trae `overflow: hidden` e
- * `isolation`, asi que la banda queda recortada a la cinta y el pseudo
- * `::before` (los rombos, z -1) queda debajo.
- *
- * ⚠️ `z-index: 2` NO ES UN CAPRICHO. `.sup-noche::before` —el filo de luz que
- * separa el bloque oscuro de lo que tiene arriba— se pinta en `z-index: 1`, y
- * la cinta es el primer hijo en `z-index: auto`: sin esto, la hairline queda
- * dibujada ENCIMA de los rombos, donde no separa nada. La cinta ES el
- * separador.
- */
-.cinta {
-  position: relative;
-  z-index: 2;
-  height: 28px;
-  --patron-color: var(--color-cambio);
-  background-color: var(--color-tiempo-extra);
-  box-shadow:
-    inset 0 -1px 0 rgb(var(--luz-cambio) / 0.35),
-    0 6px 28px -6px rgb(var(--luz-cambio) / 0.5);
-}
-
-/**
- * ⚠️ LOS ROMBOS DE ESTA CINTA SON ROMBOS DE VERDAD, Y EN EL RESTO DEL SITIO NO.
- * `--patron-rombos` (tokens.css) es la receta clasica de damero con cuatro
- * `linear-gradient` a 45deg: con las posiciones de `--patron-posicion-*` dibuja
- * CUADRADOS rectos de medio mosaico. Se llama "rombos" en todo el repo y los
- * comentarios lo describen como la bandera, pero lo que sale es un damero de
- * ajedrez. El dueño lo marco sobre el pie el 2026-09-16.
- *
- * ⚠️ SE ARREGLA SOLO ACA Y A PROPOSITO. Esa variable la consumen ~12
- * declaraciones en 11 hojas —el bloque grande, la textura fina de la ficha, las
- * etiquetas—, y cambiarla en `tokens.css` cambiaria el fondo de medio sitio de
- * una. Lo que se pidio fue esta cinta.
- *
- * ⚠️ `repeating-conic-gradient` Y NO CUATRO GRADIENTES. Con `from 45deg` los
- * cortes caen sobre las DIAGONALES del mosaico, asi que cada celda queda
- * partida en cuatro triangulos alternos; al repetirse, el triangulo derecho de
- * una celda y el izquierdo de la siguiente forman un rombo entero sobre el
- * borde. Una sola capa en vez de cuatro.
- *
- * ⚠️ EL MOSAICO ES 14 Y NO EL 28 DE `--patron-tamanio-cinta`, que es lo que
- * pone DOS FILAS de rombos en los 28px de la cinta. Con 28 entraba una sola
- * fila de rombos grandes; el dueño eligio la version de dos filas el
- * 2026-09-16. Como el rombo mide el mosaico entero —y no el medio mosaico que
- * median los cuadrados—, 14 deja el rombo del mismo tamaño que tenia el
- * cuadrado, que es lo que hace que la cinta conserve su densidad.
- *
- * ⚠️ `--patron-paso` BAJA CON EL MOSAICO Y NO ES OPCIONAL. `.patron-vivo` corre
- * el pseudo exactamente un mosaico para que el bucle sea invisible; dejado en
- * 28 con un mosaico de 14 seguiria cayendo sobre si mismo (28 es multiplo de
- * 14), pero el pseudo mediria un mosaico de mas de lo necesario. Se baja para
- * que las dos cuentas sigan diciendo lo mismo.
- *
- * ⚠️ SE DECLARA EN `div.cinta::before` Y NO EN `.cinta`. `tokens.css` declara
- * `--patron-rombos` en el selector universal INCLUYENDO `*::before`, o sea que
- * el pseudo tiene la suya propia y no hereda la del elemento: puesta en
- * `.cinta` no cambiaria nada. Y lleva el tag adelante porque
- * `.patron-vivo-cinta::before` tiene la misma especificidad (0,1,0) que
- * `.cinta::before`, y cual gana lo decidiria el orden de insercion de las
- * hojas, que en Next App Router no es un contrato estable entre `dev` y
- * `build`.
- *
- * Sin soporte de `repeating-conic-gradient` la cinta queda en Verde Tiempo
- * Extra liso, con su halo: sigue separando, que es su trabajo.
- */
-div.cinta {
-  --patron-paso: 14px;
-}
-
-div.cinta::before {
-  background-image: repeating-conic-gradient(
-    from 45deg,
-    var(--patron-color) 0 25%,
-    transparent 0 50%
-  );
-  background-size: 14px 14px;
-  background-position: 0 0;
-}
-
-.cinta::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 38%;
-  pointer-events: none;
-  background-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgb(255 255 255 / 0.22) 45%,
-    rgb(255 255 255 / 0.4) 50%,
-    rgb(255 255 255 / 0.22) 55%,
-    transparent 100%
-  );
-  transform: translate3d(-120%, 0, 0);
-}
-
-/*
- * ⚠️ DENTRO DE LA MEDIA QUERY, y no confiando en la regla global: una animacion
- * infinita con duracion 0.01ms queda clavada en su ULTIMO cuadro, que aca es
- * fuera de la cinta (320%): invisible, que es lo correcto, pero mejor que no
- * exista. Keyframe local con nombre propio: en un CSS Module los `@keyframes`
- * son locales y un nombre repetido con `movimiento.css` mataria al global.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .cinta::after {
-    animation: pieBrillo 9s var(--curva-corte) infinite;
-    animation-delay: 1.2s;
-    will-change: transform;
-  }
-}
-
-@keyframes pieBrillo {
-  0% {
-    transform: translate3d(-120%, 0, 0);
-  }
-  38% {
-    transform: translate3d(320%, 0, 0);
-  }
-  100% {
-    transform: translate3d(320%, 0, 0);
-  }
-}
-
-/**
- * ⚠️ EN TELEFONO EL MOSAICO BAJA CON LA CINTA, PARA QUE SIGAN ENTRANDO DOS
- * FILAS ENTERAS: 18 / 2 = 9. Con el mosaico clavado en 14 la segunda fila
- * quedaria cortada por la mitad y dejaria una tira de hexagonos; el cuadrado
- * aguantaba el recorte porque un cuadrado cortado sigue siendo un rectangulo, y
- * el rombo no.
- */
-@media (max-width: 480px) {
-  div.cinta {
-    height: 18px;
-    --patron-paso: 9px;
-  }
-
-  div.cinta::before {
-    background-size: 9px 9px;
-  }
 }
 
 /* ------------------------------------------------------------------ layout */
@@ -507,8 +356,7 @@ div.cinta::before {
 
 /**
  * ⚠️ EN `forced-colors` LOS FONDOS DE IMAGEN Y LAS SOMBRAS SE SUPRIMEN, y el
- * subrayado de los enlaces, el filete de cada columna y la banda de luz de la
- * cinta son eso: se evaporan. El subrayado se devuelve con `text-decoration`,
+ * subrayado de los enlaces y el filete de cada columna son eso: se evaporan. El subrayado se devuelve con `text-decoration`,
  * que el modo si respeta; el filete se devuelve con un borde de sistema para
  * que la columna no pierda su cabecera; el panel gana un borde arriba para no
  * fundirse con la pagina.

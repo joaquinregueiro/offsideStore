@@ -35,10 +35,17 @@ import { LogoLockup } from './marca';
  * Mismo destino, mismo tipo que en la barra: si el mismo enlace se animara
  * distinto segun desde donde se toca, el movimiento dejaria de significar algo.
  *
- * ⚠️ TRES PLANOS, NO UNO. Antes era UN rectangulo de Tinta y por eso se leia
- * como un apendice: cinta de rombos → bloque noche con malla, grano y blobs de
- * luz → tira legal en fosa. Ninguno se escribe a mano: son clases del sistema
- * (`sup-*`, `escena-luz`, `blobs`, `patron-vivo`, `con-grano`).
+ * ⚠️ DOS PLANOS, NO UNO. Antes era UN rectangulo de Tinta y por eso se leia como
+ * un apendice: bloque noche con malla, grano y blobs de luz → tira legal en
+ * fosa. Ninguno se escribe a mano: son clases del sistema (`sup-*`,
+ * `escena-luz`, `blobs`, `con-grano`).
+ *
+ * ⚠️ LA CINTA DE ROMBOS SE SACO EL 2026-09-16, por decision del dueño. Era el
+ * primer hijo y llevaba `z-index: 2` justamente para taparle el lugar a
+ * `.sup-noche::before` —el filo de luz que separa el bloque oscuro de lo que
+ * tiene arriba, que se pinta en `z-index: 1`—. Sin la cinta, ese filo vuelve a
+ * ser el separador, que es para lo que existe: el pie NO se queda sin division
+ * arriba.
  */
 /**
  * ⚠️ EL ORDEN NO ES ALFABETICO: va de menos a mas compromiso. "Automatico"
@@ -75,14 +82,6 @@ export async function Footer() {
       className={`${estilos.pie} sup-noche escena-luz con-grano`}
       style={{ viewTransitionName: 'pie' }}
     >
-      {/*
-        Cinta de seccion (identidad §05), en su escala real (28px), con halo y
-        una banda de luz que la recorre; el rombo se corre un mosaico EXACTO
-        cada 26s, asi que el bucle es invisible. Un "200% corrido -50%"
-        saltaria cada vuelta.
-      */}
-      <div className={`${estilos.cinta} patron-vivo patron-vivo-cinta`} aria-hidden="true" />
-
       {/*
         BLOBS DE LUZ detras de las columnas: verde arriba a la derecha, amarillo
         abajo a la izquierda, un verde chico arriba al medio (las posiciones por
