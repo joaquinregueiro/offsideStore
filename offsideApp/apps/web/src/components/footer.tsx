@@ -4,7 +4,7 @@ import { elegirTema } from '@/app/acciones';
 import { temaElegido, type Tema } from '@/lib/tema';
 
 import estilos from './footer.module.css';
-import { Logo } from './marca';
+import { LogoLockup } from './marca';
 
 /**
  * Pie del sitio.
@@ -106,7 +106,7 @@ export async function Footer() {
       */}
       <div className={`${estilos.contenido} revela-grilla-luz`}>
         <div className={estilos.marca}>
-          <Logo invertido alto={34} />
+          <LogoLockup alto={34} />
 
           {/*
             ⚠️ EL CLAIM ES DISPLAY Y ES LO QUE CONVIERTE AL PIE EN UN CIERRE. Con

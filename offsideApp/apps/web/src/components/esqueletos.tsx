@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-import { Logo } from './marca';
+import { LogoLockup } from './marca';
 
 import estilos from './esqueletos.module.css';
 
@@ -95,7 +95,7 @@ export function BarraFantasma() {
     <div className={estilos.barraFantasma} aria-hidden="true">
       <div className={estilos.barraFantasmaContenido}>
         <span className={estilos.barraFantasmaMarca}>
-          <Logo invertido />
+          <LogoLockup alto={36} />
         </span>
 
         <span className={estilos.barraFantasmaBuscador} />

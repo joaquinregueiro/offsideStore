@@ -1,37 +1,19 @@
 /**
- * LA MARCA: bandera de linea + wordmark.
+ * LA MARCA: el lockup de imagen y la bandera suelta.
  *
- * ⚠️ EL COLOR NO SE ESCRIBE EN `.invertido`, Y ESO NO ES UN OLVIDO. Antes era
- * `color: var(--color-papel)` y eso volvia muerto el hover de la marca en la
- * barra: `.invertido` esta en el MISMO elemento que `.logo`, o sea que una
- * declaracion de color aca gana sobre cualquier color heredado del `<a>` que
- * lo envuelve. Con `inherit` el color lo decide el contexto. Los consumidores
- * de `invertido` ya lo declaran:
- *   header.module.css `.marca`         → --color-papel (y --color-cambio en hover)
- *   footer                `.sup-noche`  → --color-sobre-oscuro (= papel)
- *   (auth)/auth.module.css `.panel`     → --color-papel
+ * ⚠️ `.logo`, `.invertido` Y `.wordmark` SE FUERON CON EL COMPONENTE `Logo`
+ * (2026-09-15). Existian para el lockup de TEXTO —bandera al lado de "Offside"
+ * en Big Noodle— y no quedo una sola pantalla que lo use. Nada acá hereda ni
+ * depende de ellas: el lockup nuevo es una imagen y no tiene color que heredar,
+ * asi que el `color: inherit` que `.invertido` existia para no romper ya no
+ * protege nada.
  *
- * ⚠️ LA LUZ DEL ISOTIPO VIVE ACA, LA RESPIRACION NO. La bandera lleva un halo
- * estatico del color de `--luz-marca` —verde luminoso sobre papel, verde-400
- * sobre noche, Amarillo Cambio sobre cancha: lo remapea cada superficie, no
- * este archivo— en TODOS sus usos (barra, pie, panel de auth, esqueletos,
- * pantallas de servicio). Es `filter: drop-shadow`: sigue la silueta del PNG
- * transparente y sale de cualquier `overflow`. Cuesta nada: es una imagen de
- * 26 a 72px. El halo que RESPIRA es cosa de la barra (`header.module.css`):
- * una perpetua se decide por pantalla, no se hereda desde la marca.
+ * ⚠️ LA LUZ VIVE ACA, LA RESPIRACION NO. Los dos dibujos llevan un halo estatico
+ * de `filter: drop-shadow`, que sigue la silueta del PNG transparente y sale de
+ * cualquier `overflow`. El halo que RESPIRA es cosa de la barra
+ * (`header.module.css`): una perpetua se decide por pantalla, no se hereda
+ * desde la marca.
  */
-
-.logo {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--espacio-3);
-  color: var(--marca-texto, var(--color-cancha));
-  transition: color var(--dur-hover) var(--curva);
-}
-
-.invertido {
-  color: inherit;
-}
 
 .isotipo {
   display: block;
@@ -46,29 +28,11 @@
    */
   transform-origin: 10% 90%;
   /*
-   * Halo de reposo: corto y tenue. Sobre papel es verde y se lee como que la
-   * bandera esta iluminada; sobre la barra es amarillo y es la chispa de la
-   * marca. Un contenedor que anime `filter` (la barra) lo pisa mientras corre.
+   * Halo de reposo: corto y tenue. Lo tiñe `--luz-marca`, que cada superficie
+   * remapea —hoy el unico uso es la bandera izada del 404, sobre `.sup-fosa`—.
+   * Un contenedor que anime `filter` lo pisa mientras corre.
    */
   filter: drop-shadow(0 0 5px rgb(var(--luz-marca) / 0.45));
-}
-
-.wordmark {
-  font-family: var(--fuente-titulo);
-  font-weight: var(--peso-normal);
-  /*
-   * Interlineado 1 y no el del sistema: el wordmark es una sola linea y con
-   * 0.95 el recuadro queda mas bajo que las letras y las corta arriba.
-   */
-  line-height: 1;
-  letter-spacing: var(--tracking-titulo);
-  text-transform: uppercase;
-  color: inherit;
-  /*
-   * Compensa la altura de la x: Big Noodle no tiene descendentes visibles en
-   * "Offside" y sin esto el wordmark se ve flotando sobre la bandera.
-   */
-  transform: translateY(1px);
 }
 
 /**
@@ -83,19 +47,24 @@
  * macizo de 26px se convierte en un resplandor alrededor de cada asta de cada
  * letra.
  *
- * ⚠️ EL HALO SE REMAPEA A VERDE Y NO SE DEJA EN EL AMARILLO DE LA SUPERFICIE.
- * `.sup-cancha` apunta `--luz-marca` a Amarillo Cambio, y eso es correcto para
- * la bandera, que no tiene sombra propia. Este lockup SI la tiene: trae una
- * sombra dura verde dibujada adentro del PNG. Un halo amarillo alrededor de una
- * sombra verde son dos acentos peleándose en el mismo elemento; con
- * `--luz-verde-clara` el halo se lee como continuación de la sombra del logo.
- * Se remapea la variable, no se escribe el color: el que respira es el
- * `@keyframes` de la barra, que lee `--luz-marca` y no sabe de este archivo.
+ * ⚠️ EL HALO SE CLAVA EN AMARILLO CAMBIO Y NO LO DECIDE LA SUPERFICIE, al reves
+ * que en `.isotipo`. La razon es que este lockup TRAE SU PROPIA SOMBRA dibujada
+ * adentro del PNG, en Amarillo Cambio, y esa sombra es la misma en las cinco
+ * pantallas porque es un archivo, no una variable. El halo existe para
+ * continuarla, asi que tiene que ser igual de fijo: dejarlo a merced de
+ * `--luz-marca` lo pondria verde sobre `.sup-noche` (el pie) y sobre
+ * `.sup-fosa` (el 404), o sea un resplandor verde alrededor de una sombra
+ * amarilla. La bandera si se deja tintar, porque no tiene sombra propia.
+ *
+ * Se remapea la variable en vez de escribir el color en el `filter`: el que
+ * respira es el `@keyframes marcaRespira` de la barra, que lee `--luz-marca` y
+ * no sabe de este archivo. Escribir el color acá dejaria la respiracion en
+ * amarillo sobre la barra y en verde en cualquier otro lado.
  */
 .lockup {
   display: block;
   /* No se deja encoger: el logo pierde su margen de proteccion enseguida. */
   flex: none;
-  --luz-marca: var(--luz-verde-clara);
+  --luz-marca: var(--luz-cambio);
   filter: drop-shadow(0 0 4px rgb(var(--luz-marca) / 0.3));
 }

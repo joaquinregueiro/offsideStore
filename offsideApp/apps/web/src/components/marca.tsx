@@ -1,15 +1,20 @@
 import estilos from './marca.module.css';
 
 /**
- * La marca: bandera de linea + wordmark.
+ * La marca: el lockup de imagen (`LogoLockup`) y la bandera suelta (`Isotipo`).
  *
- * ⚠️ EL WORDMARK ES TEXTO, NO UNA IMAGEN, y eso es fiel a la identidad, no un
- * atajo. El §01 dice "misma tipografia en todas las aplicaciones": el logotipo
- * ES Big Noodle Titling en mayusculas, y esa fuente ya la carga la app. Como
- * texto se selecciona, se lee en un lector de pantalla, escala con el zoom del
- * navegador y no pesa un byte extra.
+ * ⚠️ EL LOCKUP DE TEXTO SE RETIRO EL 2026-09-15. Habia un componente `Logo`
+ * —bandera + "Offside" escrito en Big Noodle— y su argumento era bueno: como
+ * texto se seleccionaba, lo leia un lector de pantalla, escalaba con el zoom y
+ * no pesaba un byte. El dueño entrego un lockup dibujado y decidio usarlo en
+ * las cinco pantallas que tenian el otro, asi que `Logo` se quedo sin un solo
+ * consumidor. Queda en el historial de git, no comentado acá.
  *
- * ⚠️ EL ISOTIPO SI ES UNA IMAGEN, y se extrajo del archivo real de identidad
+ * ⚠️ EL ISOTIPO SOBREVIVE PORQUE NO ES UN LOGOTIPO, ES UN ORNAMENTO: lo usa
+ * `BanderaIzada` en el 404, donde la bandera se iza y es "el gesto literal del
+ * fuera de juego". Ahi la palabra no reemplaza nada.
+ *
+ * ⚠️ EL ISOTIPO ES UNA IMAGEN, y se extrajo del archivo real de identidad
  * (`design/assets/logos/offside-isotipo-bandera.png`) recortando la bandera y
  * volviendo transparente el fondo verde de la lamina. NO se redibujo a mano:
  * el damero en diagonal tiene una geometria precisa y una version "parecida"
@@ -49,64 +54,47 @@ export function Isotipo({ alto = 26 }: { alto?: number }) {
 }
 
 /**
- * Lockup completo. `invertido` es para fondos oscuros —la barra verde y el pie
- * en tinta—, donde el wordmark va en papel en vez del verde de marca.
- */
-export function Logo({ invertido = false, alto = 26 }: { invertido?: boolean; alto?: number }) {
-  return (
-    <span className={`${estilos.logo} ${invertido ? estilos.invertido : ''}`.trim()}>
-      <Isotipo alto={alto} />
-      <span
-        className={estilos.wordmark}
-        data-marca="wordmark"
-        style={{ fontSize: `${Math.round(alto * 1.35)}px` }}
-      >
-        Offside
-      </span>
-    </span>
-  );
-}
-
-/**
  * LOCKUP DE IMAGEN — la marca completa en un solo archivo blanco.
  *
- * ⚠️ NO REEMPLAZA A `Logo`, CONVIVE CON EL. `Logo` sigue siendo bandera +
- * wordmark de TEXTO y lo usan el pie, el panel de auth, los esqueletos y las
- * pantallas de servicio. Esto es el lockup que el dueño entregó el 2026-09-15
- * y que hoy usa SOLO la barra.
+ * ⚠️ ES LA MARCA EN LAS CINCO PANTALLAS QUE LA MUESTRAN: la barra (36), el pie
+ * (34), el panel de auth (34), la barra fantasma de los esqueletos (36, que
+ * TIENE que coincidir con la barra real o el logo salta al cargar) y las
+ * pantallas de servicio (26).
  *
  * ⚠️ LA TINTA ES BLANCA Y NO HAY VARIANTE OSCURA: sobre una superficie clara es
  * INVISIBLE. Por eso vive en la barra, que es `.sup-cancha` en los dos temas
  * —`tokens.css` no redefine `--color-cancha` ni en claro ni en oscuro—. Antes
  * de ponerlo en otro lado hay que confirmar que ese lado sea oscuro.
  *
- * ⚠️ EL WORDMARK DEJA DE SER TEXTO, y arriba está escrito por qué eso era
- * mejor: se seleccionaba, lo leía un lector de pantalla y escalaba con el zoom.
- * Lo decidió el dueño. Lo que se conserva es el nombre accesible: el `<a>` de la
- * barra ya declara `aria-label`, así que la imagen va con `alt=""` y no repite.
+ * ⚠️ EL NOMBRE ACCESIBLE NO VIVE EN LA IMAGEN. Donde el lockup va adentro de un
+ * enlace a la portada —la barra y las pantallas de servicio— el `<a>` ya
+ * declara `aria-label="Offside Store — inicio"`, así que la imagen va con
+ * `alt=""` para no decir el nombre dos veces. Donde NO es un enlace —el pie y
+ * el panel de auth— el nombre de la marca ya está escrito en el texto que lo
+ * rodea, y la barra fantasma entera es `aria-hidden`.
  *
- * ⚠️ ES SOLO LA PALABRA: ESTE LOCKUP NO TRAE LA BANDERA. O sea que la barra
- * dejó de mostrar el isotipo, que era la única forma de marca que tenía. Fue
- * decisión del dueño (reemplazó al lockup apilado del 2026-09-15, que a la
- * altura de la barra dejaba la palabra en 45px de ancho). La bandera sigue
- * viva en el pie, el panel de auth, los esqueletos y las pantallas de
- * servicio, que usan `Logo`.
+ * ⚠️ ES SOLO LA PALABRA: ESTE LOCKUP NO TRAE LA BANDERA. Con el retiro de
+ * `Logo`, el isotipo deja de aparecer en la barra, el pie, el panel de auth y
+ * los esqueletos. La bandera queda SOLO en el 404, izada. Es consecuencia de
+ * usar este archivo en todos lados, y lo decidió el dueño.
  *
- * ⚠️ LA RELACION ES 2.826 Y POR ESO ENTRA SIN TOCAR LA BARRA: a 44px de alto
- * mide 124px de ancho, casi lo mismo que ocupaba `Logo` (bandera 26 + hueco 12
- * + wordmark ~90). `--alto-barra` sigue siendo 84px = 16 + 44 + 16 + 6.
+ * ⚠️ LA RELACION ES 2.826 Y POR ESO ENTRA SIN TOCAR LA BARRA: a 36px de alto
+ * mide 102px de ancho, y `.marca` sigue midiendo `--alto-control` (44) porque
+ * lo declara como `min-height`. `--alto-barra` sigue siendo 84px = 16 + 44 +
+ * 16 + 6. Con el lockup a 44 tambien entraba (124px); 36 es el "achicalo un
+ * poco" que pidio el dueño el 2026-09-15.
  *
  * ⚠️ EL PNG NO ES EL ARCHIVO CRUDO, y el recorte no es una optimización
  * opcional: el original es un lienzo de 2600x2600 con la palabra en una banda
- * de 2016x713 al medio, así que pedirle 44px de ALTO al archivo entero dejaría
- * la palabra en 12px. Se recorta al contenido, se baja a 264px de alto (6x de
- * los 44 a los que se muestra) y se guarda con paleta: 220 KB → 26 KB, sin
- * diferencia visible al tamaño al que se usa.
+ * de 2016x713 al medio, así que pedirle 36px de ALTO al archivo entero dejaría
+ * la palabra en 10px. Se recorta al contenido, se baja a 264px de alto —7x del
+ * uso mas grande, que son los 36 de la barra— y se guarda con paleta: 82 KB →
+ * 17 KB, sin diferencia visible a los tamaños a los que se usa.
  */
 
 const LOCKUP_RELACION = 746 / 264;
 
-export function LogoLockup({ alto = 44 }: { alto?: number }) {
+export function LogoLockup({ alto = 36 }: { alto?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

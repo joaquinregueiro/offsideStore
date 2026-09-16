@@ -245,7 +245,7 @@ export async function Header({
           aria-label="Offside Store — inicio"
           transitionTypes={['retrocede']}
         >
-          <LogoLockup />
+          <LogoLockup alto={36} />
         </Link>
 
         {/*

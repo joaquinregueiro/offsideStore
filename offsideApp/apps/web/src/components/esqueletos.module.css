@@ -211,6 +211,12 @@
   min-height: var(--alto-control);
   flex: none;
   color: var(--color-papel);
+  /*
+   * ⚠️ EL HALO TIENE QUE SER EL MISMO QUE EL DE LA BARRA REAL (Amarillo Cambio,
+   * ver `.lockup` en `marca.module.css`). Si no, el logo cambia de color en el
+   * momento exacto en que el fantasma da paso a la barra de verdad, que es lo
+   * unico que este componente existe para evitar.
+   */
   filter: drop-shadow(0 0 8px rgb(var(--luz-cambio) / 0.45));
 }
 

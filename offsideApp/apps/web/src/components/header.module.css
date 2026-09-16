@@ -430,71 +430,14 @@ header.barra::before {
 }
 
 /**
- * LA BANDERA RESPIRA. Un halo del color de `--luz-marca` —Amarillo Cambio
- * adentro de `.sup-cancha`— que crece y se apaga cada 3.6s alrededor del
- * isotipo. Es `filter: drop-shadow`: sigue la silueta de la bandera, sale de
- * cualquier `overflow` y se compone en la GPU. Un PNG de 26px: cuesta nada.
- *
- * ⚠️ ES LA UNICA PERPETUA DE LA BARRA Y VA SOBRE UN ELEMENTO DECORATIVO, que es
- * la regla dura de `movimiento.css`. No se usa la global `.respira` porque esa
- * es "un CTA por pantalla" y cada pantalla ya tiene el suyo: dos elementos
- * respirando en la misma pantalla se pelean.
- *
- * ⚠️ EL `transform-origin` NO SE DECLARA ACA. Vive en `marca.module.css`,
- * sobre `.isotipo`, porque el eje de giro es una propiedad de la MARCA y no del
- * contexto. Aca va solo el disparador, porque el foco lo recibe el `<a>`.
- *
- * ⚠️ SE ENGANCHA POR `[data-marca]` Y NO POR `img`: el dia que el isotipo sea
- * un `<svg>`, un selector de tag deja de aplicar en silencio.
- */
-.marca [data-marca='isotipo'] {
-  transition: transform var(--dur-hover) var(--curva-viva);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .marca [data-marca='isotipo'] {
-    animation: marcaRespira var(--dur-respirar) var(--curva-flotar) infinite;
-    will-change: filter;
-  }
-}
-
-/*
- * ⚠️ EL HOVER NO TOCA EL `filter`, Y NO ES PEREZA: mientras la animacion corre,
- * su valor gana sobre cualquier declaracion; pausarla la deja clavada en el
- * cuadro en que estaba, y sacarla la reinicia al soltar. El halo sigue
- * respirando; lo que responde al hover es la bandera, que se levanta, y el
- * wordmark, que se enciende.
- */
-.marca:hover [data-marca='isotipo'],
-.marca:focus-visible [data-marca='isotipo'] {
-  transform: rotate(-8deg) scale(1.1);
-}
-
-.marca:active [data-marca='isotipo'] {
-  transform: rotate(-3deg) scale(1.02);
-  transition-duration: var(--dur-instante);
-}
-
-/**
- * El wordmark se enciende con el hover: `text-shadow` difuso ALREDEDOR de las
- * letras, nunca un fondo debajo. Cambio sobre el vidrio sigue en 4.92:1.
- */
-.marca [data-marca='wordmark'] {
-  transition: text-shadow var(--dur-hover) var(--curva);
-}
-
-.marca:hover [data-marca='wordmark'],
-.marca:focus-visible [data-marca='wordmark'] {
-  text-shadow: 0 0 16px rgb(var(--luz-cambio) / 0.55);
-}
-
-/**
  * EL LOCKUP DE IMAGEN — lo que hoy muestra la barra (`LogoLockup`).
  *
- * ⚠️ LAS REGLAS DE `[data-marca='isotipo']` Y `[data-marca='wordmark']` DE ARRIBA
- * NO LE APLICAN, y quedan igual porque `Logo` sigue vivo en el pie, el panel de
- * auth, los esqueletos y las pantallas de servicio. El lockup tiene enganche
- * propio justamente para que la barra pueda animarlo distinto sin tocarlas.
+ * ⚠️ ACA VIVIA LA BANDERA QUE RESPIRA Y SE LEVANTA CON EL HOVER, mas el
+ * encendido del wordmark. Las dos familias de reglas se borraron el 2026-09-15
+ * con el componente `Logo`: nada adentro de `.marca` lleva ya
+ * `[data-marca='isotipo']` ni `[data-marca='wordmark']`, asi que eran selectores
+ * que no enganchaban con nada. La respiracion no se perdio —es el mismo
+ * `marcaRespira` de siempre—, cambio de elemento.
  *
  * ⚠️ NO GIRA. El `rotate(-8deg)` del isotipo es la bandera que se levanta desde
  * el asta; el lockup incluye la palabra, y una palabra inclinada no se lee como

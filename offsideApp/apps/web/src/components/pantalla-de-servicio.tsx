@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { Isotipo, Logo } from './marca';
+import { Isotipo, LogoLockup } from './marca';
 import { Blobs } from './movimiento';
 import { Contenedor } from './ui';
 
@@ -128,7 +128,7 @@ export function PantallaDeServicio({
               className={`${estilos.marcaEnlace} marca-brilla entra-veloz`}
               aria-label="Offside Store — inicio"
             >
-              <Logo invertido alto={26} />
+              <LogoLockup alto={26} />
             </Link>
           )}
 
