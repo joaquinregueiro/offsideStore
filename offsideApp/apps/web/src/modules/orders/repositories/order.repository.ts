@@ -579,32 +579,6 @@ export async function findSellerDisplayName(
   return row?.displayName;
 }
 
-/**
- * Valor NUMERICO vigente de una clave global de `app_settings`.
- *
- * ⚠️ DUPLICA LA LECTURA DEL CONFIG STORE, y es a proposito y temporal: el
- * Service de `config` solo expone la comision, y un modulo no importa el
- * repository de otro. Cuando `config` exponga `getNumberSetting(key)`, esto
- * se borra y se llama a eso. Devuelve `undefined` si la clave no esta
- * cargada; validar el tipo es del Service.
- */
-export async function findGlobalSettingValue(key: string, db?: Database): Promise<unknown> {
-  const [row] = await conn(db)
-    .select({ value: schema.appSettings.value })
-    .from(schema.appSettings)
-    .where(
-      and(
-        eq(schema.appSettings.scope, 'global'),
-        sql`${schema.appSettings.scopeId} IS NULL`,
-        eq(schema.appSettings.key, key),
-      ),
-    )
-    .orderBy(desc(schema.appSettings.version))
-    .limit(1);
-
-  return row?.value;
-}
-
 export interface AppendHistoryEventValues {
   userId: string;
   eventType: 'PURCHASE_COMPLETED' | 'SALE_COMPLETED' | 'ORDER_CANCELLED';
@@ -665,10 +639,13 @@ export interface RestoredStock {
  * read-modify-write.
  *
  * ⚠️ ESCRIBE `listings` DESDE `orders`, y es una duplicacion CONSCIENTE del
- * mismo tipo que `hasOpenDispute` (disputes) y `findGlobalSettingValue`
- * (config): un modulo no importa el repository de otro, y `listings` todavia
- * no expone `restoreStock()` ni `reactivateIfSoldOut()` en su Service. Cuando
- * los exponga, esto se borra y `cancelBySeller` los llama (NECESITA-DE-OTROS).
+ * mismo tipo que `hasOpenDispute` (disputes): un modulo no importa el
+ * repository de otro, y `listings` todavia no expone `restoreStock()` ni
+ * `reactivateIfSoldOut()` en su Service. Cuando los exponga, esto se borra y
+ * `cancelBySeller` los llama (NECESITA-DE-OTROS).
+ *
+ * ⚠️ LA OTRA DUPLICACION DE ESA LISTA —`findGlobalSettingValue`— YA SE SALDO:
+ * `config` expone su Service y `orders` lo llama. Queda esta.
  *
  * `sold_out → active` SOLO desde `sold_out`: es el unico estado que SS-051
  * pone automaticamente. Una publicacion `paused` la pauso una persona y no la

@@ -1,5 +1,5 @@
 import type { PublicUser } from '../../auth/services/auth.service';
-import { parseSettingValue } from '../../config/services/settings-registry';
+import { isFeatureEnabled } from '../../config/services/setting-store.service';
 import { coverUrls } from '../../listings/services/listing.service';
 import {
   shippingSummaryFor,
@@ -37,6 +37,14 @@ import * as cartRepo from '../repositories/cart.repository';
  * `items[]`, `checkoutCart` agrupa por vendedor sin cambiar nada mas.
  */
 
+/**
+ * La clave ⚙️ de la perilla, para quien necesite nombrarla (los tests).
+ *
+ * ⚠️ EL SERVICE YA NO LA LEE A MANO. `cart` tenia su PROPIO lector de
+ * `app_settings` —un `findGlobalSetting` en su repositorio— que salteaba el
+ * registro y su validacion. Era deuda anotada ahi mismo ("cuando `config`
+ * exponga su Service, esto se borra"): se saldo.
+ */
 export const FEATURE_KEY = 'feature_cart';
 
 /**
@@ -186,10 +194,7 @@ export function groupBySeller(
 }
 
 async function exigirHabilitado(): Promise<void> {
-  const crudo = await cartRepo.findGlobalSetting(FEATURE_KEY);
-  if (crudo === undefined) throw errors.settingNotConfigured(FEATURE_KEY);
-
-  if (!parseSettingValue(FEATURE_KEY, crudo)) throw errors.cartDisabled();
+  if (!(await isFeatureEnabled('cart'))) throw errors.cartDisabled();
 }
 
 /**
@@ -203,10 +208,14 @@ async function exigirHabilitado(): Promise<void> {
  */
 async function habilitado(): Promise<boolean> {
   try {
-    const crudo = await cartRepo.findGlobalSetting(FEATURE_KEY);
-
-    return crudo !== undefined && parseSettingValue(FEATURE_KEY, crudo) === true;
+    return await isFeatureEnabled('cart');
   } catch {
+    /*
+     * El `catch` tambien cubre la clave NO CARGADA: `isFeatureEnabled` lanza
+     * `SETTING_NOT_CONFIGURED` donde el lector viejo devolvia `undefined`. El
+     * resultado visible es el mismo —`false`— y por la misma razon de siempre:
+     * esto lo pregunta la barra superior, que esta en las 22 pantallas.
+     */
     return false;
   }
 }

@@ -2,7 +2,7 @@ import { getRedisClient, withLock, type LockStore } from '@offside/jobs';
 
 import * as audit from '../../audit/services/audit.service';
 import * as orderRepo from '../repositories/order.repository';
-import * as orderSettings from './order-settings.service';
+import * as orderSettings from '../../config/services/setting-store.service';
 import { completeIfWindowElapsed, expirePendingOrder } from './order.service';
 
 /**
