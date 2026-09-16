@@ -50,6 +50,7 @@ let questionService: typeof QuestionService;
 let inapp: typeof InappService;
 let encryptToken: (plaintext: string) => string;
 let closeRedis: () => Promise<void>;
+let vaciarCola: () => Promise<void>;
 let secuencia = 0;
 
 beforeAll(async () => {
@@ -70,13 +71,34 @@ beforeAll(async () => {
   cipher.resetTokenCipherCache();
   encryptToken = cipher.encryptToken;
 
-  ({ closeRedisConnections: closeRedis } = await import('@offside/jobs'));
+  const jobs = await import('@offside/jobs');
+  ({ closeRedisConnections: closeRedis } = jobs);
+  vaciarCola = async () => {
+    /*
+     * ⚠️ PREGUNTAR AHORA ENCOLA UN EMAIL, asi que este archivo deja jobs en
+     * Redis. Sin esto quedan decenas apuntando a direcciones `@qstest.offside`
+     * que no existen: en CI da igual —Redis es efimero— pero en la maquina de
+     * quien desarrolla se acumulan, y el worker del `next dev` los toma. Hoy en
+     * local el adaptador es el de LOG y no sale nada; el dia que alguien
+     * configure SES en su `.env`, serian rebotes duros contra direcciones
+     * inventadas y eso ensucia la reputacion del remitente de verdad.
+     */
+    const cola = jobs.getQueue<{ to?: string }>(jobs.QUEUE_NAMES.NOTIFICATIONS_SEND);
+    const pendientes = await cola.getJobs(['waiting', 'delayed', 'failed', 'completed']);
+
+    await Promise.all(
+      pendientes
+        .filter((job) => typeof job.data?.to === 'string' && job.data.to.endsWith(SUFIJO))
+        .map((job) => job.remove()),
+    );
+  };
 
   await limpiar();
 });
 
 afterAll(async () => {
   await limpiar();
+  await vaciarCola();
 
   const { closeDatabase } = await import('@offside/database');
   await closeDatabase();
@@ -866,19 +888,137 @@ describe('historial del vendedor', () => {
   });
 });
 
-describe('tiempo de respuesta', () => {
-  it('devuelve null si nunca respondio: no se inventa un numero', async () => {
-    const { user: seller, sellerId } = await vendedor('promedio');
-    const comprador = await usuario('promedio-buyer');
+describe('como responde el vendedor', () => {
+  it('⚠️ EL SILENCIO SE VE: quien ignora muestra una tasa baja, no nada', async () => {
+    // Es el defecto que esto vino a arreglar. Antes se promediaban SOLO las
+    // respondidas: quien nunca contestaba no mostraba NADA y quien contestaba
+    // lento mostraba "~40 h". Ignorar quedaba mejor que tardar.
+    const { user: seller, sellerId } = await vendedor('ignora');
+    const comprador = await usuario('ignora-buyer');
     const listing = await publicacionActiva(seller);
-    const pregunta = await questionService.askQuestion(comprador, listing.id, '¿Cuanto mide?');
 
-    expect(await questionService.averageAnswerHours(sellerId)).toBeNull();
+    for (let i = 0; i < 4; i += 1) {
+      await questionService.askQuestion(comprador, listing.id, `Pregunta sin contestar ${i}`);
+    }
+    const contestada = await questionService.askQuestion(comprador, listing.id, '¿Esta si?');
+    await questionService.answerQuestion(seller, contestada.id, 'Esta si la contesto');
 
-    await questionService.answerQuestion(seller, pregunta.id, 'Mide 56');
+    const stats = await questionService.answerStats(sellerId);
 
-    const horas = await questionService.averageAnswerHours(sellerId);
-    expect(horas).not.toBeNull();
-    expect(horas).toBeGreaterThanOrEqual(0);
+    expect(stats).not.toBeNull();
+    expect(stats?.total).toBe(5);
+    expect(stats?.tasa).toBeCloseTo(0.2, 5);
+    expect(stats?.horas).not.toBeNull();
+
+    // Y la frase lo dice con todas las letras.
+    expect(questionService.frecuenciaDeRespuesta(stats, (h) => `${h} h`)).toContain(
+      'responde el 20% de las preguntas',
+    );
+  });
+
+  it('null si NADIE le pregunto: no se acusa a quien no tuvo la ocasion', async () => {
+    // "Responde el 0%" sobre alguien a quien nadie pregunto seria inventado.
+    // Distinto es no responder lo que SI le preguntaron.
+    const { sellerId } = await vendedor('sin-preguntas');
+
+    expect(await questionService.answerStats(sellerId)).toBeNull();
+  });
+
+  it('⚠️ LA VENTANA DEJA AFUERA LO VIEJO: dejar de responder se nota', async () => {
+    // Sin ventana, un vendedor que fue bueno y dejo de serlo seguia mostrando
+    // el numero viejo en la pantalla donde alguien decide comprarle.
+    const { user: seller, sellerId } = await vendedor('ventana');
+    const comprador = await usuario('ventana-buyer');
+    const listing = await publicacionActiva(seller);
+
+    const vieja = await questionService.askQuestion(comprador, listing.id, '¿La de hace mucho?');
+    await questionService.answerQuestion(seller, vieja.id, 'Contestada en su momento');
+
+    // Se la envejece mas alla de la ventana. Es la unica forma de fijar esto
+    // sin esperar 90 dias ni simular relojes.
+    const fueraDeVentana = new Date(
+      Date.now() - (questionService.VENTANA_DE_RESPUESTA_DIAS + 5) * 24 * 60 * 60 * 1000,
+    );
+    await getDatabase()
+      .update(schema.listingQuestions)
+      .set({ createdAt: fueraDeVentana, answeredAt: fueraDeVentana })
+      .where(eq(schema.listingQuestions.id, vieja.id));
+
+    expect(await questionService.answerStats(sellerId)).toBeNull();
+
+    // Y lo de ahora si cuenta.
+    await questionService.askQuestion(comprador, listing.id, '¿Y ahora?');
+    const stats = await questionService.answerStats(sellerId);
+    expect(stats?.total).toBe(1);
+    expect(stats?.tasa).toBe(0);
+  });
+
+  it('⚠️ las OCULTAS no cuentan ni a favor ni en contra', async () => {
+    // Una retirada por quien pregunto no es culpa del vendedor, y una ocultada
+    // legitima —spam— tampoco deberia contarle como "no respondida".
+    const { user: seller, sellerId } = await vendedor('ocultas-stats');
+    const comprador = await usuario('ocultas-stats-buyer');
+    const listing = await publicacionActiva(seller);
+
+    const spam = await questionService.askQuestion(comprador, listing.id, 'Texto de spam');
+    const real = await questionService.askQuestion(comprador, listing.id, '¿Cuanto mide?');
+    await questionService.answerQuestion(seller, real.id, 'Mide 56');
+
+    expect((await questionService.answerStats(sellerId))?.total).toBe(2);
+
+    await questionService.hideQuestion(seller, spam.id);
+
+    const stats = await questionService.answerStats(sellerId);
+    expect(stats?.total).toBe(1);
+    expect(stats?.tasa).toBe(1);
+  });
+});
+
+describe('la frase que ve el comprador', () => {
+  const horas = (h: number): string => `${h} h`;
+
+  it('no publica un porcentaje con pocas preguntas', () => {
+    // Con dos preguntas y una sin responder, "responde el 50%" suena a
+    // veredicto y es una moneda al aire.
+    const frase = questionService.frecuenciaDeRespuesta({ tasa: 0.5, horas: 2, total: 2 }, horas);
+
+    expect(frase).toBe('responde preguntas en ~2 h');
+    expect(frase).not.toContain('%');
+  });
+
+  it('⚠️ NO REDONDEA HACIA ARRIBA: 89.6% no es 90%', () => {
+    // Inflar un punto es inflar la reputacion de otra persona en la pantalla
+    // donde alguien decide transferir plata.
+    const frase = questionService.frecuenciaDeRespuesta(
+      { tasa: 0.896, horas: 3, total: 25 },
+      horas,
+    );
+
+    expect(frase).toBe('responde el 89% de las preguntas, en ~3 h');
+  });
+
+  it('sin una sola respuesta dice solo la tasa, sin inventar un tiempo', () => {
+    const frase = questionService.frecuenciaDeRespuesta({ tasa: 0, horas: null, total: 8 }, horas);
+
+    expect(frase).toBe('responde el 0% de las preguntas');
+  });
+
+  it('sin datos no dice nada', () => {
+    expect(questionService.frecuenciaDeRespuesta(null, horas)).toBeNull();
+  });
+
+  it('⚠️ NO ENCIMA DOS APROXIMACIONES: "en ~menos de 1 h" no', () => {
+    // Aparecio en la app: con un vendedor que contesta en minutos, el
+    // formateador devuelve "menos de 1 h" y la pantalla le anteponia "~".
+    const formatear = (h: number): string => (h < 1 ? 'menos de 1 h' : `${h} h`);
+
+    expect(questionService.tiempoDeRespuesta(0.3, formatear)).toBe('menos de 1 h');
+    expect(questionService.tiempoDeRespuesta(3, formatear)).toBe('~3 h');
+
+    const frase = questionService.frecuenciaDeRespuesta(
+      { tasa: 1, horas: 0.3, total: 13 },
+      formatear,
+    );
+    expect(frase).toBe('responde el 100% de las preguntas, en menos de 1 h');
   });
 });

@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, asc, avg, count, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 /**
  * Acceso a `listing_questions` (delta al ERD v1.3, 2026-09-10). Sin reglas
@@ -49,6 +49,9 @@ export interface ListingForQuestionRow {
   title: string;
   sellerId: string;
   sellerUserId: string;
+  /** Para avisarle por email. Sale de `users`, no del perfil de vendedor. */
+  sellerEmail: string;
+  sellerDisplayName: string | null;
   status: string;
   /**
    * Si se ve en la vitrina: ERD §9.1 (`active` + `APPROVED` + stock) y el
@@ -73,6 +76,8 @@ export async function findListingForQuestion(
       title: schema.listings.title,
       sellerId: schema.listings.sellerId,
       sellerUserId: schema.sellerProfiles.userId,
+      sellerEmail: schema.users.email,
+      sellerDisplayName: schema.users.displayName,
       status: schema.listings.status,
       visible: sql<boolean>`COALESCE((
         ${schema.listings.status} = 'active'
@@ -84,6 +89,7 @@ export async function findListingForQuestion(
     })
     .from(schema.listings)
     .innerJoin(schema.sellerProfiles, eq(schema.listings.sellerId, schema.sellerProfiles.id))
+    .innerJoin(schema.users, eq(schema.sellerProfiles.userId, schema.users.id))
     .leftJoin(
       schema.mercadopagoAccounts,
       eq(schema.mercadopagoAccounts.sellerId, schema.sellerProfiles.id),
@@ -401,31 +407,67 @@ export async function countByAskerId(askerId: string, db?: Database): Promise<nu
 }
 
 /**
- * Horas promedio que tarda un vendedor en responder, sobre TODAS sus
- * respondidas. `null` si nunca respondio.
+ * Como responde un vendedor las preguntas de una ventana de tiempo.
  *
- * Se calcula en la base con `AVG(EXTRACT(EPOCH ...))`: traer las filas para
- * promediar en memoria crece con el historial y esto se muestra en cada
- * ficha.
+ * ⚠️ DEVUELVE LA TASA ADEMAS DEL TIEMPO, Y LA TASA ES LO QUE ARREGLA LA
+ * METRICA. Antes se promediaban SOLO las respondidas, asi que quien nunca
+ * contestaba no mostraba NADA y quien contestaba lento mostraba "~40 h":
+ * ignorar se veia mejor que tardar. Con la tasa, el silencio se ve.
+ *
+ * ⚠️ LAS `hidden` NO CUENTAN NI ARRIBA NI ABAJO. Una retirada por quien
+ * pregunto no es culpa del vendedor, y una ocultada legitima —spam, un
+ * insulto— tampoco deberia contarle como "no respondida".
+ *
+ * ⚠️ Y ESO ABRE UN HUECO QUE HAY QUE NOMBRAR: ocultar todo lo que no se piensa
+ * contestar deja la tasa en 100%. Hoy se acota porque ocultar es una accion
+ * deliberada por pregunta Y QUEDA EN `audit_log` (QUESTION_HIDDEN), asi que el
+ * patron es visible; pero la fila no distingue "la oculto el vendedor" de "la
+ * retiro quien pregunto" —falta `hidden_by`, que es un cambio de ERD—, y hasta
+ * entonces esto no se puede cerrar desde el codigo.
+ *
+ * Se calcula TODO en la base y en UNA consulta: esto se muestra en cada ficha.
  */
-export async function averageAnswerHours(sellerId: string, db?: Database): Promise<number | null> {
+export interface AnswerStatsRow {
+  /** Preguntas de la ventana que cuentan: abiertas + respondidas. */
+  total: number;
+  respondidas: number;
+  /** Horas promedio sobre las respondidas. `null` si no respondio ninguna. */
+  horas: number | null;
+}
+
+export async function answerStatsBySellerId(
+  sellerId: string,
+  desde: Date,
+  db?: Database,
+): Promise<AnswerStatsRow> {
   const [fila] = await conn(db)
     .select({
-      horas: avg(
-        sql`EXTRACT(EPOCH FROM (${schema.listingQuestions.answeredAt} - ${schema.listingQuestions.createdAt})) / 3600`,
-      ),
+      total: count(),
+      respondidas: sql<number>`COUNT(*) FILTER (WHERE ${schema.listingQuestions.status} = 'answered')`,
+      horas: sql<
+        number | null
+      >`AVG(EXTRACT(EPOCH FROM (${schema.listingQuestions.answeredAt} - ${schema.listingQuestions.createdAt})) / 3600)`,
     })
     .from(schema.listingQuestions)
     .innerJoin(schema.listings, eq(schema.listingQuestions.listingId, schema.listings.id))
     .where(
       and(
         eq(schema.listings.sellerId, sellerId),
-        eq(schema.listingQuestions.status, 'answered'),
+        /*
+         * ⚠️ `open` Y `answered`, NO `ne(status, 'hidden')`. Es el mismo
+         * conjunto hoy, pero el CHECK admite agregar un cuarto estado y un
+         * "todo menos oculta" lo sumaria en silencio a una metrica publica.
+         */
+        inArray(schema.listingQuestions.status, ['open', 'answered']),
         isNull(schema.listingQuestions.deletedAt),
+        gte(schema.listingQuestions.createdAt, desde),
+        publicacionVigente(),
       ),
     );
 
-  if (fila?.horas === null || fila?.horas === undefined) return null;
-
-  return Number(fila.horas);
+  return {
+    total: Number(fila?.total ?? 0),
+    respondidas: Number(fila?.respondidas ?? 0),
+    horas: fila?.horas === null || fila?.horas === undefined ? null : Number(fila.horas),
+  };
 }

@@ -8,6 +8,7 @@ import {
 } from '../../config/services/setting-store.service';
 import * as audit from '../../audit/services/audit.service';
 import * as inapp from '../../notifications/services/inapp-notification.service';
+import * as orderEmails from '../../notifications/services/order-emails.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../questions.errors';
 import { detectarContacto, mensajeDeContacto } from './contacto-fuera-de-offside';
@@ -172,8 +173,10 @@ async function exigirHabilitado(): Promise<void> {
  *  - el texto entra en `questions_max_length`;
  *  - la cuenta no supera `questions_max_open_per_user` sin responder.
  *
- * ⚠️ NO AVISA AL VENDEDOR POR AHORA: su panel tiene `countPendingForSeller`.
- * Un aviso in-app por pregunta es un `notify` mas si se pide.
+ * AVISA AL VENDEDOR POR DOS CANALES: la campanita (en la misma transaccion que
+ * la fila) y un email (despues de commitear). Los dos, porque cumplen cosas
+ * distintas: la campanita ordena el trabajo de quien ya esta adentro; el email
+ * es lo unico que alcanza a quien no entro.
  */
 export async function askQuestion(
   user: PublicUser,
@@ -228,6 +231,34 @@ export async function askQuestion(
 
     return creada;
   });
+
+  /*
+   * ⚠️ EL EMAIL VA DESPUES DE COMMITEAR, FUERA DE LA TRANSACCION. Mandar "te
+   * preguntaron" por una fila que todavia puede revertirse es peor que tardar
+   * un segundo mas —un email no se puede deshacer—. Es la misma regla que
+   * siguen todos los emails de orden.
+   *
+   * ⚠️ NO PUEDE VOLTEAR LA PREGUNTA. `preguntaRecibida` ya atrapa sus propios
+   * fallos y devuelve `null`, pero el `catch` queda igual: la pregunta YA esta
+   * publicada y el aviso in-app YA se escribio; que la cola de emails este
+   * caida no puede convertir eso en un error en la cara de quien pregunto.
+   *
+   * ⚠️ POR QUE EXISTE: la campanita no alcanza. Un vendedor que no entra al
+   * sitio no se enteraba, y el TIEMPO DE RESPUESTA es una de las metricas que
+   * su reputacion publica muestra —se lo medía por algo que no tenia forma de
+   * saber—.
+   */
+  try {
+    await orderEmails.preguntaRecibida(
+      { email: listing.sellerEmail, nombre: listing.sellerDisplayName },
+      { publicacion: listing.title, texto: question },
+    );
+  } catch (error) {
+    console.error(
+      '[questions] no se pudo encolar el email de pregunta:',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 
   return toPublicQuestion(row);
 }
@@ -518,13 +549,105 @@ export async function listMyQuestions(
 }
 
 /**
- * Horas promedio que tarda el vendedor en responder, para "responde en ~X h"
- * en la ficha. `null` si nunca respondio: no se muestra nada, no se inventa
- * un numero. Redondeado a una decimal; menos que eso es ruido.
+ * Dias de la ventana sobre la que se mide como responde un vendedor.
+ *
+ * ⚠️ HAY VENTANA, Y ANTES NO HABIA. Una respuesta de hace un año pesaba igual
+ * que la de ayer, asi que un vendedor que fue bueno y dejo de serlo seguia
+ * mostrando el numero viejo en la pantalla donde alguien decide comprarle.
+ *
+ * ⚠️ 90 Y NO 30: con poco volumen —y este marketplace es nuevo— una sola
+ * pregunta mueve el porcentaje entero. Con 30 dias, dos preguntas y una sin
+ * responder dan 50%.
+ *
+ * ⚠️ NO ES ⚙️ CONFIGURABLE. Cambiarlo cambia lo que un numero PUBLICO significa
+ * sobre una persona; que se pueda mover desde Admin sin dejar rastro es peor
+ * que tenerlo fijo. Si alguna vez tiene que moverse, es una decision de
+ * producto con su registro.
  */
-export async function averageAnswerHours(sellerId: string): Promise<number | null> {
-  const horas = await questionRepo.averageAnswerHours(sellerId);
-  if (horas === null) return null;
+export const VENTANA_DE_RESPUESTA_DIAS = 90;
 
-  return Math.round(horas * 10) / 10;
+export interface AnswerStats {
+  /** Proporcion respondida, 0..1. */
+  tasa: number;
+  /** Horas promedio de las respondidas. `null` si no respondio ninguna. */
+  horas: number | null;
+  /** Preguntas que entraron en la cuenta. */
+  total: number;
+}
+
+/**
+ * Como responde un vendedor, para la ficha y la tienda.
+ *
+ * `null` cuando NO LE PREGUNTARON NADA en la ventana: ahi no hay nada que
+ * decir, y "responde el 0%" sobre alguien a quien nadie pregunto seria una
+ * acusacion inventada. Distinto es no responder lo que SI le preguntaron, que
+ * es justamente lo que esto vino a hacer visible.
+ */
+export async function answerStats(sellerId: string): Promise<AnswerStats | null> {
+  const desde = new Date(Date.now() - VENTANA_DE_RESPUESTA_DIAS * 24 * 60 * 60 * 1000);
+  const fila = await questionRepo.answerStatsBySellerId(sellerId, desde);
+
+  if (fila.total === 0) return null;
+
+  return {
+    tasa: fila.respondidas / fila.total,
+    // Redondeado a una decimal; menos que eso es ruido.
+    horas: fila.horas === null ? null : Math.round(fila.horas * 10) / 10,
+    total: fila.total,
+  };
+}
+
+/**
+ * La frase que ve el comprador, armada UNA sola vez.
+ *
+ * ⚠️ VIVE ACA Y NO EN CADA PANTALLA. La ficha y la tienda muestran el mismo
+ * dato; con dos redacciones, el dia que cambie la regla —o el umbral— una de
+ * las dos queda vieja y nadie se entera. Es la misma razon por la que las seis
+ * secciones del cajon se definen una vez.
+ *
+ * ⚠️ CON POCAS PREGUNTAS NO SE PUBLICA UN PORCENTAJE. Con dos preguntas y una
+ * sin responder, "responde el 50%" suena a veredicto y es una moneda al aire.
+ * Debajo del minimo se dice el tiempo, si respondio alguna, y nada mas.
+ *
+ * ⚠️ NO SE REDONDEA HACIA ARRIBA. `Math.floor`: prometer 90% cuando es 89,6%
+ * es inflar, sobre la reputacion de otra persona, en la pantalla donde alguien
+ * decide transferir plata.
+ */
+export const MINIMO_PARA_LA_TASA = 5;
+
+/**
+ * El tiempo de respuesta con SU PROPIO marcador de aproximacion.
+ *
+ * ⚠️ EL `~` LO DECIDE ESTE LUGAR Y NO QUIEN LO IMPRIME. Las pantallas escribian
+ * `~{horas(...)}` a mano, y cuando el promedio cae por debajo de una hora el
+ * formateador devuelve "menos de 1 h": el resultado era "en ~menos de 1 h". Una
+ * aproximacion sobre otra. Con la regla acá, las dos pantallas dicen lo mismo y
+ * no hay forma de que una quede vieja.
+ */
+export function tiempoDeRespuesta(
+  horas: number,
+  formatearHoras: (horas: number) => string,
+): string {
+  const formateado = formatearHoras(horas);
+
+  return horas < 1 ? formateado : `~${formateado}`;
+}
+
+export function frecuenciaDeRespuesta(
+  stats: AnswerStats | null,
+  formatearHoras: (horas: number) => string,
+): string | null {
+  if (stats === null) return null;
+
+  const tiempo =
+    stats.horas === null ? null : `en ${tiempoDeRespuesta(stats.horas, formatearHoras)}`;
+
+  if (stats.total < MINIMO_PARA_LA_TASA) {
+    return tiempo === null ? null : `responde preguntas ${tiempo}`;
+  }
+
+  const porcentaje = Math.floor(stats.tasa * 100);
+  const cuantas = `responde el ${porcentaje}% de las preguntas`;
+
+  return tiempo === null ? cuantas : `${cuantas}, ${tiempo}`;
 }

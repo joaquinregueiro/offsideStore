@@ -9,6 +9,7 @@ import type {
   DisputaEmail,
   NivelVendedorEmail,
   OrdenEmail,
+  PreguntaEmail,
   ParteDeLaOrden,
   ResenaEmail,
   SeguimientoEmail,
@@ -63,7 +64,8 @@ export type OrderEmailKind =
   | 'dispute_opened'
   | 'dispute_resolved'
   | 'review_received'
-  | 'seller_tier_updated';
+  | 'seller_tier_updated'
+  | 'question_received';
 
 const KINDS: readonly OrderEmailKind[] = [
   'order_new_sale',
@@ -76,6 +78,7 @@ const KINDS: readonly OrderEmailKind[] = [
   'dispute_resolved',
   'review_received',
   'seller_tier_updated',
+  'question_received',
 ];
 
 /** A quien se le manda. `nombre` es `users.display_name` (puede no tener). */
@@ -104,7 +107,8 @@ export type OrderEmailJobData =
   | ({ kind: 'dispute_opened'; disputa: DisputaEmail } & JobBase)
   | ({ kind: 'dispute_resolved'; disputa: DisputaEmail; parte: ParteDeLaOrden } & JobBase)
   | ({ kind: 'review_received'; resena: ResenaEmail } & JobBase)
-  | ({ kind: 'seller_tier_updated'; nivel: NivelVendedorEmail } & JobBase);
+  | ({ kind: 'seller_tier_updated'; nivel: NivelVendedorEmail } & JobBase)
+  | ({ kind: 'question_received'; pregunta: PreguntaEmail } & JobBase);
 
 /* ---------------------------------------------------- validacion del job */
 
@@ -115,6 +119,16 @@ export type OrderEmailJobData =
  */
 const centavos = z.string().regex(/^\d+$/, 'centavos como string de digitos');
 const moneda = z.string().length(3);
+
+const preguntaSchema = z.object({
+  publicacion: z.string().min(1),
+  /*
+   * El tope real lo aplica `questions_max_length` ⚙️ en el Service. Aca solo se
+   * corta lo absurdo: lo que llega salio de Redis y pudo encolarlo cualquier
+   * version del codigo (CLAUDE.md §9).
+   */
+  texto: z.string().min(1).max(5_000),
+});
 
 const ordenSchema = z.object({
   id: z.string().min(1),
@@ -184,6 +198,7 @@ const jobSchema = z.discriminatedUnion('kind', [
   z.object({ ...base, kind: z.literal('dispute_resolved'), disputa: disputaSchema, parte }),
   z.object({ ...base, kind: z.literal('review_received'), resena: resenaSchema }),
   z.object({ ...base, kind: z.literal('seller_tier_updated'), nivel: nivelSchema }),
+  z.object({ ...base, kind: z.literal('question_received'), pregunta: preguntaSchema }),
 ]);
 
 /**
@@ -227,6 +242,8 @@ function build(data: OrderEmailJobData): EmailMessage {
       return templates.calificacionRecibida(data.to, data.nombre, data.resena);
     case 'seller_tier_updated':
       return templates.nivelDeVendedorActualizado(data.to, data.nombre, data.nivel);
+    case 'question_received':
+      return templates.preguntaRecibida(data.to, data.nombre, data.pregunta);
   }
 }
 
@@ -314,6 +331,14 @@ export function jobIdDe(data: OrderEmailJobData): string {
       // clave en Redis —un dato personal a la vista de cualquier `KEYS *`— y
       // porque una direccion puede llevar `:`, que BullMQ reserva.
       return `${data.kind}-${huella(data.to)}-${data.nivel.codigo}`;
+    case 'question_received':
+      /*
+       * ⚠️ LA PREGUNTA NO TRAE SU ID Y NO HACE FALTA: el jobId se arma con la
+       * huella del destinatario y la del TEXTO, asi que dos avisos de la misma
+       * pregunta se colapsan y dos preguntas distintas no. Meter el id en el
+       * payload obligaria a que la plantilla lo arrastre sin usarlo.
+       */
+      return `${data.kind}-${huella(data.to)}-${huella(data.pregunta.texto)}`;
   }
 }
 
@@ -490,7 +515,22 @@ export type {
   DisputaEmail,
   NivelVendedorEmail,
   OrdenEmail,
+  PreguntaEmail,
   ParteDeLaOrden,
   ResenaEmail,
   SeguimientoEmail,
 } from '../templates/order.templates';
+
+/**
+ * Al vendedor. Disparador: alguien pregunta sobre una de sus publicaciones.
+ *
+ * ⚠️ SE ENCOLA DESPUES DE COMMITEAR, como todos los de este archivo: mandar
+ * "te preguntaron" por algo que todavia puede revertirse es peor que tardar un
+ * segundo mas.
+ */
+export function preguntaRecibida(
+  seller: Destinatario,
+  pregunta: PreguntaEmail,
+): Promise<string | null> {
+  return enqueueOrderEmail({ kind: 'question_received', ...destinatario(seller), pregunta });
+}

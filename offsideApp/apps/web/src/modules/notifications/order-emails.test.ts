@@ -106,10 +106,16 @@ function todas(): { nombre: string; mensaje: EmailMessage }[] {
       nombre: 'nivelDeVendedorActualizado',
       mensaje: templates.nivelDeVendedorActualizado(A, 'Ana', NIVEL),
     },
+    { nombre: 'preguntaRecibida', mensaje: templates.preguntaRecibida(A, 'Ana', PREGUNTA) },
   ];
 }
 
-describe('propiedades comunes a las diez plantillas', () => {
+const PREGUNTA: templates.PreguntaEmail = {
+  publicacion: 'Camiseta Boca 2001 titular',
+  texto: '¿Hacés envío a Córdoba?',
+};
+
+describe('propiedades comunes a las once plantillas', () => {
   it('todas traen asunto, texto plano y HTML, al destinatario indicado', () => {
     for (const { nombre, mensaje } of todas()) {
       expect(mensaje.to, nombre).toBe(A);
@@ -164,9 +170,14 @@ describe('propiedades comunes a las diez plantillas', () => {
   });
 
   it('el texto plano y el HTML dicen lo mismo: el numero de orden esta en los dos', () => {
-    for (const { nombre, mensaje } of todas().filter(
-      (t) => t.nombre !== 'nivelDeVendedorActualizado',
-    )) {
+    /*
+     * ⚠️ SE EXCLUYEN LOS QUE NO NACEN DE UNA ORDEN. El cambio de nivel y la
+     * pregunta recibida no tienen uno: exigirles el numero obligaria a
+     * inventarles un campo que no les corresponde, que es peor que la excepcion.
+     */
+    const sinOrden = ['nivelDeVendedorActualizado', 'preguntaRecibida'];
+
+    for (const { nombre, mensaje } of todas().filter((t) => !sinOrden.includes(t.nombre))) {
       expect(mensaje.text, nombre).toContain(ORDEN.numero);
       expect(mensaje.html, nombre).toContain(ORDEN.numero);
     }
@@ -528,5 +539,40 @@ describe('isOrderEmailJob — separa estos jobs de los de auth', () => {
     expect(isOrderEmailJob(null)).toBe(false);
     expect(isOrderEmailJob('order_new_sale')).toBe(false);
     expect(isOrderEmailJob({})).toBe(false);
+  });
+});
+
+describe('preguntaRecibida — al vendedor', () => {
+  it('lleva el texto de la pregunta y manda a la bandeja', () => {
+    // Muchas se contestan leyendolas ("¿hacés envío a Córdoba?"): obligar a
+    // entrar al sitio para saber QUE le preguntaron agrega un paso a lo que el
+    // email vino a acelerar.
+    const mensaje = templates.preguntaRecibida(A, 'Ana', PREGUNTA);
+
+    expect(mensaje.subject).toContain(PREGUNTA.publicacion);
+    expect(mensaje.text).toContain(PREGUNTA.texto);
+    expect(mensaje.text).toContain('/vendedor/preguntas');
+  });
+
+  it('⚠️ NO DICE QUIEN PREGUNTO: es "Alguien"', () => {
+    // Las preguntas son anonimas en la ficha —la lista de quien pregunto por
+    // una camiseta es la lista de quien la esta por comprar— y un email no
+    // puede ser la puerta de atras a eso. El dato ni siquiera entra: la
+    // plantilla no recibe al autor, y esto lo fija por su SALIDA.
+    const mensaje = templates.preguntaRecibida(A, 'Ana', PREGUNTA);
+
+    expect(mensaje.text).toContain('Alguien preguntó');
+
+    // La unica direccion que aparece es la del destinatario.
+    const direcciones = mensaje.text.match(/[\w.+-]+@[\w.-]+\.\w+/g) ?? [];
+    expect(direcciones.filter((d) => d !== A)).toHaveLength(0);
+  });
+
+  it('avisa que la respuesta es publica, antes de que la escriba', () => {
+    // Quien responde "te lo dejo en 80 mil, pasame tu teléfono" creyendo que
+    // hablaba en privado ya no lo puede borrar: la respuesta es una sola.
+    const mensaje = templates.preguntaRecibida(A, 'Ana', PREGUNTA);
+
+    expect(mensaje.text).toMatch(/p[úu]blica|la ve cualquiera/i);
   });
 });

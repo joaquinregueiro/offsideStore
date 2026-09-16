@@ -346,6 +346,14 @@ export function horas(valor: number): string {
   const dias = Math.floor(redondeadas / 24);
   const resto = redondeadas % 24;
 
+  /*
+   * ⚠️ MENOS DE UNA HORA NO ES "0 h". Apareció mirando la ficha de un vendedor
+   * que contesta en minutos: el promedio redondeaba a cero y la pantalla decía
+   * "responde en ~0 h", que se lee como un dato roto justo donde se quiere
+   * mostrar lo contrario —que contesta rapidísimo—.
+   */
+  if (redondeadas === 0) return 'menos de 1 h';
+
   if (dias === 0) return `${resto} h`;
   if (resto === 0) return dias === 1 ? '1 día' : `${dias} días`;
 

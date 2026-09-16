@@ -47,7 +47,8 @@ import { isFeatureEnabled } from '@/modules/config/services/setting-store.servic
 import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
 import { findPublicListing } from '@/modules/listings/services/listing.service';
 import {
-  averageAnswerHours,
+  answerStats,
+  frecuenciaDeRespuesta,
   listPublicQuestions,
   type PublicQuestion,
 } from '@/modules/questions/services/question.service';
@@ -309,14 +310,14 @@ export default async function DetalleDePublicacion({
    * —recomputa si la fila no existe—, así que un vendedor sin ningún hecho no
    * rompe nada: devuelve todo en cero, que es la verdad.
    */
-  const [reputacion, nivel, horasDeRespuesta, resenas] = await Promise.all([
+  const [reputacion, nivel, respuestas, resenas] = await Promise.all([
     getSellerReputation(listing.sellerId).catch((error: unknown) => {
       console.error('[ficha] no se pudo leer la reputación del vendedor', error);
 
       return null;
     }),
     getTierProgress(listing.sellerId).catch(() => null),
-    averageAnswerHours(listing.sellerId).catch(() => null),
+    answerStats(listing.sellerId).catch(() => null),
     listSellerReviews(listing.sellerId, 1).catch(() => null),
   ]);
 
@@ -748,15 +749,22 @@ export default async function DetalleDePublicacion({
                             ? [cantidadLegible(reputacion.claimsCount, 'reclamo')]
                             : []),
                           /*
-                            ⚠️ "RESPONDE EN ~X" SÓLO SI ALGUNA VEZ RESPONDIÓ.
-                            `averageAnswerHours` devuelve `null` justamente para
-                            que nadie invente un número: prometer "responde en
-                            ~2 h" sobre un vendedor que nunca contestó es la
-                            clase de dato que hace que alguien compre.
+                            ⚠️ LA FRASE LA ARMA EL SERVICE, no esta pantalla: la
+                            tienda muestra el mismo dato y dos redacciones se
+                            separan. Devuelve `null` cuando NO HAY NADA QUE
+                            DECIR —nadie le preguntó en la ventana—, y ahí no se
+                            dibuja: prometer algo sobre un vendedor del que no
+                            hay evidencia es la clase de dato que hace que
+                            alguien compre.
+
+                            ⚠️ Y AHORA EL SILENCIO SE VE. Antes se promediaban
+                            sólo las respondidas, así que quien nunca contestaba
+                            no mostraba nada y quien contestaba lento mostraba
+                            "~40 h": ignorar quedaba mejor que tardar.
                           */
-                          ...(horasDeRespuesta === null
+                          ...(frecuenciaDeRespuesta(respuestas, horas) === null
                             ? []
-                            : [`responde preguntas en ~${horas(horasDeRespuesta)}`]),
+                            : [frecuenciaDeRespuesta(respuestas, horas)!]),
                         ]}
                       />
 

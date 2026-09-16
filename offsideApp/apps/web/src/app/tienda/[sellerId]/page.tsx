@@ -19,7 +19,13 @@ import { cantidad, fecha, horas, nivelDeUsuario, porcentajeDeComision } from '@/
 import { getSessionUser } from '@/lib/session';
 import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
 import { listPublicSellerCatalog } from '@/modules/listings/services/listing.service';
-import { averageAnswerHours } from '@/modules/questions/services/question.service';
+import {
+  answerStats,
+  frecuenciaDeRespuesta,
+  MINIMO_PARA_LA_TASA,
+  tiempoDeRespuesta,
+  type AnswerStats,
+} from '@/modules/questions/services/question.service';
 import { getSellerReputation } from '@/modules/reputation/services/reputation.service';
 import { listSellerReviews } from '@/modules/reviews/services/review.service';
 import { getTierProgress } from '@/modules/sellers/services/seller-tier.service';
@@ -84,7 +90,7 @@ async function leerReputacion(sellerId: string) {
 /** Una metrica cruda: se muestra sólo si aporta. */
 function metricasDe(
   reputacion: Awaited<ReturnType<typeof getSellerReputation>>,
-  horasDeRespuesta: number | null,
+  respuestas: AnswerStats | null,
 ): string[] {
   const metricas: string[] = [
     reputacion.salesCount === 0
@@ -107,10 +113,15 @@ function metricasDe(
     metricas.push(cantidad(reputacion.cancellationsCount, 'venta cancelada', 'ventas canceladas'));
   }
 
-  // ⚠️ "responde en ~X" sólo si alguna vez respondió. Sin respuestas no se
-  // inventa un número: el Service devuelve `null` justamente para eso.
-  if (horasDeRespuesta !== null) {
-    metricas.push(`responde preguntas en ~${horas(horasDeRespuesta)}`);
+  /*
+    ⚠️ LA FRASE LA ARMA EL SERVICE, no esta pantalla: la ficha muestra el mismo
+    dato y con dos redacciones una de las dos queda vieja. Devuelve `null`
+    cuando no hay nada que decir —nadie preguntó en la ventana— y ahí no se
+    dibuja nada, en vez de inventar un número sobre una persona.
+  */
+  const frecuencia = frecuenciaDeRespuesta(respuestas, horas);
+  if (frecuencia !== null) {
+    metricas.push(frecuencia);
   }
 
   return metricas;
@@ -167,14 +178,14 @@ export default async function TiendaPublica({
    * una sección. El contrato de esta pantalla es "quién es este vendedor y qué
    * hizo", y eso ya lo trajo la reputación.
    */
-  const [progreso, deVacaciones, horasDeRespuesta, resenas, catalogo, user] = await Promise.all([
+  const [progreso, deVacaciones, respuestas, resenas, catalogo, user] = await Promise.all([
     getTierProgress(sellerId).catch((error: unknown) => {
       console.error('[tienda] no se pudo leer el nivel', error);
 
       return null;
     }),
     isOnVacation(sellerId).catch(() => false),
-    averageAnswerHours(sellerId).catch(() => null),
+    answerStats(sellerId).catch(() => null),
     listSellerReviews(sellerId, paginaDeResenas).catch((error: unknown) => {
       console.error('[tienda] no se pudieron leer las reseñas', error);
 
@@ -203,7 +214,7 @@ export default async function TiendaPublica({
           catalogo.listings.map((item) => item.id),
         );
 
-  const metricas = metricasDe(reputacion, horasDeRespuesta);
+  const metricas = metricasDe(reputacion, respuestas);
 
   /**
    * Los enlaces de las dos paginaciones.
@@ -344,8 +355,25 @@ export default async function TiendaPublica({
                     </span>
                   </Dato>
                 )}
-                {horasDeRespuesta !== null && (
-                  <Dato termino="Responde preguntas en">~{horas(horasDeRespuesta)}</Dato>
+                {/*
+                  ⚠️ ACÁ SÍ VAN SEPARADAS: esto es una lista de datos con su
+                  término, no una frase corrida. Y la tasa se muestra con
+                  CUÁNTAS preguntas la sostienen —"85% sobre 12 preguntas"—,
+                  igual que el despacho a tiempo de arriba: un porcentaje sin su
+                  denominador deja creer que hay volumen donde hay tres casos.
+                */}
+                {respuestas !== null && respuestas.total >= MINIMO_PARA_LA_TASA && (
+                  <Dato termino="Responde">
+                    {Math.floor(respuestas.tasa * 100)}%{' '}
+                    <span className={estilos.datoNota}>
+                      sobre {cantidad(respuestas.total, 'pregunta')}
+                    </span>
+                  </Dato>
+                )}
+                {respuestas?.horas != null && (
+                  <Dato termino="Responde preguntas en">
+                    {tiempoDeRespuesta(respuestas.horas, horas)}
+                  </Dato>
                 )}
               </dl>
 
