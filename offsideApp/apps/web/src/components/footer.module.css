@@ -96,12 +96,20 @@
  * cortes caen sobre las DIAGONALES del mosaico, asi que cada celda queda
  * partida en cuatro triangulos alternos; al repetirse, el triangulo derecho de
  * una celda y el izquierdo de la siguiente forman un rombo entero sobre el
- * borde. Es una sola capa en vez de cuatro, y el rombo mide el mosaico completo
- * (28px) en vez del medio mosaico que median los cuadrados: a 28 se lee como la
- * bandera, que es la escala que esta cinta siempre quiso.
+ * borde. Una sola capa en vez de cuatro.
  *
- * El mosaico y el paso NO cambian, asi que la deriva de `.patron-vivo` sigue
- * cayendo sobre si misma: 28px de ancho de mosaico, 28px de `--patron-paso`.
+ * ⚠️ EL MOSAICO ES 14 Y NO EL 28 DE `--patron-tamanio-cinta`, que es lo que
+ * pone DOS FILAS de rombos en los 28px de la cinta. Con 28 entraba una sola
+ * fila de rombos grandes; el dueño eligio la version de dos filas el
+ * 2026-09-16. Como el rombo mide el mosaico entero —y no el medio mosaico que
+ * median los cuadrados—, 14 deja el rombo del mismo tamaño que tenia el
+ * cuadrado, que es lo que hace que la cinta conserve su densidad.
+ *
+ * ⚠️ `--patron-paso` BAJA CON EL MOSAICO Y NO ES OPCIONAL. `.patron-vivo` corre
+ * el pseudo exactamente un mosaico para que el bucle sea invisible; dejado en
+ * 28 con un mosaico de 14 seguiria cayendo sobre si mismo (28 es multiplo de
+ * 14), pero el pseudo mediria un mosaico de mas de lo necesario. Se baja para
+ * que las dos cuentas sigan diciendo lo mismo.
  *
  * ⚠️ SE DECLARA EN `div.cinta::before` Y NO EN `.cinta`. `tokens.css` declara
  * `--patron-rombos` en el selector universal INCLUYENDO `*::before`, o sea que
@@ -115,12 +123,17 @@
  * Sin soporte de `repeating-conic-gradient` la cinta queda en Verde Tiempo
  * Extra liso, con su halo: sigue separando, que es su trabajo.
  */
+div.cinta {
+  --patron-paso: 14px;
+}
+
 div.cinta::before {
   background-image: repeating-conic-gradient(
     from 45deg,
     var(--patron-color) 0 25%,
     transparent 0 50%
   );
+  background-size: 14px 14px;
   background-position: 0 0;
 }
 
@@ -171,20 +184,20 @@ div.cinta::before {
 }
 
 /**
- * ⚠️ EN TELEFONO EL MOSAICO BAJA CON LA CINTA. Con la cinta en 18px y el
- * mosaico en 28, el rombo se corta por la mitad y deja una fila de hexagonos:
- * el cuadrado aguantaba el recorte porque un cuadrado cortado sigue siendo un
- * rectangulo. `--patron-paso` baja con el, si no la deriva deja de caer sobre
- * si misma y el bucle salta cada vuelta.
+ * ⚠️ EN TELEFONO EL MOSAICO BAJA CON LA CINTA, PARA QUE SIGAN ENTRANDO DOS
+ * FILAS ENTERAS: 18 / 2 = 9. Con el mosaico clavado en 14 la segunda fila
+ * quedaria cortada por la mitad y dejaria una tira de hexagonos; el cuadrado
+ * aguantaba el recorte porque un cuadrado cortado sigue siendo un rectangulo, y
+ * el rombo no.
  */
 @media (max-width: 480px) {
-  .cinta {
+  div.cinta {
     height: 18px;
-    --patron-paso: 18px;
+    --patron-paso: 9px;
   }
 
   div.cinta::before {
-    background-size: 18px 18px;
+    background-size: 9px 9px;
   }
 }
 
