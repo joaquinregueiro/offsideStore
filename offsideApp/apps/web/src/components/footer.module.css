@@ -184,20 +184,31 @@
 }
 
 /**
- * ⚠️ ES `--display-3` Y NO `--texto-3xl`: la escala de display es una serie
- * APARTE. Un cierre de marca es un CARTEL; un `<h2>` de seccion es estructura.
+ * ⚠️ EL TAMAÑO SE BAJA ACA Y NO CON UNA CLASE DE LA ESCALA DISPLAY, porque ya
+ * no hay ninguna mas chica: `--display-3` (30→52px) ES el ultimo escalon. El
+ * dueño lo pidio mas chico el 2026-09-15, asi que el claim se sale de la serie
+ * display en TAMAÑO pero sigue en ella en FORMA —`.display` le deja Big Noodle,
+ * la caja alta y el tracking—: un cierre de marca es un CARTEL, no un `<h2>`.
  *
- * ⚠️ A 320px `--display-3` entrega su minimo (30px) y `.display` ya trae
- * `overflow-wrap: anywhere`, asi que ni una palabra sola mas larga que la caja
- * empuja la pagina.
+ * ⚠️ NO PUEDE BAJAR DE 24px, Y NO ES UNA PREFERENCIA. El gradiente de
+ * `.titular-vivo` termina en verde-400, que sobre el peor punto de la escena da
+ * **4.11:1**. Eso alcanza para TEXTO GRANDE (WCAG: ≥24px normal, umbral 3:1) y
+ * NO alcanza para texto normal, que pide 4.5. `--texto-2xl` es
+ * `clamp(28px, …, 32px)`: su minimo, el que sale a 320px, es 28 y deja 4px de
+ * aire sobre el limite. El escalon siguiente hacia abajo, `--texto-xl`, arranca
+ * en 22px y rompe AA en teléfono sin que se vea nada raro en escritorio.
  *
- * El gradiente lo pone `.titular-vivo` (en el TSX): sobre `.sup-noche` elige
- * papel → Cambio → verde-400, y verde-400 sobre el peor punto de la escena da
- * 4.11, que para un display de ≥30px (texto grande, 3:1) sobra. Sin soporte
- * de `background-clip: text` queda en papel solido.
+ * ⚠️ SIN `oblicuo`. La cursiva de Big Noodle es la unica variacion que la
+ * identidad admite, pero el dueño la saco de ESTE claim. La clase sigue viva y
+ * en uso en la portada, el checkout y `/como-funciona`: no se toca.
+ *
+ * ⚠️ `.display` ya trae `overflow-wrap: anywhere`, asi que ni una palabra sola
+ * mas larga que la caja empuja la pagina a 320px. Sin soporte de
+ * `background-clip: text` el claim queda en papel solido.
  */
 .claim {
   margin: 0;
+  font-size: var(--texto-2xl);
   color: var(--color-papel);
   max-width: 12ch;
 }

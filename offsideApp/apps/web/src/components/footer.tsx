@@ -122,7 +122,7 @@ export async function Footer() {
             momento en que el claim significa algo. Sin soporte de
             `animation-timeline` queda dibujado, no en blanco.
           */}
-          <p className={`${estilos.claim} display display-3 oblicuo titular-vivo revela-suave`}>
+          <p className={`${estilos.claim} display titular-vivo revela-suave`}>
             Camisetas con historia
           </p>
 
@@ -140,9 +140,6 @@ export async function Footer() {
           </Link>
           <Link href="/buscar" className={estilos.enlace} transitionTypes={['barrido']}>
             Buscar por club o marca
-          </Link>
-          <Link href="/como-funciona" className={estilos.enlace} transitionTypes={['avanza']}>
-            Cómo funciona
           </Link>
           {/*
             ⚠️ EL CARRITO ENTRA AL PIE PORQUE DEC-026 LO VUELVE UN PASO DEL
@@ -185,6 +182,17 @@ export async function Footer() {
           </Link>
           <Link href="/crear-cuenta" className={estilos.enlace} transitionTypes={['avanza']}>
             Crear cuenta
+          </Link>
+          {/*
+            ⚠️ "COMO FUNCIONA" VIVE ACA Y NO EN "COMPRAR", por decision del dueño
+            (2026-09-15). No es una accion de compra: es la pantalla que explica
+            las reglas del sitio —comision, que pasa con la plata y, sobre todo,
+            lo que Offside TODAVIA no hace—, y eso se busca antes de tener
+            cuenta, no en medio de una compra. Al lado de Ingresar y Crear
+            cuenta queda en el momento en que alguien decide si entra.
+          */}
+          <Link href="/como-funciona" className={estilos.enlace} transitionTypes={['avanza']}>
+            Cómo funciona
           </Link>
         </nav>
       </div>
