@@ -95,31 +95,6 @@ export async function findListingForQuestion(
 }
 
 /**
- * Valor vigente de una clave GLOBAL de `app_settings`.
- *
- * ⚠️ DUPLICA `app-setting.repository.findCurrent` DE `config`, a proposito:
- * un modulo no importa el repository de otro (`modules/README.md`) y el
- * Service de config solo expone la comision. Cuando exista
- * `settingsService.getSetting(key)`, esto se borra y se llama a eso.
- */
-export async function findGlobalSetting(key: string, db?: Database): Promise<unknown> {
-  const [row] = await conn(db)
-    .select({ value: schema.appSettings.value })
-    .from(schema.appSettings)
-    .where(
-      and(
-        eq(schema.appSettings.scope, 'global'),
-        isNull(schema.appSettings.scopeId),
-        eq(schema.appSettings.key, key),
-      ),
-    )
-    .orderBy(desc(schema.appSettings.version))
-    .limit(1);
-
-  return row?.value;
-}
-
-/**
  * Cuantas preguntas SIN RESPONDER tiene abiertas una cuenta, en total.
  *
  * ⚠️ NO CUENTA LAS DE PUBLICACIONES ELIMINADAS, y es la mitad de la valvula de

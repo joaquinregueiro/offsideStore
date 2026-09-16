@@ -503,6 +503,94 @@ describe('ocultar (del vendedor)', () => {
   });
 });
 
+describe('rastro de lo que se hace desaparecer', () => {
+  it('⚠️ OCULTAR QUEDA EN `audit_log` Y SE LE AVISA A QUIEN PREGUNTO', async () => {
+    // Es la unica accion del sitio con la que una parte hace desaparecer lo que
+    // escribio la otra, y no dejaba ningun rastro: ni quien, ni cuando, ni
+    // sobre que. BR-052 (MUST) exige registrar todo hecho sancionable.
+    const { user: seller } = await vendedor('audita-oculta');
+    const comprador = await usuario('audita-oculta-buyer');
+    const listing = await publicacionActiva(seller);
+    const pregunta = await questionService.askQuestion(comprador, listing.id, '¿Es original?');
+
+    await questionService.hideQuestion(seller, pregunta.id);
+
+    const [fila] = await getDatabase()
+      .select()
+      .from(schema.auditLog)
+      .where(
+        and(
+          eq(schema.auditLog.entityId, pregunta.id),
+          eq(schema.auditLog.action, 'QUESTION_HIDDEN'),
+        ),
+      );
+
+    expect(fila).toBeDefined();
+    expect(fila?.actorId).toBe(seller.id);
+    expect(fila?.after).toMatchObject({ status: 'hidden' });
+
+    // ⚠️ El TEXTO de la pregunta no se copia al log: alcanza con su id.
+    expect(JSON.stringify(fila)).not.toContain('¿Es original?');
+
+    // Y quien pregunto se entera, en vez de ver su pregunta evaporarse.
+    const avisos = await inapp.listNotifications(comprador);
+    const aviso = avisos.notificaciones.find((a) => a.title === 'Tu pregunta ya no se ve');
+    expect(aviso).toBeDefined();
+    expect(aviso?.body).toContain(listing.title);
+  });
+
+  it('⚠️ RETIRAR TAMBIEN, porque la fila no distingue una cosa de la otra', async () => {
+    // Las dos acciones dejan `status = 'hidden'` y no hay columna que diga cual
+    // fue. Sin el log, una pregunta que el vendedor borro es indistinguible de
+    // una que su autor retiro — y esa es justo la diferencia que importa.
+    const { user: seller } = await vendedor('audita-retira');
+    const comprador = await usuario('audita-retira-buyer');
+    const listing = await publicacionActiva(seller);
+    const pregunta = await questionService.askQuestion(comprador, listing.id, '¿Cuanto mide?');
+
+    await questionService.withdrawQuestion(comprador, pregunta.id);
+
+    const [fila] = await getDatabase()
+      .select()
+      .from(schema.auditLog)
+      .where(
+        and(
+          eq(schema.auditLog.entityId, pregunta.id),
+          eq(schema.auditLog.action, 'QUESTION_WITHDRAWN'),
+        ),
+      );
+
+    expect(fila).toBeDefined();
+    expect(fila?.actorId).toBe(comprador.id);
+
+    // Al vendedor NO se le avisa: una notificacion por cada arrepentimiento es
+    // ruido en la misma campanita que trae las ventas.
+    const avisos = await inapp.listNotifications(seller);
+    expect(avisos.notificaciones.some((a) => a.title === 'Tu pregunta ya no se ve')).toBe(false);
+  });
+
+  it('⚠️ un intento RECHAZADO no deja auditoria ni aviso', async () => {
+    // El log tiene que decir lo que PASO. Auditar un intento fallido convierte
+    // el registro en una lista de ruido donde lo real se pierde.
+    const { user: seller } = await vendedor('audita-fallo');
+    const { user: otro } = await vendedor('audita-fallo-intruso');
+    const comprador = await usuario('audita-fallo-buyer');
+    const listing = await publicacionActiva(seller);
+    const pregunta = await questionService.askQuestion(comprador, listing.id, '¿Hay stock?');
+
+    await expect(questionService.hideQuestion(otro, pregunta.id)).rejects.toThrow();
+    await expect(questionService.withdrawQuestion(otro, pregunta.id)).rejects.toThrow();
+
+    const filas = await getDatabase()
+      .select()
+      .from(schema.auditLog)
+      .where(eq(schema.auditLog.entityId, pregunta.id));
+
+    expect(filas).toHaveLength(0);
+    expect((await questionService.listPublicQuestions(listing.id)).total).toBe(1);
+  });
+});
+
 describe('el cupo de preguntas abiertas', () => {
   it('⚠️ frena al llegar al tope ⚙️ y se libera al responder', async () => {
     const restaurar = await conSetting(questionService.MAX_OPEN_KEY, 2);

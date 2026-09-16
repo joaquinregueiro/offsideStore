@@ -571,13 +571,25 @@ describe('precedencia por ambito: seller_tier > category > global', () => {
       promotedFirstInSearch: true,
     });
     expect((await store.getPromotionSettings()).multiplier).toBe(3);
+  });
 
-    await store.setSetting('questions_max_open_per_user', 5, null, undefined, {
-      scope: 'seller_tier',
-      scopeId: tierId,
-    });
-    expect(await store.getQuestionSettings(undefined, { sellerTierId: tierId })).toEqual({
-      maxOpenPerUser: 5,
+  it('⚠️ el cupo de preguntas NO admite tier: quien pregunta no tiene tier', async () => {
+    // Venia declarado con ambito de tier y era imposible de resolver: el cupo
+    // es de QUIEN PREGUNTA —un comprador, que no tiene `seller_tier`—, asi que
+    // el lector nunca consultaba ese ambito. Cargarlo desde Admin no habria
+    // hecho nada Y NO HABRIA AVISADO, que es la peor forma de fallar de una
+    // configuracion. Ahora el registro dice lo que el lector hace, y escribirlo
+    // en un tier se rechaza en la cara de quien lo intenta.
+    await expect(
+      store.setSetting('questions_max_open_per_user', 5, null, undefined, {
+        scope: 'seller_tier',
+        scopeId: tierId,
+      }),
+    ).rejects.toMatchObject({ message: expect.stringContaining('questions_max_open_per_user') });
+
+    // Y el lector ya no acepta contexto: no hay ambito que pasarle.
+    expect(await store.getQuestionSettings()).toEqual({
+      maxOpenPerUser: 20,
       maxLength: 500,
     });
   });

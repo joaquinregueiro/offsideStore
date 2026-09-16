@@ -1,7 +1,12 @@
 import { getDatabase } from '@offside/database';
 
 import type { PublicUser } from '../../auth/services/auth.service';
-import { parseSettingValue } from '../../config/services/settings-registry';
+import {
+  getQuestionSettings,
+  getSetting,
+  isFeatureEnabled,
+} from '../../config/services/setting-store.service';
+import * as audit from '../../audit/services/audit.service';
 import * as inapp from '../../notifications/services/inapp-notification.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../questions.errors';
@@ -19,7 +24,9 @@ import * as questionRepo from '../repositories/question.repository';
  * ⚠️ TRES PARAMETROS SALEN DEL CONFIG STORE Y NINGUNO DE UNA CONSTANTE:
  * `feature_questions` (apagar todo desde Admin), `questions_max_length` y
  * `questions_max_open_per_user` (migracion `0011`, valores ASUMIDOS y
- * pendientes de confirmacion). Se leen en cada llamada.
+ * pendientes de confirmacion). Se leen en cada llamada, POR EL SERVICE DE
+ * `config` —no por un lector propio—, asi que pasan por el registro y su
+ * validacion como cualquier otra clave del sistema.
  *
  * ⚠️ AUTORIZACION: responder y ocultar resuelven el perfil del vendedor POR
  * `user.id` con el mismo helper que el resto del sistema y comparan contra
@@ -61,6 +68,17 @@ const ventana = (pagina: number, porPagina: number) => ({
   offset: (pagina - 1) * porPagina,
 });
 
+/**
+ * Las claves ⚙️ de este modulo, para quien necesite nombrarlas (los tests).
+ *
+ * ⚠️ EL SERVICE YA NO LAS LEE A MANO. Hasta hoy `questions` tenia su PROPIO
+ * lector de `app_settings` —un `findGlobalSetting` en su repositorio— que
+ * consultaba solo el ambito global y salteaba el registro, la precedencia de
+ * ambitos y la validacion del Config Store. Era deuda anotada en el codigo
+ * ("cuando exista `settingsService.getSetting(key)`, esto se borra y se llama a
+ * eso"): existe, y esto es ese borrado. Dos lectores del mismo valor terminan
+ * dando dos respuestas distintas.
+ */
 export const FEATURE_KEY = 'feature_questions';
 export const MAX_LENGTH_KEY = 'questions_max_length';
 export const MAX_OPEN_KEY = 'questions_max_open_per_user';
@@ -70,6 +88,12 @@ export /** Clave del payload: la pantalla de avisos decide con esto a donde llev
 const QUESTION_ASKED_KIND = 'question_asked';
 
 const QUESTION_ANSWERED_KIND = 'question_answered';
+
+/** El vendedor oculto una pregunta: se le avisa a quien la hizo. */
+const QUESTION_HIDDEN_KIND = 'question_hidden';
+
+/** `entity_type` de este modulo en `audit_log`. */
+const ENTITY_TYPE = 'listing_question';
 
 /** Una pregunta tal como se ve en la ficha. NUNCA identifica a quien pregunto. */
 export interface PublicQuestion {
@@ -132,17 +156,8 @@ export function validateQuestionText(texto: string, maxLength: number, que: stri
   return limpio;
 }
 
-async function leerSetting<
-  K extends 'feature_questions' | 'questions_max_length' | 'questions_max_open_per_user',
->(key: K) {
-  const crudo = await questionRepo.findGlobalSetting(key);
-  if (crudo === undefined) throw errors.settingNotConfigured(key);
-
-  return parseSettingValue(key, crudo);
-}
-
 async function exigirHabilitado(): Promise<void> {
-  if (!(await leerSetting(FEATURE_KEY))) throw errors.questionsDisabled();
+  if (!(await isFeatureEnabled('questions'))) throw errors.questionsDisabled();
 }
 
 /**
@@ -172,9 +187,11 @@ export async function askQuestion(
   if (!listing.visible) throw errors.listingNotAvailable();
   if (listing.sellerUserId === user.id) throw errors.cannotAskOwnListing();
 
-  const question = validateQuestionText(texto, await leerSetting(MAX_LENGTH_KEY), 'La pregunta');
+  const ajustes = await getQuestionSettings();
 
-  const maximoAbiertas = await leerSetting(MAX_OPEN_KEY);
+  const question = validateQuestionText(texto, ajustes.maxLength, 'La pregunta');
+
+  const maximoAbiertas = ajustes.maxOpenPerUser;
   if ((await questionRepo.countOpenByAskerId(user.id)) >= maximoAbiertas) {
     throw errors.tooManyOpenQuestions(maximoAbiertas);
   }
@@ -250,7 +267,11 @@ export async function answerQuestion(
   const question = await requireOwnQuestion(user, questionId);
   if (question.status !== 'open') throw errors.questionNotOpen();
 
-  const answer = validateQuestionText(texto, await leerSetting(MAX_LENGTH_KEY), 'La respuesta');
+  const answer = validateQuestionText(
+    texto,
+    await getSetting('questions_max_length'),
+    'La respuesta',
+  );
 
   const row = await getDatabase().transaction(async (tx) => {
     const respondida = await questionRepo.answer(question.id, { answer, answeredBy: user.id }, tx);
@@ -274,12 +295,62 @@ export async function answerQuestion(
 /**
  * Oculta una pregunta de la ficha (solo el dueño de la publicacion). Sirve
  * para spam o datos personales; la fila queda como evidencia.
+ *
+ * ⚠️ SE AUDITA, Y NO ES BUROCRACIA: BR-052 (MUST) exige que todo hecho
+ * sancionable quede registrado. Ocultar es la unica accion del sitio con la que
+ * una parte hace desaparecer lo que escribio la otra, y hasta hoy no dejaba
+ * NINGUN rastro —ni quien, ni cuando, ni sobre que—. Para spam esta bien; para
+ * una pregunta incomoda ("¿es original?") era una herramienta de silenciar sin
+ * registro, y sin el log no hay forma de notar el patron.
+ *
+ * ⚠️ SE LE AVISA A QUIEN PREGUNTO. Su pregunta desaparecia de la ficha en
+ * silencio y solo se enteraba si volvia a "Mis preguntas". El aviso no dice que
+ * hizo mal —no hay motivo cargado y no se va a inventar uno—: dice que ya no se
+ * ve y que puede volver a preguntar, que es lo unico accionable.
+ *
+ * ⚠️ LAS TRES ESCRITURAS VAN EN LA MISMA TRANSACCION. Una auditoria que se
+ * escribe cuando el UPDATE se revierte miente sobre lo que paso, y un aviso sin
+ * su hecho anuncia algo que no ocurrio.
+ *
+ * ⚠️ EL TEXTO DE LA PREGUNTA NO ENTRA AL `audit_log`. Alcanza con su id: quien
+ * investigue la tiene en la tabla, y copiarla ademas al log la duplica en un
+ * lugar que nadie depura.
  */
 export async function hideQuestion(user: PublicUser, questionId: string): Promise<void> {
   const question = await requireOwnQuestion(user, questionId);
   if (question.status === 'hidden') return;
 
-  await questionRepo.hide(question.id);
+  await getDatabase().transaction(async (tx) => {
+    const oculta = await questionRepo.hide(question.id, tx);
+    /*
+     * Si otro camino la oculto entre la lectura y el UPDATE, no hay hecho nuevo
+     * que auditar ni que avisar: se sale sin escribir nada, igual que arriba.
+     */
+    if (oculta === undefined) return;
+
+    await audit.record(
+      {
+        actorType: 'user',
+        actorId: user.id,
+        action: 'QUESTION_HIDDEN',
+        entityType: ENTITY_TYPE,
+        entityId: question.id,
+        before: { status: question.status },
+        after: { status: 'hidden' },
+        metadata: { listingId: question.listingId },
+      },
+      tx,
+    );
+
+    await inapp.notify(
+      question.askerId,
+      'system',
+      'Tu pregunta ya no se ve',
+      `El vendedor ocultó tu pregunta sobre ${question.listingTitle}. Podés volver a preguntar.`,
+      { kind: QUESTION_HIDDEN_KIND, listingId: question.listingId, questionId: question.id },
+      tx,
+    );
+  });
 }
 
 /**
@@ -306,15 +377,38 @@ export async function hideQuestion(user: PublicUser, questionId: string): Promis
  * de una compra, igual que al ocultarla el vendedor.
  */
 export async function withdrawQuestion(user: PublicUser, questionId: string): Promise<void> {
-  const retirada = await questionRepo.withdraw(questionId, user.id);
+  await getDatabase().transaction(async (tx) => {
+    const retirada = await questionRepo.withdraw(questionId, user.id, tx);
 
-  /*
-   * ⚠️ UN SOLO ERROR PARA LOS TRES CASOS —no existe, no es tuya, ya no esta
-   * abierta—. Distinguirlos dejaria probar ids ajenos para averiguar cuales
-   * existen, que es lo mismo que evita `questionNotFound` en el lado del
-   * vendedor.
-   */
-  if (retirada === undefined) throw errors.questionNotFound();
+    /*
+     * ⚠️ UN SOLO ERROR PARA LOS TRES CASOS —no existe, no es tuya, ya no esta
+     * abierta—. Distinguirlos dejaria probar ids ajenos para averiguar cuales
+     * existen, que es lo mismo que evita `questionNotFound` en el lado del
+     * vendedor.
+     */
+    if (retirada === undefined) throw errors.questionNotFound();
+
+    /*
+     * ⚠️ TAMBIEN SE AUDITA, aunque la haga su propio autor. Las dos acciones
+     * dejan la fila en `hidden` y la fila NO guarda cual de las dos fue: sin
+     * este registro, una pregunta oculta es indistinguible de una retirada, y
+     * la diferencia es justamente la que importa —una la borro el vendedor, la
+     * otra la persona que pregunto—.
+     */
+    await audit.record(
+      {
+        actorType: 'user',
+        actorId: user.id,
+        action: 'QUESTION_WITHDRAWN',
+        entityType: ENTITY_TYPE,
+        entityId: retirada.id,
+        before: { status: 'open' },
+        after: { status: 'hidden' },
+        metadata: { listingId: retirada.listingId },
+      },
+      tx,
+    );
+  });
 }
 
 /**
