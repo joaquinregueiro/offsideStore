@@ -82,6 +82,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await restaurar();
+  await reponerSemilla();
   await limpiarUsuarios();
 
   const { closeDatabase } = await import('@offside/database');
@@ -90,27 +91,72 @@ afterAll(async () => {
 });
 
 /**
- * Deja `app_settings` como la dejaron las migraciones: solo versiones 1,
- * solo globales, y sin las cuatro claves que todavia no tienen semilla.
+ * Las cuatro claves que estos tests necesitan VER AUSENTES para ejercitar
+ * `defaultUntilSeeded`, con el valor exacto que les da la migracion `0012`.
+ *
+ * ⚠️ ESTA LISTA ES UNA COPIA DE ESA MIGRACION y no hay forma de evitarlo hoy:
+ * el mecanismo de default transitorio SOLO se puede probar sobre una clave que
+ * lo tenga declarado, y las unicas que lo tienen son justamente estas. Si algun
+ * dia cambian ahi, cambian aca.
+ */
+const SEMILLA_DE_LA_0012 = [
+  {
+    key: 'shipping_carriers' as const,
+    value: [
+      { code: 'correo_argentino', name: 'Correo Argentino', trackingUrlTemplate: null },
+      { code: 'andreani', name: 'Andreani', trackingUrlTemplate: null },
+      { code: 'oca', name: 'OCA', trackingUrlTemplate: null },
+      { code: 'otro', name: 'Otro', trackingUrlTemplate: null },
+    ],
+    valueType: 'json' as const,
+  },
+  { key: 'shipping_to_agree_allowed' as const, value: false, valueType: 'bool' as const },
+  { key: 'dispute_window_days' as const, value: 7, valueType: 'number' as const },
+  { key: 'reconciliation_window_days' as const, value: 30, valueType: 'number' as const },
+];
+
+/**
+ * Deja `app_settings` sin rastro de lo que escribio un test: solo versiones 1,
+ * solo globales, y sin las cuatro claves de arriba —que varios tests de este
+ * archivo necesitan ausentes para ver regir el default transitorio—.
  *
  * Se borra en vez de "agregar una version mas" para que cada test arranque
  * del mismo estado sin depender del orden de los otros.
+ *
+ * ⚠️ ESTO NO DEJA LA BASE COMO LA DEJARON LAS MIGRACIONES, aunque el comentario
+ * viejo lo afirmaba. Cuando se escribio, esas cuatro claves NO tenian semilla;
+ * la migracion `0012` se las dio despues y nadie volvio aca. Correr la suite
+ * BORRABA de la base cuatro filas que una migracion habia sembrado, y no las
+ * reponia: en CI da igual —la base es nueva en cada corrida— pero en la maquina
+ * de quien desarrolla se las comia para siempre. Asi fue como
+ * `shipping_carriers` desaparecio de `offside_dev` y el catalogo de
+ * transportistas volvio a regir por el default del registro.
+ *
+ * Por eso `afterAll` ahora REPONE (ver `reponerSemilla`).
  */
 async function restaurar(): Promise<void> {
   const db = getDatabase();
 
   await db.delete(schema.appSettings).where(gt(schema.appSettings.version, 1));
   await db.delete(schema.appSettings).where(ne(schema.appSettings.scope, 'global'));
-  await db
-    .delete(schema.appSettings)
-    .where(
-      inArray(schema.appSettings.key, [
-        'shipping_carriers',
-        'shipping_to_agree_allowed',
-        'dispute_window_days',
-        'reconciliation_window_days',
-      ]),
-    );
+  await db.delete(schema.appSettings).where(
+    inArray(
+      schema.appSettings.key,
+      SEMILLA_DE_LA_0012.map((s) => s.key),
+    ),
+  );
+}
+
+/**
+ * Devuelve las cuatro filas que la suite borro, como las dejo la `0012`.
+ *
+ * ⚠️ VA EN `afterAll` Y NO EN `beforeEach`: los tests las necesitan ausentes
+ * MIENTRAS corren. Lo que no puede pasar es que la base quede asi DESPUES.
+ */
+async function reponerSemilla(): Promise<void> {
+  for (const fila of SEMILLA_DE_LA_0012) {
+    await settingRepo.insertNextVersion(fila);
+  }
 }
 
 async function limpiarUsuarios(): Promise<void> {
