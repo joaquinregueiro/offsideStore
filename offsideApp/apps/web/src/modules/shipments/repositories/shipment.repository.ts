@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 /**
  * Acceso a `shipments` y `shipment_tracking_events` (ERD §13). Sin reglas de
@@ -111,29 +111,4 @@ export async function findTrackingEvents(
     .from(schema.shipmentTrackingEvents)
     .where(eq(schema.shipmentTrackingEvents.shipmentId, shipmentId))
     .orderBy(schema.shipmentTrackingEvents.occurredAt, schema.shipmentTrackingEvents.id);
-}
-
-/**
- * Valor vigente de una clave GLOBAL de `app_settings`.
- *
- * ⚠️ DUPLICA LA LECTURA DEL CONFIG STORE, igual que `orders` y por el mismo
- * motivo: el Service de `config` solo expone la comision, y un modulo no
- * importa el repository de otro. Cuando `config` exponga
- * `getJsonSetting(key)`, esto se borra. `undefined` = la clave no esta cargada.
- */
-export async function findGlobalSettingValue(key: string, db?: Database): Promise<unknown> {
-  const [row] = await conn(db)
-    .select({ value: schema.appSettings.value })
-    .from(schema.appSettings)
-    .where(
-      and(
-        eq(schema.appSettings.scope, 'global'),
-        isNull(schema.appSettings.scopeId),
-        eq(schema.appSettings.key, key),
-      ),
-    )
-    .orderBy(desc(schema.appSettings.version))
-    .limit(1);
-
-  return row?.value;
 }

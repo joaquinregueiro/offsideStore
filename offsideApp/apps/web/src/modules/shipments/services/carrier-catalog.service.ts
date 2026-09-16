@@ -1,116 +1,63 @@
-import { z } from 'zod';
-
-import * as configErrors from '../../config/config.errors';
-import * as shipmentRepo from '../repositories/shipment.repository';
+import {
+  findShippingCarrier,
+  getShippingCarriers,
+  trackingUrlFor,
+} from '../../config/services/setting-store.service';
+import type { ShippingCarrier } from '../../config/services/settings-registry';
 import * as errors from '../shipments.errors';
 
 /**
  * Catalogo de transportistas para el despacho MANUAL (SH-010 sin Correo
  * Argentino: el vendedor despacha por su cuenta y declara con quien).
  *
- * ⚠️ ES ⚙️ CONFIGURACION, NO UNA CONSTANTE: la lista vive en
- * `app_settings.shipping_carriers` (json: `[{ code, name, trackingUrlTemplate }]`)
- * y se lee de ahi cuando existe. El DEFAULT de abajo se usa SOLO mientras la
- * clave no este sembrada —ninguna migracion la carga todavia— y es la unica
- * excepcion documentada al principio de "sin defaults en codigo"
- * (`config.errors.ts`): sin lista, nadie puede despachar, y bloquear todas las
- * ventas por una clave que falta es peor que arrancar con cuatro nombres.
- * ASUMIDO, confirmar: los cuatro codigos y que la clave se siembre por
- * migracion (`config` la tiene que agregar a `settings-registry.ts`).
+ * =============================================================================
+ * ⚠️ ESTE ARCHIVO ERA CINCO DUPLICACIONES DEL MODULO `config`
+ * =============================================================================
  *
- * ⚠️ `trackingUrlTemplate` es `null` en los cuatro por defecto, A PROPOSITO:
- * el formato de la pagina publica de seguimiento de cada correo es un
- * contrato de un tercero y no se inventa (CLAUDE.md §11). El administrador lo
- * carga cuando lo verifique; hasta entonces la pantalla muestra el numero sin
- * enlace, que es exacto y no manda a nadie a una URL rota.
+ * Tenia su propio lector de `app_settings`, su propio schema de validacion, su
+ * propia lista por defecto, su propia constante `{tracking}` y su propia
+ * `trackingUrlFor`. `config` ya tenia las cinco, y las suyas son las buenas:
+ *
+ *  - la validacion vive en el REGISTRO, asi que es la misma que se aplica
+ *    cuando un administrador guarda la lista desde el back-office —antes eran
+ *    dos schemas parecidos y NO IGUALES: el de aca aceptaba un `code` que
+ *    empieza con digito y un `name` de hasta 64, el registro exige empezar con
+ *    letra y admite 80—;
+ *  - la lista por defecto estaba COPIADA palabra por palabra en los dos
+ *    lugares, que es la forma mas silenciosa de que un dia dejen de coincidir;
+ *  - su `trackingUrlFor` usa `replaceAll` y recorta el numero, contra el
+ *    `replace` de aca que reemplazaba SOLO EL PRIMER `{tracking}` de la
+ *    plantilla.
+ *
+ * Lo que queda es lo unico que es de ESTE modulo: traducir "no esta en la
+ * lista" al error de dominio de `shipments`.
+ *
+ * ⚠️ `trackingUrlFor` SE RE-EXPORTA en vez de que los consumidores importen de
+ * `config`: `manual-shipment.service` y la pantalla de una venta piden "la URL
+ * de seguimiento de este envio", no "una utilidad del Config Store". El dia que
+ * el seguimiento lo resuelva el adaptador de Correo Argentino, cambia acá.
  */
 
-export const SHIPPING_CARRIERS_KEY = 'shipping_carriers';
+/** El transportista tal como lo valida el registro del Config Store. */
+export type Carrier = ShippingCarrier;
 
-export interface Carrier {
-  /** Identificador estable: es lo que se guarda en `shipments.raw.carrier`. */
-  code: string;
-  /** Nombre visible. Con tildes si las lleva. */
-  name: string;
-  /** URL publica de seguimiento con `{tracking}` como marcador, o null. */
-  trackingUrlTemplate: string | null;
-}
-
-/** Marcador que el template tiene que contener para poder armar el enlace. */
-export const TRACKING_PLACEHOLDER = '{tracking}';
-
-export const DEFAULT_CARRIERS: readonly Carrier[] = [
-  { code: 'correo_argentino', name: 'Correo Argentino', trackingUrlTemplate: null },
-  { code: 'andreani', name: 'Andreani', trackingUrlTemplate: null },
-  { code: 'oca', name: 'OCA', trackingUrlTemplate: null },
-  { code: 'otro', name: 'Otro', trackingUrlTemplate: null },
-];
-
-const carrierSchema = z.strictObject({
-  code: z.string().regex(/^[a-z0-9_]{2,32}$/, 'code: minusculas, digitos y guion bajo'),
-  name: z.string().trim().min(1).max(64),
-  trackingUrlTemplate: z
-    .string()
-    .url()
-    .refine((u) => u.startsWith('https://'), 'debe ser https')
-    .refine((u) => u.includes(TRACKING_PLACEHOLDER), `debe contener ${TRACKING_PLACEHOLDER}`)
-    .nullable()
-    .optional(),
-});
-
-const carriersSchema = z
-  .array(carrierSchema)
-  .min(1)
-  .refine((lista) => new Set(lista.map((c) => c.code)).size === lista.length, 'codigos repetidos');
-
-/**
- * Valida la lista tal como sale de `app_settings`. Lanza `SETTING_INVALID`
- * (500) si esta corrupta: un valor mal cargado se detecta al leer, no cuando
- * un vendedor intenta despachar y recibe "transportista desconocido".
- */
-export function parseCarriers(raw: unknown): Carrier[] {
-  const resultado = carriersSchema.safeParse(raw);
-
-  if (!resultado.success) {
-    const motivo = resultado.error.issues
-      .map((i) => (i.path.length > 0 ? `${i.path.join('.')}: ${i.message}` : i.message))
-      .join('; ');
-
-    throw configErrors.settingInvalid(SHIPPING_CARRIERS_KEY, motivo);
-  }
-
-  return resultado.data.map((c) => ({
-    code: c.code,
-    name: c.name,
-    trackingUrlTemplate: c.trackingUrlTemplate ?? null,
-  }));
-}
+export { trackingUrlFor };
 
 /** Los transportistas ofrecidos hoy. Para el formulario de despacho. */
 export async function getCarriers(): Promise<Carrier[]> {
-  const raw = await shipmentRepo.findGlobalSettingValue(SHIPPING_CARRIERS_KEY);
-  if (raw === undefined) return [...DEFAULT_CARRIERS];
-
-  return parseCarriers(raw);
-}
-
-/** El transportista por su codigo, o `VALIDATION_FAILED` si no esta en la lista. */
-export async function requireCarrier(code: string): Promise<Carrier> {
-  const carrier = (await getCarriers()).find((c) => c.code === code);
-  if (carrier === undefined) throw errors.carrierUnknown();
-
-  return carrier;
+  return getShippingCarriers();
 }
 
 /**
- * Enlace publico de seguimiento, o null si el transportista no tiene template.
- * El numero va codificado: viene de un formulario y termina en una URL.
+ * El transportista por su codigo, o `VALIDATION_FAILED` si no esta en la lista.
+ *
+ * ⚠️ ES LA UNICA RAZON POR LA QUE ESTE ARCHIVO SIGUE EXISTIENDO. `config`
+ * devuelve `undefined` —no sabe nada de despachos—; que un codigo desconocido
+ * sea un error de VALIDACION del vendedor es una regla de `shipments`.
  */
-export function trackingUrlFor(carrier: Carrier, trackingNumber: string): string | null {
-  if (carrier.trackingUrlTemplate === null) return null;
+export async function requireCarrier(code: string): Promise<Carrier> {
+  const carrier = await findShippingCarrier(code);
+  if (carrier === undefined) throw errors.carrierUnknown();
 
-  return carrier.trackingUrlTemplate.replace(
-    TRACKING_PLACEHOLDER,
-    encodeURIComponent(trackingNumber),
-  );
+  return carrier;
 }
