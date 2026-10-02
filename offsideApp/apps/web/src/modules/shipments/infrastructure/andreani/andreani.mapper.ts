@@ -200,6 +200,11 @@ export function cuerpoDeCotizacion(input: QuoteInput) {
  * ⚠️ `validUntil` ES NUESTRO, NO DE ANDREANI. La API PyME no dice hasta cuando
  * vale el precio. Se le da una hora: alcanza para que el vendedor confirme el
  * envio que acaba de cotizar, y es corto como para no prometer una tarifa vieja.
+ *
+ * ⚠️ UNA TARIFA POR MODO. La respuesta real (verificada contra la cuenta el
+ * 2026-10-02) trae `estándar` una vez y `sucursal` UNA VEZ POR SUCURSAL, con el
+ * codigo en `reference` —39 filas para CABA → Rosario—. Lo que se cotiza es el
+ * modo; la sucursal se elige al dar de alta. Se queda la mas barata.
  */
 export function leerTarifas(cuerpo: unknown, ahora: Date, modo?: DeliveryMode): ShippingRate[] {
   const datos = objeto(desenvolver(cuerpo));
@@ -215,14 +220,20 @@ export function leerTarifas(cuerpo: unknown, ahora: Date, modo?: DeliveryMode): 
     const modoTarifa = modoDeContrato(codigo, null);
     if (modoTarifa === null || (modo !== undefined && modoTarifa !== modo)) continue;
 
-    tarifas.push({
+    const priceAmount = aCentavos(r.total);
+    const previa = tarifas.findIndex((t) => t.mode === modoTarifa);
+    if (previa !== -1 && tarifas[previa]!.priceAmount <= priceAmount) continue;
+
+    const tarifa: ShippingRate = {
       mode: modoTarifa,
       productCode: codigo,
-      productName: `Andreani ${codigo}`,
-      priceAmount: aCentavos(r.total),
+      productName: modoTarifa === 'agency' ? 'Andreani a sucursal' : 'Andreani a domicilio',
+      priceAmount,
       currency: 'ARS',
       validUntil,
-    });
+    };
+    if (previa === -1) tarifas.push(tarifa);
+    else tarifas[previa] = tarifa;
   }
 
   return tarifas;

@@ -137,6 +137,29 @@ describe('tarifas', () => {
     expect(leerTarifas(RESPUESTA, ahora, 'agency')).toHaveLength(1);
   });
 
+  /**
+   * ⚠️ LA FORMA REAL, vista contra la cuenta: `estándar` una vez y `sucursal`
+   * una vez por sucursal. Sin agrupar, CABA → Rosario devolvia 38 tarifas
+   * "a sucursal" identicas.
+   */
+  it('deja una sola tarifa por modo, la mas barata, con la respuesta real', () => {
+    const real = {
+      response: {
+        rates: [
+          { code: 'estándar', total: 9407.7 },
+          { code: 'sucursal', total: 6860.78, reference: 'ROS' },
+          { code: 'sucursal', total: 6500, reference: 'PRC' },
+          { code: 'sucursal', total: 6860.78, reference: 'VGG' },
+        ],
+      },
+    };
+
+    expect(leerTarifas(real, ahora).map((t) => [t.mode, t.priceAmount])).toEqual([
+      ['home', 940_770n],
+      ['agency', 650_000n],
+    ]);
+  });
+
   it('le da una hora de validez, porque la API no la informa', () => {
     expect(leerTarifas(RESPUESTA, ahora)[0]?.validUntil).toEqual(new Date('2026-10-02T13:00:00Z'));
   });
