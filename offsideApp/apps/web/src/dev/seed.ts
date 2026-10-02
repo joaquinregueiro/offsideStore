@@ -1539,6 +1539,9 @@ async function aprobarPago(orderId: string, mpUserId: string): Promise<void> {
     payment_type_id: 'credit_card',
     installments: 1,
     date_approved: approvedAt.toISOString(),
+    // 18 dias: el plazo con el que coincide el costo de la prueba real
+    // (3,39% + IVA = 4,10%). Lo muestra la ficha de la venta.
+    money_release_date: new Date(approvedAt.getTime() + 18 * 24 * 60 * 60_000).toISOString(),
     marketplace_fee: pesos(comision),
     transaction_details: { net_received_amount: pesos(netoVendedor) },
     fee_details: [

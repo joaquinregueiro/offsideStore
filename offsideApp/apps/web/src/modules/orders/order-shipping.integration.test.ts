@@ -116,6 +116,7 @@ async function limpiar(): Promise<void> {
       );
     }
     await db.delete(schema.shipments).where(inArray(schema.shipments.orderId, orderIds));
+    await db.delete(schema.payments).where(inArray(schema.payments.orderId, orderIds));
     await db
       .delete(schema.orderStatusHistory)
       .where(inArray(schema.orderStatusHistory.orderId, orderIds));
@@ -356,5 +357,40 @@ describe('seguimiento automatico', () => {
     await envios.sincronizarEnvios({ soloOrdenes: [orderId] });
 
     expect(await orderService.getOrderTimeline(orderId)).toHaveLength(antes.length);
+  });
+});
+
+describe('liberacion del dinero', () => {
+  async function pago(orderId: string, status: 'APPROVED' | 'REJECTED', liberacion: string) {
+    await getDatabase()
+      .insert(schema.payments)
+      .values({
+        orderId,
+        status,
+        amount: PRECIO,
+        checkoutType: 'checkout_pro',
+        raw: { id: 1, status: status.toLowerCase(), money_release_date: liberacion },
+      });
+  }
+
+  /**
+   * ⚠️ OFFSIDE NO LIBERA NADA (DEC-019): la fecha es la que informo Mercado
+   * Pago en el pago, tal cual. Sin mostrarla, "no se me liquida" no tenia
+   * respuesta en ningun lado del sitio.
+   */
+  it('muestra la fecha que informo Mercado Pago en el pago aprobado', async () => {
+    const { vendedor, orderId } = await ventaEnPreparacion('libera');
+    await pago(orderId, 'APPROVED', '2026-10-20T15:04:05.000-04:00');
+
+    const venta = await orderService.getSaleDetail(vendedor, orderId);
+
+    expect(venta?.moneyReleaseDate).toBe('2026-10-20T19:04:05.000Z');
+  });
+
+  it('no toma la fecha de un pago rechazado', async () => {
+    const { vendedor, orderId } = await ventaEnPreparacion('rechazado');
+    await pago(orderId, 'REJECTED', '2026-10-20T15:04:05.000-04:00');
+
+    expect((await orderService.getSaleDetail(vendedor, orderId))?.moneyReleaseDate).toBeNull();
   });
 });

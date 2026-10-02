@@ -1336,6 +1336,16 @@ Tests: **1019** tras integrar el trabajo en paralelo del owner (incluye el nuevo
 falla si se reintroduce el bug del barrido). ⚠️ Los de integración corren
 contra la base del `.env`; un test que barra tiene que acotarse a lo suyo.
 
+**Cuándo se libera la plata del vendedor (2026-10-02)**: Offside **no libera
+nada** (DEC-019): en Split 1:1 el pago entra a la cuenta del vendedor y Mercado
+Pago lo deja disponible según el plazo que esa cuenta eligió —al instante, 10,
+18 o 35 días, con costos distintos—. La prueba real del 2026-08-26 cobró 4,10%,
+que es exactamente el plan de **18 días** (3,39% + IVA). Ninguna pantalla lo
+decía, así que "no se me liquida" no tenía respuesta en el sitio: ahora la
+ficha de la venta muestra `money_release_date` tal como lo informa MP en el
+pago (leído de `payments.raw`, sin migración). ⚠️ `money_release_status` **no**
+se lee: la referencia oficial no publica sus valores 🔵.
+
 **Desplegado en producción** en **`offside.com.ar`**, en un VPS con Coolify
 (DEC-012), con HTTPS y migraciones aplicadas al arrancar el contenedor. Ver
 `offsideApp/docs-implementation/deployment-coolify.md`.

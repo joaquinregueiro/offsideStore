@@ -732,6 +732,38 @@ export async function findPaymentRefs(
 }
 
 /**
+ * Fecha en que Mercado Pago libera el dinero de la orden, tal como la informo.
+ *
+ * ⚠️ OFFSIDE NO LIBERA NADA (DEC-019): en Split 1:1 el pago se acredita en la
+ * cuenta del vendedor y MP lo deja disponible segun el plazo que esa cuenta
+ * eligio ("al instante", 10, 18 o 35 dias). Esto solo LEE lo que MP devolvio al
+ * reconsultar el pago —`money_release_date`, guardado en `payments.raw`
+ * (DEC-035)— para que el vendedor sepa cuando esperarlo.
+ *
+ * Se lee del pago APROBADO o reembolsado en parte: de uno rechazado no hay nada
+ * que liberar. `money_release_status` NO se lee: la referencia oficial no
+ * publica sus valores y no se interpretan valores inventados 🔵.
+ */
+export async function findMoneyReleaseDate(orderId: string, db?: Database): Promise<Date | null> {
+  const [row] = await conn(db)
+    .select({ fecha: sql<string | null>`${schema.payments.raw} ->> 'money_release_date'` })
+    .from(schema.payments)
+    .where(
+      and(
+        eq(schema.payments.orderId, orderId),
+        inArray(schema.payments.status, ['APPROVED', 'PARTIALLY_REFUNDED']),
+      ),
+    )
+    .orderBy(desc(schema.payments.createdAt))
+    .limit(1);
+
+  if (row?.fecha === null || row?.fecha === undefined) return null;
+  const fecha = new Date(row.fecha);
+
+  return Number.isNaN(fecha.getTime()) ? null : fecha;
+}
+
+/**
  * Lo que el transportista necesita del comprador para entregar: email y
  * telefono de la CUENTA. Se usan solo si la direccion de la compra no trae
  * telefono propio.

@@ -970,6 +970,8 @@ export interface SaleDetail extends PublicOrderConItems {
   shipment: manualShipment.PublicShipment | null;
   windows: OrderWindows;
   timeline: TimelineEntry[];
+  /** Cuando Mercado Pago libera el dinero, segun el pago. `null` si no lo informo. */
+  moneyReleaseDate: string | null;
   actions: { canShip: boolean; canCancel: boolean };
 }
 
@@ -990,12 +992,13 @@ export async function getSaleDetail(
   const order = await orderRepo.findById(orderId);
   if (order?.sellerId !== seller.id) return null;
 
-  const [items, shipment, windows, timeline, displayName] = await Promise.all([
+  const [items, shipment, windows, timeline, displayName, liberacion] = await Promise.all([
     orderRepo.findItems(orderId),
     manualShipment.getShipmentForOrder(orderId),
     ventanasDe(order, now),
     getOrderTimeline(orderId),
     orderRepo.findBuyerDisplayName(order.buyerId),
+    orderRepo.findMoneyReleaseDate(orderId),
   ]);
 
   const mostrarComprador = order.status !== 'PENDING_PAYMENT' && order.status !== 'CANCELLED';
@@ -1012,6 +1015,7 @@ export async function getSaleDetail(
     shipment,
     windows,
     timeline,
+    moneyReleaseDate: liberacion?.toISOString() ?? null,
     actions: {
       /*
        * ⚠️ CON UN ENVIO YA GENERADO NO SE OFRECE DESPACHAR. El alta automatica
