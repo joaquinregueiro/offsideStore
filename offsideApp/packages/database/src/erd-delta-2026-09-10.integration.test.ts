@@ -71,6 +71,22 @@ async function limpiar(): Promise<void> {
 }
 
 beforeAll(async () => {
+  /*
+   * ⚠️ CARGAR EL `.env` ES LO PRIMERO, Y SIN ESTO EL ARCHIVO ENTERO NO CORRIA.
+   * `getDatabase()` lee `DATABASE_URL` y `REDIS_URL` de `getEnv()`; localmente
+   * esas variables salen del `.env` y quien las pone ahi es `loadRootEnv()`.
+   * Todos los demas tests de integracion lo llaman; este no, asi que su
+   * `beforeAll` explotaba en la primera consulta y **vitest marcaba sus 9 tests
+   * como SKIPPED, no como fallados**: el archivo se leia como verde.
+   *
+   * ⚠️ POR ESO NADIE LO NOTO: en CI las dos variables son variables de entorno
+   * de verdad, asi que alla siempre paso. El agujero era solo local — y local es
+   * donde se corren antes de commitear—.
+   */
+  const { loadRootEnv, resetEnvCache } = await import('@offside/config');
+  loadRootEnv(import.meta.dirname);
+  resetEnvCache();
+
   await limpiar();
   const db = getDatabase();
 

@@ -2,7 +2,7 @@ import type { Database } from '@offside/database';
 
 import { precio as formatearPrecio } from '../../../lib/formato';
 import type { PublicUser } from '../../auth/services/auth.service';
-import { parseSettingValue } from '../../config/services/settings-registry';
+import { getSetting } from '../../config/services/setting-store.service';
 import { coverUrls } from '../../listings/services/listing.service';
 import * as inapp from '../../notifications/services/inapp-notification.service';
 import * as errors from '../favorites.errors';
@@ -34,7 +34,13 @@ import * as favoriteRepo from '../repositories/favorite.repository';
 /** Tamaño de pagina de "Mis favoritos". Limite de UI, no regla de negocio. */
 export const FAVORITOS_POR_PAGINA = 24;
 
-/** Clave del Config Store con la baja minima para avisar (⚙️, migracion `0011`). */
+/**
+ * Clave del Config Store con la baja minima para avisar (⚙️, migracion `0011`).
+ *
+ * ⚠️ EL SERVICE YA NO LA LEE A MANO. `favorites` tenia su PROPIO lector de
+ * `app_settings` que consultaba el ambito global y salteaba el registro; era
+ * deuda anotada ahi mismo y se saldo llamando al Service de `config`.
+ */
 export const PRICE_DROP_MIN_PERCENT_KEY = 'favorites_price_drop_min_percent';
 
 /** Un favorito tal como lo pinta la lista. */
@@ -190,10 +196,7 @@ export function thresholdBasisPoints(minPercent: number): number {
 }
 
 async function minPriceDropBasisPoints(db?: Database): Promise<number> {
-  const crudo = await favoriteRepo.findGlobalSetting(PRICE_DROP_MIN_PERCENT_KEY, db);
-  if (crudo === undefined) throw errors.settingNotConfigured(PRICE_DROP_MIN_PERCENT_KEY);
-
-  return thresholdBasisPoints(parseSettingValue(PRICE_DROP_MIN_PERCENT_KEY, crudo));
+  return thresholdBasisPoints(await getSetting(PRICE_DROP_MIN_PERCENT_KEY, db));
 }
 
 /**

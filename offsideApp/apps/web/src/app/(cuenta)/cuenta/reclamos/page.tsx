@@ -45,7 +45,7 @@ export default async function MisReclamos() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="compras">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Compras"

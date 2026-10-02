@@ -1,0 +1,254 @@
+/* =============================================================================
+ * CAJON DE CUENTA — el panel que abren las tres rayitas de la izquierda
+ * =============================================================================
+ *
+ * ⚠️ SE DESPLIEGA HACIA ABAJO, COLGADO DE LA BARRA. NO es un panel al costado, y
+ * el primer intento —que si lo era— llego a produccion ROTO: quedaba ATRAPADO
+ * ADENTRO DE LA BARRA, del alto exacto de la barra y con su propia barra de
+ * scroll.
+ *
+ * LA CAUSA: `header.barra` tiene `backdrop-filter` (el vidrio), y un
+ * `backdrop-filter` **crea un bloque contenedor para los descendientes
+ * `position: fixed`**. O sea que el panel nunca se posiciono contra el viewport:
+ * se posiciono contra la barra, y `inset-block: 0` lo dejo de 110px de alto.
+ * Lo mismo le pasaba al fondo oscuro que cerraba al tocar afuera —tampoco puede
+ * escapar de la barra—, asi que esa pieza se va.
+ *
+ * La salida es la que el menu de telefono de esta misma barra ya usaba desde
+ * antes —`position: absolute` colgado de `top: 100%`—, que ademas es lo que se
+ * pidio.
+ *
+ * ⚠️ SIN UNA LINEA DE JAVASCRIPT. Es un `<details>`: el navegador ya sabe
+ * abrirlo con teclado y anunciarlo a un lector de pantalla, y anda con JS
+ * apagado. Manejarlo con estado de React volveria Client Component a la barra
+ * entera, y con ella se iria la sesion al bundle.
+ * ========================================================================== */
+
+.cajon {
+  /*
+   * ⚠️ ACA SI SE QUIERE EL CONTEXTO DE POSICIONAMIENTO: el panel cuelga de este
+   * `<details>`, no del viewport. Es el cambio exacto respecto del intento que
+   * fallo.
+   */
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------ las rayitas -- */
+
+.boton {
+  /*
+   * ⚠️ `list-style: none` MAS el pseudo de WebKit. El triangulito que el
+   * navegador le pone a un `<summary>` se saca distinto en cada motor, y con uno
+   * solo de los dos aparece una flechita al lado de las rayas.
+   */
+  list-style: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px: el minimo tactil que el resto de la barra ya respeta. */
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radio);
+  cursor: pointer;
+  color: var(--color-sobre-cancha);
+  transition: background-color var(--dur-hover) var(--curva-seca);
+}
+
+.boton::-webkit-details-marker {
+  display: none;
+}
+
+.boton:hover,
+.cajon[open] .boton {
+  background-color: rgb(var(--luz-papel) / 0.14);
+}
+
+/* --------------------------------------------------------------- el panel -- */
+
+.panel {
+  position: absolute;
+  /* Cuelga del borde inferior de la barra, alineado a su izquierda. */
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  margin-block-start: var(--espacio-3);
+  z-index: var(--z-menu);
+
+  /*
+   * ⚠️ `min()` CONTRA EL ANCHO DE LA VENTANA. A 320px un panel de 300 fijo se
+   * sale de la pantalla y empuja el `<body>`: el desborde horizontal es el
+   * defecto que mas veces volvio en este frontend.
+   */
+  inline-size: min(300px, calc(100vw - 2 * var(--espacio-5)));
+
+  /*
+   * Que no tape la pantalla entera en un telefono apaisado. Con mas secciones
+   * de las que entran, el panel scrollea solo.
+   */
+  max-block-size: min(70vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  padding: var(--espacio-4);
+  border-radius: var(--radio-ficha);
+  /* Sobre fondo oscuro una sombra no separa: lo hace el canto iluminado. */
+  box-shadow: var(--sombra-oscura);
+}
+
+/*
+ * ⚠️ LA ENTRADA VA ADENTRO DE LA MEDIA QUERY, no afuera con una duracion que la
+ * regla global pueda aplastar. Quien pide menos movimiento recibe el panel ya
+ * puesto, no a medio camino.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .cajon[open] .panel {
+    animation: bajaCajon var(--dur-media) var(--curva-corte) both;
+  }
+}
+
+@keyframes bajaCajon {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------ encabezado -- */
+
+.quien {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block-end: var(--espacio-3);
+  border-block-end: 1px solid rgb(var(--luz-papel) / 0.14);
+}
+
+.nombre {
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-lg);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-titulo);
+  color: var(--color-papel);
+}
+
+.correo {
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-tenue);
+  /* Un correo largo no puede ensanchar el panel ni desbordarlo. */
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- enlaces -- */
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/*
+ * Segundo grupo: lo que es del SITIO, separado de lo que es TUYO por una linea.
+ * Sin la separacion, "Explorar" quedaba entre "Compras" y "Favoritos" como si
+ * fuera otra seccion de la cuenta.
+ */
+.grupo {
+  padding-block-start: var(--espacio-3);
+  border-block-start: 1px solid rgb(var(--luz-papel) / 0.14);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-block-size: 44px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio);
+  color: var(--color-papel);
+  text-decoration: none;
+  transition: background-color var(--dur-hover) var(--curva-seca);
+}
+
+.item:hover {
+  background-color: rgb(var(--luz-papel) / 0.1);
+}
+
+.icono {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--color-cambio);
+}
+
+.texto {
+  flex: 1;
+  font-size: var(--texto-sm);
+}
+
+/*
+ * ⚠️ SOLO LOS NUMEROS QUE PIDEN UNA ACCION. Es la misma regla del panel lateral:
+ * un contador que nunca baja a cero deja de significar algo.
+ */
+.dato {
+  flex-shrink: 0;
+  min-inline-size: 22px;
+  padding: 2px 7px;
+  border-radius: var(--radio-pastilla);
+  background-color: var(--color-cambio);
+  color: var(--color-tinta);
+  font-size: var(--texto-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ pie -- */
+
+.pie {
+  padding-block-start: var(--espacio-3);
+  border-block-start: 1px solid rgb(var(--luz-papel) / 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.nota {
+  margin: 0;
+  font-size: var(--texto-xs);
+  line-height: 1.5;
+  color: var(--color-neutro-tenue);
+}
+
+/*
+ * ⚠️ HAY QUE RESETEAR EL BOTON, no alcanza con darle color. "Salir" es un
+ * `<button>` dentro de un `<form>` —porque cerrar sesion es una MUTACION y no
+ * puede ir en un enlace—, y un boton sin resetear se dibuja con el estilo del
+ * navegador: fondo claro y borde, o sea una pastilla blanca en un panel oscuro.
+ */
+.salir {
+  appearance: none;
+  inline-size: 100%;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio);
+  color: var(--color-papel);
+  font-size: var(--texto-sm);
+  text-align: start;
+}
+
+.salir:hover {
+  background-color: rgb(var(--luz-papel) / 0.1);
+}

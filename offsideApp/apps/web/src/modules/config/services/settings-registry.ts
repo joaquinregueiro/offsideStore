@@ -461,10 +461,23 @@ export const SETTING_DEFINITIONS = {
 
   /* ---------------------------------------------- preguntas (0011) -------- */
 
+  /**
+   * ⚠️ GLOBAL Y NO POR TIER, aunque parezca que podria serlo. El cupo es de
+   * QUIEN PREGUNTA, y quien pregunta es un comprador: no tiene `seller_tier`,
+   * asi que el ambito de tier no se podia resolver NUNCA. Declararlo igual era
+   * peor que inutil —prometia desde el registro un override que el lector nunca
+   * iba a consultar, y cargarlo desde Admin no habria hecho nada ni avisado—.
+   *
+   * Las otras claves con tier son parametros del VENDEDOR —peso de foto, plazo
+   * de despacho, multiplicador de promocion—, donde el tier del actor existe.
+   *
+   * El dia que el cupo quiera variar por nivel, el ambito correcto es el NIVEL
+   * DE USUARIO (`user_level`), que hoy no es un `SettingScope`.
+   */
   questions_max_open_per_user: def({
     valueType: 'number',
     schema: z.number().int().min(1).max(1_000),
-    scopes: GLOBAL_Y_TIER,
+    scopes: GLOBAL,
     descripcion: 'Preguntas sin responder que una cuenta puede tener abiertas a la vez',
   }),
   questions_max_length: def({

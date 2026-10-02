@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, eq, sql } from 'drizzle-orm';
 
 /**
  * Acceso a `carts` y `cart_items` (ERD §10). Sin reglas de negocio.
@@ -277,28 +277,4 @@ export async function touch(cartId: string, db?: Database): Promise<void> {
     .update(schema.carts)
     .set({ updatedAt: sql`now()` })
     .where(eq(schema.carts.id, cartId));
-}
-
-/**
- * Valor vigente de una clave GLOBAL de `app_settings`.
- *
- * ⚠️ DUPLICA `app-setting.repository.findCurrent` DE `config`, a proposito:
- * un modulo no importa el repository de otro (`modules/README.md`). Cuando
- * exista `settingsService.getSetting(key)`, esto se borra.
- */
-export async function findGlobalSetting(key: string, db?: Database): Promise<unknown> {
-  const [row] = await conn(db)
-    .select({ value: schema.appSettings.value })
-    .from(schema.appSettings)
-    .where(
-      and(
-        eq(schema.appSettings.scope, 'global'),
-        isNull(schema.appSettings.scopeId),
-        eq(schema.appSettings.key, key),
-      ),
-    )
-    .orderBy(desc(schema.appSettings.version))
-    .limit(1);
-
-  return row?.value;
 }

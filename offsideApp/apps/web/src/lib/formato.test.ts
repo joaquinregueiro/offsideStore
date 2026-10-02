@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { condicion, estadoDeOrden, precio, rutaInternaSegura } from './formato';
+import { condicion, estadoDeOrden, horas, precio, rutaInternaSegura } from './formato';
 
 /**
  * Formateo de la interfaz.
@@ -71,5 +71,27 @@ describe('rutaInternaSegura', () => {
     expect(rutaInternaSegura(undefined)).toBe('/');
     expect(rutaInternaSegura('')).toBe('/');
     expect(rutaInternaSegura(undefined, '/vendedor')).toBe('/vendedor');
+  });
+});
+
+describe('horas', () => {
+  it('⚠️ menos de una hora NO es "0 h"', () => {
+    // Aparecio mirando la ficha de un vendedor que contesta en minutos: el
+    // promedio redondeaba a cero y la pantalla decia "responde en ~0 h", que se
+    // lee como un dato roto justo donde se quiere mostrar lo contrario.
+    expect(horas(0)).toBe('menos de 1 h');
+    expect(horas(0.4)).toBe('menos de 1 h');
+  });
+
+  it('cuenta horas hasta el dia y dias despues', () => {
+    expect(horas(1)).toBe('1 h');
+    expect(horas(5.6)).toBe('6 h');
+    expect(horas(24)).toBe('1 día');
+    expect(horas(26)).toBe('1 día y 2 h');
+    expect(horas(48)).toBe('2 días');
+  });
+
+  it('un valor negativo no produce una hora negativa', () => {
+    expect(horas(-3)).toBe('menos de 1 h');
   });
 });

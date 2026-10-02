@@ -71,7 +71,7 @@ export default async function PromocionarPublicacion({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="publicaciones">
+      <PanelDeCuenta>
         <main id="contenido">
           <Migas
             items={[

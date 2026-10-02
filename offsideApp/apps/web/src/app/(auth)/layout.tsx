@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Footer } from '@/components/footer';
 import { Header } from '@/components/header';
 import { IconoAutenticado, IconoEtiqueta, IconoIntercambio } from '@/components/iconos';
-import { Logo } from '@/components/marca';
+import { LogoLockup } from '@/components/marca';
 
 import estilos from './auth.module.css';
 
@@ -94,7 +94,7 @@ export default function LayoutDeAutenticacion({ children }: { children: ReactNod
 
           <div className={estilos.panelContenido}>
             <div className="entra-acerca">
-              <Logo invertido alto={34} />
+              <LogoLockup alto={34} />
             </div>
 
             {/*

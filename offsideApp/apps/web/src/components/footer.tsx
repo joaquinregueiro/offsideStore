@@ -4,7 +4,7 @@ import { elegirTema } from '@/app/acciones';
 import { temaElegido, type Tema } from '@/lib/tema';
 
 import estilos from './footer.module.css';
-import { Logo } from './marca';
+import { LogoLockup } from './marca';
 
 /**
  * Pie del sitio.
@@ -35,10 +35,17 @@ import { Logo } from './marca';
  * Mismo destino, mismo tipo que en la barra: si el mismo enlace se animara
  * distinto segun desde donde se toca, el movimiento dejaria de significar algo.
  *
- * ⚠️ TRES PLANOS, NO UNO. Antes era UN rectangulo de Tinta y por eso se leia
- * como un apendice: cinta de rombos → bloque noche con malla, grano y blobs de
- * luz → tira legal en fosa. Ninguno se escribe a mano: son clases del sistema
- * (`sup-*`, `escena-luz`, `blobs`, `patron-vivo`, `con-grano`).
+ * ⚠️ DOS PLANOS, NO UNO. Antes era UN rectangulo de Tinta y por eso se leia como
+ * un apendice: bloque noche con malla, grano y blobs de luz → tira legal en
+ * fosa. Ninguno se escribe a mano: son clases del sistema (`sup-*`,
+ * `escena-luz`, `blobs`, `con-grano`).
+ *
+ * ⚠️ LA CINTA DE ROMBOS SE SACO EL 2026-09-16, por decision del dueño. Era el
+ * primer hijo y llevaba `z-index: 2` justamente para taparle el lugar a
+ * `.sup-noche::before` —el filo de luz que separa el bloque oscuro de lo que
+ * tiene arriba, que se pinta en `z-index: 1`—. Sin la cinta, ese filo vuelve a
+ * ser el separador, que es para lo que existe: el pie NO se queda sin division
+ * arriba.
  */
 /**
  * ⚠️ EL ORDEN NO ES ALFABETICO: va de menos a mas compromiso. "Automatico"
@@ -76,14 +83,6 @@ export async function Footer() {
       style={{ viewTransitionName: 'pie' }}
     >
       {/*
-        Cinta de seccion (identidad §05), en su escala real (28px), con halo y
-        una banda de luz que la recorre; el rombo se corre un mosaico EXACTO
-        cada 26s, asi que el bucle es invisible. Un "200% corrido -50%"
-        saltaria cada vuelta.
-      */}
-      <div className={`${estilos.cinta} patron-vivo patron-vivo-cinta`} aria-hidden="true" />
-
-      {/*
         BLOBS DE LUZ detras de las columnas: verde arriba a la derecha, amarillo
         abajo a la izquierda, un verde chico arriba al medio (las posiciones por
         defecto salen del orden). Son gradientes radiales sin `filter: blur`,
@@ -106,7 +105,7 @@ export async function Footer() {
       */}
       <div className={`${estilos.contenido} revela-grilla-luz`}>
         <div className={estilos.marca}>
-          <Logo invertido alto={34} />
+          <LogoLockup alto={34} />
 
           {/*
             ⚠️ EL CLAIM ES DISPLAY Y ES LO QUE CONVIERTE AL PIE EN UN CIERRE. Con
@@ -122,7 +121,7 @@ export async function Footer() {
             momento en que el claim significa algo. Sin soporte de
             `animation-timeline` queda dibujado, no en blanco.
           */}
-          <p className={`${estilos.claim} display display-3 oblicuo titular-vivo revela-suave`}>
+          <p className={`${estilos.claim} display titular-vivo revela-suave`}>
             Camisetas con historia
           </p>
 
@@ -140,9 +139,6 @@ export async function Footer() {
           </Link>
           <Link href="/buscar" className={estilos.enlace} transitionTypes={['barrido']}>
             Buscar por club o marca
-          </Link>
-          <Link href="/como-funciona" className={estilos.enlace} transitionTypes={['avanza']}>
-            Cómo funciona
           </Link>
           {/*
             ⚠️ EL CARRITO ENTRA AL PIE PORQUE DEC-026 LO VUELVE UN PASO DEL
@@ -185,6 +181,17 @@ export async function Footer() {
           </Link>
           <Link href="/crear-cuenta" className={estilos.enlace} transitionTypes={['avanza']}>
             Crear cuenta
+          </Link>
+          {/*
+            ⚠️ "COMO FUNCIONA" VIVE ACA Y NO EN "COMPRAR", por decision del dueño
+            (2026-09-15). No es una accion de compra: es la pantalla que explica
+            las reglas del sitio —comision, que pasa con la plata y, sobre todo,
+            lo que Offside TODAVIA no hace—, y eso se busca antes de tener
+            cuenta, no en medio de una compra. Al lado de Ingresar y Crear
+            cuenta queda en el momento en que alguien decide si entra.
+          */}
+          <Link href="/como-funciona" className={estilos.enlace} transitionTypes={['avanza']}>
+            Cómo funciona
           </Link>
         </nav>
       </div>

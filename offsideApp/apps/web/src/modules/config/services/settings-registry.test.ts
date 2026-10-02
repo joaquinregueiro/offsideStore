@@ -127,7 +127,16 @@ describe('ambitos', () => {
   it('los plazos que un tier puede comprometer admiten seller_tier; los de plataforma no', () => {
     expect(allowsScope('dispatch_deadline_hours', 'seller_tier')).toBe(true);
     expect(allowsScope('promotion_commission_multiplier', 'seller_tier')).toBe(true);
-    expect(allowsScope('questions_max_open_per_user', 'seller_tier')).toBe(true);
+
+    /*
+     * ⚠️ EL CUPO DE PREGUNTAS ESTABA ACA ARRIBA Y ERA UN ERROR. Un ambito de
+     * tier solo tiene sentido cuando el ACTOR de la operacion tiene tier: el
+     * plazo de despacho y el multiplicador de promocion los ejerce el VENDEDOR.
+     * El cupo de preguntas abiertas lo ejerce quien PREGUNTA —un comprador, sin
+     * `seller_tier`—, asi que el lector jamas iba a consultar ese ambito y el
+     * override era irresoluble: se cargaba desde Admin y no pasaba nada.
+     */
+    expect(allowsScope('questions_max_open_per_user', 'seller_tier')).toBe(false);
 
     expect(allowsScope('payment_window_minutes', 'seller_tier')).toBe(false);
     expect(allowsScope('feature_cart', 'seller_tier')).toBe(false);

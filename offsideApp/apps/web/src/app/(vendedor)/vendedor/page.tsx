@@ -163,7 +163,7 @@ export default async function PanelDeVendedor() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="cuenta">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa
             rotulo="Mi cuenta"

@@ -26,6 +26,7 @@ import {
   InsigniaDeNivel,
   InsigniaDeReputacion,
   Migas,
+  Paginacion,
   Pliego,
   Precio,
 } from '@/components/ui';
@@ -46,7 +47,8 @@ import { isFeatureEnabled } from '@/modules/config/services/setting-store.servic
 import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
 import { findPublicListing } from '@/modules/listings/services/listing.service';
 import {
-  averageAnswerHours,
+  answerStats,
+  frecuenciaDeRespuesta,
   listPublicQuestions,
   type PublicQuestion,
 } from '@/modules/questions/services/question.service';
@@ -162,6 +164,21 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode })
 const TOPE_DE_CANTIDAD = 10;
 
 /**
+ * Un entero de la URL, o `undefined`.
+ *
+ * ⚠️ NO VALIDA EL RANGO: de eso se encarga `normalizarPagina` en el Service, que
+ * es donde vive la regla. Aca solo se convierte texto a numero —lo que llega es
+ * `string | string[] | undefined` y puede ser cualquier cosa—.
+ */
+function numeroDeParametro(valor: string | string[] | undefined): number | undefined {
+  if (typeof valor !== 'string') return undefined;
+
+  const n = Number.parseInt(valor, 10);
+
+  return Number.isNaN(n) ? undefined : n;
+}
+
+/**
  * Preguntas y respuestas de la publicacion (BS-040).
  *
  * ⚠️ NUNCA DICE QUIEN PREGUNTO. `PublicQuestion` directamente no trae al autor, y
@@ -214,7 +231,16 @@ export default async function DetalleDePublicacion({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
-  const [listing, user, preguntas, preguntasHabilitadas, params2] = await Promise.all([
+  /*
+    ⚠️ LOS PARAMETROS SE LEEN ANTES DEL RESTO, y no por prolijidad: la pagina de
+    preguntas viaja en la URL y hay que saberla para pedirlas. Es el mismo
+    criterio que el resto del sitio —todo filtro y toda pagina van por GET, asi
+    se comparten, vuelven con el botón atrás y andan sin JavaScript—.
+  */
+  const params2 = await searchParams;
+  const paginaDePreguntas = numeroDeParametro(params2.preguntas);
+
+  const [listing, user, preguntas, preguntasHabilitadas] = await Promise.all([
     findPublicListing(id),
     getSessionUser(),
     /*
@@ -222,13 +248,12 @@ export default async function DetalleDePublicacion({
       pantalla más compartida del sitio: si la consulta falla, se pierde la
       sección y no la publicación.
     */
-    listPublicQuestions(id).catch((error: unknown) => {
+    listPublicQuestions(id, paginaDePreguntas).catch((error: unknown) => {
       console.error('[ficha] no se pudieron leer las preguntas', error);
 
-      return [] as PublicQuestion[];
+      return { preguntas: [], total: 0, pagina: 1, porPagina: 1 };
     }),
     isFeatureEnabled('questions').catch(() => false),
-    searchParams,
   ]);
 
   /**
@@ -285,14 +310,14 @@ export default async function DetalleDePublicacion({
    * —recomputa si la fila no existe—, así que un vendedor sin ningún hecho no
    * rompe nada: devuelve todo en cero, que es la verdad.
    */
-  const [reputacion, nivel, horasDeRespuesta, resenas] = await Promise.all([
+  const [reputacion, nivel, respuestas, resenas] = await Promise.all([
     getSellerReputation(listing.sellerId).catch((error: unknown) => {
       console.error('[ficha] no se pudo leer la reputación del vendedor', error);
 
       return null;
     }),
     getTierProgress(listing.sellerId).catch(() => null),
-    averageAnswerHours(listing.sellerId).catch(() => null),
+    answerStats(listing.sellerId).catch(() => null),
     listSellerReviews(listing.sellerId, 1).catch(() => null),
   ]);
 
@@ -724,15 +749,22 @@ export default async function DetalleDePublicacion({
                             ? [cantidadLegible(reputacion.claimsCount, 'reclamo')]
                             : []),
                           /*
-                            ⚠️ "RESPONDE EN ~X" SÓLO SI ALGUNA VEZ RESPONDIÓ.
-                            `averageAnswerHours` devuelve `null` justamente para
-                            que nadie invente un número: prometer "responde en
-                            ~2 h" sobre un vendedor que nunca contestó es la
-                            clase de dato que hace que alguien compre.
+                            ⚠️ LA FRASE LA ARMA EL SERVICE, no esta pantalla: la
+                            tienda muestra el mismo dato y dos redacciones se
+                            separan. Devuelve `null` cuando NO HAY NADA QUE
+                            DECIR —nadie le preguntó en la ventana—, y ahí no se
+                            dibuja: prometer algo sobre un vendedor del que no
+                            hay evidencia es la clase de dato que hace que
+                            alguien compre.
+
+                            ⚠️ Y AHORA EL SILENCIO SE VE. Antes se promediaban
+                            sólo las respondidas, así que quien nunca contestaba
+                            no mostraba nada y quien contestaba lento mostraba
+                            "~40 h": ignorar quedaba mejor que tardar.
                           */
-                          ...(horasDeRespuesta === null
+                          ...(frecuenciaDeRespuesta(respuestas, horas) === null
                             ? []
-                            : [`responde preguntas en ~${horas(horasDeRespuesta)}`]),
+                            : [frecuenciaDeRespuesta(respuestas, horas)!]),
                         ]}
                       />
 
@@ -940,12 +972,37 @@ export default async function DetalleDePublicacion({
                 Preguntas
               </h2>
 
-              {preguntas.length === 0 ? (
+              {preguntas.total === 0 ? (
                 <p className={estilos.sinPreguntas}>
                   Todavía nadie preguntó nada sobre esta publicación.
                 </p>
               ) : (
-                <Preguntas preguntas={preguntas} />
+                <>
+                  <Preguntas preguntas={preguntas.preguntas} />
+                  {/*
+                    ⚠️ LA PAGINACION CONSERVA EL RESTO DE LA URL. La ficha vuelve
+                    acá con `?aviso=favorito` después del corazón: un enlace que
+                    armara sólo `?preguntas=2` borraría ese aviso a mitad de
+                    camino. Es el mismo criterio que la búsqueda con sus filtros.
+                  */}
+                  <Paginacion
+                    actual={preguntas.pagina}
+                    total={Math.ceil(preguntas.total / preguntas.porPagina)}
+                    hrefDe={(n) => {
+                      const query = new URLSearchParams();
+                      for (const [clave, valor] of Object.entries(params2)) {
+                        if (typeof valor === 'string' && clave !== 'preguntas') {
+                          query.set(clave, valor);
+                        }
+                      }
+                      if (n > 1) query.set('preguntas', String(n));
+
+                      const cadena = query.toString();
+
+                      return `/p/${listing.id}${cadena === '' ? '' : `?${cadena}`}#preguntas-titulo`;
+                    }}
+                  />
+                </>
               )}
 
               {/*

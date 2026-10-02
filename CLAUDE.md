@@ -1332,7 +1332,7 @@ PROCESSING empataban en `now()`. Ahora el historial usa `clock_timestamp()`.
 Además, en modo oscuro **el texto escrito en los campos de formulario daba
 1.25:1**: faltaban seis variables de contrato en el bloque oscuro.
 
-Tests: **978** (incluye el nuevo `order-shipping.integration.test.ts`, que
+Tests: **1019** tras integrar el trabajo en paralelo del owner (incluye el nuevo `order-shipping.integration.test.ts`, que
 falla si se reintroduce el bug del barrido). ⚠️ Los de integración corren
 contra la base del `.env`; un test que barra tiene que acotarse a lo suyo.
 

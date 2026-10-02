@@ -46,7 +46,7 @@ export default async function MisDirecciones() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="cuenta">
+      <PanelDeCuenta>
         <main id="contenido">
           <ChapaDeCuenta
             rotulo="Mi cuenta"

@@ -17,7 +17,7 @@ import * as manualShipment from '../../shipments/services/manual-shipment.servic
 import * as errors from '../orders.errors';
 import * as orderRepo from '../repositories/order.repository';
 import { emitOrderTransition } from './order-events';
-import * as orderSettings from './order-settings.service';
+import * as orderSettings from '../../config/services/setting-store.service';
 import {
   canTransition,
   computePaymentDeadline,
@@ -851,6 +851,18 @@ export async function getDispatchDeadline(
   order: Pick<orderRepo.OrderRow, 'status' | 'paidAt'>,
   now: Date = new Date(),
 ): Promise<DispatchDeadline> {
+  /*
+   * ⚠️ SE LEE EL VALOR GLOBAL, SIN CONTEXTO, Y ESO DEJA UN OVERRIDE SIN USAR.
+   * `dispatch_deadline_hours` admite ambito por `seller_tier` —el registro lo
+   * declara `GLOBAL_Y_TIER` y ahi el ambito SI tiene sentido, porque el actor
+   * del plazo es el vendedor—, pero para resolverlo hay que saber el tier, y
+   * esta funcion recibe la orden, no al vendedor. Pasarlo cambia un plazo de
+   * negocio —del que cuelgan la reputacion por despacho a tiempo y una
+   * transicion automatica—, asi que es una decision, no un refactor.
+   *
+   * Hasta entonces el comportamiento es el MISMO de siempre: `resolve` con
+   * contexto vacio consulta solo el ambito global.
+   */
   const horas = await orderSettings.getDispatchDeadlineHours();
   const deadline = dispatchDeadlineFor(order.paidAt, horas);
 

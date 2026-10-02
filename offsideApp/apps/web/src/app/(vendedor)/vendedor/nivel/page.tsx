@@ -51,7 +51,7 @@ export default async function MiNivel() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="cuenta">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa
             rotulo="Mi cuenta"

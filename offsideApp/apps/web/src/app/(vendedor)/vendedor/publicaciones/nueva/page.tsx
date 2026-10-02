@@ -78,7 +78,7 @@ export default async function NuevaPublicacion() {
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="vender">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa
             rotulo="Vender"

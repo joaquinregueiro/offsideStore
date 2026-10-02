@@ -39,6 +39,7 @@ import { dias, envolver, textoPlano, urlAbsoluta } from './base';
 export const RUTA_MIS_COMPRAS = '/mis-compras';
 export const RUTA_VENTAS = '/vendedor/ventas';
 export const RUTA_PANEL_VENDEDOR = '/vendedor';
+export const RUTA_PREGUNTAS_VENDEDOR = '/vendedor/preguntas';
 
 /* ------------------------------------------------------------ tipos de entrada */
 
@@ -91,6 +92,13 @@ export interface ResenaEmail {
   /** 1 a 5 (`reviews.rating`). */
   puntaje: number;
   comentario: string | null;
+}
+
+export interface PreguntaEmail {
+  /** Titulo de la publicacion sobre la que preguntaron. */
+  publicacion: string;
+  /** El texto de la pregunta, ya normalizado por el Service. */
+  texto: string;
 }
 
 export interface NivelVendedorEmail {
@@ -486,5 +494,40 @@ export function nivelDeVendedorActualizado(
     parrafos,
     datos,
     boton: { texto: 'Ver mi panel', ruta: RUTA_PANEL_VENDEDOR },
+  });
+}
+
+/**
+ * Al vendedor, cuando le hacen una pregunta.
+ *
+ * ⚠️ EXISTE PORQUE LA CAMPANITA NO ALCANZA. Un vendedor que no entra al sitio
+ * no se enteraba de que le preguntaron, y el TIEMPO DE RESPUESTA es una de las
+ * metricas que su reputacion publica muestra: se lo estaba midiendo por algo
+ * que no tenia forma de saber.
+ *
+ * ⚠️ EL TEXTO DE LA PREGUNTA VA EN EL CUERPO, y es deliberado: muchas se
+ * contestan leyendolas —"¿hacés envío a Córdoba?"— y obligar a entrar al sitio
+ * para saber QUE le preguntaron agrega un paso a lo que el email vino a
+ * acelerar.
+ *
+ * ⚠️ NO DICE QUIEN PREGUNTO. Ni el email ni el nombre: las preguntas son
+ * anonimas en la ficha y un email no es una puerta de atras a eso.
+ */
+export function preguntaRecibida(
+  to: string,
+  nombre: string | null,
+  pregunta: PreguntaEmail,
+): EmailMessage {
+  return armar(to, `Te preguntaron: ${pregunta.publicacion} — Offside Store`, {
+    titulo: 'Te hicieron una pregunta',
+    parrafos: [
+      saludo(nombre),
+      `Alguien preguntó sobre "${pregunta.publicacion}". Tu respuesta se publica en la publicación y la ve cualquiera, así que no incluyas datos de contacto.`,
+    ],
+    datos: [
+      { etiqueta: 'Publicación', valor: pregunta.publicacion },
+      { etiqueta: 'Pregunta', valor: pregunta.texto },
+    ],
+    boton: { texto: 'Responder', ruta: RUTA_PREGUNTAS_VENDEDOR },
   });
 }

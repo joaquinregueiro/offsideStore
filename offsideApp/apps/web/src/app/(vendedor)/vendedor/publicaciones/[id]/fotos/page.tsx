@@ -99,7 +99,7 @@ export default async function FotosDeLaPublicacion({
 
   return (
     <Pantalla>
-      <PanelDeCuenta user={user} seccion="publicaciones">
+      <PanelDeCuenta>
         <main id="contenido">
           <Chapa
             rotulo="Inventario"

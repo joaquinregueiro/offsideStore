@@ -435,18 +435,21 @@ export function trackingUrlFor(carrier: ShippingCarrier, trackingNumber: string)
 /* ---- preguntas y favoritos (delta 2026-09-10 §13/§14) -------------------- */
 
 export interface QuestionSettings {
-  /** Preguntas sin responder que una cuenta puede tener abiertas a la vez. Override por tier. */
+  /** Preguntas sin responder que una cuenta puede tener abiertas a la vez. */
   maxOpenPerUser: number;
   /** Largo maximo de pregunta y respuesta, en caracteres. */
   maxLength: number;
 }
 
-export async function getQuestionSettings(
-  db?: Database,
-  ctx: ResolutionContext = {},
-): Promise<QuestionSettings> {
+/**
+ * ⚠️ LAS DOS CLAVES SON GLOBALES Y NO HAY `ctx`. El cupo estaba declarado con
+ * ambito de tier y era irresoluble: es el cupo de QUIEN PREGUNTA, un comprador,
+ * que no tiene `seller_tier`. Aceptar un `ctx` aca invitaba a pasarle el tier
+ * del vendedor —que es de otra persona— y a creer que hacia algo.
+ */
+export async function getQuestionSettings(db?: Database): Promise<QuestionSettings> {
   const [maxOpenPerUser, maxLength] = await Promise.all([
-    resolve('questions_max_open_per_user', ctx, db),
+    getSetting('questions_max_open_per_user', db),
     getSetting('questions_max_length', db),
   ]);
 
