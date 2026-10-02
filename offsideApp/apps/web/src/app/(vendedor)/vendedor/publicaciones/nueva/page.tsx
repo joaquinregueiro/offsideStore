@@ -329,6 +329,7 @@ export default async function NuevaPublicacion() {
                 <CampoArchivos
                   nombre="fotos"
                   etiqueta="Fotos"
+                  maximo={imagenes.maxImages}
                   ayuda={`Hasta ${imagenes.maxImages} fotos, ${maxMb} MB cada una. La primera es la portada. Si es usada o retro, sumá una de la etiqueta: es la mejor señal de autenticidad.`}
                 />
               </GrupoDeCampos>

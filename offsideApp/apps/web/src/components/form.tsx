@@ -953,6 +953,11 @@ export function AreaDeTexto({
   );
 }
 
+/** La misma foto elegida dos veces se reconoce por nombre, tamaño y fecha. */
+function claveDeArchivo(archivo: File): string {
+  return `${archivo.name}:${archivo.size}:${archivo.lastModified}`;
+}
+
 /**
  * Selector de archivos.
  *
@@ -963,6 +968,21 @@ export function AreaDeTexto({
  * ⚠️ AHORA LEE EL CONTEXTO DE ERRORES, igual que `Casilla`. Es el mismo
  * agujero: un error keyeado al nombre del campo de fotos no se veia en ningun
  * lado y ni siquiera se marcaba con `aria-invalid`.
+ *
+ * ⚠️⚠️ CON JAVASCRIPT, CADA ELECCION SUMA, Y ES EL ARREGLO DE UN BUG REPORTADO
+ * ("no me deja subir mas de 1 foto"). El `<input type="file">` nativo
+ * REEMPLAZA la seleccion cada vez que se abre: quien elegia una foto y volvia
+ * a tocar para sumar otra perdia la primera, y siempre viajaba una sola. Ahora
+ * las elegidas se acumulan en el estado y se vuelven a cargar en el input con
+ * `DataTransfer`, asi que el envio sigue siendo el `FormData` de siempre.
+ *
+ * ⚠️ Y SOBREVIVEN A UN ERROR. React resetea el formulario al terminar la
+ * accion, y un input de archivos no se puede repoblar desde el servidor: un
+ * error en el precio borraba las fotos sin avisar. Si la respuesta no es `ok`,
+ * se vuelven a cargar; si es `ok`, se limpian.
+ *
+ * ⚠️ SIN JAVASCRIPT queda el selector nativo, con `multiple`: se eligen varias
+ * de una vez y funciona igual que antes.
  */
 export function CampoArchivos({
   nombre,
@@ -970,16 +990,84 @@ export function CampoArchivos({
   ayuda,
   multiple = true,
   requerido = false,
+  maximo,
 }: {
   nombre: string;
   etiqueta: string;
   ayuda?: string;
   multiple?: boolean;
   requerido?: boolean;
+  /** Cuantas se pueden elegir. Sin tope, las que vengan. */
+  maximo?: number;
 }) {
   const idAyuda = ayuda === undefined ? undefined : `${nombre}-ayuda`;
   const idError = `${nombre}-error`;
+  const idElegidas = `${nombre}-elegidas`;
   const { error } = useCampo(nombre);
+  const estado = useContext(CtxFormulario);
+  const hidratado = useHidratado();
+  const input = useRef<HTMLInputElement>(null);
+  const [elegidas, setElegidas] = useState<File[]>([]);
+  const [sobrantes, setSobrantes] = useState(0);
+  const elegidasRef = useRef<File[]>([]);
+  elegidasRef.current = elegidas;
+
+  function cargarEnElInput(lista: File[]) {
+    if (input.current === null || typeof DataTransfer === 'undefined') return;
+    const transferencia = new DataTransfer();
+    for (const archivo of lista) transferencia.items.add(archivo);
+    input.current.files = transferencia.files;
+  }
+
+  function actualizar(lista: File[]) {
+    setElegidas(lista);
+    cargarEnElInput(lista);
+  }
+
+  function alElegir(evento: ChangeEvent<HTMLInputElement>) {
+    if (!multiple) return;
+    const nuevas = Array.from(evento.target.files ?? []);
+    const vistas = new Set(elegidasRef.current.map(claveDeArchivo));
+    const sumadas = [...elegidasRef.current];
+    for (const archivo of nuevas) {
+      if (vistas.has(claveDeArchivo(archivo))) continue;
+      vistas.add(claveDeArchivo(archivo));
+      sumadas.push(archivo);
+    }
+    const tope = maximo ?? sumadas.length;
+    setSobrantes(Math.max(0, sumadas.length - tope));
+    actualizar(sumadas.slice(0, tope));
+  }
+
+  function quitar(indice: number) {
+    setSobrantes(0);
+    actualizar(elegidasRef.current.filter((_, i) => i !== indice));
+  }
+
+  /*
+   * ⚠️ SE ESPERA UN TURNO PORQUE EL RESET DE REACT LLEGA DESPUES DEL RENDER:
+   * cargarlas en el mismo efecto las dejaria puestas un instante y el reset
+   * las borraria igual.
+   */
+  useEffect(() => {
+    if (estado.ok !== undefined) {
+      setElegidas([]);
+      setSobrantes(0);
+      return;
+    }
+    const temporizador = setTimeout(() => cargarEnElInput(elegidasRef.current), 0);
+    return () => clearTimeout(temporizador);
+  }, [estado]);
+
+  /* Las miniaturas se crean y se liberan con la lista: un `blob:` no se suelta solo. */
+  const [miniaturas, setMiniaturas] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = elegidas.map((archivo) => URL.createObjectURL(archivo));
+    setMiniaturas(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [elegidas]);
+
+  const conLista = hidratado && multiple && elegidas.length > 0;
 
   return (
     <div className={estilos.campo}>
@@ -987,6 +1075,7 @@ export function CampoArchivos({
         {etiqueta}
       </label>
       <input
+        ref={input}
         id={nombre}
         name={nombre}
         type="file"
@@ -998,9 +1087,47 @@ export function CampoArchivos({
         accept="image/jpeg,image/png,image/webp"
         multiple={multiple}
         required={requerido}
+        onChange={alElegir}
         aria-invalid={error === undefined ? undefined : true}
-        aria-describedby={describe(idAyuda, idError, error)}
+        aria-describedby={
+          [describe(idAyuda, idError, error), conLista ? idElegidas : undefined]
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
       />
+      {conLista && (
+        <div id={idElegidas} className={estilos.elegidas}>
+          <p className={estilos.elegidasResumen} aria-live="polite">
+            {elegidas.length === 1 ? '1 foto elegida' : `${elegidas.length} fotos elegidas`}
+            {maximo !== undefined && ` de ${maximo}`}. Podés sumar más con el mismo botón.
+          </p>
+          {sobrantes > 0 && (
+            <p className={estilos.elegidasAviso} role="status">
+              {sobrantes === 1 ? 'Una foto quedó afuera' : `${sobrantes} fotos quedaron afuera`}: el
+              máximo es {maximo}.
+            </p>
+          )}
+          <ul className={estilos.elegidasLista}>
+            {elegidas.map((archivo, indice) => (
+              <li key={claveDeArchivo(archivo)} className={estilos.elegida}>
+                {miniaturas[indice] !== undefined && (
+                  // eslint-disable-next-line @next/next/no-img-element -- vista previa local (`blob:`), no pasa por el optimizador
+                  <img src={miniaturas[indice]} alt="" className={estilos.elegidaImagen} />
+                )}
+                {indice === 0 && <span className={estilos.elegidaPortada}>Portada</span>}
+                <button
+                  type="button"
+                  className={estilos.elegidaQuitar}
+                  onClick={() => quitar(indice)}
+                >
+                  <span aria-hidden="true">×</span>
+                  <span className="solo-lectores">Quitar {archivo.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <PieDeCampo idError={idError} idAyuda={idAyuda} error={error} ayuda={ayuda} />
     </div>
   );

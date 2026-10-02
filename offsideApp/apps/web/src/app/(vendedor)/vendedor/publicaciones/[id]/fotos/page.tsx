@@ -248,6 +248,7 @@ export default async function FotosDeLaPublicacion({
               <CampoArchivos
                 nombre="fotos"
                 etiqueta="Agregar fotos"
+                maximo={quedan}
                 ayuda={`Te quedan ${quedan} de ${settings.maxImages}. Máximo ${maxMb} MB cada una. JPEG, PNG o WebP.`}
               />
             </Formulario>
