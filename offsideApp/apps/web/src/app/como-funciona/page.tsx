@@ -148,8 +148,9 @@ const VENDER: PasoDeFlujo[] = [
     titulo: 'Conectás Mercado Pago',
     texto: (
       <>
-        Cobrás en tu propia cuenta. Nunca vemos tu contraseña: la autorización la das en Mercado
-        Pago y podés revocarla desde ahí cuando quieras.
+        Cobrás en tu propia cuenta, y la plata queda disponible según el plazo que elijas en Mercado
+        Pago. Nunca vemos tu contraseña: la autorización la das en Mercado Pago y podés revocarla
+        desde ahí cuando quieras.
       </>
     ),
   },

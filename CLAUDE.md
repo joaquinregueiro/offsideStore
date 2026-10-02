@@ -1346,6 +1346,18 @@ ficha de la venta muestra `money_release_date` tal como lo informa MP en el
 pago (leído de `payments.raw`, sin migración). ⚠️ `money_release_status` **no**
 se lee: la referencia oficial no publica sus valores 🔵.
 
+**Modo claro fijo, sin interruptor (2026-10-02, decisión del dueño)**: se sacó
+el interruptor de tema de la barra y del pie; `lib/tema.ts` escribe siempre
+`data-tema="claro"`. ⚠️ **El atributo es lo que lo hace fijo**: el bloque de
+`prefers-color-scheme: dark` está guardado con `:root:not([data-tema='claro'])`,
+así que un teléfono en oscuro sigue viendo claro (verificado emulándolo). Los
+bloques oscuros de `tokens.css` quedan **dormidos**, no borrados, y `check:tema`
+los sigue verificando. La fecha de liberación de Mercado Pago pasó a un
+desplegable de letra chica en la ficha de la venta, cerrado por defecto.
+Auditoría en el navegador de ~40 pantallas a 1280 y 375px: corregidas las fechas
+de "Mi reputación" (4.38:1) y dos enlaces de ingreso de 18px de alto.
+⚠️ Quedan 33 controles de 20–23px en `/admin/configuracion`.
+
 **Desplegado en producción** en **`offside.com.ar`**, en un VPS con Coolify
 (DEC-012), con HTTPS y migraciones aplicadas al arrancar el contenedor. Ver
 `offsideApp/docs-implementation/deployment-coolify.md`.

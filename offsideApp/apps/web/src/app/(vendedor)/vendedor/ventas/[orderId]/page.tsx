@@ -243,25 +243,29 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
             </p>
 
             {/*
-            ⚠️ OFFSIDE NO LIBERA LA PLATA (DEC-019): entra directo a la cuenta
-            del vendedor y Mercado Pago la deja disponible segun el plazo que
-            esa cuenta eligio. Sin esto, "no se me liquida" no tenia respuesta en
-            ningun lado del sitio: la fecha la informa MP en el pago y se muestra
-            tal cual, sin calcularla.
+            ⚠️ CUANDO SE LIBERA LA PLATA VA PLEGADO, POR DECISION DEL DUEÑO: es
+            letra chica, no un aviso. Offside no la libera (DEC-019): entra
+            directo a la cuenta del vendedor y Mercado Pago la deja disponible
+            segun el plazo que esa cuenta eligio. La fecha es la que informa MP
+            en el pago, tal cual.
           */}
-            {venta.moneyReleaseDate !== null ? (
-              <p className={estilos.nota}>
-                Offside no retiene este dinero: Mercado Pago lo deja disponible en tu cuenta según
-                el plazo que elegiste ahí. Si la fecha ya pasó y no lo ves disponible, revisá el
-                detalle de la venta en Mercado Pago: un reclamo o una verificación de seguridad
-                pueden demorarlo. Fecha de liberación que informa Mercado Pago:{' '}
-                <strong>{fechaYHora(venta.moneyReleaseDate)}</strong>
-              </p>
-            ) : venta.status !== 'PENDING_PAYMENT' && venta.status !== 'CANCELLED' ? (
-              <p className={estilos.nota}>
-                El dinero entra directo a tu cuenta de Mercado Pago, y queda disponible según el
-                plazo que tengas elegido ahí (al instante, 10, 18 o 35 días). Offside no lo retiene.
-              </p>
+            {venta.status !== 'PENDING_PAYMENT' && venta.status !== 'CANCELLED' ? (
+              <details className={`${estilos.letraChica} desplegable`}>
+                <summary className={estilos.letraChicaTitulo}>
+                  ¿Cuándo tengo la plata disponible?
+                </summary>
+                <p className={estilos.letraChicaTexto}>
+                  Entra directo a tu cuenta de Mercado Pago y queda disponible según el plazo que
+                  tengas elegido ahí. Si ya pasó y no la ves, revisá la venta en Mercado Pago.
+                  {venta.moneyReleaseDate !== null && (
+                    <>
+                      {' '}
+                      Fecha que informa Mercado Pago:{' '}
+                      <strong>{fechaYHora(venta.moneyReleaseDate)}</strong>
+                    </>
+                  )}
+                </p>
+              </details>
             ) : null}
           </Seccion>
 

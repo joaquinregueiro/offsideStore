@@ -160,18 +160,13 @@ export const viewport: Viewport = {
  * `background-attachment: fixed` porque en iOS un fondo fijo sobre el body se
  * repinta en cada cuadro de scroll y el sitio se arrastra.
  */
-export default async function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   /*
-   * ⚠️ EL TEMA SE RESUELVE ACA, EN EL SERVIDOR, Y POR ESO NO HAY FOGONAZO. El
-   * atributo sale ya escrito en el HTML, asi que la PRIMERA pintura del
-   * navegador ya es la del tema elegido. Aplicarlo desde el cliente pintaria la
-   * pagina clara y la daria vuelta un instante despues: un flash blanco en cada
-   * carga, justo para quien eligio oscuro porque la luz le molesta.
-   *
-   * ⚠️ SIN PREFERENCIA NO SE ESCRIBE NADA y manda el `@media
-   * (prefers-color-scheme)` de `tokens.css`. Ver `lib/tema.ts`.
+   * ⚠️ EL TEMA ES FIJO (claro) Y SE ESCRIBE EN EL SERVIDOR: el atributo es lo
+   * que impide que un sistema operativo en oscuro active el bloque dormido de
+   * `tokens.css`. Ver `lib/tema.ts`.
    */
-  const tema = await atributoDeTema();
+  const tema = atributoDeTema();
 
   return (
     <html lang="es-AR" className={`${bigNoodle.variable} ${inter.variable}`} {...tema}>

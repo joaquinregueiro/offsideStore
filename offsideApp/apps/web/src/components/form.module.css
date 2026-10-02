@@ -1268,6 +1268,16 @@
   margin-top: var(--espacio-3);
 }
 
+/*
+ * Los enlaces sueltos del pie ("Olvidé mi contraseña", "Volver a ingresar")
+ * medían 18px de alto: se tocan con el pulgar y quedaban por debajo de los 24
+ * de WCAG 2.5.8. `inline-block` para que el padding agrande el blanco de verdad.
+ */
+.pie > a {
+  display: inline-block;
+  padding-block: var(--espacio-1);
+}
+
 /* ------------------------------------------------------- campo con adorno */
 
 /**

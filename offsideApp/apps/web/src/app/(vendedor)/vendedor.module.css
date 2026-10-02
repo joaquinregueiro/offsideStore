@@ -1245,7 +1245,11 @@
 .celdaMeta {
   margin: 2px 0 0;
   font-size: var(--texto-xs);
-  color: var(--color-neutro-tenue);
+  /*
+   * `--color-neutro-texto` y no `-tenue`: sobre el fondo teñido de la fila
+   * (#f2f3ea) el tenue daba 4.38:1, medido con el auditor. Este pasa AA.
+   */
+  color: var(--color-neutro-texto);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2209,4 +2213,39 @@
 .reseniaNotaIcono {
   display: inline-flex;
   color: var(--color-naranja);
+}
+
+/* ------------------------------------------------------------ letra chica */
+
+/**
+ * Un dato que esta para quien lo busca, no para todos: una linea chica y
+ * apagada, plegada. Sin caja ni fondo, para que no compita con las notas.
+ */
+.letraChica {
+  margin-top: var(--espacio-3);
+}
+
+.letraChicaTitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: 24px;
+  font-size: var(--texto-xs);
+  color: var(--color-neutro-texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.letraChicaTitulo::-webkit-details-marker {
+  display: none;
+}
+
+.letraChicaTexto {
+  margin: var(--espacio-2) 0 0;
+  max-width: 62ch;
+  font-size: var(--texto-xs);
+  line-height: 1.5;
+  color: var(--color-neutro-texto);
 }
