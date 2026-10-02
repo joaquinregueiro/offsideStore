@@ -1305,6 +1305,37 @@ que no haya drift entre el schema de Drizzle y las migraciones.
 las suyas. `categories.code` es UNIQUE y son un conjunto fijo, así que inventar
 una de test chocaba contra la fila real.
 
+**Envío automático con Andreani PyME — ✅ en código, sin probar contra la
+cuenta real (2026-10-02)**: el vendedor carga peso y medidas, Offside da de
+alta el envío, ofrece la etiqueta y un barrido cada media hora
+(`shipments-sync`) mueve la orden a `SHIPPED` y `DELIVERED` como actor
+`system`. Detalle en `offsideApp/docs-implementation/envios-andreani.md`.
+
+⚠️ **No es la API corporativa**, que exige un contrato que nunca llegó: es la
+del **plugin oficial de WooCommerce**, relevada de su código. Puede cambiar sin
+aviso y sus términos fuera del plugin no están claros 🔵. Vive detrás de
+`ShippingPort`. Se enciende con `ANDREANI_CREDENCIAL`; sin ella, simulado en
+desarrollo y botón oculto en producción. ⚠️ **No tiene ambiente de pruebas**:
+con la credencial en un `.env` local cada alta es un envío real.
+
+⚠️ **NO ES 100% AUTOMÁTICO**: en la cuenta PyME el envío nace **por pagar**, y
+hasta que alguien lo paga en `pymes.andreani.com` no hay número ni etiqueta. Y
+**quién paga el envío es decisión abierta 🟡**: Andreani le cobra a Offside y lo
+que pagó el comprador por el envío va al vendedor en el split.
+
+Tres bugs encontrados al probarlo en el navegador: el barrido buscaba por
+`labelRef` en vez de la referencia del alta (con el simulado no encontraba
+nada y nada fallaba); el simulado guardaba las altas en memoria del módulo y el
+worker —empaquetado aparte— no las veía; y **el historial de toda orden pagada
+mostraba "Pagada (estado actual)" estando en preparación**, porque PAID y
+PROCESSING empataban en `now()`. Ahora el historial usa `clock_timestamp()`.
+Además, en modo oscuro **el texto escrito en los campos de formulario daba
+1.25:1**: faltaban seis variables de contrato en el bloque oscuro.
+
+Tests: **978** (incluye el nuevo `order-shipping.integration.test.ts`, que
+falla si se reintroduce el bug del barrido). ⚠️ Los de integración corren
+contra la base del `.env`; un test que barra tiene que acotarse a lo suyo.
+
 **Desplegado en producción** en **`offside.com.ar`**, en un VPS con Coolify
 (DEC-012), con HTTPS y migraciones aplicadas al arrancar el contenedor. Ver
 `offsideApp/docs-implementation/deployment-coolify.md`.

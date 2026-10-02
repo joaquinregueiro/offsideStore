@@ -45,6 +45,8 @@ export const QUEUE_NAMES = {
    * `modules/disputes`.
    */
   DISPUTES_ESCALATE_EXPIRED: 'disputes-escalate-expired',
+  /** Numero y estado de los envios automaticos (Andreani), cada media hora. */
+  SHIPMENTS_SYNC: 'shipments-sync',
 } as const satisfies Record<string, string>;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

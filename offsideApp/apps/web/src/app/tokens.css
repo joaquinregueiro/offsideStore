@@ -2709,6 +2709,22 @@ dd {
     --boton-secundario-texto: var(--color-sobre-oscuro);
     --boton-secundario-fondo-activo: rgb(250 250 247 / 0.12);
     --boton-secundario-texto-activo: var(--color-cambio);
+    /**
+     * ⚠️ VARIABLES DE CONTRATO QUE LOS MODULOS LEEN CON UN RESPALDO CLARO. Sin
+     * definirlas aca, en oscuro caian a ese respaldo: el texto que se escribe
+     * en un campo quedaba en Tinta sobre el campo oscuro (1.25:1, medido), el
+     * boton fantasma en Verde Cancha sobre la fosa, el hover de la navegacion
+     * igual, y el texto del boton de peligro en blanco sobre el naranja claro
+     * (2.26:1). Las encontro un barrido de `var(--x, <color claro>)` contra
+     * este bloque, no el auditor: el valor de un `<input>` no es un nodo de
+     * texto y por eso no lo media.
+     */
+    --campo-texto: var(--color-sobre-oscuro);
+    --boton-fantasma-texto: var(--verde-400);
+    --boton-fantasma-texto-activo: var(--color-cambio);
+    --peligro-texto-relleno: var(--color-tinta);
+    --nav-hover: var(--verde-400);
+    --globo-borde: var(--verde-400);
   }
 }
 
@@ -2762,4 +2778,20 @@ dd {
   --boton-secundario-texto: var(--color-sobre-oscuro);
   --boton-secundario-fondo-activo: rgb(250 250 247 / 0.12);
   --boton-secundario-texto-activo: var(--color-cambio);
+  /**
+   * ⚠️ VARIABLES DE CONTRATO QUE LOS MODULOS LEEN CON UN RESPALDO CLARO. Sin
+   * definirlas aca, en oscuro caian a ese respaldo: el texto que se escribe
+   * en un campo quedaba en Tinta sobre el campo oscuro (1.25:1, medido), el
+   * boton fantasma en Verde Cancha sobre la fosa, el hover de la navegacion
+   * igual, y el texto del boton de peligro en blanco sobre el naranja claro
+   * (2.26:1). Las encontro un barrido de `var(--x, <color claro>)` contra
+   * este bloque, no el auditor: el valor de un `<input>` no es un nodo de
+   * texto y por eso no lo media.
+   */
+  --campo-texto: var(--color-sobre-oscuro);
+  --boton-fantasma-texto: var(--verde-400);
+  --boton-fantasma-texto-activo: var(--color-cambio);
+  --peligro-texto-relleno: var(--color-tinta);
+  --nav-hover: var(--verde-400);
+  --globo-borde: var(--verde-400);
 }

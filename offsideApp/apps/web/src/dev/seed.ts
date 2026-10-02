@@ -1938,6 +1938,19 @@ async function sembrarCicloCompleto(datos: {
     codigoPostal: DIRECCION_2.codigoPostal,
     predeterminada: true,
   });
+  // El domicilio de despacho: sin el, "Enviar con Andreani" se niega a generar
+  // el envio —es el origen del paquete—, y el flujo no se podia probar.
+  await addressService.createAddress(conectado.user, {
+    etiqueta: 'Depósito',
+    nombre: 'Camisetas del Sur',
+    telefono: '+54 11 5555-0100',
+    calle: 'Av. Corrientes',
+    numero: '1234',
+    ciudad: 'CABA',
+    provincia: 'CABA',
+    codigoPostal: 'C1043AAZ',
+    predeterminada: true,
+  });
 
   /*
    * --- Publicaciones promocionadas -------------------------------------------
@@ -2085,7 +2098,7 @@ async function sembrarCicloCompleto(datos: {
 
   imprimir(
     '[seed] ciclo completo: venta COMPLETADA con reseña y respuesta, venta EN CAMINO con ' +
-      'reclamo abierto, reclamo resuelto, 2 preguntas, 3 favoritos, 3 direcciones, ' +
+      'reclamo abierto, reclamo resuelto, 2 preguntas, 3 favoritos, 4 direcciones, ' +
       'carrito de 2 vendedores, 1 vendedor de vacaciones y 1 sanción',
   );
 }

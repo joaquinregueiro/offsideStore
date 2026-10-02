@@ -52,7 +52,14 @@ S3_ACCESS_KEY=<Access Key ID del token R2>
 S3_SECRET_KEY=<Secret Access Key del token R2>
 S3_PUBLIC_URL=https://<dominio publico del bucket>
 S3_REGION=auto
+ANDREANI_CREDENCIAL=<Credencial ID de andreani.com > Integraciones > WooCommerce>
 ```
+
+⚠️ **`ANDREANI_CREDENCIAL` ENCIENDE EL ENVIO AUTOMATICO, y cada envio es real.**
+Sin ella, "Enviar con Andreani" no aparece en produccion (el simulado se niega
+a correr ahi) y queda solo el despacho manual. Con ella, cada envio que genere
+un vendedor se da de alta en la cuenta PyME de Offside **pendiente de pago**: no
+hay ambiente de pruebas. Detalle en [envios-andreani.md](envios-andreani.md).
 
 ⚠️ **LAS CREDENCIALES DE STORAGE Y LAS DE SES SON DE PROVEEDORES DISTINTOS.**
 `AWS_*` es Amazon SES (emails); `S3_*` es Cloudflare R2 (fotos). Se llaman

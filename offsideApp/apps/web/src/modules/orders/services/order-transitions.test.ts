@@ -37,7 +37,10 @@ const PERMITIDAS: readonly [OrderStatus, OrderStatus, TransitionActor][] = [
   ['PENDING_PAYMENT', 'PAID', 'system'],
   ['PAID', 'PROCESSING', 'system'],
   ['PROCESSING', 'SHIPPED', 'seller'],
+  // El seguimiento del transportista (despacho automatico con Andreani).
+  ['PROCESSING', 'SHIPPED', 'system'],
   ['SHIPPED', 'DELIVERED', 'buyer'],
+  ['SHIPPED', 'DELIVERED', 'system'],
   ['DELIVERED', 'COMPLETED', 'system'],
   ['PENDING_PAYMENT', 'CANCELLED', 'buyer'],
   ['PENDING_PAYMENT', 'CANCELLED', 'system'],

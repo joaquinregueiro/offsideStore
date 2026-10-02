@@ -58,6 +58,28 @@ export const envSchema = z.object({
    */
   S3_PUBLIC_URL: z.string().url().optional(),
 
+  // --- Andreani (envios) ---
+  /**
+   * Credencial de la cuenta PyME de Andreani. Se genera en andreani.com >
+   * Integraciones > WooCommerce ("Credencial ID") y es lo UNICO que pide la API
+   * PyME: con ella se hace login y se obtiene el token de cada sesion.
+   *
+   * ⚠️ NO ES LA API CORPORATIVA DOCUMENTADA EN developers.andreani.com. Esa usa
+   * usuario/contraseña, codigo de cliente y contratos, y las credenciales las da
+   * un ejecutivo comercial. La PyME es la que usa el plugin oficial de Andreani
+   * para WooCommerce, cuyo codigo es publico: de ahi salen sus endpoints.
+   *
+   * Sin credencial: fuera de produccion se usa el adaptador simulado; en
+   * produccion el despacho con Andreani queda apagado y sigue el manual.
+   *
+   * ⚠️ VACIA ES AUSENTE. `.env.example` la trae como `ANDREANI_CREDENCIAL=`:
+   * sin esto, copiarlo tal cual hacia fallar el `min(20)` y la app no arrancaba.
+   */
+  ANDREANI_CREDENCIAL: z.preprocess(
+    (valor) => (typeof valor === 'string' && valor.trim() === '' ? undefined : valor),
+    z.string().trim().min(20).optional(),
+  ),
+
   // --- Mercado Pago ---
   // `CLIENT_ID`, `CLIENT_SECRET` y `REDIRECT_URI` los usa la conexion OAuth de
   // vendedores (modulo `sellers`); `ACCESS_TOKEN` y `WEBHOOK_SECRET` los usara

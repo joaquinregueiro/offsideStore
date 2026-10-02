@@ -27,6 +27,24 @@ describe('parseEnv', () => {
   it('rechaza un APP_ENV desconocido', () => {
     expect(() => parseEnv({ ...baseEnv, APP_ENV: 'staging' })).toThrowError(/APP_ENV/);
   });
+
+  /**
+   * ⚠️ `.env.example` trae `ANDREANI_CREDENCIAL=` vacia. Si vacia contara como
+   * cargada, copiar el ejemplo tumbaba el arranque por el `min(20)`, o peor,
+   * encendia el adaptador real con una credencial en blanco.
+   */
+  it('toma una credencial de Andreani vacia como ausente', () => {
+    expect(parseEnv({ ...baseEnv, ANDREANI_CREDENCIAL: '' }).ANDREANI_CREDENCIAL).toBeUndefined();
+    expect(
+      parseEnv({ ...baseEnv, ANDREANI_CREDENCIAL: '   ' }).ANDREANI_CREDENCIAL,
+    ).toBeUndefined();
+  });
+
+  it('rechaza una credencial de Andreani demasiado corta', () => {
+    expect(() => parseEnv({ ...baseEnv, ANDREANI_CREDENCIAL: 'corta' })).toThrowError(
+      /ANDREANI_CREDENCIAL/,
+    );
+  });
 });
 
 describe('requireEnv', () => {

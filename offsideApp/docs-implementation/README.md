@@ -31,6 +31,7 @@ Documentación **del código**, no del producto.
 | [frontend-2026-09-10.md](frontend-2026-09-10.md)                         | **Frontend completo: primitivas, pantallas y datos (2026-09-10)**         |
 | [frontend-rediseno-2026-09-10.md](frontend-rediseno-2026-09-10.md)       | **Rediseño visual: el eje de 112°, cuatro planos y el movimiento**        |
 | [correo-argentino-spec.md](correo-argentino-spec.md)                     | **Relevamiento** de las dos APIs de Correo Argentino (sin implementar)    |
+| [envios-andreani.md](envios-andreani.md)                                 | **Envío automático con Andreani PyME: alta, etiqueta y seguimiento**      |
 | [verificacion-real-2026-09-10.md](verificacion-real-2026-09-10.md)       | **Postgres y Redis sin Docker, 257 de integración, 22 pantallas reales**  |
 | [frontend-home-2026-09-11.md](frontend-home-2026-09-11.md)               | **Home que nunca queda vacía, buscador y primitivas del panel**           |
 | [marketplace-completo-2026-09-11.md](marketplace-completo-2026-09-11.md) | **Niveles, promociones, ciclo de la orden, reputación y reclamos**        |

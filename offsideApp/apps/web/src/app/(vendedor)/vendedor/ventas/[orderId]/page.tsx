@@ -33,9 +33,16 @@ import { PanelDeCuenta, SolapasDeCuenta } from '../../../../(cuenta)/panel';
 import { getDisputeForOrder } from '@/modules/disputes/services/dispute.service';
 import { findById, getSaleDetail } from '@/modules/orders/services/order.service';
 import { listTiers } from '@/modules/sellers/services/seller-tier.service';
+import { PAQUETE_SUGERIDO } from '@/modules/orders/services/order-shipping.service';
+import { envioAutomaticoDisponible } from '@/modules/shipments/infrastructure/shipping';
 import { getCarriers } from '@/modules/shipments/services/carrier-catalog.service';
 
-import { cancelarVenta, despachar, responderReclamo } from '../../../acciones';
+import {
+  cancelarVenta,
+  despachar,
+  despacharConAndreani,
+  responderReclamo,
+} from '../../../acciones';
 import { Chapa } from '../../../chapa';
 import estilos from '../../../vendedor.module.css';
 
@@ -61,6 +68,9 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
 
   const venta = await getSaleDetail(user, orderId);
   if (venta === null) notFound();
+
+  /** Si este entorno puede generar el envio en Andreani (o simularlo, fuera de produccion). */
+  const automatico = envioAutomaticoDisponible();
 
   /*
    * ⚠️ `findById` NO AUTORIZA Y ACA NO HACE FALTA QUE LO HAGA: se llama DESPUES
@@ -267,14 +277,34 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
 
           {venta.shipment !== null && (
             <Seccion titulo="El envío">
+              {venta.shipment.pendienteDePago && (
+                /*
+                 * ⚠️ SE DICE QUE ESTA PENDIENTE Y DE QUIEN DEPENDE. En la cuenta
+                 * PyME de Andreani el numero aparece recien cuando Offside paga
+                 * el envio en el portal. Un "Sin número" pelado haria pensar al
+                 * vendedor que algo fallo y que tiene que volver a generarlo.
+                 */
+                <Aviso tono="neutro">
+                  El envío ya está generado en Andreani. Se está procesando el pago: apenas se
+                  acredite vas a ver acá el número de seguimiento y la etiqueta para imprimir. No
+                  hace falta que hagas nada todavía.
+                </Aviso>
+              )}
               <div className={estilos.tarjeta}>
-                <FilaDeDatos concepto="Estado">{estadoDeEnvio(venta.shipment.status)}</FilaDeDatos>
+                <FilaDeDatos concepto="Estado">
+                  {venta.shipment.pendienteDePago
+                    ? 'Generado, pendiente de pago'
+                    : estadoDeEnvio(venta.shipment.status)}
+                </FilaDeDatos>
                 <FilaDeDatos concepto="Transportista">
                   {venta.shipment.carrierName ?? venta.shipment.carrierCode ?? 'Sin declarar'}
                 </FilaDeDatos>
                 <FilaDeDatos concepto="Seguimiento">
                   {venta.shipment.trackingUrl === null ? (
-                    (venta.shipment.trackingNumber ?? 'Sin número')
+                    (venta.shipment.trackingNumber ??
+                    (venta.shipment.pendienteDePago
+                      ? 'Se asigna al acreditarse el pago'
+                      : 'Sin número'))
                   ) : (
                     <a href={venta.shipment.trackingUrl} rel="noreferrer" target="_blank">
                       {venta.shipment.trackingNumber}
@@ -287,14 +317,22 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
                   </FilaDeDatos>
                 )}
               </div>
-              {/*
-              ⚠️ OFFSIDE NO HACE SEGUIMIENTO AUTOMATICO. No hay integración con
-              Correo Argentino: lo que se ve acá es lo que el vendedor declaró.
-              Prometer tracking en vivo sería prometer algo que no existe.
-            */}
+              {venta.shipment.etiquetaDisponible && (
+                <p className={estilos.nota}>
+                  {/*
+                   * ⚠️ ES UN ENLACE A OFFSIDE, NO A ANDREANI: la etiqueta se pide
+                   * con el token de la cuenta, que no sale del servidor.
+                   */}
+                  <a href={`/vendedor/ventas/${venta.id}/etiqueta`} download>
+                    Descargar la etiqueta (PDF)
+                  </a>
+                  . Imprimila, pegala en el paquete y llevalo a cualquier sucursal de Andreani.
+                </p>
+              )}
               <p className={estilos.nota}>
-                El seguimiento lo actualiza el transportista en su propio sitio. Offside no lo
-                consulta solo.
+                {venta.shipment.automatico
+                  ? 'El estado se actualiza solo con lo que informa Andreani, cada media hora. Cuando lo entreguen, la venta pasa a entregada sin que nadie tenga que confirmarlo.'
+                  : 'El seguimiento lo actualiza el transportista en su propio sitio. Offside no lo consulta solo.'}
               </p>
             </Seccion>
           )}
@@ -306,12 +344,56 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
           {(venta.actions.canShip || venta.actions.canCancel) && (
             <Seccion titulo="Qué podés hacer">
               <div className={estilos.accionesVenta}>
+                {venta.actions.canShip && automatico && (
+                  <div className={estilos.tarjeta}>
+                    <p className={estilos.bajada}>
+                      <strong>Enviar con Andreani.</strong> Indicá el peso y las medidas del paquete
+                      y Offside genera el envío con los datos de la compra. Después te damos la
+                      etiqueta para imprimir y el seguimiento se actualiza solo.
+                    </p>
+                    {/*
+                     * ⚠️ LOS VALORES VIENEN SUGERIDOS, NO VACIOS: una camiseta
+                     * doblada en bolsa de envio. Casi todas las ventas del sitio
+                     * son eso, y hacer tipear cuatro numeros que casi nunca cambian
+                     * es la forma mas rapida de que alguien ponga cualquier cosa.
+                     */}
+                    <Formulario accion={despacharConAndreani} enviar="Generar envío con Andreani">
+                      <CampoOculto nombre="orderId" valor={venta.id} />
+                      <Campo
+                        nombre="pesoKg"
+                        etiqueta="Peso (kg)"
+                        inputMode="decimal"
+                        defaultValue={String(PAQUETE_SUGERIDO.weightGrams / 1000).replace('.', ',')}
+                        ayuda="Con el embalaje incluido."
+                      />
+                      <Campo
+                        nombre="largoCm"
+                        etiqueta="Largo (cm)"
+                        inputMode="numeric"
+                        defaultValue={String(PAQUETE_SUGERIDO.lengthCm)}
+                      />
+                      <Campo
+                        nombre="anchoCm"
+                        etiqueta="Ancho (cm)"
+                        inputMode="numeric"
+                        defaultValue={String(PAQUETE_SUGERIDO.widthCm)}
+                      />
+                      <Campo
+                        nombre="altoCm"
+                        etiqueta="Alto (cm)"
+                        inputMode="numeric"
+                        defaultValue={String(PAQUETE_SUGERIDO.heightCm)}
+                      />
+                    </Formulario>
+                  </div>
+                )}
+
                 {venta.actions.canShip && (
                   <div className={estilos.tarjeta}>
                     <p className={estilos.bajada}>
-                      Marcala como despachada cuando la lleves. Transportista y número de
-                      seguimiento son obligatorios: sin ellos el comprador no puede saber dónde está
-                      su paquete.
+                      {automatico
+                        ? '¿Lo despachaste por tu cuenta, con otro correo? Cargá el transportista y el número de seguimiento.'
+                        : 'Marcala como despachada cuando la lleves. Transportista y número de seguimiento son obligatorios: sin ellos el comprador no puede saber dónde está su paquete.'}
                     </p>
                     <Formulario accion={despachar} enviar="Marcar como despachada">
                       <CampoOculto nombre="orderId" valor={venta.id} />

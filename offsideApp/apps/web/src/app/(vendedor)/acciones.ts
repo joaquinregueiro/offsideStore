@@ -8,6 +8,7 @@ import { exigirLimitePorUsuario } from '@/lib/rate-limit-actions';
 import { respuestaDeError } from '@/lib/errores';
 import type { EstadoFormulario } from '@/lib/formulario';
 import { requireVerifiedSessionUser } from '@/lib/session';
+import { despacharAutomatico } from '@/modules/orders/services/order-shipping.service';
 import type { PublicUser } from '@/modules/auth/services/auth.service';
 import { createSellerProfileSchema, submitTaxIdentitySchema } from '@/modules/auth/auth.schemas';
 import {
@@ -832,6 +833,10 @@ export async function eliminar(
  */
 const PRESERVAR_PANEL = [
   'carrier',
+  'pesoKg',
+  'altoCm',
+  'anchoCm',
+  'largoCm',
   'trackingNumber',
   'motivo',
   'texto',
@@ -903,6 +908,69 @@ export async function despachar(
   }
 
   return { ok: 'Marcamos la venta como despachada. El comprador ya puede seguir el envío.' };
+}
+
+/**
+ * Medida de un paquete como numero positivo. Acepta coma decimal: en Argentina
+ * "0,5" kg se escribe asi, y rechazarlo seria un error de formulario gratuito.
+ */
+const medida = (mensaje: string) =>
+  z.preprocess(
+    (v) => (typeof v === 'string' ? Number(v.replace(',', '.').trim()) : v),
+    z.number({ error: mensaje }).positive(mensaje).finite(mensaje),
+  );
+
+const despacharConAndreaniSchema = ordenSchema.extend({
+  pesoKg: medida('Indicá el peso en kilos, por ejemplo 0,5'),
+  altoCm: medida('Indicá el alto en centímetros'),
+  anchoCm: medida('Indicá el ancho en centímetros'),
+  largoCm: medida('Indicá el largo en centímetros'),
+});
+
+/**
+ * Despacho automatico: Offside da de alta el envio en Andreani con los datos
+ * de la compra. El vendedor solo declara el paquete.
+ *
+ * ⚠️ COMPARTE EL CUPO DE `despachar` (`order-ship`): son dos caminos para la
+ * misma operacion y un bucle no tiene que poder usar los dos para duplicar su
+ * techo. Cada alta es una llamada a una API ajena, con la cuenta de Offside.
+ */
+export async function despacharConAndreani(
+  _estado: EstadoVendedor,
+  formData: FormData,
+): Promise<EstadoVendedor> {
+  try {
+    const user = await requireVerifiedSessionUser();
+    await exigirLimitePorUsuario('order-ship', user.id);
+
+    const input = despacharConAndreaniSchema.parse({
+      orderId: texto(formData, 'orderId'),
+      pesoKg: texto(formData, 'pesoKg'),
+      altoCm: texto(formData, 'altoCm'),
+      anchoCm: texto(formData, 'anchoCm'),
+      largoCm: texto(formData, 'largoCm'),
+    });
+
+    await despacharAutomatico(user, input.orderId, {
+      weightGrams: Math.round(input.pesoKg * 1000),
+      heightCm: Math.ceil(input.altoCm),
+      widthCm: Math.ceil(input.anchoCm),
+      lengthCm: Math.ceil(input.largoCm),
+    });
+
+    revalidatePath(`/vendedor/ventas/${input.orderId}`);
+    revalidatePath('/vendedor/ventas');
+  } catch (error) {
+    return respuestaDeError(error, {
+      ambito: 'vendedor',
+      formData,
+      preservar: PRESERVAR_PANEL,
+    });
+  }
+
+  return {
+    ok: 'Generamos el envío en Andreani. Cuando Offside lo confirme vas a ver acá el número de seguimiento y la etiqueta para imprimir.',
+  };
 }
 
 /**

@@ -43,12 +43,15 @@ interface Transition {
  *    de Mercado Pago). `PAID` dura lo que dura una transaccion: la orden entra
  *    en `PROCESSING` en el mismo commit, porque el plazo de despacho (MF-030)
  *    corre desde que el pago se aprobo, no desde que alguien mira la orden.
- *  - `PROCESSING → SHIPPED` la hace el VENDEDOR (SH-010: despacho manual, sin
- *    Correo Argentino).
- *  - `SHIPPED → DELIVERED` la confirma el COMPRADOR. ⚠️ ASUMIDO: la doc
- *    deriva `DELIVERED` del tracking de Correo Argentino (marketplace-flow §6),
- *    que no existe. Sin proveedor, la unica persona que sabe que el paquete
- *    llego es quien lo recibio.
+ *  - `PROCESSING → SHIPPED` la hace el VENDEDOR (SH-010, despacho manual) o el
+ *    SISTEMA cuando el seguimiento del transportista muestra el paquete en
+ *    camino (despacho automatico con Andreani, 2026-10-02).
+ *  - `SHIPPED → DELIVERED` la confirma el COMPRADOR o el SISTEMA cuando el
+ *    transportista informa la entrega. Es lo que la doc pedia desde el
+ *    principio —marketplace-flow §6 deriva `DELIVERED` del tracking—: mientras
+ *    no hubo proveedor, la unica persona que sabia que el paquete llego era
+ *    quien lo recibio, y por eso era solo del comprador. Con despacho manual
+ *    sigue siendolo: el sistema solo mueve la orden si hay un seguimiento real.
  *  - `DELIVERED → COMPLETED` es del sistema: vence la ventana de proteccion sin
  *    reclamo (BR-033 / MF-040). No la dispara el comprador al confirmar.
  *  - `PENDING_PAYMENT → CANCELLED`: el comprador, el sistema (vencio la
@@ -66,8 +69,8 @@ interface Transition {
 const TRANSICIONES: readonly Transition[] = [
   { from: 'PENDING_PAYMENT', to: 'PAID', actors: ['system'] },
   { from: 'PAID', to: 'PROCESSING', actors: ['system'] },
-  { from: 'PROCESSING', to: 'SHIPPED', actors: ['seller'] },
-  { from: 'SHIPPED', to: 'DELIVERED', actors: ['buyer'] },
+  { from: 'PROCESSING', to: 'SHIPPED', actors: ['seller', 'system'] },
+  { from: 'SHIPPED', to: 'DELIVERED', actors: ['buyer', 'system'] },
   { from: 'DELIVERED', to: 'COMPLETED', actors: ['system'] },
   { from: 'PENDING_PAYMENT', to: 'CANCELLED', actors: ['buyer', 'system', 'admin'] },
   { from: 'PROCESSING', to: 'CANCELLED', actors: ['seller', 'admin'] },

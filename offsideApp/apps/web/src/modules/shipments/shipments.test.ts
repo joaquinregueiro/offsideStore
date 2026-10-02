@@ -132,6 +132,50 @@ describe('cotizar', () => {
   });
 });
 
+describe('buscar por referencia', () => {
+  const shipping = createFakeShipping();
+
+  /**
+   * ⚠️ ES EL CAMINO QUE USA LA SINCRONIZACION. El simulado no recuerda nada:
+   * la etapa sale del numero. Por eso responde igual aunque lo consulte OTRA
+   * instancia —el worker del barrido no comparte modulo con la accion que
+   * dio el alta—.
+   */
+  it('responde por la referencia sin recordar el alta', async () => {
+    const envio = await createFakeShipping().createShipment({
+      orderId: '22222222-2222-4222-8222-222222222222',
+      mode: 'home',
+      origin: DIRECCION,
+      destination: DIRECCION,
+      recipientName: 'Comprador',
+      recipientEmail: 'comprador@offside.test',
+      package: PAQUETE,
+      declaredValueAmount: 1n,
+      currency: 'ARS',
+      reference: 'OFS-BUSCADA',
+    });
+
+    const [encontrado] = await shipping.lookupShipments([
+      { reference: 'OFS-BUSCADA', trackingNumber: envio.trackingNumber },
+    ]);
+
+    expect(encontrado?.trackingNumber).toBe(envio.trackingNumber);
+    expect(encontrado?.status).toBe('created');
+  });
+
+  it('una referencia que no conoce no inventa historia', async () => {
+    const [desconocido] = await shipping.lookupShipments([
+      { reference: 'NO-EXISTE', trackingNumber: null },
+    ]);
+
+    expect(desconocido).toMatchObject({
+      trackingNumber: null,
+      providerStatus: null,
+      status: 'created',
+    });
+  });
+});
+
 describe('crear envio', () => {
   const shipping = createFakeShipping();
 
@@ -144,6 +188,7 @@ describe('crear envio', () => {
     package: PAQUETE,
     declaredValueAmount: 8_500_000n,
     currency: 'ARS',
+    reference: 'OFS-PRUEBA-1',
   };
 
   it('devuelve numero de seguimiento y referencia de rotulo', async () => {

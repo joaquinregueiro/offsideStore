@@ -232,6 +232,16 @@ export async function appendStatusHistory(
       actorType: values.actorType,
       actorId: values.actorId ?? null,
       note: values.note ?? null,
+      /*
+       * ⚠️ `clock_timestamp()`, NO EL DEFAULT `now()`. `now()` es la hora de
+       * INICIO de la transaccion, y el pago aprobado escribe PAID y PROCESSING
+       * en la misma: las dos filas quedaban con la misma hora, el desempate
+       * por uuid es al azar, y la ficha de la venta mostraba "Pagada (estado
+       * actual)" con la orden ya en preparacion. `clock_timestamp()` avanza
+       * dentro de la transaccion, asi que el orden de escritura es el orden
+       * del historial.
+       */
+      createdAt: sql`clock_timestamp()`,
     });
 }
 
@@ -407,7 +417,20 @@ export async function findStatusHistory(
     .from(schema.orderStatusHistory)
     .leftJoin(schema.users, eq(schema.users.id, schema.orderStatusHistory.actorId))
     .where(eq(schema.orderStatusHistory.orderId, orderId))
-    .orderBy(asc(schema.orderStatusHistory.createdAt), asc(schema.orderStatusHistory.id));
+    .orderBy(
+      asc(schema.orderStatusHistory.createdAt),
+      // Desempate para las filas escritas antes de `clock_timestamp()`, que
+      // empatan en la hora: se ordenan por el estado de ORIGEN segun el ciclo
+      // de DEC-029, asi PENDING_PAYMENT -> PAID va antes que PAID -> PROCESSING.
+      asc(sql`case when ${schema.orderStatusHistory.fromStatus} is null then 0
+        when ${schema.orderStatusHistory.fromStatus} = 'PENDING_PAYMENT' then 1
+        when ${schema.orderStatusHistory.fromStatus} = 'PAID' then 2
+        when ${schema.orderStatusHistory.fromStatus} = 'PROCESSING' then 3
+        when ${schema.orderStatusHistory.fromStatus} = 'SHIPPED' then 4
+        when ${schema.orderStatusHistory.fromStatus} = 'DELIVERED' then 5
+        else 6 end`),
+      asc(schema.orderStatusHistory.id),
+    );
 
   return filas.map((fila) => ({ ...fila.historia, actorDisplayName: fila.actorDisplayName }));
 }
@@ -729,4 +752,39 @@ export async function findPaymentRefs(
     .from(schema.payments)
     .where(eq(schema.payments.orderId, orderId))
     .orderBy(asc(schema.payments.createdAt));
+}
+
+/**
+ * Lo que el transportista necesita del comprador para entregar: email y
+ * telefono de la CUENTA. Se usan solo si la direccion de la compra no trae
+ * telefono propio.
+ */
+export async function findBuyerContact(
+  buyerId: string,
+  db?: Database,
+): Promise<{ email: string; phone: string | null } | undefined> {
+  const [row] = await conn(db)
+    .select({ email: schema.users.email, phone: schema.users.phone })
+    .from(schema.users)
+    .where(eq(schema.users.id, buyerId))
+    .limit(1);
+
+  return row;
+}
+
+/**
+ * Numero de orden por id, para un lote.
+ *
+ * El seguimiento automatico busca cada envio por la referencia con la que se
+ * dio de alta, y esa referencia ES el numero de orden.
+ */
+export async function findOrderNumbers(ids: string[], db?: Database): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+
+  const rows = await conn(db)
+    .select({ id: schema.orders.id, orderNumber: schema.orders.orderNumber })
+    .from(schema.orders)
+    .where(inArray(schema.orders.id, ids));
+
+  return new Map(rows.map((r) => [r.id, r.orderNumber]));
 }

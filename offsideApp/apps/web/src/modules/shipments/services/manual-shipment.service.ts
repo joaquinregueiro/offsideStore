@@ -145,10 +145,22 @@ export interface PublicTrackingEvent {
   occurredAt: string | null;
 }
 
+/** Pagina publica de seguimiento de Andreani (constante del plugin oficial). */
+const SEGUIMIENTO_ANDREANI = 'https://www.andreani.com/envio/';
+
 /** El envio de una orden, abstraido del proveedor (SH-012). */
 export interface PublicShipment {
   id: string;
   provider: string | null;
+  /** Lo genero Offside en el transportista (no lo declaro el vendedor). */
+  automatico: boolean;
+  /**
+   * Generado en Andreani pero sin numero todavia: esta "por pagar" en la
+   * cuenta de Offside. Las pantallas lo dicen en vez de mostrar "sin numero".
+   */
+  pendienteDePago: boolean;
+  /** Se puede bajar la etiqueta: hay numero de seguimiento del transportista. */
+  etiquetaDisponible: boolean;
   status: shipmentRepo.ShipmentStatus;
   /** Codigo del transportista declarado (`shipping_carriers`), si es manual. */
   carrierCode: string | null;
@@ -184,17 +196,28 @@ export async function getShipmentForOrder(orderId: string): Promise<PublicShipme
   const carrierName =
     carrier?.name ?? (typeof raw.carrierName === 'string' ? raw.carrierName : carrierCode);
 
+  const automatico = shipment.provider !== null && shipment.provider !== MANUAL_PROVIDER;
+  const esAndreani = shipment.provider === 'andreani';
+  // El simulado se nombra como tal: en desarrollo, "Sin declarar" en un envio
+  // que Offside genero solo se leia como un error.
+  const esSimulado = shipment.provider === 'fake';
+
   return {
     id: shipment.id,
     provider: shipment.provider,
+    automatico,
+    pendienteDePago: esAndreani && shipment.trackingNumber === null,
+    etiquetaDisponible: automatico && shipment.trackingNumber !== null,
     status: shipment.status,
-    carrierCode,
-    carrierName,
+    carrierCode: esAndreani ? 'andreani' : carrierCode,
+    carrierName: esAndreani ? 'Andreani' : esSimulado ? 'Andreani (simulado)' : carrierName,
     trackingNumber: shipment.trackingNumber,
     trackingUrl:
-      carrier !== undefined && shipment.trackingNumber !== null
-        ? trackingUrlFor(carrier, shipment.trackingNumber)
-        : null,
+      esAndreani && shipment.trackingNumber !== null
+        ? `${SEGUIMIENTO_ANDREANI}${encodeURIComponent(shipment.trackingNumber)}`
+        : carrier !== undefined && shipment.trackingNumber !== null
+          ? trackingUrlFor(carrier, shipment.trackingNumber)
+          : null,
     dispatchedAt: shipment.dispatchedAt?.toISOString() ?? null,
     deliveredAt: shipment.deliveredAt?.toISOString() ?? null,
     events: events.map((e) => ({

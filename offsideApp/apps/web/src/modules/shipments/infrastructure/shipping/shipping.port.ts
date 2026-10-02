@@ -111,6 +111,11 @@ export interface QuoteInput {
   package: PackageInfo;
   /** Si se omite, se piden todas las modalidades disponibles. */
   mode?: DeliveryMode;
+  /**
+   * Valor declarado en CENTAVOS, para el seguro. Andreani lo usa para cotizar
+   * (el seguro es parte del precio); quien no lo usa, lo ignora.
+   */
+  declaredValueAmount?: bigint;
 }
 
 /** Una tarifa concreta ofrecida por el proveedor. */
@@ -159,6 +164,18 @@ export interface CreateShipmentInput {
   /** Valor declarado en CENTAVOS. El adaptador convierte. */
   declaredValueAmount: bigint;
   currency: string;
+  /**
+   * Numero de orden de Offside, el legible. Viaja como REFERENCIA del envio
+   * (`remito` en Andreani) y es con lo que despues se lo vuelve a encontrar:
+   * en la API PyME el alta no devuelve numero de seguimiento.
+   */
+  reference: string;
+  /** DNI del destinatario, si lo hay. Andreani lo imprime en la etiqueta. */
+  recipientDocument?: string;
+  /** Cuanto pago el comprador por el envio, en CENTAVOS. Andreani lo registra. */
+  shippingChargedAmount?: bigint;
+  /** Email de quien despacha. Andreani le manda ahi los avisos del envio. */
+  senderEmail?: string;
 }
 
 export interface CreatedShipment {
@@ -208,6 +225,38 @@ export interface TrackingResult {
 }
 
 /** Una sucursal donde el comprador puede retirar. */
+/**
+ * Lo que el proveedor sabe de un envio, buscado por NUESTRA referencia.
+ *
+ * ⚠️ EXISTE POR LA API PYME DE ANDREANI, donde el alta devuelve un id de pedido
+ * y NO un numero de seguimiento: el numero aparece recien cuando la cuenta paga
+ * el envio en el portal de Andreani PyMEs. Hasta entonces no hay nada que
+ * rastrear por numero, y la unica forma de saber si ya lo tiene es preguntar
+ * por la referencia con la que se dio de alta.
+ */
+/**
+ * Un envio a consultar: la referencia del alta y el numero que ya se conoce.
+ *
+ * ⚠️ VAN LOS DOS PORQUE CADA PROVEEDOR BUSCA POR UNO DISTINTO. Andreani PyME
+ * no da numero hasta que se paga el envio, asi que busca por referencia; el
+ * simulado lleva la fecha de creacion adentro del numero y con eso le alcanza,
+ * sin recordar nada —sobrevive a un reinicio del proceso—.
+ */
+export interface ShipmentQuery {
+  reference: string;
+  trackingNumber: string | null;
+}
+
+export interface ShipmentLookup {
+  reference: string;
+  trackingNumber: string | null;
+  /** Estado CRUDO del proveedor, tal cual. `null` si todavia no tiene. */
+  providerStatus: string | null;
+  /** Estado de Offside derivado del crudo. */
+  status: ShipmentStatus;
+  raw: unknown;
+}
+
 export interface Agency {
   code: string;
   name: string;
@@ -266,6 +315,9 @@ export interface ShippingPort {
    * y su posibilidad de fallar.
    */
   getTracking(trackingNumbers: string[]): Promise<TrackingResult[]>;
+
+  /** Estado actual de varios envios. Cada resultado lleva la referencia consultada. */
+  lookupShipments(consultas: ShipmentQuery[]): Promise<ShipmentLookup[]>;
 
   /**
    * Sucursales de una provincia.

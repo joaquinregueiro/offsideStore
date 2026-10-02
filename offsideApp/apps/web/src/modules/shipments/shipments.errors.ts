@@ -40,3 +40,25 @@ export const carrierUnknown = (): AuthError =>
  */
 export const shipmentNotDeliverable = (): AuthError =>
   new AuthError('ORDER_NOT_PAYABLE', 'Este envío no se puede marcar como entregado');
+
+/** El vendedor no cargo desde donde despacha: sin origen no hay alta posible. */
+export const originMissing = (): AuthError =>
+  new AuthError(
+    'VALIDATION_FAILED',
+    'Cargá tu domicilio de despacho en Mi cuenta > Direcciones antes de generar el envío',
+  );
+
+/** Peso o medidas fuera de lo que el transportista acepta. */
+export const packageOutOfRange = (detalle: string): AuthError =>
+  new AuthError('VALIDATION_FAILED', detalle);
+
+/** El transportista rechazo el alta. El mensaje es el suyo, ya legible. */
+export const providerRejected = (mensaje: string): AuthError =>
+  new AuthError('VALIDATION_FAILED', mensaje);
+
+/** El despacho automatico no esta configurado en este entorno. */
+export const automaticShippingUnavailable = (): AuthError =>
+  new AuthError(
+    'VALIDATION_FAILED',
+    'El envío automático no está disponible. Despachá a mano con el número de seguimiento.',
+  );

@@ -1,5 +1,6 @@
 import { getEnv } from '@offside/config';
 
+import { createAndreaniShipping } from '../andreani/andreani.adapter';
 import { createFakeShipping } from './fake-shipping.adapter';
 import type { ShippingPort } from './shipping.port';
 
@@ -28,17 +29,42 @@ import type { ShippingPort } from './shipping.port';
  * "salir del paso". Cuando exista el adaptador real, esta funcion elige por
  * presencia de credenciales, igual que storage.
  */
+/**
+ * El proveedor de envios que corresponde a este entorno.
+ *
+ * ⚠️ CON CREDENCIAL DE ANDREANI, ANDREANI, EN CUALQUIER ENTORNO. La API PyME no
+ * tiene ambiente de pruebas: la credencial es de la cuenta real. Cargarla en un
+ * `.env` de desarrollo da de alta envios reales "por pagar" en esa cuenta, y eso
+ * se elige a sabiendas, no por default.
+ *
+ * ⚠️ SIN CREDENCIAL, EL SIMULADO, SALVO EN PRODUCCION, donde se rompe a
+ * proposito: un envio simulado informa "entregado" y cerraria ordenes que nunca
+ * se despacharon. Quien llama tiene que preguntar `envioAutomaticoDisponible()`
+ * antes y caer al despacho manual.
+ */
 export function createShipping(): ShippingPort {
+  const credencial = getEnv().ANDREANI_CREDENCIAL;
+  if (credencial !== undefined) return createAndreaniShipping(credencial);
+
   if (getEnv().APP_ENV === 'production') {
     throw new Error(
       'No hay proveedor de envios configurado. El adaptador simulado NO puede ' +
         'usarse en produccion: informaria envios entregados que nunca salieron. ' +
-        'Falta la integracion con Correo Argentino (ver ' +
-        'docs-implementation/correo-argentino-spec.md).',
+        'Falta ANDREANI_CREDENCIAL.',
     );
   }
 
   return createFakeShipping();
+}
+
+/** Si este entorno puede despachar automaticamente, real o simulado. */
+export function envioAutomaticoDisponible(): boolean {
+  return getEnv().ANDREANI_CREDENCIAL !== undefined || getEnv().APP_ENV !== 'production';
+}
+
+/** El nombre del proveedor activo, para guardarlo en `shipments.provider`. */
+export function proveedorActivo(): 'andreani' | 'fake' {
+  return getEnv().ANDREANI_CREDENCIAL !== undefined ? 'andreani' : 'fake';
 }
 
 export { ShippingError } from './shipping.port';
@@ -55,6 +81,8 @@ export type {
   ShippingLabel,
   ShippingPort,
   ShippingRate,
+  ShipmentLookup,
+  ShipmentQuery,
   TrackingEvent,
   TrackingResult,
 } from './shipping.port';

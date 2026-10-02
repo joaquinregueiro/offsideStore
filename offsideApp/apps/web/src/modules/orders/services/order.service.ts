@@ -1001,7 +1001,13 @@ export async function getSaleDetail(
     windows,
     timeline,
     actions: {
-      canShip: canTransition(order.status, 'SHIPPED', 'seller'),
+      /*
+       * ⚠️ CON UN ENVIO YA GENERADO NO SE OFRECE DESPACHAR. El alta automatica
+       * crea la fila con la orden todavia en PROCESSING —el paquete no salio,
+       * esta "por pagar" en Andreani—; sin esta condicion la pantalla ofreceria
+       * ademas el despacho manual, y el segundo choca contra el primero.
+       */
+      canShip: canTransition(order.status, 'SHIPPED', 'seller') && shipment === null,
       canCancel: canTransition(order.status, 'CANCELLED', 'seller'),
     },
   };
@@ -1234,6 +1240,36 @@ export async function markShipped(
  * que el paquete llego es quien lo recibio. NO cierra la orden: desde aca
  * corre la ventana de proteccion (BR-033) y el cierre lo hace el sistema.
  */
+/**
+ * Mueve una orden porque lo dijo el SEGUIMIENTO del transportista.
+ *
+ * ⚠️ SOLO LA LLAMA LA SINCRONIZACION DE ENVIOS AUTOMATICOS, nunca una pantalla.
+ * El actor es `system` y la maquina de estados lo permite unicamente para
+ * `PROCESSING → SHIPPED` y `SHIPPED → DELIVERED`; cualquier otra cosa devuelve
+ * `false` sin tocar nada. Asi un estado viejo que llega tarde —"en camino"
+ * cuando la orden ya esta entregada— no puede hacerla retroceder.
+ *
+ * @returns si la orden se movio.
+ */
+export async function registrarMovimientoDelTransportista(
+  orderId: string,
+  to: 'SHIPPED' | 'DELIVERED',
+  nota: string,
+  en: Date,
+): Promise<boolean> {
+  const order = await orderRepo.findById(orderId);
+  if (order === undefined) return false;
+  if (!canTransition(order.status, to, 'system')) return false;
+
+  await transicionar(order, to, SYSTEM_ACTOR, {
+    accion: to === 'SHIPPED' ? 'despachar' : 'marcar como entregada',
+    note: nota,
+    timestamps: to === 'SHIPPED' ? { shippedAt: en } : { deliveredAt: en },
+  });
+
+  return true;
+}
+
 export async function confirmDelivered(user: PublicUser, orderId: string): Promise<PublicOrder> {
   const order = await orderRepo.findById(orderId);
   if (order?.buyerId !== user.id) throw errors.orderNotFound();

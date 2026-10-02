@@ -32,6 +32,7 @@ export async function register(): Promise<void> {
   await registrarRefreshDeTokens();
   await registrarBarridosDeOrdenes();
   await registrarBarridoDeDisputas();
+  await registrarSeguimientoDeEnvios();
   await registrarEfectosDeOrden();
 
   console.warn('[instrumentation] workers registrados');
@@ -87,6 +88,38 @@ async function registrarBarridoDeDisputas(): Promise<void> {
   } catch (error) {
     console.error(
       '[instrumentation] no se pudo programar la escalada de reclamos:',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
+/**
+ * Seguimiento de los envios automaticos (Andreani).
+ *
+ * ⚠️ CADA MEDIA HORA, Y NO MAS SEGUIDO. Andreani no avisa (no hay webhook en la
+ * API PyME): hay que preguntar. El dato que mas importa —el numero de
+ * seguimiento, que aparece cuando la cuenta paga el envio— no cambia de un
+ * minuto a otro, y preguntar cada pocos minutos por cientos de envios es
+ * castigar una API ajena. El plugin oficial usa el mismo orden de magnitud.
+ * A los minutos 10 y 40, para no salir junto con los otros barridos.
+ */
+async function registrarSeguimientoDeEnvios(): Promise<void> {
+  const { QUEUE_NAMES, createWorker, getQueue } = await import('@offside/jobs');
+  const { sincronizarEnvios } = await import('./modules/orders/services/order-shipping.service');
+
+  createWorker(QUEUE_NAMES.SHIPMENTS_SYNC, async () => {
+    await sincronizarEnvios();
+  });
+
+  try {
+    await getQueue(QUEUE_NAMES.SHIPMENTS_SYNC).upsertJobScheduler(
+      'shipments-sync-cada-media-hora',
+      { pattern: '10,40 * * * *' },
+      { name: 'sincronizar', data: {} },
+    );
+  } catch (error) {
+    console.error(
+      '[instrumentation] no se pudo programar el seguimiento de envios:',
       error instanceof Error ? error.message : String(error),
     );
   }

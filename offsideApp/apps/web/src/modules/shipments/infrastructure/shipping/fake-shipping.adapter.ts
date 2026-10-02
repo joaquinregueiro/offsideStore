@@ -18,6 +18,8 @@ import {
   type CreateShipmentInput,
   type CreatedShipment,
   type QuoteInput,
+  type ShipmentLookup,
+  type ShipmentQuery,
   type ShipmentStatus,
   type ShippingLabel,
   type ShippingPort,
@@ -33,10 +35,11 @@ import {
  * POR QUE EXISTE
  * =============================================================================
  *
- * Porque el adaptador real **no se puede escribir todavia**. Las credenciales de
- * Correo Argentino salen de un acuerdo comercial y el vocabulario de estados de
- * tracking no esta documentado en ningun manual: se descubre contra el ambiente
- * de test. Escribir el adaptador real ahora seria inventar el contrato.
+ * Nacio cuando no habia transportista: las credenciales de Correo Argentino
+ * salen de un acuerdo comercial que nunca llego. Hoy el real es Andreani
+ * (`../andreani/`), y este sigue siendo el que se usa sin `ANDREANI_CREDENCIAL`
+ * —en desarrollo y en los tests—, porque la API PyME no tiene ambiente de
+ * pruebas: cada alta contra ella es un envio real en la cuenta de Offside.
  *
  * No es una concesion: `shipping.md` §3.2 lo pide con todas las letras —"poder
  * testear con un proveedor **fake** en el MVP"— y OQ-J1 recomienda arrancar
@@ -113,9 +116,17 @@ function creacionDe(trackingNumber: string): Date | null {
   return Number.isNaN(ms) ? null : new Date(ms);
 }
 
+/** La etapa en la que va un envio simulado, segun cuanto tiempo paso. */
+function etapaDe(creadoEn: Date, ahora: number): (typeof ETAPAS)[number] {
+  const transcurridos = (ahora - creadoEn.getTime()) / 60_000;
+  const indice = Math.min(ETAPAS.length - 1, Math.floor(transcurridos / MINUTOS_POR_ETAPA));
+
+  return ETAPAS[Math.max(0, indice)]!;
+}
+
 function aviso(operacion: string): void {
   console.warn(
-    `[shipping] ⚠️ adaptador SIMULADO: "${operacion}" no toca Correo Argentino. ` +
+    `[shipping] ⚠️ adaptador SIMULADO: "${operacion}" no toca ningun transportista. ` +
       'Los datos son inventados.',
   );
 }
@@ -190,7 +201,7 @@ export function createFakeShipping(): ShippingPort {
         `ROTULO ${MARCA}\n` +
         `Seguimiento: ${labelRef}\n\n` +
         'Este rotulo NO sirve para despachar. Lo genero el adaptador simulado ' +
-        'porque todavia no hay integracion con Correo Argentino.\n';
+        'porque no hay credencial de Andreani cargada (ANDREANI_CREDENCIAL).\n';
 
       return {
         content: Buffer.from(contenido, 'utf8'),
@@ -228,6 +239,43 @@ export function createFakeShipping(): ShippingPort {
         );
 
         return { trackingNumber, events };
+      });
+    },
+
+    async lookupShipments(consultas: ShipmentQuery[]): Promise<ShipmentLookup[]> {
+      aviso('lookupShipments');
+
+      const ahora = Date.now();
+
+      /*
+       * ⚠️ SIN MEMORIA: la etapa sale del numero, que lleva adentro la fecha de
+       * creacion. Antes las altas vivian en un mapa del proceso, y Next
+       * empaqueta el worker del barrido aparte de las Server Actions —cada uno
+       * con su copia del modulo—: el barrido miraba un mapa vacio y el envio
+       * simulado no avanzaba nunca. Tampoco sobrevivia a un reinicio.
+       */
+      return consultas.map(({ reference, trackingNumber }) => {
+        const creadoEn = trackingNumber === null ? null : creacionDe(trackingNumber);
+
+        if (creadoEn === null) {
+          return {
+            reference,
+            trackingNumber: null,
+            providerStatus: null,
+            status: 'created' as const,
+            raw: { simulado: true, desconocida: true },
+          };
+        }
+
+        const etapa = etapaDe(creadoEn, ahora);
+
+        return {
+          reference,
+          trackingNumber,
+          providerStatus: etapa.providerStatus,
+          status: etapa.status,
+          raw: { simulado: true },
+        };
       });
     },
 
