@@ -68,7 +68,18 @@ export function readSessionToken(request: Request): string | null {
 
   if (cookie) {
     const value = cookie.slice(SESSION_COOKIE_NAME.length + 1);
-    if (value) return decodeURIComponent(value);
+    if (value) {
+      /*
+       * `decodeURIComponent` LANZA ante un `%` mal formado. Sin esto, una cookie
+       * basura convertia cualquier endpoint en un 500 en vez de "sin sesion".
+       * Un token que no se puede decodificar no es de nadie.
+       */
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return null;
+      }
+    }
   }
 
   const auth = request.headers.get('authorization');

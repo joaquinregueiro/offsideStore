@@ -67,6 +67,26 @@ describe('rutaInternaSegura', () => {
     expect(rutaInternaSegura('/\\sitio-falso.test')).toBe('/');
   });
 
+  it('⚠️ RECHAZA tabs y saltos de linea: el navegador los borra y queda `//otro`', () => {
+    // El bypass es real: el parser WHATWG elimina TAB/LF/CR antes de
+    // interpretar, asi que `/<TAB>/sitio` se resuelve fuera del sitio.
+    expect(new URL('/\t/sitio-falso.test', 'https://offside.com.ar').host).toBe('sitio-falso.test');
+
+    expect(rutaInternaSegura('/\t/sitio-falso.test')).toBe('/');
+    expect(rutaInternaSegura('/\n/sitio-falso.test')).toBe('/');
+    expect(rutaInternaSegura('/\r/sitio-falso.test')).toBe('/');
+    expect(rutaInternaSegura('/\t\\sitio-falso.test')).toBe('/');
+    expect(rutaInternaSegura('/\u0000/sitio-falso.test')).toBe('/');
+    // El espacio NO lo borra el parser en el medio de la URL: no es un bypass.
+    expect(rutaInternaSegura('/buscar?q=river plate')).toBe('/buscar?q=river plate');
+  });
+
+  it('sigue aceptando rutas internas con caracteres codificados', () => {
+    expect(rutaInternaSegura('/buscar?q=river%20plate')).toBe('/buscar?q=river%20plate');
+    expect(rutaInternaSegura('/%2F%2Fsitio-falso.test')).toBe('/%2F%2Fsitio-falso.test');
+    expect(rutaInternaSegura('/p/abc#fotos')).toBe('/p/abc#fotos');
+  });
+
   it('cae al destino por defecto si no hay nada', () => {
     expect(rutaInternaSegura(undefined)).toBe('/');
     expect(rutaInternaSegura('')).toBe('/');

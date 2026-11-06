@@ -629,6 +629,59 @@ describe('webhook', () => {
     expect(order?.status).toBe('PENDING_PAYMENT');
   });
 
+  it('⚠️ un pago APROBADO por menos de lo cobrado NO paga la orden', async () => {
+    // Auditoria de seguridad 2026-11-06: antes, cualquier pago `approved` con
+    // el `external_reference` de la orden la daba por pagada —por ejemplo un
+    // cobro de $1 creado por el propio vendedor sobre su cuenta—.
+    const ctx = await conCheckout('wh-importe-menor');
+    const { orderId } = ctx;
+    requestAsSeller.mockImplementation(mercadoPago(ctx, { transaction_amount: 1 }));
+
+    expect(await webhookService.handleNotification(notificacion(ctx), {})).toBe('processed');
+
+    const local = await pago(orderId);
+    // El estado crudo de MP se conserva (DEC-035)...
+    expect(local?.mpStatus).toBe('approved');
+
+    // ...pero la orden NO avanza, no se registra reparto y queda auditado.
+    const [order] = await getDatabase()
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orderId));
+    expect(order?.status).toBe('PENDING_PAYMENT');
+    expect(order?.paidAt).toBeNull();
+
+    const splits = await getDatabase()
+      .select()
+      .from(schema.paymentSplits)
+      .where(eq(schema.paymentSplits.paymentId, local!.id));
+    expect(splits).toHaveLength(0);
+
+    const registros = (await auditoria('PAYMENT_AMOUNT_MISMATCH')).filter(
+      (r) => r.entityId === local!.id,
+    );
+    expect(registros).toHaveLength(1);
+    expect(registros[0]?.metadata).toMatchObject({
+      motivo: 'importe_distinto',
+      esperado: TOTAL.toString(),
+      recibido: '100',
+    });
+  });
+
+  it('⚠️ un pago APROBADO en otra moneda NO paga la orden', async () => {
+    const ctx = await conCheckout('wh-moneda');
+    const { orderId } = ctx;
+    requestAsSeller.mockImplementation(mercadoPago(ctx, { currency_id: 'USD' }));
+
+    await webhookService.handleNotification(notificacion(ctx), {});
+
+    const [order] = await getDatabase()
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orderId));
+    expect(order?.status).toBe('PENDING_PAYMENT');
+  });
+
   it('un estado en mediacion no toca el estado local', async () => {
     const ctx = await conCheckout('wh-mediacion');
     const { orderId } = ctx;

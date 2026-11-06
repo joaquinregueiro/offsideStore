@@ -1358,6 +1358,28 @@ Auditoría en el navegador de ~40 pantallas a 1280 y 375px: corregidas las fecha
 de "Mi reputación" (4.38:1) y dos enlaces de ingreso de 18px de alto.
 ⚠️ Quedan 33 controles de 20–23px en `/admin/configuracion`.
 
+**Auditoría de seguridad (2026-11-06)**: seis arreglos, cada uno con un test
+que falla con el código anterior. Detalle en
+`offsideApp/docs-implementation/seguridad-auditoria-2026-11-06.md`.
+
+- ⚠️ **`next@16.3.1` tenía un RCE sin autenticación** (Image Optimization / `use
+cache`). Subido a `^16.4.3`, con `sharp`, `zod` y `source-map-js`:
+  `npm audit --omit=dev` en 0.
+- ⚠️ **Redirector abierto**: `rutaInternaSegura` dejaba pasar `/<TAB>/otro`,
+  que el navegador lee como `//otro`. Ahora rechaza caracteres de control.
+- ⚠️ **Un pago `approved` por $1 pagaba la orden**: el webhook no comparaba
+  importe ni moneda. Ahora tienen que coincidir con la preferencia; si no, la
+  orden no avanza y queda `PAYMENT_AMOUNT_MISMATCH` en la auditoría.
+- `POST /api/auth/password/forgot` no limitaba por cuenta (la pantalla sí).
+- No había cabeceras de seguridad: el sitio se podía embeber (clickjacking).
+  Ahora `frame-ancestors 'none'`, `nosniff`, HSTS, `Referrer-Policy` y otras,
+  desde `lib/security-headers.ts`.
+- Una cookie mal codificada daba 500 en toda la API.
+
+⚠️ **Hallazgo que necesita decisión**: con `buyer_pays`, `orders.total_amount`
+suma el envío pero la preferencia de Mercado Pago **no lo cobra** (quién paga
+el envío es 🟡, `shipping.md` §5.b). No se tocó.
+
 **Desplegado en producción** en **`offside.com.ar`**, en un VPS con Coolify
 (DEC-012), con HTTPS y migraciones aplicadas al arrancar el contenedor. Ver
 `offsideApp/docs-implementation/deployment-coolify.md`.

@@ -183,6 +183,17 @@ export async function forgotPassword(request: Request): Promise<NextResponse> {
   try {
     await enforceIpLimit(request, 'password-forgot');
     const { email } = forgotPasswordSchema.parse(await readJson(request));
+
+    /*
+     * ⚠️ LIMITE POR CUENTA, contando TODOS los intentos (auditoria de seguridad
+     * 2026-11-06). La pantalla ya lo aplicaba (`exigirLimiteDeEnvio`) y este
+     * endpoint no: rotando IPs se podia inundar de emails de reset la casilla
+     * de cualquiera. Es la MISMA clave que usa la Server Action, asi que los
+     * dos caminos comparten el contador.
+     */
+    const cuenta = await consumeAccountLimit('password-forgot', email);
+    if (!cuenta.allowed) throw errors.rateLimited(cuenta.retryAfterSeconds);
+
     const token = await authService.requestPasswordReset(email);
 
     return ok({

@@ -1,12 +1,26 @@
 import { loadRootEnv } from '@offside/config';
 import type { NextConfig } from 'next';
 
+import { securityHeaders } from './src/lib/security-headers';
+
 // Next solo lee `.env` desde `apps/web/`, pero el archivo vive en la raiz del
 // monorepo. Se carga aca, antes de que arranque cualquier Route Handler.
 loadRootEnv(import.meta.dirname);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  /** `X-Powered-By: Next.js` solo le sirve a quien busca que version atacar. */
+  poweredByHeader: false,
+
+  /**
+   * Cabeceras de seguridad en TODAS las respuestas, incluidas `/public` y
+   * `/_next/*`. El detalle y lo que deliberadamente NO incluyen esta en
+   * `src/lib/security-headers.ts`.
+   */
+  headers() {
+    return Promise.resolve([{ source: '/:path*', headers: securityHeaders() }]);
+  },
 
   /**
    * Los packages del monorepo se publican como TypeScript sin compilar

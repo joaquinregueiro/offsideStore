@@ -277,6 +277,34 @@ export function rutaInternaSegura(destino: string | undefined, porDefecto = '/')
   // `/\` tambien lo interpretan algunos navegadores como externo.
   if (destino.startsWith('/\\')) return porDefecto;
 
+  /*
+   * ⚠️ CARACTERES DE CONTROL (auditoria de seguridad 2026-11-06). El parser de
+   * URL del navegador (WHATWG) BORRA tabulaciones y saltos de linea en
+   * cualquier posicion antes de interpretar la URL. `/<TAB>/sitio-falso` pasa
+   * los tres controles de arriba —empieza con UNA barra seguida de un tab— y el
+   * navegador la lee como `//sitio-falso`: protocol-relative, externa. El tab
+   * es valido en el valor de una cabecera HTTP, asi que llega intacto al
+   * `Location` del redirect.
+   *
+   * Se rechaza cualquier caracter de control C0 o DEL: una ruta
+   * interna legitima nunca los lleva sin codificar.
+   */
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(destino)) return porDefecto;
+
+  /*
+   * Ultima red: se resuelve igual que lo haria el navegador contra un origen
+   * ficticio, y si el resultado sale de ese origen se descarta. Cubre cualquier
+   * variante que el parser normalice a algo externo y que los controles de
+   * prefijo no anticipen.
+   */
+  const base = 'https://offside.invalid';
+  try {
+    if (new URL(destino, base).origin !== base) return porDefecto;
+  } catch {
+    return porDefecto;
+  }
+
   return destino;
 }
 

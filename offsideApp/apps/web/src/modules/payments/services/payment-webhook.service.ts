@@ -11,6 +11,8 @@ import {
 import * as paymentRepo from '../repositories/payment.repository';
 import * as webhookRepo from '../repositories/payment-webhook.repository';
 
+import { verificarImporte, type VerificacionDeImporte } from './payment-amount';
+
 /**
  * Procesamiento de los webhooks de pago de Mercado Pago.
  *
@@ -190,6 +192,19 @@ export async function syncPaymentFromMercadoPago(
 
   const antes = local.status;
 
+  /*
+   * ⚠️ UN PAGO APROBADO TIENE QUE CUBRIR LO QUE SE COBRO. Sin esto, cualquier
+   * pago `approved` con el `external_reference` de la orden —por ejemplo uno
+   * de $1 creado por el propio vendedor sobre su cuenta— la daba por pagada.
+   * El detalle esta en `payment-amount.ts`.
+   *
+   * El estado crudo de MP se conserva igual (DEC-035): el pago ES aprobado
+   * para Mercado Pago. Lo que no ocurre es el efecto sobre la orden: queda
+   * auditado para que lo resuelva una persona, como el pagado sin stock.
+   */
+  const verificacion: VerificacionDeImporte =
+    objetivo === 'APPROVED' ? await verificarImporteContraLaOrden(orderId, pago) : { ok: true };
+
   await getDatabase().transaction(async (tx) => {
     await paymentRepo.applyMercadoPagoState(
       local.id,
@@ -206,8 +221,32 @@ export async function syncPaymentFromMercadoPago(
       tx,
     );
 
-    if (objetivo === 'APPROVED') {
+    if (objetivo === 'APPROVED' && verificacion.ok) {
       await aplicarAprobacion(local, pago, orderId, tx);
+    }
+
+    if (!verificacion.ok) {
+      console.error(
+        `[payments] pago aprobado que NO cubre la orden (${verificacion.motivo}): no se marca pagada`,
+      );
+
+      await audit.record(
+        {
+          actorType: 'system',
+          action: 'PAYMENT_AMOUNT_MISMATCH',
+          entityType: ENTITY_TYPE,
+          entityId: local.id,
+          metadata: {
+            orderId,
+            mpPaymentId: pago.mpPaymentId,
+            motivo: verificacion.motivo,
+            esperado: verificacion.esperado.toString(),
+            recibido: verificacion.recibido?.toString() ?? null,
+            moneda: pago.currency,
+          },
+        },
+        tx,
+      );
     }
 
     if (antes !== objetivo) {
@@ -227,6 +266,21 @@ export async function syncPaymentFromMercadoPago(
   });
 
   return 'processed';
+}
+
+/** Compara el pago con los items que la preferencia le pidio cobrar a MP. */
+async function verificarImporteContraLaOrden(
+  orderId: string,
+  pago: mp.FetchedPayment,
+): Promise<VerificacionDeImporte> {
+  const encontrada = await orderService.getOrderForPayment(orderId);
+
+  // Sin orden no hay contra que comparar: falla cerrado.
+  if (encontrada === null) {
+    return { ok: false, motivo: 'importe_desconocido', esperado: 0n, recibido: pago.amountCents };
+  }
+
+  return verificarImporte(pago, encontrada.items, encontrada.order.currency);
 }
 
 /**
