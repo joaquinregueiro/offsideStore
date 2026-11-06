@@ -86,7 +86,7 @@ export default async function MisPromociones() {
             </EstadoVacio>
           ) : (
             <>
-              <div className={`${estilos.tablero} sup-noche con-grano`}>
+              <div className={estilos.tablero}>
                 <Cifras
                   cifras={[
                     { valor: String(promociones.length), etiqueta: 'Promociones hechas' },
@@ -179,7 +179,7 @@ export default async function MisPromociones() {
             </>
           )}
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Una promoción no se puede cortar antes de tiempo. La comisión agravada se aplica a las
               órdenes creadas mientras estuvo vigente, y cada orden la congela al crearse: lo

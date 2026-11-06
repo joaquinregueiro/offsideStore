@@ -1,51 +1,3 @@
-/* =============================================================================
- * BACK-OFFICE — HOJA DE OPERACIONES
- * =============================================================================
- *
- * ⚠️ ACA NO SE BUSCA ESPECTACULO. Es una herramienta: la prioridad es densidad
- * y legibilidad. Todo lo que se agrega tiene que hacer que un dato se lea mas
- * rapido o que una accion peligrosa se sienta peligrosa. Nada mas.
- *
- * ⚠️ EL PANEL ES OTRO LUGAR, NO OTRA PAGINA DEL SITIO. Antes la unica
- * diferencia con la tienda era una franja de 20px arriba del titulo — y el
- * comentario de la version anterior lo admitia con todas las letras: "el panel
- * se parece al resto del sitio". Ahora son TRES PLANOS:
- *
- *   banda oscura (.consola)   contexto, identidad, navegacion, titulo y
- *                             buscador. A sangre, del ancho del viewport.
- *   papel (.hoja)             el suelo de trabajo. Es el papel del sitio, con
- *                             su malla y su grano: NO se tiñe.
- *   fichas (.tarjeta)         blancas, con elevacion real y franja de estado.
- *
- * ⚠️⚠️ NO EXISTE UN "PLANO INTERMEDIO TEÑIDO", Y ESO ES UNA CORRECCION, NO UNA
- * OMISION. Una placa `--superficie-2` (#f2f3ea) sobre papel (#fafaf7) da
- * **1.07:1**: es imperceptible, en <1040px ocupa todo el ancho y su sombra
- * queda fuera de pantalla, y ademas es EXACTAMENTE el mismo hex que el fondo de
- * `.aviso`, `.etiquetaNeutra`, `.confirmarPanel`, `.tabla th` y `.esqueleto`. Lo
- * que separa un plano de otro en este sistema es la ELEVACION —que la fundacion
- * acaba de volver visible— y el CONTRASTE de los bloques oscuros.
- *
- * ⚠️⚠️ REGLA DURA DE ESTA SUPERFICIE: **ningun componente de `ui.tsx` va adentro
- * de un bloque oscuro.** `.vacioTitulo`, `.confirmarPregunta`, `.tablaTitulo`,
- * `.navSeccionActivo` y `.panelTitulo` escriben `color: var(--color-tinta)`
- * literal, y `.etiquetaMarca` escribe `--color-tiempo-extra`: sobre un plano
- * oscuro quedan invisibles o casi. Por eso los planos oscuros de este archivo
- * son HERMANOS del contenido, nunca ancestros. La unica excepcion es `Boton`,
- * que lee los ocho tokens `--boton-*` que `.sup-noche` cablea a proposito.
- *
- * ⚠️ SE ELIMINARON TRES CLASES DUPLICADAS. `.contexto`, `.acceso` y `.nota`
- * estaban declaradas DOS VECES cada una en este mismo archivo. En un CSS Module
- * los dos bloques resuelven al mismo nombre y gana el ultimo: ~30 lineas eran
- * codigo que nadie podia ver, con comentarios que se contradecian entre si.
- *
- * ⚠️ LOS `@keyframes` DE ACA VAN PREFIJADOS `admin-`. En un CSS Module los
- * nombres de keyframes son LOCALES: no se puede referenciar uno global
- * (`alzar`, `barrer-x`) desde este archivo, y declarar uno con el mismo nombre
- * que otro modulo es una trampa silenciosa. El movimiento GLOBAL entra por
- * clases en el `className` del TSX (`escalona`, `eleva`, `cifra-entra`,
- * `presiona`, `esqueleto`), no por CSS.
- * ========================================================================== */
-
 /* -------------------------------------------------------------- estructura */
 
 /**
@@ -90,45 +42,11 @@
 }
 
 /* ----------------------------------------------------------------- consola */
-
-/**
- * BANDA DE CONTEXTO DE ENTORNO.
- *
- * Lleva el rotulo del entorno, quien esta operando, la navegacion, el titulo de
- * la pantalla y —en la consola de pagos— el buscador. Es la mitad "comunicar"
- * de la señal que el archivo viejo prometia con 20px de alto.
- *
- * ⚠️ NO ES `sticky`, AUNQUE UNA NAV DE OPERACIONES PEGADA SERIA UTIL. La barra
- * del sitio ya es `sticky` en `top: 0` y su alto real cambia con el buscador y
- * con el menu plegado; apilar una segunda con `top: var(--alto-barra)` las
- * solapa en cuanto la primera no mide los 76px nominales.
- *
- * Uso: <div class="<consola> sup-noche con-grano">
- * `sup-noche` trae la malla, el filo de luz superior, el remapeo de los
- * `--color-neutro-*`, `--linea-*`, `--color-foco` y los ocho tokens de boton.
- */
 .consola {
   position: relative;
   padding-block: var(--espacio-5) var(--espacio-6);
-  /* Redundante con `sup-noche`, a proposito: si manana alguien usa esta banda
-     sin la superficie, el anillo de foco verde sobre verde no desaparece. */
-  --color-foco: var(--color-cambio);
+  --color-foco: var(--color-tiempo-extra);
 }
-
-/**
- * ROMBOS DE LA BANDERA, ESTATICOS, EN LA MITAD DERECHA.
- *
- * ⚠️ VA EN UN `<span>` PROPIO Y NO EN UN PSEUDO: `sup-noche` ya usa `::before`
- * (el filo de luz) y `con-grano` usa `::after`. Los dos estan tomados.
- *
- * ⚠️ ES ESTATICO, NO `patron-vivo`. La deriva del patron es para una portada;
- * en la pantalla donde se aprieta "Confirmar reembolso" no se mueve nada de
- * fondo. `--patron-color` ya lo cablea `.sup-noche`.
- *
- * ⚠️ `z-index: -1` MAS EL `isolation: isolate` QUE `sup-noche` YA TRAE: asi
- * queda encima del fondo de la banda y debajo del contenido en flujo, sin tocar
- * el z-index de ningun enlace.
- */
 .rombos {
   position: absolute;
   inset-block: 0;
@@ -137,10 +55,6 @@
   z-index: var(--z-fondo);
   pointer-events: none;
   background-image: var(--patron-rombos);
-  background-size: var(--patron-tamanio-cinta);
-  background-position: var(--patron-posicion-cinta);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%, #000 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 45%, #000 100%);
 }
 
 .consolaEncabezado {
@@ -150,19 +64,12 @@
   flex-wrap: wrap;
   gap: var(--espacio-2) var(--espacio-4);
 }
-
-/**
- * ⚠️ ES UN ROTULO DE ENTORNO, NO UNA ETIQUETA DE PRODUCTO.
- * Amarillo Cambio sobre `--sup-noche`: **13.97:1**.
- */
 .marcaConsola {
   margin: 0;
   font-family: var(--fuente-texto);
   font-size: var(--texto-xs);
   font-weight: var(--peso-semi);
-  letter-spacing: var(--tracking-amplio);
-  text-transform: uppercase;
-  color: var(--color-cambio);
+  color: var(--color-tiempo-extra);
 }
 
 /**
@@ -178,61 +85,23 @@
 .identidad {
   margin: 0;
   font-size: var(--texto-xs);
-  letter-spacing: var(--tracking-etiqueta);
-  text-transform: uppercase;
-  color: var(--color-sobre-oscuro-2);
+  color: var(--color-neutro-texto);
   /* Un email largo parte en vez de empujar la banda a 320px. */
   overflow-wrap: anywhere;
 }
 
 .identidad strong {
-  color: var(--color-papel);
+  color: var(--color-tinta);
   font-weight: var(--peso-semi);
 }
-
-/**
- * PESTAÑAS: AHORA SON `NavDeSeccion`, LA MISMA DEL PANEL DEL VENDEDOR.
- *
- * ⚠️ ESTO BORRA 45 LINEAS DE COPIA Y CIERRA LA DEUDA QUE ESTE ARCHIVO DEJO
- * ANOTADA. La copia existia porque `.navSeccionActivo` escribia
- * `color: var(--color-tinta)` LITERAL y esta banda ES tinta: 1.00:1. La salida
- * que se pidio acá —indireccionar el color con una variable y fallback igual
- * al valor de antes— es la que `ui.module.css` implementa hoy, asi que la
- * copia dejo de tener motivo. Con diez pestañas, ademas, mantener a mano el
- * scroll horizontal, el `aria-current`, el indicador animado y el contador era
- * mantener dos veces lo mismo.
- *
- * ⚠️ LOS TRES TOKENS SE DECLARAN ACA, EN EL MARCO, Y NO EN `.consola`: asi el
- * remapeo alcanza SOLO a la barra y no a cualquier cosa que mañana entre a la
- * banda.
- *
- *   --nav-activo   Amarillo Cambio sobre noche = **13.97:1**. Papel daria
- *                  15.72 pero se confundiria con el `<h1>`, que es papel: la
- *                  pestaña activa y el titulo tienen que distinguirse.
- *   --nav-hover    el mismo Cambio: el hover ADELANTA el estado activo. El
- *                  default del componente es `--color-cancha`, que sobre tinta
- *                  da 3.05:1 y queda debajo de AA.
- *   --nav-acento   el subrayado, que es FORMA y no informacion (el texto y el
- *                  `aria-current` ya lo dicen). Se pide como IMAGEN porque el
- *                  componente lo pinta con `background-image`.
- *
- * ⚠️ EL AIRE VERTICAL ES EL ANILLO DE FOCO, NO ESTETICA. La lista del
- * componente es `overflow-x: auto`, o sea un contenedor de scroll —y cuando un
- * eje deja de ser `visible` el otro computa a `auto`—, asi que el `outline` de
- * 3px con offset 2 se recortaba arriba y abajo. Es el unico camino de teclado
- * del back-office (WCAG 2.4.11). El padding se compensa con margenes negativos
- * iguales para no mover un pixel: el subrayado de la activa tiene que seguir
- * cayendo sobre la regla del `<nav>`.
- */
 .navConsola {
   max-width: 100%;
   margin-top: var(--espacio-4);
   padding-block: var(--espacio-2);
   margin-block: calc(var(--espacio-2) * -1 + var(--espacio-4)) calc(var(--espacio-2) * -1);
 
-  --nav-activo: var(--color-cambio);
-  --nav-hover: var(--color-cambio);
-  --nav-acento: linear-gradient(var(--eje), var(--color-cambio), var(--color-naranja));
+  --nav-activo: var(--color-tiempo-extra);
+  --nav-hover: var(--color-tiempo-extra);
 }
 
 /**
@@ -261,36 +130,14 @@
  */
 .titulo {
   margin: var(--espacio-6) 0 0;
-  color: var(--color-papel);
+  color: var(--color-tinta);
 }
-
-/**
- * FILETE EDITORIAL bajo el titulo. Es el separador que un borde de 1px gris no
- * sabe ser, y ancla la pantalla: en las tres, el ojo cae en el mismo lugar.
- *
- * ⚠️ ES CASI EL UNICO MOVIMIENTO DE ENTRADA DE ESTAS PANTALLAS. Un back-office
- * no lleva revelado por scroll: cada milisegundo de animacion es un milisegundo
- * esperando para leer un dato.
- */
 .filete {
   border: 0;
   height: 4px;
   width: 96px;
   margin: var(--espacio-4) 0 0;
   background-image: var(--degradado-acento);
-}
-
-@keyframes admin-filete {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .filete {
-    transform-origin: left center;
-    animation: admin-filete var(--transicion-lenta) var(--curva-corte) both;
-  }
 }
 
 /* ------------------------------------------------------------ hoja: textos */
@@ -305,34 +152,18 @@
 /** Encabezado de bloque dentro de la hoja. La regla maciza es del sistema. */
 .subtitulo {
   font-size: var(--texto-xl);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   margin: var(--espacio-7) 0 var(--espacio-4);
   padding-bottom: var(--espacio-2);
   border-bottom: 2px solid var(--color-tinta);
 }
 
 /* -------------------------------------------------------- fichas y datos */
-
-/**
- * ⚠️ SE VA EL BORDE DE 1px GRIS Y ENTRA ELEVACION REAL. `--color-neutro-borde`
- * sobre blanco da **1.26:1**: es un contorno que no se ve, y es literalmente el
- * diagnostico del dueño. Blanco + hairline de apoyo + filo de luz + `--sombra-1`
- * separa muchisimo mejor y no come 2px de ancho util a 320px.
- *
- * ⚠️ MENOS AIRE Y MAS SEPARACION, QUE NO ES LO MISMO: 16/20px en vez de 20 por
- * los cuatro lados.
- *
- * ⚠️ `isolation: isolate` PARA QUE LA FRANJA DE ESTADO PUEDA IR ARRIBA DE LA
- * ZONA DE PELIGRO. Sin un contexto de apilado propio, el `z-index: 1` del
- * pseudo se escaparia hacia el ancestro.
- */
 .tarjeta {
   position: relative;
   isolation: isolate;
   background: var(--superficie-1);
   border-radius: var(--radio);
-  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  box-shadow: none;
   padding: var(--espacio-4) var(--espacio-5);
   margin-bottom: var(--espacio-4);
   /* La franja de estado no se sale de la esquina redondeada. */
@@ -409,37 +240,19 @@
  */
 .numeroDeOrden {
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
+  font-size: var(--texto-sm);
   line-height: 1;
-  letter-spacing: var(--tracking-etiqueta);
-  text-transform: uppercase;
   user-select: all;
   overflow-wrap: anywhere;
 }
-
-/**
- * TITULO DE UNA FICHA DE TRABAJO, cuando la ficha no es un pago sino una
- * accion: "Cambiar la comision".
- *
- * ⚠️ EXISTE PORQUE EL FORMULARIO DE `/admin/comision` FLOTABA SOBRE EL PAPEL.
- * Era el unico control del back-office que cambia una regla de negocio de toda
- * la plataforma y estaba suelto entre dos parrafos, sin nada que dijera donde
- * empieza y donde termina la operacion. Va adentro de `.tarjetaCabecera`, asi
- * que hereda la misma regla maciza que separa la cabecera de un pago de sus
- * datos: las dos pantallas encuadran igual.
- */
 .tituloDeFicha {
   font-size: var(--texto-xl);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
 }
 
 .pasoDeFicha {
   margin: 0;
   font-size: var(--texto-xs);
   font-weight: var(--peso-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-texto);
 }
 
@@ -459,8 +272,6 @@
 .rotuloEstado {
   font-size: var(--texto-xs);
   font-weight: var(--peso-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-texto);
 }
 
@@ -539,19 +350,6 @@
 }
 
 /* ------------------------------------------------------- barra de reparto */
-
-/**
- * DE DONDE SALE LA PLATA, DIBUJADO.
- *
- * ⚠️ CONTESTA DE UN VISTAZO LA PREGUNTA QUE SE HACE ANTES DE CADA REEMBOLSO. Es
- * FORMA pura: no tiene requisito de contraste porque los tres importes estan
- * escritos con todas las letras justo arriba, en `.datos`. El riel lleva
- * `aria-hidden`.
- *
- * ⚠️ SE ANIMA UNA SOLA VEZ Y CON `transform`. El riel entero crece de izquierda
- * a derecha al primer pintado; los importes ya estan escritos y quietos. Nada
- * cuenta hacia arriba: es un sitio donde se transfiere plata.
- */
 .reparto {
   margin-top: var(--espacio-5);
 }
@@ -566,24 +364,11 @@
 }
 
 .repartoOffside {
-  background: var(--color-cambio);
+  background: var(--color-sobre-cancha);
 }
 
 .repartoVendedor {
   background: var(--color-cancha);
-}
-
-@keyframes admin-reparto {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .repartoRiel {
-    transform-origin: left center;
-    animation: admin-reparto var(--dur-escena) var(--curva-corte) both;
-  }
 }
 
 .repartoLeyenda {
@@ -594,8 +379,6 @@
   padding: 0;
   list-style: none;
   font-size: var(--texto-xs);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-texto);
 }
 
@@ -619,7 +402,7 @@
 }
 
 .muestraOffside {
-  background: var(--color-cambio);
+  background: var(--color-sobre-cancha);
 }
 
 .muestraVendedor {
@@ -627,37 +410,6 @@
 }
 
 /* ---------------------------------------------------------- zona de peligro */
-
-/**
- * ZONA DE PELIGRO.
- *
- * ⚠️ ANTES EL DISPARADOR DEL REEMBOLSO QUEDABA PEGADO AL ULTIMO DATO, con el
- * mismo aire que separa dos importes.
- *
- * ⚠️ LA SEÑAL ES UNA CINTA DE PELIGRO DE 10px, NO UN FILETE NI UN RELLENO
- * RAYADO, Y ESO CORRIGE DOS DEFECTOS MEDIDOS:
- *   (a) `border-top: 1px solid var(--color-naranja)` sobre una placa clara da
- *       **2.05:1**: un pelo de 1px a ese contraste no se ve;
- *   (b) `--patron-diagonales` con naranja al 16% da **1.14:1** contra su base:
- *       todo el aparato "aca empieza otra cosa" se resolvia en un rectangulo
- *       apenas tibio.
- * Naranja sobre tinta da **7.26:1**, asi que la cinta se ve desde el otro lado
- * de la habitacion, que es exactamente lo que tiene que pasar.
- *
- * ⚠️ EL RAYADO NO LLEVA TEXTO ENCIMA. Un texto de 14px sobre una trama de
- * periodo 13px no falla la formula de WCAG —que mide contra UN fondo— y falla
- * al ojo igual. La cinta ocupa 10px y el texto vive debajo, sobre color plano.
- *
- * ⚠️ SOBRE UNA SUPERFICIE CLARA, OSCURECER EL FONDO BAJA EL CONTRASTE DEL TEXTO
- * OSCURO, NO LO MEJORA: con el rayado al 16% `--color-alerta-hondo` caia a
- * **4.49:1**, debajo de AA. Por eso el cuerpo de la zona es color plano.
- *
- * Uso: <div class="<zonaPeligro> sup-calida">
- * `sup-calida` pinta `--superficie-calida` (#f7f4cf) y —esto es lo que no se
- * puede saltear— cablea `--color-neutro-tenue` a `--color-neutro-texto`
- * (5.51:1) y `--color-alerta` a `--color-alerta-hondo` (5.05:1): sobre ese
- * amarillo, los originales dan 4.39 y 4.36, los dos DEBAJO de AA.
- */
 .zonaPeligro {
   position: relative;
   margin: var(--espacio-5) calc(var(--espacio-5) * -1) calc(var(--espacio-4) * -1);
@@ -675,17 +427,6 @@
   --superficie-2: var(--superficie-1);
 }
 
-.zonaPeligro::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  block-size: 10px;
-  pointer-events: none;
-  background-color: var(--color-tinta);
-  background-image: var(--patron-diagonales-anchas);
-  --patron-color: var(--color-naranja);
-}
-
 .zonaPeligro > p {
   margin: 0;
 }
@@ -697,17 +438,6 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--espacio-4);
 }
-
-/**
- * ⚠️⚠️ EL ENVOLTORIO NO ES DECORATIVO: SIN EL, EL HOVER DE LA TARJETA NO
- * FUNCIONA. `.escalona > *` (fundacion) declara `animation: acercarse-corto …
- * both`, y `both` incluye `forwards`: la animacion sigue APLICANDO `transform`
- * para siempre despues de terminar, y una propiedad bajo control de una
- * animacion que rellena NO transiciona. Con `escalona` y `eleva` en el MISMO
- * elemento, la tarjeta saltaria de golpe a -4px y volveria de golpe, y el
- * `:active` —la mitad del gesto que `.eleva` documenta— no se percibiria. La
- * entrada va en el envoltorio, la elevacion en la tarjeta.
- */
 .celda {
   display: flex;
 }
@@ -730,7 +460,7 @@
   border: 1px solid transparent;
   border-radius: var(--radio);
   background: var(--superficie-1);
-  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  box-shadow: none;
   color: inherit;
 }
 
@@ -750,10 +480,9 @@
   /* `display: block` porque son <span>: inline ignora el margin vertical y el
      titulo terminaba pegado al detalle en la misma linea. */
   display: block;
-  font-family: var(--fuente-titulo);
+  font-family: var(--fuente-texto);
+  font-weight: var(--peso-semi);
   font-size: var(--texto-xl);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   margin-bottom: var(--espacio-1);
 }
 
@@ -782,17 +511,14 @@
   border: 1px dashed var(--linea-control);
   border-radius: var(--radio);
   background-image: var(--patron-rombos);
-  background-size: var(--patron-tamanio-fino);
-  background-position: var(--patron-posicion-fino);
   color: var(--color-neutro-texto);
 }
 
 .fantasmaTitulo {
   display: block;
-  font-family: var(--fuente-titulo);
-  font-size: var(--texto-lg);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
+  font-family: var(--fuente-texto);
+  font-weight: var(--peso-semi);
+  font-size: var(--texto-xl);
   color: var(--color-neutro-texto);
 }
 
@@ -802,8 +528,6 @@
   margin-bottom: var(--espacio-2);
   font-size: var(--texto-xs);
   font-weight: var(--peso-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-amplio);
   color: var(--color-alerta);
 }
 
@@ -832,48 +556,13 @@
   /* A 320px (288px utiles) el boton baja solo a su propia fila. */
   min-width: 200px;
 }
-
-/**
- * ⚠️ SE RENOMBRA DE `.etiqueta` A `.etiquetaCampo`. El nombre viejo era el
- * MISMO que la etiqueta de estado de `ui.module.css`: no colisionaban porque
- * son modulos distintos, pero cualquiera que leyera las dos hojas asumia que
- * eran lo mismo.
- *
- * `--color-neutro-texto` adentro de `sup-noche` se remapea a
- * `--color-sobre-oscuro-2`: **9.15:1**.
- */
 .etiquetaCampo {
   display: block;
   margin-bottom: var(--espacio-2);
   font-size: var(--texto-xs);
   font-weight: var(--peso-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-texto);
 }
-
-/**
- * ⚠️ EL BORDE PASA DE `--color-neutro-borde` A `--linea-control`, Y ES UN
- * DEFECTO REAL, NO UN GUSTO. `#e4e6de` da **1.26:1 sobre blanco** y **1.20:1
- * sobre papel**; WCAG 1.4.11 exige **3:1** para el contorno de algo que se
- * aprieta. Adentro de la banda, `sup-noche` lo remapea a
- * `--linea-control-oscura` (`#6f8f79`), que sobre noche da **4.60:1**.
- *
- * ⚠️ EL BORDE DE UN CONTROL SE MIDE CONTRA LOS DOS COLORES ADYACENTES. Si
- * alguien vuelve a poner un `.control` sobre `#f2f3ea`, `--linea-control` da
- * 2.90:1 y el defecto reaparece. Acá vive sobre la banda oscura y nunca sobre
- * una placa teñida.
- *
- * ⚠️ `min-height` EXPLICITO. El alto salia del padding sobre el line-height:
- * daba ~48px de casualidad, y cualquier cambio de tipografia lo bajaba de los
- * 44px de WCAG 2.5.5 sin que nadie se enterara.
- *
- * ⚠️ EL TAMAÑO ES 16px Y NO SE BAJA. Debajo de eso iOS Safari hace zoom al
- * enfocar y no lo deshace al salir.
- *
- * ⚠️ `text-transform: uppercase` ES SOLO VISUAL: el `value` viaja tal como se
- * tipeo y la pantalla ya hace `.toUpperCase()`.
- */
 .control {
   width: 100%;
   min-height: var(--alto-control);
@@ -885,16 +574,15 @@
   font-size: var(--texto-md);
   color: inherit;
   font-variant-numeric: tabular-nums;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  /* ⚠️ NO se transiciona `box-shadow`: nada se la cambia. El foco lo dibuja
-     `outline` y solo `outline`, por regla del sistema. */
-  transition: border-color var(--transicion-rapida) var(--curva);
+  transition:
+    color var(--transicion),
+    background-color var(--transicion),
+    border-color var(--transicion),
+    box-shadow var(--transicion);
 }
 
 .control::placeholder {
   color: var(--color-neutro-tenue);
-  letter-spacing: normal;
 }
 
 .control:hover {
@@ -920,16 +608,15 @@
 
 .buscadorHeroe .etiquetaCampo {
   font-size: var(--texto-sm);
-  letter-spacing: var(--tracking-amplio);
-  color: var(--color-cambio);
+  color: var(--color-tiempo-extra);
 }
 
 .buscadorHeroe .control {
   min-height: 72px;
   padding: 0 var(--espacio-4);
-  font-family: var(--fuente-titulo);
-  font-size: var(--display-3);
-  letter-spacing: 0.04em;
+  font-family: var(--fuente-texto);
+  font-weight: var(--peso-semi);
+  font-size: var(--texto-xl);
 }
 
 /* `--color-sobre-oscuro-tenue` sobre noche: 6.39:1. */
@@ -937,32 +624,16 @@
   margin: var(--espacio-4) 0 0;
   max-width: var(--ancho-lectura);
   font-size: var(--texto-sm);
-  color: var(--color-sobre-oscuro-tenue);
+  color: var(--color-neutro-texto);
 }
 
 /* Amarillo Cambio sobre noche: 13.97:1. */
 .ayudaBuscador code {
-  color: var(--color-cambio);
+  color: var(--color-tiempo-extra);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.02em;
 }
 
 /* ------------------------------------------------------------- marcador */
-
-/**
- * MARCADOR DE LA COMISION VIGENTE.
- *
- * ⚠️ REEMPLAZA A `<Cifras>`, Y NO ES CAPRICHO: ES LA UNICA SALIDA. `.cifra` es
- * una caja con borde de 1px que no se puede reencuadrar desde aca: es una clase
- * de CSS Module, se hashea al compilar, y `:global(.cifra)` apunta a un nombre
- * que no existe en el DOM. Se deja de usar el componente en esta pantalla.
- *
- * ⚠️ ES EL SEGUNDO PLANO OSCURO DE LA PANTALLA, y esa es la mitad del trabajo:
- * un back-office con un solo bloque oscuro arriba vuelve a ser papel plano tres
- * centimetros mas abajo.
- *
- * Uso: <section class="<marcador> sup-noche con-grano">
- */
 .marcador {
   border-radius: var(--radio);
   padding: var(--espacio-6) var(--espacio-6) var(--espacio-5);
@@ -974,18 +645,8 @@
   margin: 0;
   font-size: var(--texto-xs);
   font-weight: var(--peso-semi);
-  letter-spacing: var(--tracking-amplio);
-  text-transform: uppercase;
-  color: var(--color-cambio);
+  color: var(--color-tiempo-extra);
 }
-
-/**
- * ⚠️ EL IMPORTE ENTRA UNA VEZ Y TERMINA QUIETO. La clase global `.cifra-entra`
- * es la unica animacion que el sistema permite sobre un numero de plata: el
- * valor final esta pintado desde el primer cuadro y solo se desplaza. Nada de
- * contar hacia arriba —un numero que sube mientras alguien lo lee se interpreta
- * como un numero que todavia se esta calculando—.
- */
 /**
  * ⚠️⚠️ EL SELECTOR LLEVA EL NOMBRE DEL ELEMENTO, Y ES UN ARREGLO. `.cifra-entra`
  * declara `display: inline-block` —lo necesita para recortar la mascara—, este
@@ -1007,8 +668,7 @@ p.marcadorCifra {
   font-family: var(--fuente-titulo);
   font-size: var(--display-2);
   line-height: var(--interlineado-display);
-  letter-spacing: var(--tracking-display);
-  color: var(--color-papel);
+  color: var(--color-tinta);
 }
 
 .marcadorDatos {
@@ -1027,17 +687,15 @@ p.marcadorCifra {
 /* `--color-sobre-oscuro-tenue` sobre noche: 6.39:1. */
 .marcadorDatos dt {
   font-size: var(--texto-xs);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  color: var(--color-sobre-oscuro-tenue);
+  color: var(--color-neutro-texto);
 }
 
 /* Papel sobre noche: 15.72:1. */
 .marcadorDatos dd {
   margin: var(--espacio-1) 0 0;
-  font-size: var(--texto-lg);
+  font-size: var(--texto-sm);
   font-variant-numeric: tabular-nums;
-  color: var(--color-papel);
+  color: var(--color-tinta);
 }
 
 /* ---------------------------------------------------------- tira de cierre */
@@ -1066,7 +724,7 @@ p.marcadorCifra {
   font-size: var(--texto-sm);
   line-height: var(--interlineado-lectura);
   /* --color-sobre-oscuro-2 sobre noche: 9.15:1. */
-  color: var(--color-sobre-oscuro-2);
+  color: var(--color-neutro-texto);
 }
 
 /**
@@ -1081,7 +739,7 @@ p.marcadorCifra {
 }
 
 .cierreCuerpo code {
-  color: var(--color-cambio);
+  color: var(--color-tiempo-extra);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -1152,23 +810,10 @@ p.marcadorCifra {
 }
 
 /* ------------------------------------------------------------- esqueletos */
-
-/**
- * ⚠️ EL `loading.tsx` TIENE QUE TENER LA FORMA DE LO QUE VIENE. El grupo entero
- * es `force-dynamic`, asi que el esqueleto se ve SIEMPRE: si la carga muestra
- * cuatro lineas grises sobre papel y despues aparece una banda oscura a sangre,
- * el salto es de pantalla completa, en cada entrada a cada una de las tres
- * pantallas.
- *
- * ⚠️ LOS BLOQUES DE LA BANDA NO USAN LA CLASE GLOBAL `.esqueleto`. Su brillo es
- * `rgb(255 255 255 / 0.75)`, calibrado como 1.10:1 contra una base CLARA; sobre
- * la banda oscura seria un flash. En la hoja si se usa `.esqueleto`, que es
- * donde corresponde.
- */
 .esqueletoOscuro {
   display: block;
   border-radius: var(--radio-chico);
-  background: rgb(250 250 247 / 0.1);
+  background: var(--color-neutro-borde);
 }
 
 /**
@@ -1233,29 +878,7 @@ p.marcadorCifra {
   border-radius: var(--radio);
 }
 
-/* ==========================================================================
- * PANTALLAS NUEVAS DEL BACK-OFFICE (2026-09-11)
- * ==========================================================================
- *
- * Siete pantallas más: configuración, niveles, disputas, vendedores, órdenes,
- * reportes e ingresos. Todo lo que se agrega acá sigue la regla de la cabecera
- * del archivo: densidad y legibilidad, cero espectáculo. El único movimiento
- * que entra es el que ya existía —el filete del título, `eleva` en lo que se
- * puede tocar— y ninguno se dispara por scroll.
- * ======================================================================== */
-
 /* --------------------------------------------------------- colas del indice */
-
-/**
- * PENDIENTES: lo que espera a que alguien lo atienda.
- *
- * ⚠️ SOLO SE DIBUJA LO QUE TIENE ALGO. Una tarjeta en cero es ruido; la cola
- * vacía ya se ve adentro de su pantalla. Lo decide el TSX, no el CSS.
- *
- * ⚠️ EL NUMERO ES EL CONTENIDO Y POR ESO VA EN LA TIPOGRAFIA DE TITULARES —la
- * identidad le asigna Big Noodle a "titulares, precios, números de camiseta"—,
- * pero NO se anima: es un back-office y el número se lee, no se mira aparecer.
- */
 .pendientes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1268,7 +891,7 @@ p.marcadorCifra {
   border: 1px solid transparent;
   border-radius: var(--radio);
   background: var(--superficie-1);
-  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  box-shadow: none;
   color: inherit;
 }
 
@@ -1336,9 +959,10 @@ p.marcadorCifra {
   font-weight: var(--peso-medio);
   white-space: nowrap;
   transition:
-    color var(--transicion-rapida) var(--curva),
-    background-color var(--transicion-rapida) var(--curva),
-    border-color var(--transicion-rapida) var(--curva);
+    color var(--transicion),
+    background-color var(--transicion),
+    border-color var(--transicion),
+    box-shadow var(--transicion);
 }
 
 .filtro {
@@ -1351,12 +975,6 @@ p.marcadorCifra {
   color: var(--marca-texto, var(--color-cancha));
   border-color: var(--linea-marca);
 }
-
-/**
- * ⚠️ EL ACTIVO ES PAPEL SOBRE VERDE CANCHA: **5.16:1**, el mismo par que sostiene
- * los contrastes del sitio entero. La luz se RESTA: aclarar ese verde aunque sea
- * un 7% rompe AA.
- */
 .filtroActivo {
   color: var(--color-papel);
   background: var(--color-cancha);
@@ -1539,7 +1157,7 @@ p.marcadorCifra {
   padding: var(--espacio-4);
   border-radius: var(--radio);
   background: var(--superficie-1);
-  box-shadow: var(--sombra-0), var(--luz-superior);
+  box-shadow: none;
 }
 
 .bitacoraTitulo {

@@ -46,7 +46,7 @@ export function ErrorDePantalla({
 }) {
   return (
     <Contenedor ancho="angosto" vertical>
-      <section className={`${estilos.panel} sup-flotante entra-seco`}>
+      <section className={`${estilos.panel} sup-flotante`}>
         <span className={estilos.cinta} aria-hidden="true" />
 
         <div className={estilos.cuerpo}>
@@ -58,7 +58,7 @@ export function ErrorDePantalla({
             existe. Sin este, la página se queda sin encabezado de nivel uno y
             el atajo "ir al título" no lleva a ninguna parte.
           */}
-          <h1 className={`${estilos.titulo} display display-3`}>{titulo}</h1>
+          <h1 className={estilos.titulo}>{titulo}</h1>
 
           <p className={estilos.detalle}>{detalle}</p>
 

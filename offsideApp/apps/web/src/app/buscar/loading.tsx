@@ -29,19 +29,6 @@ export default function CargandoBusqueda() {
     <main id="contenido" className={estilos.pagina}>
       <BarraFantasma />
 
-      <div className={`${estilos.franja} sup-noche con-grano`}>
-        <div className={`${estilos.rombos} patron-vivo`} aria-hidden="true" />
-
-        <div className={estilos.franjaCuerpo}>
-          <p className={estilos.kicker}>Catálogo</p>
-          <h1 className={`${estilos.titulo} display display-3`}>
-            <span>
-              <span>Buscando</span>
-            </span>
-          </h1>
-        </div>
-      </div>
-
       <div className={estilos.cuerpo}>
         <Cargando>
           <EsqueletoDeVitrina conEncabezado={false} />

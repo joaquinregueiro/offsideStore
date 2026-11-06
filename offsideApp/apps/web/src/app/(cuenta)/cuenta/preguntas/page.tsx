@@ -109,14 +109,13 @@ export default async function MisPreguntas({
             </EstadoVacio>
           ) : (
             <Seccion titulo="Preguntas" dato={cantidad(pagina.total, 'pregunta')}>
-              <ul className={`${estilos.lista} ${estilos.revela}`}>
+              <ul className={estilos.lista}>
                 {preguntas.map((pregunta) => (
-                  <li key={pregunta.id} className={`${estilos.tarjetaTexto} sup-ficha eleva`}>
+                  <li key={pregunta.id} className={`${estilos.tarjetaTexto} sup-ficha`}>
                     <div className={estilos.tarjetaCabecera}>
                       <Link
                         href={`/p/${pregunta.listingId}`}
                         className={`${estilos.tarjetaEnlace} subraya`}
-                        transitionTypes={['avanza']}
                       >
                         {pregunta.listingTitle}
                       </Link>

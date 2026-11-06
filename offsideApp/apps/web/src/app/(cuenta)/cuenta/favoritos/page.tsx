@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 import { CampoOculto, Formulario } from '@/components/form';
 import { IconoFavorito } from '@/components/iconos';
-import { FotoCompartida, Pantalla } from '@/components/movimiento';
+import { Pantalla } from '@/components/movimiento';
 import { BotonEnlace, Etiqueta, EstadoVacio, Paginacion, Precio, Seccion } from '@/components/ui';
 import { cantidad, condicion, precio } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
@@ -79,22 +79,18 @@ export default async function MisFavoritos({
               titulo="Guardadas"
               dato={cantidad(pagina.total, 'publicación', 'publicaciones')}
             >
-              <ul className={`${estilos.favoritos} ${estilos.revela}`}>
+              <ul className={estilos.favoritos}>
                 {pagina.favoritos.map((favorito) => (
-                  <li key={favorito.listingId} className={`${estilos.favorito} sup-ficha eleva`}>
+                  <li key={favorito.listingId} className={`${estilos.favorito} sup-ficha`}>
                     {/*
                     ⚠️ `FotoCompartida` USA EL MISMO NOMBRE QUE LA VITRINA Y LA
                     FICHA (`foto-<id>`): la misma camiseta que se toca acá se
                     despega y aterriza en `/p/[id]`. El nombre es un contrato que
                     ya leen cuatro pantallas; no se cambia.
                   */}
-                    <Link
-                      href={`/p/${favorito.listingId}`}
-                      className={estilos.favoritoEnlace}
-                      transitionTypes={['avanza']}
-                    >
-                      <FotoCompartida id={favorito.listingId}>
-                        <span className={`${estilos.favoritoMarco} zoom-marco`}>
+                    <Link href={`/p/${favorito.listingId}`} className={estilos.favoritoEnlace}>
+                      <>
+                        <span className={estilos.favoritoMarco}>
                           {favorito.coverUrl === null ? (
                             <span
                               className={`${estilos.favoritoPatron} ${estilos.rombos}`}
@@ -103,7 +99,7 @@ export default async function MisFavoritos({
                           ) : (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              className={`${estilos.favoritoFoto} zoom-foto`}
+                              className={estilos.favoritoFoto}
                               src={favorito.coverUrl}
                               alt=""
                               width={240}
@@ -113,7 +109,7 @@ export default async function MisFavoritos({
                             />
                           )}
                         </span>
-                      </FotoCompartida>
+                      </>
 
                       <p className={estilos.favoritoTitulo}>{favorito.title}</p>
                     </Link>

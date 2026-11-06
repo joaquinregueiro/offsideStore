@@ -287,7 +287,7 @@ export default async function Reclamo({ params }: { params: Promise<{ id: string
             </div>
           ) : (
             <section className={`${estilos.tarjeta} ${estilos.fichaAlerta}`}>
-              <div className={`${estilos.zonaPeligro} sup-calida`}>
+              <div className={estilos.zonaPeligro}>
                 <Confirmar
                   etiqueta="Resolver el reclamo"
                   pregunta={`Según la resolución que elijas, esto puede devolverle hasta ${precio(total.toString(), reclamo.currency)} a quien compró y puede suspender al vendedor. Se ejecuta contra Mercado Pago y no se deshace desde acá.`}

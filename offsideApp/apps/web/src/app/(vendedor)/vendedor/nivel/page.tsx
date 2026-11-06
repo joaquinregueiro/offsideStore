@@ -88,7 +88,7 @@ export default async function MiNivel() {
             </Aviso>
           )}
 
-          <div className={`${estilos.tablero} sup-noche con-grano`}>
+          <div className={estilos.tablero}>
             <Cifras
               cifras={[
                 {
@@ -199,7 +199,7 @@ export default async function MiNivel() {
             </div>
           </Seccion>
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Sólo cuentan las ventas <strong>completadas</strong>: las canceladas y las que siguen
               en curso no suman. Subir de nivel no cambia lo que ya vendiste, porque cada orden

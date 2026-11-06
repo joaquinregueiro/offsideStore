@@ -71,10 +71,7 @@ export default async function Comision() {
             desde el {fecha}" y cuatro líneas más abajo una tarjeta repetía
             "Vigente desde {fecha}", en la pantalla más corta del grupo.
           */}
-          <section
-            className={`${estilos.marcador} sup-noche con-grano`}
-            aria-labelledby="marcador-comision"
-          >
+          <section className={estilos.marcador} aria-labelledby="marcador-comision">
             <p className={estilos.marcadorRotulo} id="marcador-comision">
               Comisión vigente
             </p>
@@ -85,7 +82,7 @@ export default async function Comision() {
               Nada de contar hacia arriba — un importe en movimiento se lee como
               un importe que todavía se está calculando.
             */}
-            <p className={`${estilos.marcadorCifra} cifra-entra`}>
+            <p className={estilos.marcadorCifra}>
               <span>{basisPointsToPercent(basisPoints)}</span>
             </p>
 

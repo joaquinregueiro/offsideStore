@@ -95,32 +95,10 @@ export function BarraFantasma() {
     <div className={estilos.barraFantasma} aria-hidden="true">
       <div className={estilos.barraFantasmaContenido}>
         <span className={estilos.barraFantasmaMarca}>
-          <LogoLockup alto={36} />
+          <LogoLockup alto={30} />
         </span>
-
         <span className={estilos.barraFantasmaBuscador} />
-
-        <span className={estilos.barraFantasmaAcciones}>
-          <span className={estilos.barraFantasmaEnlace} style={{ width: 74 }} />
-          <span className={estilos.barraFantasmaEnlace} style={{ width: 58 }} />
-          {/*
-            "Crear cuenta" es una PASTILLA de 44px con borde de Cambio en la
-            barra real, no texto: se dibuja con su forma o deja un hueco de
-            31px que se llena de golpe al llegar la barra.
-          */}
-          <span className={estilos.barraFantasmaEnlaceDestacado} style={{ width: 132 }} />
-        </span>
-
-        <span className={estilos.barraFantasmaMenu} />
       </div>
-
-      {/*
-        La tira de diagonales del filo inferior. Son 6px que la barra real
-        cuenta dentro de su padding: sin dibujarlos, el fantasma termina en un
-        corte seco y al llegar la barra aparece un borde que no estaba. Va
-        entre las dos esquinas redondeadas, como en la isla real.
-      */}
-      <span className={estilos.barraFantasmaCinta} />
     </div>
   );
 }
@@ -151,7 +129,7 @@ function FichaFantasma() {
           poco mas de Cambio: es el resaltador que la ficha real pone detras de
           la cifra.
         */}
-        <Barra alto="var(--alto-precio)" ancho="46%" className={estilos.precio} />
+        <Barra alto="var(--alto-precio)" ancho="46%" />
 
         <span className={estilos.titulo}>
           <Barra alto={12} />
@@ -278,7 +256,7 @@ export function EsqueletoDeFicha() {
       <div className={estilos.detalleColumna}>
         <Barra alto={12} ancho={110} />
         <Barra alto="var(--display-3)" ancho="88%" />
-        <Barra alto="var(--texto-3xl)" ancho="40%" className={estilos.precio} />
+        <Barra alto="var(--texto-3xl)" ancho="40%" />
 
         <span className={estilos.metadatos}>
           <Barra alto={25} ancho={72} />

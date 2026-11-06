@@ -8,35 +8,17 @@
  */
 
 .armazon {
-  /*
-   * ⚠️ UNA SOLA COLUMNA. Era un grid de `15.5rem + 1fr` para la barra; sin ella,
-   * lo que queda es el ancho maximo, el centrado y el canal lateral, que es lo
-   * unico que las 31 pantallas privadas necesitan compartir.
-   */
+  width: 100%;
   max-width: var(--ancho-contenido);
   margin: 0 auto;
-  /*
-   * ⚠️ `width: 100%` NO ES REDUNDANTE Y SIN EL ESTA PANTALLA SE ENCOGE. Es hijo
-   * DIRECTO del `body`, que es `display: flex`, y **un margen automatico en el
-   * eje transversal cancela el `stretch`**: en vez de ocupar el ancho y centrar
-   * su contenido, el armazon se achica hasta el ancho de su contenido.
-   * `tokens.css` ya parchea esto, pero su regla es `body > main` y esto es un
-   * `<div>`. Antes no se notaba por accidente: siendo un grid con una columna
-   * fija de 15.5rem para la barra, su ancho maximo daba ancho. Medido al sacar
-   * la barra: en un viewport de 1280 el armazon media **334px**.
-   */
-  width: 100%;
   padding: var(--espacio-5) var(--canal) var(--espacio-seccion);
 }
 
-/* ================================================================== solapas */
+.privadoContenido .armazon {
+  padding: 0;
+}
 
-/**
- * ⚠️ LAS SOLAPAS SON EL SEGUNDO NIVEL Y SE VEN COMO TAL: texto con un filete
- * abajo, sin marco, sin sombra y sin halo. El titulo de la pantalla ya dice en
- * que seccion estas; que las dos cosas se vieran igual de importantes era el
- * motivo de que la pantalla anterior no se entendiera.
- */
+/* ================================================================== solapas */
 .solapas {
   margin-bottom: var(--espacio-6);
   border-bottom: 1px solid var(--linea-tenue);
@@ -69,7 +51,11 @@
   font-size: var(--texto-sm);
   font-weight: var(--peso-medio);
   white-space: nowrap;
-  transition: color var(--transicion) var(--curva);
+  transition:
+    color var(--transicion),
+    background-color var(--transicion),
+    border-color var(--transicion),
+    box-shadow var(--transicion);
 }
 
 .solapa::after,
@@ -81,7 +67,11 @@
   border-radius: var(--radio-pastilla);
   background-color: var(--color-cancha);
   transform: scaleX(0);
-  transition: transform var(--dur-media) var(--curva-corte);
+  transition:
+    color var(--transicion),
+    background-color var(--transicion),
+    border-color var(--transicion),
+    box-shadow var(--transicion);
 }
 
 .solapa:hover,
@@ -91,7 +81,6 @@
 
 .solapa:hover::after,
 .solapa:focus-visible::after {
-  transform: scaleX(1);
   background-color: var(--linea-control);
 }
 
@@ -114,7 +103,7 @@
 }
 
 .solapaActiva .solapaDato {
-  background-color: var(--color-cambio);
+  background-color: var(--color-sobre-cancha);
   color: var(--color-tinta);
 }
 
@@ -128,5 +117,86 @@
   .solapas {
     margin-inline: calc(var(--canal) * -1);
     padding-inline: var(--canal);
+  }
+}
+
+/* Area privada: barra lateral de 216px + contenido. La barra solo existe en escritorio. */
+.privado {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: flex-start;
+  gap: var(--espacio-6);
+  width: 100%;
+  max-width: var(--ancho-contenido);
+  margin: 0 auto;
+  padding: var(--espacio-6) var(--canal) var(--espacio-8);
+}
+
+.privadoContenido {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.lateral {
+  flex: 0 0 216px;
+  padding: var(--espacio-2);
+  border-radius: var(--radio-ficha);
+  background: var(--color-blanco);
+  box-shadow: var(--sombra-1);
+}
+
+.lateralLista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lateralEnlace {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--alto-control);
+  padding: 0 var(--espacio-3);
+  border-radius: var(--radio);
+  color: var(--color-tinta);
+  font-size: 14px;
+}
+
+.lateralEnlace:hover {
+  background: var(--color-neutro-suave);
+  color: var(--color-tinta);
+}
+
+.lateralEnlace[aria-current='page'] {
+  background: var(--color-sobre-cancha);
+  color: var(--color-tiempo-extra);
+  font-weight: var(--peso-semi);
+}
+
+.lateralTexto {
+  flex: 1;
+}
+
+.lateralDato {
+  min-width: 20px;
+  padding: 0 var(--espacio-2);
+  border-radius: var(--radio-pastilla);
+  background: var(--color-cancha);
+  color: var(--color-blanco);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  line-height: 20px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .privado {
+    padding-top: var(--espacio-4);
+  }
+
+  .lateral {
+    display: none;
   }
 }

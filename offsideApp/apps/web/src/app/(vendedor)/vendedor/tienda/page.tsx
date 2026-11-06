@@ -105,7 +105,7 @@ export default async function MiTienda() {
             </div>
           </Seccion>
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               No prometas plazos que no vas a poder cumplir: el plazo de despacho de cada orden lo
               fija Offside y despachar tarde cuenta en tu reputación.

@@ -236,7 +236,7 @@ export default async function PromocionarPublicacion({
             </Seccion>
           )}
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               El multiplicador y la duración los fija Offside desde su configuración y pueden
               cambiar. Lo que se aplica a tu promoción es lo que estaba vigente cuando la activaste:

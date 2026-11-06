@@ -132,7 +132,7 @@ function Domicilio({ snapshot }: { snapshot: Record<string, unknown> }) {
       {numero !== null && ` ${numero}`}
       {departamento !== null && `, ${departamento}`}
       {(calle !== null || numero !== null) && <br />}
-      {codigoPostal !== null && `${codigoPostal} `}
+      {codigoPostal !== null && codigoPostal}
       {ciudad}
       {provincia !== null && (
         <>

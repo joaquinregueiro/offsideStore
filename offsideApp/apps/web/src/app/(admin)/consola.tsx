@@ -130,7 +130,7 @@ export function Consola({
   }
 
   return (
-    <div className={`${estilos.consola} sup-noche con-grano`}>
+    <div className={estilos.consola}>
       {/*
         Rombos de la bandera, estaticos y en la mitad derecha. Van en un span
         propio porque `sup-noche` ya usa `::before` (el filo de luz) y
@@ -157,7 +157,7 @@ export function Consola({
           <NavDeSeccion items={items} activo={activo} etiqueta="Back-office" />
         </div>
 
-        <h1 className={`display display-3 ${estilos.titulo}`}>{titulo}</h1>
+        <h1 className={estilos.titulo}>{titulo}</h1>
         <hr className={estilos.filete} aria-hidden="true" />
 
         {children}

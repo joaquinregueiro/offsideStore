@@ -57,7 +57,7 @@ const ESTADOS: Record<string, { etiqueta: string; tono: TonoChapa; que: string; 
     tono: 'marca',
     que: 'Cobrás en tu propia cuenta. Offside retiene su comisión del mismo pago.',
     // Las dos globales traen el fondo de marca, el grano y el filo de luz.
-    clase: 'sup-cancha con-grano',
+    clase: ' ',
   },
   expired: {
     etiqueta: 'Vencida',
@@ -160,13 +160,11 @@ export default async function ConexionConMercadoPago({
 
             ⚠️ EL ATRIBUTO Y LA CLASE NO SON REDUNDANTES: `data-estado` es lo que
             el CSS usa para elegir riel, rayas o pozo, y la clase es la única
-            forma de traer una superficie GLOBAL (`sup-cancha`), que un módulo no
+            forma de traer una superficie GLOBAL (``), que un módulo no
             puede escribir.
           */}
             <div
-              className={[estilos.tarjetaConexion, estado.clase, 'entra-acerca']
-                .filter(Boolean)
-                .join(' ')}
+              className={[estilos.tarjetaConexion, estado.clase, ''].filter(Boolean).join(' ')}
               data-estado={claveEstado}
             >
               <div className={estilos.estadoConexion}>
@@ -268,7 +266,7 @@ export default async function ConexionConMercadoPago({
           Pago es un requisito para cobrar, no un sello de confianza, y decirlo
           en gris de 13px al pie es no decirlo.
         */}
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Conectar Mercado Pago no es un distintivo de confianza: es lo que hace posible que te
               paguen. Podés desvincular cuando quieras y tus publicaciones vuelven solas al

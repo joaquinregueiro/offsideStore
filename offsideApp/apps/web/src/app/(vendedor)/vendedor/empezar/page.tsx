@@ -110,7 +110,7 @@ export default async function EmpezarAVender() {
           </Casilla>
         </Formulario>
 
-        <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+        <div className={estilos.cierre}>
           <p className={estilos.nota}>
             Crear la tienda no te habilita todavía: faltan la identificación fiscal y Mercado Pago.
             No es una cuenta nueva, es un rol más sobre la que ya tenés — seguís comprando con la

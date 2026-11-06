@@ -340,7 +340,7 @@ export default async function NuevaPublicacion() {
           ⚠️ La publicación sale visible de inmediato porque la moderación previa
           todavía no está decidida. No se promete una revisión que no existe.
         */}
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Tu publicación queda visible apenas la publicás: no hay nadie revisando del otro lado.
               El stock se descuenta cuando el pago del comprador se aprueba, no antes.

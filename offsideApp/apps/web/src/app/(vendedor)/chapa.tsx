@@ -79,15 +79,13 @@ export function Chapa({
         chica ? estilos.chapaChica : '',
         // Las tres globales traen el fondo de marca, el grano y la entrada al
         // primer pintado. El color de la superficie NO se escribe en el módulo.
-        'sup-cancha',
-        'con-grano',
-        'entra-acerca',
+        '',
+        '',
+        '',
       ]
         .filter(Boolean)
         .join(' ')}
     >
-      <span className={`${estilos.chapaPatron} patron-vivo`} aria-hidden="true" />
-
       <div>
         <p className={estilos.chapaRotulo}>{rotulo}</p>
         <h1 className={estilos.chapaTitulo}>

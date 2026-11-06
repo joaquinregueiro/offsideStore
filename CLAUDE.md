@@ -1358,6 +1358,22 @@ Auditoría en el navegador de ~40 pantallas a 1280 y 375px: corregidas las fecha
 de "Mi reputación" (4.38:1) y dos enlaces de ingreso de 18px de alto.
 ⚠️ Quedan 33 controles de 20–23px en `/admin/configuracion`.
 
+**Rediseño sobrio con la estructura de Mercado Libre — ✅ en código, sin desplegar
+(2026-11-06)**: barra de dos filas, portada que llega rápido a las publicaciones,
+filtros como lista, ficha en tres zonas con caja de compra y barra lateral en el panel.
+Detalle en `offsideApp/docs-implementation/frontend-sobrio-2026-11-06.md`.
+
+⚠️ **Revierte a propósito el rediseño del 2026-09-10**: sin glow, vidrio, mallas ni
+animaciones; radios de 6 y 8 px; Big Noodle solo en logo, titular de portada y precios.
+Todo lo que esta sección dice arriba sobre movimiento, superficies y luz es historia.
+
+⚠️ **No se copian funciones que Offside no tiene**: compra protegida, cuotas, envío
+gratis, ofertas. Quedan visibles "Envío a convenir" y "La autenticidad la declara el
+vendedor".
+
+⚠️ Los **tests de integración no se corrieron** (Docker no arrancó) y **no se vieron
+fotos reales**: se verificó en el navegador con una base embebida y datos cargados a mano.
+
 **Desplegado en producción** en **`offside.com.ar`**, en un VPS con Coolify
 (DEC-012), con HTTPS y migraciones aplicadas al arrancar el contenedor. Ver
 `offsideApp/docs-implementation/deployment-coolify.md`.

@@ -60,7 +60,7 @@ export default async function IdentificacionFiscal() {
 
           {perfil !== null && (
             <Seccion titulo="Lo que tenemos cargado">
-              <div className={`${estilos.tarjeta} entra-acerca`}>
+              <div className={estilos.tarjeta}>
                 {/*
                 ⚠️ EL NUMERO VA EN MONOESPACIADA (`.dato`). Son once dígitos que
                 alguien va a cotejar contra su constancia: con una tipografía
@@ -130,7 +130,7 @@ export default async function IdentificacionFiscal() {
           exactamente lo que alguien podría entender al revés — y entenderlo al
           revés es creer que Offside comprobó una titularidad que no comprobó.
         */}
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Verificamos que el número sea válido, no que sea tuyo: todavía no consultamos a ARCA.
               Cargar una identificación que no te pertenece es motivo de suspensión. El modelo

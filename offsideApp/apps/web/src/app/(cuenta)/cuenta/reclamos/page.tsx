@@ -80,13 +80,12 @@ export default async function MisReclamos() {
             </EstadoVacio>
           ) : (
             <Seccion titulo="Reclamos" dato={cantidad(reclamos.length, 'reclamo')}>
-              <ul className={`${estilos.lista} ${estilos.revela}`}>
+              <ul className={estilos.lista}>
                 {ordenados.map((reclamo) => (
                   <li key={reclamo.id}>
                     <Link
                       href={`/cuenta/reclamos/${reclamo.id}`}
-                      className={`${estilos.reclamo} sup-ficha eleva destello presiona`}
-                      transitionTypes={['avanza']}
+                      className={`${estilos.reclamo} sup-ficha`}
                     >
                       <div className={estilos.reclamoCabecera}>
                         <p className={estilos.reclamoTitulo}>{motivoDeReclamo(reclamo.reason)}</p>

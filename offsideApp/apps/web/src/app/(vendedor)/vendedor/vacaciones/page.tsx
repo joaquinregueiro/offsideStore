@@ -174,7 +174,7 @@ export default async function Vacaciones() {
             </>
           )}
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               El modo vacaciones no te exime de las órdenes que ya tenés: lo que se pagó antes hay
               que despacharlo igual, y el plazo de despacho sigue corriendo.

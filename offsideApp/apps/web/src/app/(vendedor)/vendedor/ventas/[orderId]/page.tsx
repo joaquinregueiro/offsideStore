@@ -250,7 +250,7 @@ export default async function DetalleDeVenta({ params }: { params: Promise<{ ord
             en el pago, tal cual.
           */}
             {venta.status !== 'PENDING_PAYMENT' && venta.status !== 'CANCELLED' ? (
-              <details className={`${estilos.letraChica} desplegable`}>
+              <details className={estilos.letraChica}>
                 <summary className={estilos.letraChicaTitulo}>
                   ¿Cuándo tengo la plata disponible?
                 </summary>

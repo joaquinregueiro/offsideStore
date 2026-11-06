@@ -11,16 +11,6 @@
  * esos seria otro 404 con aspecto de promesa, que es peor que el 404 original
  * porque ya venias de uno.
  */
-
-/**
- * ⚠️ ES UN `<a>` Y POR ESO SI PUEDE ELEVARSE. La regla del sistema es que el
- * hover no promete lo que no existe: acá la ficha entera navega, asi que
- * `eleva destello` —las dos globales, aplicadas desde el JSX— dicen la verdad.
- *
- * ⚠️ EL COLOR NO SE HEREDA DEL ENLACE. Sin `color`, un `<a>` toma
- * `--color-cancha` de la regla global y los tres textos de la ficha saldrian
- * verdes, incluido el detalle en 13px.
- */
 .salida {
   display: flex;
   flex-direction: column;
@@ -32,19 +22,13 @@
   border: 1px solid var(--linea-tenue);
   border-radius: var(--radio);
   background-color: var(--superficie-1);
-  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
+  box-shadow: none;
   color: var(--texto);
 }
 
 .salida:hover {
   color: var(--texto);
 }
-
-/**
- * ⚠️ EL ROMBO ES FORMA, NO INFORMACION, y por eso puede ir en `--verde-500`
- * (3.12:1 sobre blanco, que es el minimo de WCAG 1.4.11 para un grafico). El
- * dato lo dice el texto de abajo.
- */
 .marcador {
   width: 10px;
   height: 10px;
@@ -54,12 +38,10 @@
 }
 
 .salidaTitulo {
-  font-family: var(--fuente-titulo);
-  font-weight: var(--peso-normal);
+  font-family: var(--fuente-texto);
+  font-weight: var(--peso-semi);
   font-size: var(--texto-xl);
-  line-height: var(--interlineado-titulo);
-  letter-spacing: var(--tracking-titulo);
-  text-transform: uppercase;
+  line-height: 1.25;
   /* La regla dura de 320px: un nombre largo no puede empujar la pagina. */
   overflow-wrap: anywhere;
 }

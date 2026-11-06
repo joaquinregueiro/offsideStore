@@ -169,7 +169,7 @@ export default async function FotosDeLaPublicacion({
               `prefers-reduced-motion`, las fotos ya están: la clase global se
               apaga entera, no deja nada en `opacity: 0`.
             */}
-              <ul className={`${estilos.galeria} revela-grilla`}>
+              <ul className={estilos.galeria}>
                 {imagenes.map((imagen, indice) => (
                   <li key={imagen.id}>
                     <figure className={estilos.miniatura}>
@@ -189,7 +189,7 @@ export default async function FotosDeLaPublicacion({
                       `scale` escrito a mano. Es el mismo acercamiento que usan
                       la vitrina y el inventario.
                     */}
-                      <span className={`${estilos.miniaturaMarco} zoom-marco`}>
+                      <span className={estilos.miniaturaMarco}>
                         {/*
                         ⚠️ `<img>` y no `next/image`: las fotos se sirven ya
                         redimensionadas desde el CDN del bucket, en tres
@@ -200,7 +200,6 @@ export default async function FotosDeLaPublicacion({
                       */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          className="zoom-foto"
                           src={imagen.variants.thumb ?? imagen.url}
                           {...srcSet(imagen.variants)}
                           sizes="(max-width: 420px) 92vw, 220px"
@@ -273,7 +272,7 @@ export default async function FotosDeLaPublicacion({
           ⚠️ Y SE DICE QUE BORRAR LA ULTIMA DE UNA ACTIVA SE RECHAZA: bajarla en
           silencio sería dejar de vender sin enterarse.
         */}
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               La portada es la primera foto y por ahora no se puede reordenar: si querés otra
               portada, borrá las que sobran y subilas en el orden que quieras. Si la publicación

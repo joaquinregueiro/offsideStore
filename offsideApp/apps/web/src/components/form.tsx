@@ -363,7 +363,7 @@ export function Formulario({
         tamanio={tamanio}
         bloque={bloque}
         cargando={pending}
-        className={variante === 'primario' ? clases('luz-filo', bloque && 'respira') : undefined}
+        className={variante === 'primario' ? clases('', bloque && '') : undefined}
       >
         {pending ? 'Enviando…' : enviar}
       </Boton>

@@ -239,7 +239,7 @@ export default async function Administracion() {
             <Seccion titulo="Pendientes">
               <div className={estilos.pendientes}>
                 {colas.map((cola) => (
-                  <Link key={cola.clave} href={cola.href} className={`${estilos.pendiente} eleva`}>
+                  <Link key={cola.clave} href={cola.href} className={estilos.pendiente}>
                     <span className={estilos.pendienteNumero}>{cola.cantidad}</span>
                     <span className={estilos.pendienteTexto}>
                       {cola.cantidad === 1 ? cola.singular : cola.plural}
@@ -265,13 +265,13 @@ export default async function Administracion() {
               ⚠️ `escalona` CORTA EN EL HIJO 12. Acá son como mucho 9 + 5 = 14, y
               las últimas simplemente aparecen sin escalonar.
             */}
-            <div className={`${estilos.accesos} escalona`}>
+            <div className={estilos.accesos}>
               {accesos.map((acceso) => {
                 const Icono = ICONOS[acceso.icono];
 
                 return (
                   <div key={acceso.href} className={estilos.celda}>
-                    <Link href={acceso.href} className={`${estilos.acceso} eleva`}>
+                    <Link href={acceso.href} className={estilos.acceso}>
                       <span className={estilos.accesoIcono} aria-hidden="true">
                         <Icono tamanio={22} />
                       </span>
@@ -303,7 +303,7 @@ export default async function Administracion() {
           ⚠️ ADENTRO SOLO MARCADO PROPIO: ningún componente de `ui.tsx` puede ir
           en una superficie oscura (escriben `--color-tinta` literal).
         */}
-        <div className={`${estilos.cierre} sup-noche con-grano`}>
+        <div className={estilos.cierre}>
           <div className={estilos.consolaCentro}>
             <p className={estilos.cierreCuerpo}>
               <IconoAutenticado tamanio={18} />

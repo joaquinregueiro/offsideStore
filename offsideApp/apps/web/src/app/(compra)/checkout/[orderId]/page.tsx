@@ -203,12 +203,9 @@ export default async function Checkout({
 
         <Migas items={[{ texto: 'Mis compras', href: '/cuenta/compras' }, { texto: 'Pago' }]} />
 
-        <div className={`${estilos.cabecera}${quieto ? '' : ' entra'}`}>
+        <div className={`${estilos.cabecera}${quieto ? '' : ' '}`}>
           <h1 className={estilos.titulo}>Orden {order.orderNumber}</h1>
-          <span
-            className={`${estilos.reglaTitulo}${quieto ? '' : ` ${estilos.reglaTituloAnimada}`}`}
-            aria-hidden="true"
-          />
+          <span className={`${estilos.reglaTitulo}${quieto ? '' : ``}`} aria-hidden="true" />
           <p className={estilos.fechaOrden}>Creada el {fecha(order.createdAt)}</p>
         </div>
 
@@ -230,7 +227,7 @@ export default async function Checkout({
         */}
         {confirmando && (
           <section
-            className={`${estilos.confirmando} sup-noche con-grano`}
+            className={estilos.confirmando}
             role="status"
             style={{ '--espera': `${SEGUNDOS_ENTRE_REINTENTOS}s` } as CSSProperties}
           >
@@ -308,11 +305,8 @@ export default async function Checkout({
           recibe el tono YA resuelto por `tonoDeOrden()`: el CSS no tiene un
           segundo mapa de estados.
         */}
-        <section
-          className={`${estilos.ticket} sup-ficha con-grano${quieto ? '' : ' entra'}`}
-          data-tono={tono}
-        >
-          <div className={`${estilos.ticketBanda} ${estilos.rombos}`} aria-hidden="true" />
+        <section className={`${estilos.ticket} sup-ficha ${quieto ? '' : ' '}`} data-tono={tono}>
+          <div className={estilos.ticketBanda} aria-hidden="true" />
 
           <header className={estilos.ticketCabecera}>
             <div>
@@ -336,16 +330,16 @@ export default async function Checkout({
 
               return (
                 <div key={item.id} className={estilos.itemOrden}>
-                  <span className={`${estilos.itemMarco} zoom-marco`}>
+                  <span className={estilos.itemMarco}>
                     {portada === undefined ? (
                       <span
-                        className={`${estilos.itemPatron} ${estilos.rombos} ${estilos.rombosFinos}`}
+                        className={`${estilos.itemPatron} ${estilos.rombosFinos}`}
                         aria-hidden="true"
                       />
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        className={`${estilos.itemFoto} zoom-foto`}
+                        className={estilos.itemFoto}
                         src={portada}
                         alt=""
                         width={72}
@@ -399,7 +393,7 @@ export default async function Checkout({
               palabras.
             */}
             {pagada && !cancelada && (
-              <span className={`${estilos.sello} entra-telon-diagonal oblicuo`} aria-hidden="true">
+              <span className={`${estilos.sello}  oblicuo`} aria-hidden="true">
                 Pagada
               </span>
             )}
@@ -407,9 +401,9 @@ export default async function Checkout({
 
           <div className={estilos.perforacion} aria-hidden="true" />
 
-          <div className={`${estilos.total} sup-2`}>
+          <div className={estilos.total}>
             <span className={estilos.totalConcepto}>Total</span>
-            <span className={`${estilos.totalValor}${quieto ? '' : ' cifra-entra'}`}>
+            <span className={`${estilos.totalValor}${quieto ? '' : ' '}`}>
               {quieto ? total : <span>{total}</span>}
             </span>
           </div>
@@ -430,13 +424,13 @@ export default async function Checkout({
           justo despues de volver de Mercado Pago es invitar a pagar dos veces
           la misma orden.
 
-          ⚠️ EL BLOQUE DE MARCA ES EL ENFASIS. Sobre `.sup-cancha` el primario
+          ⚠️ EL BLOQUE DE MARCA ES EL ENFASIS. Sobre `.` el primario
           pasa solo a Amarillo Cambio con texto Tinta (13.97:1), y el corte
           diagonal de seccion es la bandera cruzando la pantalla: la unica vez en
           todo el tramo, puesta donde se cobra.
         */}
         {pendiente && !vencida && !confirmando && (
-          <div className={`${estilos.accionPago} sup-cancha con-grano`}>
+          <div className={estilos.accionPago}>
             <Formulario
               accion={pagar}
               enviar={status === 'failure' ? 'Intentar de nuevo' : 'Pagar con Mercado Pago'}
@@ -495,7 +489,7 @@ export default async function Checkout({
           y no se promete ninguno.
         */}
         {envio !== null && (
-          <section className={`${estilos.envio} sup-ficha con-grano`}>
+          <section className={`${estilos.envio} sup-ficha`}>
             <h2 className={estilos.envioTitulo}>
               <IconoCamion tamanio={20} />
               <span>Envío</span>
@@ -586,7 +580,7 @@ export default async function Checkout({
             className={
               cancelada
                 ? `${estilos.cierre} ${estilos.cierreApagado} sup-fosa con-grano`
-                : `${estilos.cierre} sup-cancha con-grano`
+                : `${estilos.cierre} con-grano`
             }
           >
             <p className={estilos.cierreTitulo}>

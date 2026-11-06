@@ -96,7 +96,7 @@ export default function NoEncontrado() {
                   no en el modulo porque el modulo no puede referenciar un
                   `@keyframes` global.
                 */}
-                <Link href={salida.href} className={`${estilos.salida} eleva destello`}>
+                <Link href={salida.href} className={estilos.salida}>
                   <span className={estilos.marcador} aria-hidden="true" />
                   <span className={estilos.salidaTitulo}>{salida.titulo}</span>
                   <span className={estilos.salidaDetalle}>{salida.detalle}</span>

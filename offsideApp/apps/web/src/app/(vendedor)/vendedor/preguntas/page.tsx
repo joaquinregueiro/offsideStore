@@ -214,7 +214,7 @@ export default async function PreguntasDelVendedor({
             </Seccion>
           )}
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Las respuestas son públicas y no se pueden editar después. Offside no tiene chat
               privado entre comprador y vendedor: todo lo que se acuerde fuera de la plataforma

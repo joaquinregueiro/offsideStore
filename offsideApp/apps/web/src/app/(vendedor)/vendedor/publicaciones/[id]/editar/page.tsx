@@ -315,7 +315,7 @@ export default async function EditarPublicacion({ params }: { params: Promise<{ 
             </div>
           </Seccion>
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Cada cambio de precio y de condición queda registrado (BR-015). La categoría no se
               puede cambiar: volvería obligatorios atributos que esta publicación no tiene, así que

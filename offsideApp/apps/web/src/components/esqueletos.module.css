@@ -1,79 +1,6 @@
-/**
- * ESQUELETOS DE CARGA
- * =============================================================================
- *
- * ⚠️ ES LO PRIMERO QUE VE ALGUIEN EN CADA NAVEGACION. El sitio entero es
- * `force-dynamic`: no hay una sola pantalla cacheada, asi que entre el clic y
- * el HTML hay una consulta a PostgreSQL —y en la vitrina, ademas, la portada de
- * cada publicacion—. Estos bloques son lo unico que ocupa esa ventana.
- *
- * ⚠️ VERSION LUMINOSA (2026-09-10). El dueño rechazo la anterior por "cuadrada
- * y anticuada", y el esqueleto era la pieza mas cuadrada del sitio: barras de
- * radio 1px, gris plano, quietas. Ahora las barras son pastillas, las fichas
- * llevan el radio de ficha (20px), sus dos lavados de luz y el anillo conico
- * de la ficha real, el marco de la foto tiene un punto de luz arriba a la
- * derecha —la direccion de la luz del sistema— y las barras se tiñen apenas de
- * verde y de Amarillo Cambio: un esqueleto tiene que parecer de ESTE sitio, no
- * de cualquier framework.
- *
- * ⚠️ UN ESQUELETO QUIETO NO SE LEE COMO "CARGANDO", SE LEE COMO "ROTO". El
- * brillo lo aporta la clase GLOBAL `.esqueleto` de `movimiento.css`, que mueve
- * un pseudo con `transform` —compositor puro— y vive adentro de
- * `@media (prefers-reduced-motion: no-preference)`. Este modulo NO declara
- * keyframes: solo GEOMETRIA, tinte y luz estatica.
- *
- * ⚠️ DONDE ESTE ARCHIVO PISA UNA PROPIEDAD DE UNA UTILIDAD GLOBAL, LO HACE CON
- * LA CLASE DUPLICADA (`.barra.barra`, `.ficha.ficha`, `.marco.marco`), Y NO ES
- * UN TYPO. El orden de inyeccion entre el CSS global y un CSS Module no esta
- * garantizado en Next: `.esqueleto` declara `border-radius: 12px` y
- * `background-color`, `.sup-ficha` declara `background` (shorthand, que resetea
- * `background-image`), `border-radius` y `box-shadow`, todas con especificidad
- * (0,1,0), la misma que una clase de aca. Una pastilla que quede en 12px es lo
- * mismo en una barra de 13px de alto y es OTRA FORMA en una de 52; una ficha
- * fantasma sin sus lavados es una ficha que cambia de fondo al llegar la real.
- * La clase repetida da (0,2,0) y gana sin depender de que hoja cargo primero.
- * Es el mismo recurso que `header.module.css` usa con `header.barra`.
- *
- * ⚠️ LAS MEDIDAS CALCAN AL CONTENIDO REAL, HASTA EL PIXEL DONDE SE PUEDE. Un
- * esqueleto con proporciones inventadas produce un SALTO al llegar el
- * contenido, que es peor que no poner nada: la persona ya empezo a leer y todo
- * se corre. Cada bloque de abajo tiene al lado la medida que copia.
- *
- * ⚠️ NINGUN ESQUELETO ENTRA ANIMADO, Y SIGUE SIENDO DELIBERADO aunque el resto
- * del sitio ahora entre escalonado. Una entrada de 560ms sobre una respuesta
- * de 200ms se ve como un parpadeo: aparece a medias y ya se fue. El esqueleto
- * se pinta entero desde el primer cuadro y lo que se anima es la LLEGADA del
- * contenido (`LlegaContenido` / `SeVaElEsqueleto`). El "dinamismo al cargar"
- * lo pone el shimmer, que ya corre desde el primer cuadro.
- *
- * ⚠️ NINGUN BLOB ACA. Un blob es una capa de compositor promovida que dura lo
- * que dura una consulta: se crea, flota 200ms y se destruye. Es gastar GPU en
- * el unico momento en que el navegador ya esta ocupado.
- */
-
 /* ============================================================== primitiva */
-
-/**
- * La barra. Forma, tinte y nada mas: el brillo lo pone `.esqueleto`.
- *
- * ⚠️ `display: block` HACE FALTA. La utilidad global no lo declara y el
- * elemento es un `<span>`: sin esto, un alto en pixeles sobre un inline no
- * hace absolutamente nada.
- *
- * ⚠️ EL TINTE ES UNA CAPA DE `background-image` SOBRE EL `background-color` DE
- * LA GLOBAL, no un color nuevo: un lavado de verde luminoso hacia Amarillo
- * Cambio en el eje del sistema. Es decorativo —no lleva texto— asi que no
- * tiene presupuesto de contraste, pero se queda bajo el 20% igual: mas que eso
- * y el esqueleto compite con la pagina que viene detras.
- */
 .barra {
   display: block;
-  background-image: linear-gradient(
-    var(--eje),
-    rgb(var(--luz-verde-clara) / 0.08) 0%,
-    transparent 55%,
-    rgb(var(--luz-cambio) / 0.18) 100%
-  );
   /*
    * ⚠️ Adentro de un contenedor flex, el `flex-shrink: 1` por defecto achica la
    * barra por debajo del ancho declarado: dos pastillas de 72 y 92px en una
@@ -94,133 +21,6 @@
 /* ========================================================== barra fantasma */
 
 /**
- * BARRA SUPERIOR FANTASMA.
- *
- * ⚠️ EXISTE SOLO PARA LAS TRES PANTALLAS PUBLICAS —vitrina, busqueda y ficha—,
- * que renderizan su propio `Header` DENTRO de la pagina. En los grupos de rutas
- * la barra la pone el layout y sigue en pantalla durante la carga; aca
- * desapareceria y el sitio se veria decapitado.
- *
- * ⚠️ LA VERSION ANTERIOR SALTABA ~55px EN TODO TELEFONO. Tenia `min-height:
- * 74px` escrito a mano, pero la barra real a 375px mide ~144px: abajo de 900px
- * el buscador baja a su propia fila (`header.module.css` @media 900px). O sea
- * que el esqueleto de la barra causaba exactamente el salto que un esqueleto
- * existe para evitar. Aca se reproduce la ESTRUCTURA —dos filas, mismos
- * paddings, mismos gaps— en vez de adivinar un numero.
- *
- * ⚠️ NADA DE ESTA BARRA BRILLA, Y NO ES UN OLVIDO. El brillo significa "esto
- * lo estamos trayendo"; la barra no se esta trayendo, se va a renderizar igual
- * a como esta dibujada aca. Un brillo ahi seria una mentira animada, y ademas
- * la barra es lo unico estable de la pantalla mientras el resto llega.
- *
- * ⚠️ LA BARRA REAL ES UNA ISLA FLOTANTE (`header.module.css`, 2026-09-10):
- * se despega 12px de los tres bordes (8 en telefono chico), se redondea a 20px
- * y es VIDRIO —`--vidrio-fondo` con `backdrop-filter`— con el canto de luz, el
- * anillo de papel al 12% y la sombra de nivel 2. La version anterior de este
- * fantasma calcaba la barra de antes: franja pegada al techo, de borde a borde,
- * con `--malla-cancha`. Al llegar la real, el bloque verde se ENCOGIA 24px de
- * ancho, bajaba 12px y cambiaba de tono: tres saltos en la pieza que existe
- * para que no haya ninguno. Ahora se copian margen, radio, fondo y sombra.
- *
- * ⚠️ EL VIDRIO SE COPIA, CON SU `backdrop-filter`. Es UN elemento y dura lo que
- * dura una consulta; el costo es despreciable y la alternativa —el solido
- * `--vidrio-solido`— es Verde Cancha plano (#0f7a45) contra un compuesto
- * #22734c: se ve como un flash de tono al llegar la barra. El solido queda
- * afuera del `@supports`, como en la real, porque sin desenfoque un fondo con
- * alfa deja ver el papel a traves.
- *
- * ⚠️ `isolation: isolate` HACE FALTA: la cinta del filo va en `z-index: -1`
- * para pintar por encima del fondo y por debajo de todo lo demas, igual que en
- * la real, y sin aislar el -1 se escapa detras del fondo de la pagina.
- */
-.barraFantasma {
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  align-items: center;
-  --margen-barra: 12px;
-  margin: var(--margen-barra) var(--margen-barra) 0;
-  border-radius: var(--radio-ficha);
-  /*
-   * ⚠️ EL PADDING SE COPIA DE `header.module.css`, CINTA INCLUIDA. La barra real
-   * declara `padding: 16 24 calc(16 + var(--alto-cinta))`, y esos 6px de la
-   * cinta diagonal son alto real: sin ellos el fantasma mide 6px de menos y la
-   * pagina entera se corre al llegar la barra de verdad.
-   */
-  padding: var(--espacio-4) var(--espacio-6) calc(var(--espacio-4) + 6px);
-  background-color: var(--vidrio-solido);
-  /* La misma capa que la real: en el eje del sistema y solo resta luz. */
-  background-image: linear-gradient(var(--eje), transparent 0%, rgb(7 59 34 / 0.35) 100%);
-  box-shadow:
-    var(--luz-superior-oscura),
-    0 0 0 1px rgb(var(--luz-papel) / 0.12),
-    var(--sombra-2);
-  color: var(--color-papel);
-  /*
-   * ⚠️ NO SE USA `var(--alto-barra)`. Ese token lo REDEFINE `header.module.css`
-   * a 84/140/132 — pero es el CSS de un componente que esta pantalla no
-   * renderiza, asi que durante la carga puede no estar en el documento. Los
-   * numeros de aca salen de la misma aritmetica que la barra real y no
-   * dependen de que hoja cargo primero:
-   *
-   *   >900   16 + 44 (fila de control) + 16 + 6 (cinta)      = 82
-   *
-   * El margen de la isla va APARTE del alto: 12 + 82, igual que la real.
-   *
-   * ⚠️ ES UN PISO, NO UNA ALTURA. Con el marcado actual el alto ya sale de la
-   * estructura y este `min-height` no hace nada; queda como red.
-   */
-  min-height: 82px;
-}
-
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .barraFantasma {
-    background-color: var(--vidrio-fondo);
-    -webkit-backdrop-filter: var(--vidrio-desenfoque);
-    backdrop-filter: var(--vidrio-desenfoque);
-  }
-}
-
-.barraFantasmaContenido {
-  width: 100%;
-  max-width: var(--ancho-contenido);
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  /*
-   * ⚠️ `column-gap` Y `row-gap` POR SEPARADO, COMO LA BARRA REAL. Un `gap`
-   * unico le pone 24px de separacion a las DOS filas de telefono, y esa
-   * diferencia entra directo en el alto de una barra adherida. La real usa 24
-   * entre columnas y 12 entre filas.
-   */
-  column-gap: var(--espacio-6);
-  row-gap: var(--espacio-3);
-  /* Igual que la barra real: abajo de 900px el buscador se va a su propia fila. */
-  flex-wrap: wrap;
-}
-
-/**
- * La marca. Va de verdad, con su halo: el isotipo es lo unico de la barra que
- * ya esta completo, y la luz alrededor dice "esto es lo que hay de fijo".
- * `filter` estatico sobre un svg/png de 26px: cuesta nada.
- */
-.barraFantasmaMarca {
-  display: inline-flex;
-  align-items: center;
-  /* Los enlaces reales llevan `min-height: 44px` y son los que fijan la fila. */
-  min-height: var(--alto-control);
-  flex: none;
-  color: var(--color-papel);
-  /*
-   * ⚠️ EL HALO TIENE QUE SER EL MISMO QUE EL DE LA BARRA REAL (Amarillo Cambio,
-   * ver `.lockup` en `marca.module.css`). Si no, el logo cambia de color en el
-   * momento exacto en que el fantasma da paso a la barra de verdad, que es lo
-   * unico que este componente existe para evitar.
-   */
-  filter: drop-shadow(0 0 8px rgb(var(--luz-cambio) / 0.45));
-}
-
-/**
  * El buscador.
  *
  * ⚠️ 44px Y 460 DE ANCHO, MEDIDOS CONTRA EL CAMPO REAL, NO ESTIMADOS. El
@@ -234,23 +34,6 @@
  * translucido y redondeado a blanco y en pastilla, delante de los ojos. Un
  * fantasma no "sugiere" el campo: lo calca.
  */
-.barraFantasmaBuscador {
-  flex: 1;
-  max-width: 460px;
-  height: var(--alto-control);
-  border-radius: var(--radio-pastilla);
-  background-color: var(--superficie-1);
-  box-shadow:
-    var(--sombra-hundida),
-    0 0 0 1px rgb(var(--luz-papel) / 0.3);
-}
-
-.barraFantasmaAcciones {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--espacio-5);
-}
 
 /**
  * Los enlaces de la barra.
@@ -260,88 +43,8 @@
  * distinta a la que va a llegar. Un velo de papel al 22% en pastilla se lee
  * como lo que es: texto que todavia no esta.
  */
-.barraFantasmaEnlace {
-  display: block;
-  height: 13px;
-  border-radius: var(--radio-pastilla);
-  background-color: rgb(var(--luz-papel) / 0.22);
-}
-
-/**
- * EL ENLACE DESTACADO ("Crear cuenta"): en la barra real es una PASTILLA de
- * 44px con borde de Amarillo Cambio al 75% y un halo tenue, no texto pelado.
- * Dibujarlo como una barra mas de 13px dejaba un hueco de 31px de alto que se
- * llenaba de golpe al llegar la barra.
- */
-.barraFantasmaEnlaceDestacado {
-  display: block;
-  height: var(--alto-control);
-  border: 1px solid rgb(var(--luz-cambio) / 0.75);
-  border-radius: var(--radio-pastilla);
-}
-
-/**
- * CINTA DEL FILO INFERIOR.
- *
- * ⚠️ LA BARRA REAL TERMINA EN UNA TIRA DE DIAGONALES DE 6px y el fantasma
- * terminaba en un corte seco contra el papel. No es adorno: es el unico borde
- * inferior que tiene la barra, asi que sin ella el bloque verde flota y al
- * llegar la barra de verdad aparece una linea que antes no estaba.
- *
- * ⚠️ VA ENTRE LAS DOS ESQUINAS Y TERMINA EN PUNTAS REDONDEADAS, como en la
- * real: la isla es redondeada y una tira de punta a punta pintaria por fuera
- * de la curva en las dos esquinas de abajo. El glow de Cambio es `box-shadow`
- * estatico, pintado una vez.
- *
- * ⚠️ NO DERIVA. La global `.diagonales-vivas` mueve el patron en bucle, y esto
- * dura lo que dura una consulta: un bucle infinito que arranca y se destruye a
- * los 200ms es compositor gastado en nada.
- */
-.barraFantasmaCinta {
-  position: absolute;
-  left: var(--radio-ficha);
-  right: var(--radio-ficha);
-  bottom: 0;
-  height: 6px;
-  z-index: var(--z-fondo);
-  pointer-events: none;
-  --patron-color: var(--color-cambio);
-  background-color: var(--color-tiempo-extra);
-  background-image: var(--patron-diagonales);
-  border-radius: var(--radio-pastilla) var(--radio-pastilla) 0 0;
-  box-shadow:
-    0 -1px 0 rgb(var(--luz-cambio) / 0.35),
-    0 0 16px -2px rgb(var(--luz-cambio) / 0.55);
-}
-
-/**
- * El boton del menu de telefono: 44x44 con canto de luz, como el real. El
- * borde es `--color-sobre-cancha` porque la barra real fija `--linea-control`
- * a ese valor (4.94:1 sobre el vidrio); papel al 35% era otro borde.
- */
-.barraFantasmaMenu {
-  display: none;
-  margin-left: auto;
-  width: var(--alto-control);
-  height: var(--alto-control);
-  border: 1px solid var(--color-sobre-cancha);
-  border-radius: var(--radio);
-  background-color: rgb(var(--luz-papel) / 0.06);
-}
 
 @media (max-width: 900px) {
-  .barraFantasmaContenido {
-    column-gap: var(--espacio-4);
-  }
-
-  .barraFantasmaAcciones {
-    display: none;
-  }
-
-  .barraFantasmaMenu {
-    display: block;
-  }
-
   /*
    * ⚠️ SIN `margin-top`, Y NO ES UN OLVIDO. La separacion entre las dos filas la
    * da el `row-gap` de 12px del contenedor; un margen ademas del gap suma 28px
@@ -349,26 +52,6 @@
    * documenta haber sacado de la barra real: repetirlo aca lo devuelve, y encima
    * solo en el fantasma, que es donde produce el salto.
    */
-  .barraFantasmaBuscador {
-    order: 3;
-    flex-basis: 100%;
-    max-width: none;
-  }
-
-  .barraFantasma {
-    /* 16 + 44 + 12 (row-gap) + 44 (buscador) + 16 + 6 (cinta) = 138. */
-    min-height: 138px;
-  }
-}
-
-@media (max-width: 480px) {
-  .barraFantasma {
-    /* La isla se pega un poco mas al borde, igual que la real: 8px por lado. */
-    --margen-barra: 8px;
-    padding: var(--espacio-3) var(--espacio-4) calc(var(--espacio-3) + 6px);
-    /* 12 + 44 + 12 + 44 + 12 + 6 = 130. */
-    min-height: 130px;
-  }
 }
 
 /* =============================================================== encabezado */
@@ -408,20 +91,6 @@
     gap: var(--espacio-4);
   }
 }
-
-/**
- * La ficha.
- *
- * ⚠️ LA SUPERFICIE SALE DE `.sup-ficha` —radio de ficha, filo de luz arriba,
- * sombra apoyada—, NO DE UN `background: white` MAS UN BORDE DE 1px. Ese blanco
- * plano escrito a mano es la causa medida de que todo el sitio se viera chato,
- * y aca importa el doble: el esqueleto es la primera imagen de cada navegacion.
- *
- * ⚠️ `clip` DESPUES DE `hidden`, EN ESE ORDEN, IGUAL QUE `listing-card`. Los dos
- * recortan; `hidden` ademas crea un contenedor de scroll, y donde `clip` no
- * exista (Safari < 16) queda `hidden`, que ahi tampoco tiene animacion de
- * scroll adentro que romper.
- */
 .ficha {
   position: relative;
   isolation: isolate;
@@ -431,82 +100,12 @@
   overflow: hidden;
   overflow: clip;
 }
-
-/**
- * EL FONDO Y LA SOMBRA DE LA FICHA REAL, CON (0,2,0).
- *
- * ⚠️ `listing-card.module.css` YA NO ES BLANCO PLANO: es blanco con dos luces
- * —verde luminoso al 10% arriba a la derecha y Amarillo Cambio al 34% abajo a
- * la izquierda— y una sombra de cuatro capas que termina en un halo verde
- * DEBAJO, corto y al 22%, que es lo que hace que la ficha se vea iluminada
- * tambien en reposo. Un fantasma blanco con la sombra generica de `.sup-ficha`
- * no era "mas sobrio": era una ficha que cambiaba de fondo y de sombra al
- * llegar el contenido.
- *
- * Va con la clase repetida porque `.sup-ficha` declara `background` como
- * shorthand —que resetea `background-image`— y `box-shadow`, las dos con
- * (0,1,0): con una clase sola, quien gana lo decide el orden de inyeccion. Los
- * numeros son los medidos en la ficha real; aca no hay texto que medir.
- */
 .ficha.ficha {
-  background-image:
-    radial-gradient(70% 55% at 100% 0%, rgb(var(--luz-verde-clara) / 0.1), transparent 62%),
-    radial-gradient(75% 60% at 0% 100%, rgb(var(--luz-cambio) / 0.34), transparent 60%);
-  box-shadow:
-    0 0 0 1px var(--linea-tenue),
-    var(--luz-superior),
-    var(--sombra-1);
+  box-shadow: none;
 }
-
-/**
- * EL ANILLO DE LUZ, QUIETO.
- *
- * ⚠️ LA FICHA REAL LLEVA EN REPOSO UN ANILLO CONICO DE 1px (`--degradado-borde`,
- * dos chispas de verde y una de Cambio) al 70%, que recien GIRA en hover. La
- * version anterior de este fantasma dibujaba un filete de 3px arriba —el de una
- * ficha que ya no existe— con un halo que ADEMAS no se pintaba: `0 0 22px -2px`
- * sobre 3px de alto es una sombra de alto negativo, o sea ninguna. Ahora se
- * calca el anillo real: misma receta, misma mascara, misma opacidad, y sin
- * animacion, porque un esqueleto no vive lo suficiente para que un giro de 6s
- * valga la capa que cuesta.
- */
-.ficha::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  padding: 1px;
-  border-radius: inherit;
-  pointer-events: none;
-  background: var(--degradado-borde);
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.7;
-}
-
-/**
- * La portada. Misma relacion 4/5 que `listing-card.module.css`.
- *
- * ⚠️ EL PUNTO DE LUZ ES `background-image` SOBRE EL `background-color` DE
- * `.esqueleto`: arriba a la derecha, que es de donde viene la luz en todo el
- * sistema. Un marco gris plano de 4/5 es lo que mas "framework" se ve de un
- * esqueleto; con un lavado de verde luminoso en la esquina se lee como un
- * marco que espera una foto.
- */
 .marco {
   aspect-ratio: 4 / 5;
   width: 100%;
-  background-image: radial-gradient(
-    80% 70% at 100% 0%,
-    rgb(var(--luz-verde-clara) / 0.14) 0%,
-    transparent 62%
-  );
 }
 
 /**
@@ -519,14 +118,6 @@
 .marco.marco {
   border-radius: var(--radio-ficha) var(--radio-ficha) 0 0;
 }
-
-/**
- * ⚠️ EL ORDEN DEL CUERPO ES PRECIO → TITULO → METADATOS → VENDEDOR, Y NO ES
- * ARBITRARIO: ES EL DE `listing-card.tsx`. La ficha real puso el precio PRIMERO
- * —en una grilla de marketplace el barrido es foto, precio, titulo— y un
- * esqueleto que conserva el orden viejo hace que al llegar el contenido los dos
- * bloques se intercambien de lugar delante de los ojos.
- */
 .cuerpo {
   display: flex;
   flex-direction: column;
@@ -563,13 +154,6 @@
  * resaltador que la ficha real pone detras de la cifra. Sigue siendo forma sin
  * texto, asi que no hay contraste que medir.
  */
-.precio {
-  background-image: linear-gradient(
-    var(--eje),
-    rgb(var(--luz-verde-clara) / 0.06) 0%,
-    rgb(var(--luz-cambio) / 0.32) 100%
-  );
-}
 
 /**
  * El titulo real son hasta DOS lineas de `--texto-md` (16px, no 15: la ficha
@@ -602,22 +186,6 @@
   gap: var(--espacio-2);
   margin-top: var(--espacio-1);
 }
-
-/**
- * El nombre del vendedor.
- *
- * ⚠️ SIN `border-top`. La ficha real cambio la linea gris a todo el ancho por
- * una marca de acento de 28x3 (`listing-card.module.css`): un esqueleto con la
- * linea vieja promete un separador que despues no llega. La marca es
- * redondeada y con su halo, como cualquier trazo de acento del sistema.
- *
- * ⚠️ EL ALTO DE LA FILA ES EL DEL TEXTO REAL: 12px de padding mas un renglon
- * de `--texto-xs` a 1.5 (18px) = 30. La barra de 12px va centrada en esos 18:
- * antes la fila media 24 y la ficha entera 6px menos que la real.
- *
- * `margin-top: auto` lo alinea con el de las fichas vecinas aunque el titulo
- * ocupe una linea sola.
- */
 .vendedor {
   position: relative;
   display: flex;
@@ -627,21 +195,6 @@
   min-height: calc(var(--espacio-3) + 1.5 * var(--texto-xs));
 }
 
-/**
- * ⚠️ EL HALO LLEVA `spread` 0 A PROPOSITO. La marca real usa `0 0 10px -2px`
- * sobre 3px de alto: 3 - 4 = -1, o sea una sombra de alto negativo que el
- * navegador no pinta. Con spread 0 la luz existe.
- */
-.vendedor::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 28px;
-  height: 3px;
-  border-radius: var(--radio-pastilla);
-  background-image: var(--degradado-acento);
-}
-
 /* ================================================================== texto */
 
 .texto {
@@ -649,11 +202,6 @@
   flex-direction: column;
   gap: var(--espacio-5);
 }
-
-/*
- * Aca el aire lo pone el `gap` del contenedor: sin esto se suma al
- * `margin-bottom` del encabezado y el titulo queda flotando solo.
- */
 .texto .encabezado {
   margin-bottom: 0;
 }
@@ -664,14 +212,6 @@
   flex-direction: column;
   gap: var(--espacio-3);
 }
-
-/**
- * Panel de datos. Casi toda pantalla de (compra), (vendedor) y (admin) termina
- * en una tarjeta con filas concepto/valor: el resumen de la orden, la identidad
- * fiscal, la comision. Superficie de `.sup-ficha`; el padding sigue la regla de
- * anidado (radio de 20 con 24 de padding: las barras de adentro no tocan la
- * curva).
- */
 .tarjeta {
   display: flex;
   flex-direction: column;
@@ -734,11 +274,6 @@
 .detalleFoto {
   aspect-ratio: 4 / 5;
   width: 100%;
-  background-image: radial-gradient(
-    80% 70% at 100% 0%,
-    rgb(var(--luz-verde-clara) / 0.14) 0%,
-    transparent 62%
-  );
 }
 
 /** Radio de ficha con (0,2,0): `.esqueleto` pone 12 y el orden no esta garantizado. */
@@ -751,18 +286,10 @@
   flex-direction: column;
   gap: var(--espacio-5);
 }
-
-/**
- * El boton de comprar. El alto lo pone el componente con `--alto-control`; aca
- * el radio de boton y el gradiente del primario CON SU HALO: es el CTA de la
- * pantalla y el esqueleto ya dice donde va a estar la accion. El shimmer de
- * `.esqueleto` pasa por encima del verde, que es lo mismo que hace `.luz-filo`
- * en el boton real. No lleva texto: nada que medir.
- */
 .detalleBoton {
   border-radius: var(--radio);
   background-image: var(--degradado-boton);
-  box-shadow: var(--glow-suave);
+  box-shadow: none;
 }
 
 .detalleDatos {
@@ -774,19 +301,6 @@
 }
 
 /* ================================================================== tabla */
-
-/**
- * Tablas del back-office y de ventas.
- *
- * ⚠️ ES LA UNICA PANTALLA DONDE EL ESQUELETO SE PARECE AL CONTENIDO CASI
- * EXACTO, porque una tabla es una grilla regular. Vale la pena: quien opera
- * pagos entra a esta pantalla muchas veces por dia y reconoce la forma antes de
- * que llegue el dato.
- *
- * ⚠️ SIN GLOW Y SIN TINTE DE MAS: la consola de pagos es una herramienta de
- * operaciones y el contrato de `movimiento.css` la deja fuera de todo efecto.
- * El radio de `.sup-ficha` y el shimmer alcanzan.
- */
 .tabla {
   display: flex;
   flex-direction: column;
@@ -810,5 +324,47 @@
 @media (max-width: 640px) {
   .tablaFila {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* Misma altura que la barra real: 64 + 44 px, y 120 px en telefono. */
+.barraFantasma {
+  min-height: 108px;
+  background: var(--color-cancha);
+}
+.barraFantasmaContenido {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-6);
+  max-width: var(--ancho-contenido);
+  min-height: 64px;
+  margin: 0 auto;
+  padding-inline: var(--canal);
+}
+.barraFantasmaMarca {
+  display: flex;
+  flex: none;
+}
+.barraFantasmaBuscador {
+  flex: 1 1 auto;
+  max-width: 680px;
+  height: 40px;
+  border-radius: var(--radio);
+  background: var(--color-blanco);
+}
+@media (max-width: 760px) {
+  .barraFantasma {
+    min-height: 120px;
+  }
+
+  .barraFantasmaContenido {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--espacio-2);
+    padding-block: var(--espacio-3);
+  }
+
+  .barraFantasmaBuscador {
+    flex-basis: 100%;
+    max-width: none;
   }
 }

@@ -39,14 +39,12 @@ export default async function RestablecerPassword({
           claro—, y `Panel` es una caja de un solo tono. Componerlo acá no edita
           un solo byte de `ui.module.css`.
         */}
-        <div className={`${propios.tarjeta} entra-acerca`}>
-          <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta} sup-calida`}>
+        <div className={propios.tarjeta}>
+          <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta}`}>
             <span className={`${propios.sello} ${propios.selloAlerta}`} aria-hidden="true">
               <IconoLlave tamanio={34} />
             </span>
-            <h1 className={`${propios.tarjetaTitulo} display display-3`}>
-              Ese enlace está incompleto
-            </h1>
+            <h1 className={propios.tarjetaTitulo}>Ese enlace está incompleto</h1>
           </div>
 
           <div className={propios.tarjetaCuerpo}>
@@ -62,15 +60,13 @@ export default async function RestablecerPassword({
 
   return (
     <Pantalla>
-      <div className={`${propios.hoja} entra-acerca`}>
-        <div className={`${propios.encabezado} escalona`}>
+      <div className={propios.hoja}>
+        <div className={propios.encabezado}>
           <p className={propios.antetitulo}>Recuperar acceso</p>
-          <h1 className={`${estilos.titulo} ${propios.titulo} display`}>
-            Elegí una contraseña nueva
-          </h1>
+          <h1 className={`${estilos.titulo} ${propios.titulo}`}>Elegí una contraseña nueva</h1>
         </div>
 
-        <div className={`${propios.cuerpo} entra-suave`}>
+        <div className={propios.cuerpo}>
           <Formulario accion={restablecerPassword} enviar="Cambiar contraseña">
             <CampoOculto nombre="token" valor={token} />
             <CampoPassword
@@ -92,7 +88,7 @@ export default async function RestablecerPassword({
           `--color-alerta-hondo` (5.05:1). Pintar el fondo a mano sin ese remapeo
           es un fallo de contraste que no avisa.
         */}
-        <p className={`${propios.nota} sup-calida`}>
+        <p className={propios.nota}>
           <IconoLlave tamanio={16} />
           <span>Al cambiarla se cierran todas tus sesiones abiertas, incluida ésta.</span>
         </p>

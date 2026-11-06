@@ -14,19 +14,15 @@
  * cuadros—, la senial literal de fuera de juego. Los seis colores, las dos
  * tipografias y el rombo salen de ahi y no se tocan.
  *
- * ⚠️ LA FORMA Y LA LUZ YA NO SON LAS DEL ARCHIVO DE IDENTIDAD, Y ES UNA
- * DECISION DEL DUEÑO (2026-09-10). La identidad describe un sistema anguloso
- * —radio de 4px— y editorial, con sombras cortas y "la luz que se resta". El
- * dueño vio esa version construida y la rechazo con estas palabras: "una ui
- * que se ve anticuada, sin animaciones, glow, dinamismo, muy cuadrado todo".
- * Desde esta version el sistema es REDONDEADO (12-28px), LUMINOSO (halos de
- * verde y amarillo de marca, mallas que si aclaran, vidrio) y VIVO desde el
- * primer cuadro. Es un apartamiento consciente de `design/` en forma, luz y
- * movimiento —no en color ni en tipografia— y queda asentado aca para que
- * nadie lo "corrija" de vuelta leyendo la identidad.
+ * ⚠️ SISTEMA SOBRIO DESDE EL 2026-11-06, POR PEDIDO DEL DUEÑO: claridad, minimalismo
+ * y profesionalidad, con la estructura de Mercado Libre y la marca de Offside. Radios
+ * de 6 y 8 px, una sola sombra, sin vidrio, sin mallas y sin movimiento. Reemplaza al
+ * sistema luminoso del 2026-09-10. Ver docs-implementation/frontend-sobrio-2026-11-06.md.
  *
- * La regla que NO cambia: el contraste AA se mide contra el punto MAS CLARO de
- * cualquier fondo, y el glow va FUERA del texto, nunca debajo.
+ * Muchos tokens de degradado y de luz siguen declarados con valores planos: los leen
+ * hojas que todavia no se limpiaron a mano. No volver a darles degradados.
+ *
+ * La regla que no cambia: el contraste AA se mide contra el fondo real del texto.
  */
 
 :root {
@@ -101,7 +97,7 @@
    * derivados"—, asi que ajustarlos por contraste no contradice el sistema
    * visual: lo hace usable.
    */
-  --color-neutro-tenue: #6b736a;
+  --color-neutro-tenue: #5b6459;
   /**
    * El gris claro anterior, ahora con el unico rol que puede cumplir: FORMA,
    * nunca texto. Separadores, trazos decorativos, placeholders de imagen.
@@ -137,10 +133,10 @@
   --texto-base: 15px;
   --texto-md: 16px;
   --texto-lg: 18px;
-  --texto-xl: 22px;
-  --texto-2xl: 28px;
-  --texto-3xl: 36px;
-  --texto-4xl: 48px;
+  --texto-xl: 20px;
+  --texto-2xl: 22px;
+  --texto-3xl: 28px;
+  --texto-4xl: 36px;
 
   /**
    * ⚠️ Los pesos son de INTER. Big Noodle tiene un solo peso y su variacion es
@@ -159,9 +155,9 @@
   --interlineado-texto: 1.5;
 
   /** Mayusculas con tracking, para etiquetas y categorias. */
-  --tracking-etiqueta: 0.08em;
-  --tracking-amplio: 0.2em;
-  --tracking-titulo: -0.01em;
+  --tracking-etiqueta: normal;
+  --tracking-amplio: normal;
+  --tracking-titulo: normal;
 
   /* --------------------------------------------------------------- forma */
   /**
@@ -190,12 +186,12 @@
    * ficha de 20px con 8px de padding → 12px. Con el mismo radio la esquina
    * interior se ve MAS redonda que la exterior y la tarjeta parece hinchada.
    */
-  --radio-chico: 8px;
-  --radio: 12px;
-  --radio-medio: 16px;
-  --radio-ficha: 20px;
-  --radio-grande: 24px;
-  --radio-panel: 28px;
+  --radio-chico: 4px;
+  --radio: 6px;
+  --radio-medio: 8px;
+  --radio-ficha: 8px;
+  --radio-grande: 8px;
+  --radio-panel: 8px;
   --radio-pastilla: 999px;
 
   /** Iconos: trazo de 1.5px, sin relleno, coherente con la linea del logo. */
@@ -216,7 +212,7 @@
    * ⚠️ LA RECETA NO VIVE ACA: vive en el bloque universal de abajo. Ver el
    * comentario de "recetas de patron" apenas termina este `:root`.
    */
-  --patron-color: var(--color-neutro-borde);
+  --patron-color: transparent;
 
   /* ---------------------------------------------------------- elevacion */
   /**
@@ -233,15 +229,15 @@
    *
    * ⚠️ `@media (prefers-reduced-motion: reduce)` (mas abajo) las anula todas.
    */
-  --transicion-rapida: 120ms;
-  --transicion: 180ms;
+  --transicion-rapida: 150ms;
+  --transicion: 150ms;
   /**
    * Recorrido: algo que cruza el espacio —un panel que se abre, una pantalla
    * que reemplaza a otra, la foto de un producto que se agranda hasta la
    * ficha—. Debajo de ~350ms el ojo no llega a seguirlo y se lee como un
    * parpadeo; arriba de ~500ms se siente lento.
    */
-  --transicion-lenta: 420ms;
+  --transicion-lenta: 150ms;
 
   --curva: cubic-bezier(0.2, 0, 0.2, 1);
   /**
@@ -288,8 +284,8 @@
   --espacio-6: 24px;
   --espacio-7: 32px;
   --espacio-8: 48px;
-  --espacio-9: 80px;
-  --espacio-10: 100px;
+  --espacio-9: 48px;
+  --espacio-10: 48px;
 
   /**
    * Anchos de contenido.
@@ -363,23 +359,11 @@
 *,
 *::before,
 *::after {
-  --patron-rombos:
-    linear-gradient(45deg, var(--patron-color) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--patron-color) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--patron-color) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--patron-color) 75%);
+  --patron-rombos: none;
 
   /** Rayas diagonales: el otro motivo de la bandera, en el eje del sistema. */
-  --patron-diagonales: repeating-linear-gradient(
-    var(--eje),
-    var(--patron-color) 0 2px,
-    transparent 2px 13px
-  );
-  --patron-diagonales-anchas: repeating-linear-gradient(
-    var(--eje),
-    var(--patron-color) 0 10px,
-    transparent 10px 30px
-  );
+  --patron-diagonales: none;
+  --patron-diagonales-anchas: none;
 }
 
 /* ------------------------------------------------------------------ base */
@@ -397,7 +381,7 @@ body {
    */
   color: var(--texto);
   font-family: var(--fuente-texto);
-  font-size: var(--texto-md);
+  font-size: 14px;
   line-height: var(--interlineado-texto);
   -webkit-font-smoothing: antialiased;
   /*
@@ -439,11 +423,10 @@ h2,
 h3,
 h4 {
   margin: 0;
-  font-family: var(--fuente-titulo);
+  font-family: var(--fuente-texto);
   /* Peso normal: Big Noodle no tiene bold real (ver nota arriba). */
-  font-weight: var(--peso-normal);
-  line-height: var(--interlineado-titulo);
-  letter-spacing: var(--tracking-titulo);
+  font-weight: var(--peso-semi);
+  line-height: 1.25;
   /*
    * Reparte las palabras entre lineas en vez de dejar una sola colgando al
    * final. Con interlineado 0.95 y mayusculas, una viuda se nota muchisimo.
@@ -508,9 +491,8 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-foco);
-  outline-offset: 3px;
-  box-shadow: var(--glow-foco);
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
 }
 
 /**
@@ -536,14 +518,6 @@ a:hover {
 /**
  * Respeta a quien pidió menos movimiento en su sistema operativo.
  */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
 
 /* =============================================================================
  * TOKENS — CAPA DE PROFUNDIDAD Y DIRECCION
@@ -605,29 +579,6 @@ a:hover {
  * silenciosa de `--color-neutro-borde` que nadie va a actualizar el dia que
  * cambie. El patron no necesita animar su color: necesita moverse.
  */
-@property --velo-barra {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 0;
-}
-
-@property --elev {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 0;
-}
-
-@property --giro {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 112deg;
-}
-
-@property --cuenta {
-  syntax: '<integer>';
-  inherits: false;
-  initial-value: 0;
-}
 
 :root {
   /* ------------------------------------------------------- rampa de verde */
@@ -734,16 +685,16 @@ a:hover {
    */
   --texto: var(--color-tinta);
   /** El fondo de la pagina. Companiero de `--texto`: los dos se dan vuelta juntos. */
-  --fondo-pagina: var(--color-papel);
+  --fondo-pagina: var(--color-neutro-suave);
 
-  --superficie-0: var(--color-papel);
+  --superficie-0: var(--color-neutro-suave);
   --superficie-1: var(--color-blanco);
   /** Un escalon por debajo del papel: agrupa sin encerrar. Tinta 14.71:1. */
   --superficie-2: var(--color-neutro-suave);
   /** Lavado de marca, para bloques claros que no son ni papel ni blanco. */
-  --superficie-marca: #eef5f0;
+  --superficie-marca: var(--color-neutro-suave);
   /** Lavado calido. Tinta encima 14.71:1. */
-  --superficie-calida: #f7f4cf;
+  --superficie-calida: var(--color-neutro-suave);
 
   /**
    * ⚠️ TRAMPA VERIFICADA EN LAS TRES SUPERFICIES TENIDAS. Sobre `#f2f3ea`,
@@ -846,25 +797,11 @@ a:hover {
   --eje: 112deg;
 
   /** Superficies de marca: barra, botones, cintas. Peor punto = cancha, 5.16:1. */
-  --degradado-cancha: linear-gradient(
-    var(--eje),
-    var(--verde-700) 0%,
-    var(--verde-750) 58%,
-    var(--verde-800) 100%
-  );
-  --degradado-cancha-activo: linear-gradient(
-    var(--eje),
-    var(--verde-750) 0%,
-    var(--verde-900) 100%
-  );
+  --degradado-cancha: linear-gradient(var(--color-cancha), var(--color-cancha));
+  --degradado-cancha-activo: linear-gradient(var(--color-tiempo-extra), var(--color-tiempo-extra));
 
   /** Superficies oscuras. Papel encima: minimo 12.59:1. */
-  --degradado-noche: linear-gradient(
-    158deg,
-    var(--sup-noche-alta) 0%,
-    var(--sup-noche) 52%,
-    var(--sup-fosa) 100%
-  );
+  --degradado-noche: linear-gradient(var(--color-blanco), var(--color-blanco));
 
   /**
    * MALLA DE PORTADA. Tres capas y **ninguna aclara**: el maximo es Verde
@@ -877,15 +814,7 @@ a:hover {
    *   papel 5.16:1 · Amarillo Cambio 4.59:1 · --color-sobre-cancha 4.60:1
    * En cualquier otro punto es mejor (verde-900 al 40% ya da papel 7.22:1).
    */
-  --malla-cancha:
-    radial-gradient(125% 130% at 2% 106%, var(--verde-950) 0%, transparent 60%),
-    radial-gradient(
-      90% 80% at 100% 0%,
-      transparent 0%,
-      transparent 48%,
-      color-mix(in oklab, var(--color-tinta) 20%, transparent) 100%
-    ),
-    linear-gradient(var(--eje), var(--color-cancha) 0%, var(--verde-750) 46%, var(--verde-900) 100%);
+  --malla-cancha: linear-gradient(var(--color-cancha), var(--color-cancha));
 
   /**
    * MALLA DE BLOQUE OSCURO.
@@ -914,15 +843,7 @@ a:hover {
    * O sea: los contrastes de `.sup-noche` vuelven a valer POR CONSTRUCCION, en
    * cualquier punto del bloque, sin volver a medir nada.
    */
-  --malla-noche:
-    radial-gradient(125% 130% at 2% 106%, var(--sup-fosa) 0%, transparent 62%),
-    radial-gradient(
-      90% 80% at 92% 0%,
-      transparent 0%,
-      transparent 50%,
-      color-mix(in oklab, var(--sup-fosa) 55%, transparent) 100%
-    ),
-    linear-gradient(160deg, var(--sup-noche-alta) 0%, var(--sup-noche) 100%);
+  --malla-noche: linear-gradient(var(--color-blanco), var(--color-blanco));
 
   /**
    * MALLA DE PAPEL: el fondo de las 21 pantallas. Un lavado verde luminoso
@@ -947,9 +868,7 @@ a:hover {
    * luz VISIBLE sobre papel no vive aca sino en `.escena-luz`, que remapea los
    * tokens que un blob de verdad tumba.
    */
-  --malla-papel:
-    radial-gradient(75% 55% at 100% 0%, rgb(var(--luz-verde-clara) / 0.04) 0%, transparent 60%),
-    radial-gradient(65% 50% at 0% 100%, rgb(var(--luz-cambio) / 0.24) 0%, transparent 58%);
+  --malla-papel: none;
 
   /**
    * TITULARES CON GRADIENTE (`background-clip: text`).
@@ -965,29 +884,10 @@ a:hover {
    * La ultima es la trampa: verde-400 es luz sobre noche y es invisible sobre
    * Verde Cancha. `.titular-vivo` (mas abajo) elige sola segun la superficie.
    */
-  --degradado-titular: linear-gradient(
-    104deg,
-    var(--color-tinta) 0%,
-    var(--verde-750) 62%,
-    var(--color-cancha) 100%
-  );
-  --degradado-titular-vivo: linear-gradient(
-    104deg,
-    var(--color-tinta) 0%,
-    var(--color-cancha) 55%,
-    var(--verde-500) 100%
-  );
-  --degradado-titular-claro: linear-gradient(
-    104deg,
-    var(--color-papel) 0%,
-    var(--color-cambio) 100%
-  );
-  --degradado-titular-claro-vivo: linear-gradient(
-    104deg,
-    var(--color-papel) 0%,
-    var(--color-cambio) 58%,
-    var(--verde-400) 100%
-  );
+  --degradado-titular: linear-gradient(var(--color-tinta), var(--color-tinta));
+  --degradado-titular-vivo: linear-gradient(var(--color-tinta), var(--color-tinta));
+  --degradado-titular-claro: linear-gradient(var(--color-tinta), var(--color-tinta));
+  --degradado-titular-claro-vivo: linear-gradient(var(--color-tinta), var(--color-tinta));
 
   /**
    * Subrayados vivos, barras de progreso, filetes. Es FORMA: no lleva texto
@@ -995,13 +895,7 @@ a:hover {
    * pasa por `--verde-400`, la luz pura, antes de llegar al Cambio: mas
    * luminoso en la mitad del recorrido, sin mover ningun contraste.
    */
-  --degradado-acento: linear-gradient(
-    96deg,
-    var(--verde-700) 0%,
-    var(--verde-500) 42%,
-    var(--verde-400) 70%,
-    var(--color-cambio) 100%
-  );
+  --degradado-acento: linear-gradient(var(--color-neutro-borde), var(--color-neutro-borde));
 
   /**
    * DESTELLO que cruza en hover, en el eje del sistema.
@@ -1016,26 +910,12 @@ a:hover {
    * 30% el alerta ya queda en 4.4996 ❌. Sobre blanco sobra aire (4.66). El
    * oscuro sube: sobre verde hondo el amarillo pleno es un foco de estadio.
    */
-  --destello-claro: linear-gradient(
-    var(--eje),
-    transparent 34%,
-    rgb(255 255 255 / 0.45) 44%,
-    rgb(var(--luz-cambio) / 0.22) 50%,
-    rgb(255 255 255 / 0.45) 56%,
-    transparent 66%
-  );
-  --destello-oscuro: linear-gradient(
-    var(--eje),
-    transparent 34%,
-    rgb(var(--luz-cambio) / 0.4) 46%,
-    rgb(var(--luz-cambio) / 0.7) 50%,
-    rgb(var(--luz-cambio) / 0.4) 54%,
-    transparent 66%
-  );
-  --destello: var(--destello-claro);
+  --destello-claro: none;
+  --destello-oscuro: none;
+  --destello: none;
 
   /** Desvanece los bordes de una marquesina sin pintar el fondo encima. */
-  --velo-lateral: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  --velo-lateral: none;
 
   /* ------------------------------------------------------------- vidrio */
   /**
@@ -1060,11 +940,11 @@ a:hover {
    */
   --vidrio-tinte: var(--verde-750);
   --vidrio-solido: var(--color-cancha);
-  --vidrio-fondo: color-mix(in srgb, var(--vidrio-tinte) 92%, transparent);
-  --vidrio-fondo-denso: color-mix(in srgb, var(--vidrio-tinte) 97%, transparent);
+  --vidrio-fondo: var(--color-cancha);
+  --vidrio-fondo-denso: var(--color-cancha);
   /** ⚠️ VALOR CAMBIADO: 14 → 18px y mas saturacion. El vidrio tiene que verse vidrio. */
-  --vidrio-desenfoque: saturate(170%) blur(18px);
-  --vidrio-desenfoque-fuerte: saturate(180%) blur(28px);
+  --vidrio-desenfoque: none;
+  --vidrio-desenfoque-fuerte: none;
 
   /**
    * DOS VIDRIOS MAS, para tarjetas y paneles (el de la barra queda como esta).
@@ -1090,11 +970,11 @@ a:hover {
    * ⚠️ LOS SOLIDOS SON OBLIGATORIOS Y VAN AFUERA DEL `@supports`: sin
    * `backdrop-filter` un fondo con alfa deja leer lo de atras.
    */
-  --vidrio-claro-fondo: rgb(255 255 255 / 0.82);
-  --vidrio-claro-borde: rgb(255 255 255 / 0.85);
+  --vidrio-claro-fondo: var(--color-blanco);
+  --vidrio-claro-borde: var(--color-neutro-borde);
   --vidrio-claro-solido: var(--color-blanco);
-  --vidrio-oscuro-fondo: rgb(7 26 18 / 0.86);
-  --vidrio-oscuro-borde: rgb(250 250 247 / 0.16);
+  --vidrio-oscuro-fondo: var(--color-blanco);
+  --vidrio-oscuro-borde: var(--color-neutro-borde);
   --vidrio-oscuro-solido: var(--sup-noche-alta);
 
   /* ------------------------------------------------------------ texturas */
@@ -1114,10 +994,10 @@ a:hover {
    * ⚠️ 5% Y NO SE SUBE. Arriba de ~8% el ruido compite con el texto de 12px,
    * que es el tamaño de la mitad de las etiquetas del sitio.
    */
-  --textura-grano: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.84' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  --textura-grano: none;
   --grano-tamanio: 160px 160px;
-  --grano-fuerza: 0.05;
-  --grano-fuerza-oscuro: 0.075;
+  --grano-fuerza: 0;
+  --grano-fuerza-oscuro: 0;
 
   /**
    * ESCALAS DEL PATRON DE ROMBOS, ya resueltas: nadie mas calcula offsets.
@@ -1146,11 +1026,7 @@ a:hover {
    */
 
   /** Pasto recien cortado. Ambiente (lugar), no marca (el rombo es la marca). */
-  --textura-pasto: repeating-linear-gradient(
-    var(--eje),
-    rgb(250 250 247 / 0.035) 0 46px,
-    rgb(250 250 247 / 0) 46px 92px
-  );
+  --textura-pasto: none;
 
   /* ---------------------------------------------------------- elevacion */
   /**
@@ -1196,26 +1072,19 @@ a:hover {
    */
 
   /** Hairline de apoyo. AHORA carga la definicion que antes ponia la sombra. */
-  --sombra-0: 0 0 0 1px rgb(var(--sombra-tinte) / 0.07);
+  --sombra-0: 0 0 0 0 transparent;
   /** Apoyado: ficha en reposo, input, etiqueta maciza. Una capa, y corta. */
-  --sombra-1: 0 1px 2px rgb(var(--sombra-tinte) / 0.05);
+  --sombra-1: 0 1px 2px rgb(16 35 26 / 0.14);
   /** Levantado: ficha con el mouse encima, panel, menu. */
-  --sombra-2:
-    0 1px 2px rgb(var(--sombra-tinte) / 0.05), 0 4px 10px -4px rgb(var(--sombra-tinte) / 0.08);
+  --sombra-2: 0 1px 2px rgb(16 35 26 / 0.14);
   /** Flotando: barra despegada, popover, ficha elevada. */
-  --sombra-3:
-    0 2px 4px rgb(var(--sombra-tinte) / 0.06), 0 8px 20px -8px rgb(var(--sombra-tinte) / 0.1);
+  --sombra-3: 0 4px 12px rgb(16 35 26 / 0.16);
   /** Superpuesto: algo que tapa la pagina. Acá la sombra SI informa. */
-  --sombra-4:
-    0 4px 8px -2px rgb(var(--sombra-tinte) / 0.08),
-    0 16px 32px -12px rgb(var(--sombra-tinte) / 0.14);
-  --sombra-5:
-    0 6px 12px -3px rgb(var(--sombra-tinte) / 0.1),
-    0 24px 48px -16px rgb(var(--sombra-tinte) / 0.18);
+  --sombra-4: 0 4px 12px rgb(16 35 26 / 0.16);
+  --sombra-5: 0 4px 12px rgb(16 35 26 / 0.16);
 
   /** Pozo: interior de un input, riel de progreso, marco de foto vacio. */
-  --sombra-hundida:
-    inset 0 1px 2px rgb(var(--sombra-tinte) / 0.07), inset 0 0 0 1px rgb(var(--sombra-tinte) / 0.04);
+  --sombra-hundida: 0 0 0 0 transparent;
 
   /**
    * ⚠️ APAGADA. Era una sombra AMBIENTE de color —un panel proyectando verde—.
@@ -1230,15 +1099,15 @@ a:hover {
    * canto iluminado de un objeto, y ahora ademas un halo verde tenue en la
    * tercera capa. Es el error clasico al portar un sistema claro a oscuro.
    */
-  --luz-superior: inset 0 1px 0 rgb(255 255 255 / 0.9);
-  --luz-superior-oscura: inset 0 1px 0 rgb(250 250 247 / 0.12);
+  --luz-superior: 0 0 0 0 transparent;
+  --luz-superior-oscura: 0 0 0 0 transparent;
   /**
    * ⚠️ SIN EL HALO VERDE de la tercera capa (2026-09-11): era luz de color, o
    * sea adorno. La linea de luz de arriba SE MANTIENE y ahora hace casi todo el
    * trabajo, que es lo correcto: sobre fondo oscuro una sombra no existe
    * —negro sobre negro— y lo que separa una ficha es su canto iluminado.
    */
-  --sombra-oscura: var(--luz-superior-oscura), 0 12px 28px -12px rgb(0 0 0 / 0.45);
+  --sombra-oscura: 0 0 0 0 transparent;
 
   /* ---------------------------------------------------------- tipografia */
   /**
@@ -1256,10 +1125,10 @@ a:hover {
    *
    * Verificado a 320px: los cuatro fluidos entregan exactamente su minimo.
    */
-  --texto-xl: clamp(22px, 1.25rem + 0.35vw, 26px);
-  --texto-2xl: clamp(28px, 1.55rem + 0.5vw, 32px);
-  --texto-3xl: clamp(36px, 1.9rem + 1.1vw, 46px);
-  --texto-4xl: clamp(48px, 2.4rem + 1.9vw, 64px);
+  --texto-xl: 20px;
+  --texto-2xl: 22px;
+  --texto-3xl: 28px;
+  --texto-4xl: 36px;
 
   /**
    * ESCALA DE DISPLAY — la que hace que esto deje de verse como un CRUD.
@@ -1274,14 +1143,14 @@ a:hover {
    * titular se compone respetando ese corte, y una PALABRA sola mas larga que
    * eso se parte gracias a `overflow-wrap` en `.display` (ver abajo).
    */
-  --display-3: clamp(30px, 1.6rem + 2.2vw, 52px);
-  --display-2: clamp(40px, 1.8rem + 4.4vw, 84px);
-  --display-1: clamp(52px, 2rem + 7.4vw, 132px);
+  --display-3: 22px;
+  --display-2: 28px;
+  --display-1: clamp(44px, 6vw, 64px);
 
   /** A 84px+ un interlineado de 0.95 abre un canal blanco que parte el titular. */
-  --interlineado-display: 0.86;
+  --interlineado-display: 0.95;
   /** El tracking se CIERRA al crecer: es optica, no gusto. */
-  --tracking-display: -0.025em;
+  --tracking-display: normal;
   /** Para parrafos largos de lectura editorial. */
   --interlineado-lectura: 1.65;
 
@@ -1297,17 +1166,17 @@ a:hover {
    * un `sticky` adentro deja de pegarse y un desplegable queda tijereteado. No
    * se usa en una seccion que contenga un `<details>` o un filtro pegado.
    */
-  --corte-abajo: polygon(0 0, 100% 0, 100% calc(100% - 40px), 0 100%);
-  --corte-arriba: polygon(0 40px, 100% 0, 100% 100%, 0 100%);
-  --corte-compensacion: 40px;
+  --corte-abajo: none;
+  --corte-arriba: none;
+  --corte-compensacion: 0px;
 
   /**
    * RITMO VERTICAL FLUIDO. Es la otra mitad de por que el sitio se ve apretado:
    * con 80px fijos entre secciones, un monitor de 27" se ve amontonado y un
    * telefono desperdicia media pantalla.
    */
-  --espacio-seccion: clamp(48px, 3rem + 4.5vw, 128px);
-  --espacio-bloque: clamp(28px, 1.5rem + 1.8vw, 56px);
+  --espacio-seccion: 32px;
+  --espacio-bloque: 16px;
   /**
    * Margen lateral de pagina. A 320px son 16px de cada lado.
    *
@@ -1328,11 +1197,7 @@ a:hover {
    * navegador que no conoce ese inset descarta la declaracion ENTERA y el sitio
    * se queda sin canal.
    */
-  --canal: max(
-    clamp(16px, 4vw, 40px),
-    env(safe-area-inset-left, 0px),
-    env(safe-area-inset-right, 0px)
-  );
+  --canal: 24px;
   --ancho-lectura: 62ch;
   /** Composicion editorial asimetrica: convive con --ancho-contenido, no lo reemplaza. */
   --ancho-editorial: 1360px;
@@ -1375,7 +1240,7 @@ a:hover {
    * nivel superior — Next compila los modulos en `mode: 'pure'` y el build
    * entero falla. Verificado en `header.module.css`.
    */
-  --alto-barra: 84px;
+  --alto-barra: 108px;
 
   /* --------------------------------------------------------- movimiento */
   /** Duraciones CON ROL. El nombre dice para que sirve, no cuanto dura. */
@@ -1462,17 +1327,6 @@ a:hover {
  * angosto tiene que ir DESPUES para poder ganar. Invertidos, un telefono de
  * 375px se llevaria los 140px del corte de 900 y el ancla quedaria 8px baja.
  */
-@media (max-width: 900px) {
-  :root {
-    --alto-barra: 140px;
-  }
-}
-
-@media (max-width: 480px) {
-  :root {
-    --alto-barra: 132px;
-  }
-}
 
 /* ------------------------------------------------------------------ base */
 
@@ -1523,35 +1377,11 @@ body {
  * compone: se repinta en cada cuadro de scroll y el sitio se arrastra. Un
  * `position: fixed` lo resuelve el compositor y no cuesta nada.
  */
-body::before,
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-body::before {
-  background-image: var(--malla-papel);
-}
-
-body::after {
-  opacity: var(--grano-fuerza);
-  background-image: var(--textura-grano);
-  background-size: var(--grano-tamanio);
-}
 
 /**
  * ⚠️ EN PANTALLA DE ALTA DENSIDAD EL RUIDO SE VE EL DOBLE DE FUERTE. Bajarlo en
  * 2x es lo que hace que el efecto se vea igual en una notebook y en un telefono.
  */
-@media (min-resolution: 2dppx) {
-  :root {
-    --grano-fuerza: 0.036;
-    --grano-fuerza-oscuro: 0.055;
-  }
-}
 
 /**
  * ⚠️ `pretty` Y NO `balance` EN PARRAFOS. `balance` reparte todas las lineas
@@ -1614,47 +1444,6 @@ dd {
  */
 
 /** Bloque oscuro estandar: pie, tira de datos, bloque de cierre. */
-.sup-noche,
-.sup-fosa {
-  position: relative;
-  isolation: isolate;
-  color: var(--color-sobre-oscuro);
-
-  --color-neutro-texto: var(--color-sobre-oscuro-2);
-  --color-neutro-tenue: var(--color-sobre-oscuro-tenue);
-  --color-neutro-apagado: var(--color-sobre-oscuro-tenue);
-  --color-neutro-borde: var(--linea-tenue-oscura);
-  --color-neutro-suave: rgb(250 250 247 / 0.06);
-  --linea-tenue: var(--linea-tenue-oscura);
-  --linea-control: var(--linea-control-oscura);
-  --superficie-1: var(--sup-noche-alta);
-  --superficie-2: rgb(250 250 247 / 0.05);
-  /**
-   * ⚠️ ES LA UNICA CAPA DEL SISTEMA OSCURO QUE SUMA LUZ, y por eso lleva numero
-   * medido. Papel al 8% sobre `--sup-fosa` compone #1a2c24 y ahi el token de
-   * texto mas debil —`--color-sobre-oscuro-tenue`— queda en **5.71:1**: sobra.
-   * `.sup-noche` lo baja, porque su base es mas clara (ver ahi mismo).
-   */
-  --patron-color: rgb(250 250 247 / 0.08);
-  --destello: var(--destello-oscuro);
-  /** El anillo de foco verde sobre verde oscuro es invisible. */
-  --color-foco: var(--color-cambio);
-  /** Sobre oscuro el naranja SI es texto (7.26:1). No hace falta el hondo. */
-  --color-alerta: var(--color-naranja);
-  /* Sobre un fondo oscuro el lavado claro seria un parche blanco: se apaga. */
-  --alerta-lavado: rgb(255 144 45 / 0.16);
-  /** Verde Cancha sobre fosa da 3.34:1: los enlaces suben a --verde-400. */
-  --enlace: var(--verde-400);
-
-  --boton-primario-fondo: var(--color-cambio);
-  --boton-primario-texto: var(--color-tinta);
-  --boton-primario-fondo-activo: var(--color-papel);
-  --boton-secundario-fondo: transparent;
-  --boton-secundario-borde: var(--linea-control-oscura);
-  --boton-secundario-texto: var(--color-sobre-oscuro);
-  --boton-secundario-fondo-activo: rgb(250 250 247 / 0.12);
-  --boton-secundario-texto-activo: var(--color-cambio);
-}
 
 /**
  * ⚠️ EL PATRON BAJA A 4% ACA, Y NO ES GUSTO: ES EL PISO DE CONTRASTE DE ESTA
@@ -1673,24 +1462,10 @@ dd {
  * llevara `sup-noche` mas un patron. Un modulo que quiera el rombo mas presente
  * puede subirlo, pero entonces le toca medir de nuevo su propio texto.
  */
-.sup-noche {
-  background-color: var(--sup-noche);
-  background-image: var(--malla-noche);
-
-  --patron-color: rgb(250 250 247 / 0.04);
-}
-
-.sup-fosa {
-  background-color: var(--sup-fosa);
-  background-image: none;
-}
 
 /** Bloque verde de marca: la portada y sus parientes. */
 .sup-cancha {
-  position: relative;
-  isolation: isolate;
   background-color: var(--color-cancha);
-  background-image: var(--malla-cancha);
   color: var(--color-papel);
 
   --color-neutro-texto: var(--color-sobre-cancha);
@@ -1706,8 +1481,8 @@ dd {
   --linea-control: rgb(250 250 247 / 0.65);
   --patron-color: var(--color-tiempo-extra);
   --destello: var(--destello-oscuro);
-  --color-foco: var(--color-cambio);
-  --enlace: var(--color-cambio);
+  --color-foco: var(--color-blanco);
+  --enlace: var(--color-blanco);
 
   /**
    * ⚠️ SOBRE VERDE CANCHA NO EXISTE UN NARANJA LEGIBLE, Y HAY QUE DECIRLO.
@@ -1727,8 +1502,8 @@ dd {
   --color-alerta: var(--color-cambio);
   --color-alerta-hondo: var(--color-cambio);
 
-  --boton-primario-fondo: var(--color-cambio);
-  --boton-primario-texto: var(--color-tinta);
+  --boton-primario-fondo: var(--color-blanco);
+  --boton-primario-texto: var(--color-tiempo-extra);
   --boton-primario-fondo-activo: var(--color-papel);
   --boton-secundario-fondo: transparent;
   --boton-secundario-borde: var(--color-papel);
@@ -1780,25 +1555,6 @@ dd {
  * O sea: son tres efectos y dos pseudo-elementos. La convencion del hijo vacio
  * es la salida, y esta documentada en los ~12 modulos que la aplican.
  */
-.sup-noche::before,
-.sup-fosa::before,
-.sup-cancha::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  z-index: var(--z-contenido);
-  pointer-events: none;
-  /* Mas presente que antes y con Amarillo Cambio en el centro: es luz, no un borde. Mide 1px: no lleva texto. */
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgb(250 250 247 / 0.34) 24%,
-    rgb(var(--luz-cambio) / 0.75) 50%,
-    rgb(250 250 247 / 0.34) 76%,
-    transparent 100%
-  );
-}
 
 /**
  * ⚠️ SUPERFICIES CLARAS TENIDAS: REMAPEO OBLIGATORIO. Sobre `#f2f3ea`,
@@ -1812,44 +1568,12 @@ dd {
  * calibrado contra papel usado sobre una superficie mas apagada— y se arregla
  * en el mismo lugar. Con el hondo queda en **3.44:1** (3.48 sobre marca).
  */
-.sup-2,
-.sup-marca,
-.sup-calida {
-  --color-neutro-tenue: var(--color-neutro-texto);
-  --color-alerta: var(--color-alerta-hondo);
-  --linea-control: var(--linea-control-honda);
-}
-
-.sup-2 {
-  background-color: var(--superficie-2);
-}
-.sup-marca {
-  background-color: var(--superficie-marca);
-}
-.sup-calida {
-  background-color: var(--superficie-calida);
-}
 
 /** Objeto apoyado sobre el papel: la ficha estandar del sistema. Radio de ficha (20px) y filo de luz. */
-.sup-ficha {
-  background: var(--superficie-1);
-  border-radius: var(--radio-ficha);
-  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-1);
-}
 
 /** Objeto levantado: menu, panel, popover, ficha activa. Ya flota y ya trae un poco de glow. */
-.sup-flotante {
-  background: var(--superficie-1);
-  border-radius: var(--radio-grande);
-  box-shadow: var(--sombra-0), var(--luz-superior), var(--sombra-3), var(--glow-suave);
-}
 
 /** Pozo: interior de un input, riel de una barra, marco de foto vacio. */
-.sup-hundida {
-  background: var(--superficie-2);
-  border-radius: var(--radio);
-  box-shadow: var(--sombra-hundida);
-}
 
 /**
  * VIDRIO ESMERILADO de marca (tinte verde-750): para una barra o una cinta
@@ -1863,19 +1587,6 @@ dd {
  * scroll sobre la vitrina es cara—. Ahi el vidrio se reemplaza por el cambio
  * de color al despegarse. El vidrio de barra se ofrece; no se impone.
  */
-.sup-vidrio {
-  background-color: var(--vidrio-solido);
-  /* Filo de luz ABAJO: separa el vidrio del contenido sin ocupar layout. */
-  box-shadow: inset 0 -1px 0 rgb(250 250 247 / 0.14);
-}
-
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .sup-vidrio {
-    background-color: var(--vidrio-fondo);
-    -webkit-backdrop-filter: var(--vidrio-desenfoque);
-    backdrop-filter: var(--vidrio-desenfoque);
-  }
-}
 
 /**
  * GRANO LOCAL, para una superficie que no herede el del body.
@@ -1884,27 +1595,6 @@ dd {
  * de lo que se busca; sin `isolation`, el -1 se escapa del bloque y termina
  * detras del fondo del ancestro.
  */
-.con-grano {
-  position: relative;
-  isolation: isolate;
-}
-
-.con-grano::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: var(--z-fondo);
-  pointer-events: none;
-  opacity: var(--grano-fuerza);
-  background-image: var(--textura-grano);
-  background-size: var(--grano-tamanio);
-}
-
-.sup-noche.con-grano::after,
-.sup-fosa.con-grano::after,
-.sup-cancha.con-grano::after {
-  opacity: var(--grano-fuerza-oscuro);
-}
 
 /* --------------------------------------------------- primitivas de forma */
 
@@ -1914,8 +1604,6 @@ dd {
   font-weight: var(--peso-normal);
   font-size: var(--display-1);
   line-height: var(--interlineado-display);
-  letter-spacing: var(--tracking-display);
-  text-transform: uppercase;
   text-wrap: balance;
   /**
    * ⚠️ ESTO ES LO QUE GARANTIZA LA REGLA DE 320px. A ~56px, una PALABRA sola de
@@ -1929,16 +1617,22 @@ dd {
 }
 
 .display-2 {
-  font-size: var(--display-2);
+  font-family: var(--fuente-texto);
+  font-weight: var(--peso-semi);
+  font-size: var(--texto-xl);
+  line-height: 1.25;
 }
 
 .display-3 {
-  font-size: var(--display-3);
+  font-family: var(--fuente-texto);
+  font-weight: var(--peso-semi);
+  font-size: var(--texto-xl);
+  line-height: 1.25;
 }
 
 /** La oblicua real de Big Noodle: la unica variacion que la identidad admite. */
 .oblicuo {
-  font-style: italic;
+  font-style: normal;
 }
 
 /**
@@ -1947,14 +1641,6 @@ dd {
  * —una extension, un modo de alto contraste— queda LITERALMENTE INVISIBLE. Por
  * eso el `@supports`: sin soporte se queda el color solido de siempre.
  */
-@supports ((background-clip: text) or (-webkit-background-clip: text)) {
-  .titular-degradado {
-    background-image: var(--degradado-titular);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-}
 
 /** Filete: el separador que un 1px gris no sabe ser. Ahora es un trazo redondeado. */
 .regla {
@@ -1966,28 +1652,12 @@ dd {
 }
 
 /** El de acento es la linea de energia: gradiente vivo con halo. */
-.regla-acento {
-  height: 8px;
-  background-image: var(--degradado-acento);
-  box-shadow: var(--glow-suave);
-}
 
 /**
  * Desplazamiento suave SOLO para quien no pidio lo contrario. Fuera de la media
  * query, un `scroll-behavior: smooth` global marea a quien tiene sensibilidad
  * vestibular.
  */
-@media (prefers-reduced-motion: no-preference) {
-  html {
-    scroll-behavior: smooth;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
 
 /* =============================================================================
  * TOKENS — LUZ, GLOW Y VIDRIO (2026-09-10)
@@ -2030,11 +1700,6 @@ dd {
  * interpole. Los angulos que giran usan `--giro`, que YA esta registrada mas
  * arriba: no se duplica con otro nombre.
  */
-@property --brillo-x {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: 100%;
-}
 
 /* ------------------------------------------ recetas de luz (universal) */
 /**
@@ -2069,22 +1734,8 @@ dd {
 *,
 *::before,
 *::after {
-  --degradado-vivo: linear-gradient(
-    var(--giro),
-    var(--verde-700) 0%,
-    var(--verde-500) 48%,
-    var(--color-cambio) 100%
-  );
-  --degradado-borde: conic-gradient(
-    from var(--giro),
-    transparent 0turn,
-    rgb(var(--luz-marca) / 0.95) 0.1turn,
-    transparent 0.26turn,
-    rgb(var(--luz-cambio) / 0.9) 0.52turn,
-    transparent 0.68turn,
-    rgb(var(--luz-marca) / 0.95) 0.88turn,
-    transparent 1turn
-  );
+  --degradado-vivo: none;
+  --degradado-borde: none;
   /**
    * =========================================================================
    * ⚠️ LOS GLOWS ESTAN APAGADOS (2026-09-11)
@@ -2112,7 +1763,7 @@ dd {
    * `:focus-visible` y INTACTO. Este token era el halo que lo acompañaba, y el
    * propio comentario del bloque de foco ya lo llamaba "adorno".
    */
-  --glow-foco: 0 0 rgb(0 0 0 / 0);
+  --glow-foco: 0 0 0 0 transparent;
   /** Para SVG e iconos. Apagado con un `drop-shadow` transparente, por lo mismo. */
   --glow-drop-marca: drop-shadow(0 0 0 rgb(0 0 0 / 0));
   /**
@@ -2168,9 +1819,9 @@ dd {
   /* ------------------------------------------------------ glow explicito */
   /** Para cuando se quiere UNA luz sin importar la superficie (`.glow-cambio`). */
   /** ⚠️ Apagados por la misma razon que el resto de la familia. */
-  --glow-cancha: 0 0 rgb(0 0 0 / 0);
-  --glow-cambio: 0 0 rgb(0 0 0 / 0);
-  --borde-luz-cambio: rgb(var(--luz-cambio) / 0.55);
+  --glow-cancha: 0 0 0 0 transparent;
+  --glow-cambio: 0 0 0 0 transparent;
+  --borde-luz-cambio: var(--color-neutro-borde);
 
   /* ---------------------------------------------------- gradientes vivos */
   /**
@@ -2179,17 +1830,8 @@ dd {
    * barra ni para ningun bloque con `--color-sobre-cancha` o Cambio encima
    * (4.15 / 4.14 ❌): esos siguen con `--degradado-cancha`.
    */
-  --degradado-boton: linear-gradient(
-    var(--eje),
-    var(--verde-600) 0%,
-    var(--color-cancha) 55%,
-    var(--verde-750) 100%
-  );
-  --degradado-boton-activo: linear-gradient(
-    var(--eje),
-    var(--color-cancha) 0%,
-    var(--verde-800) 100%
-  );
+  --degradado-boton: linear-gradient(var(--color-cancha), var(--color-cancha));
+  --degradado-boton-activo: linear-gradient(var(--color-tiempo-extra), var(--color-tiempo-extra));
 
   /**
    * MALLA VIVA — la portada que SI aclara y satura: cancha → verde-600 →
@@ -2206,21 +1848,17 @@ dd {
    * el velo: adentro de una viva el texto secundario es `--color-sobre-cancha`,
    * que es lo que `.sup-cancha` ya remapea.
    */
-  --malla-viva:
-    radial-gradient(55% 50% at 84% 12%, rgb(var(--luz-cambio) / 0.28) 0%, transparent 62%),
-    radial-gradient(70% 70% at 100% 55%, var(--verde-500) 0%, transparent 60%),
-    radial-gradient(90% 85% at 8% 100%, var(--verde-900) 0%, transparent 58%),
-    linear-gradient(var(--eje), var(--color-cancha) 0%, var(--verde-600) 50%, var(--verde-500) 100%);
+  --malla-viva: none;
 
   /** VELO DE TEXTO: la capa oscura detras del texto sobre una malla viva. El numero esta arriba. */
-  --velo-texto: rgb(16 35 26 / 0.66);
+  --velo-texto: none;
 
   /**
    * LUZ DEL SHIMMER DE TITULAR: la banda que cruza una vez al cargar. Sobre
    * claro es verde-500 (3.12:1, o sea solo titulares grandes); las superficies
    * oscuras la pasan a Amarillo Cambio.
    */
-  --titular-luz: var(--verde-500);
+  --titular-luz: transparent;
 
   /**
    * BARRIDO DE LUZ bajo el texto de un boton (`.barrido-luz`). ⚠️ ES VERDE Y NO
@@ -2229,20 +1867,8 @@ dd {
    * con texto tinta —el primario de las superficies oscuras— las superficies lo
    * pasan a blanco al 45% (tinta 15.02 ✅).
    */
-  --barrido-luz: linear-gradient(
-    var(--eje),
-    transparent 30%,
-    rgb(var(--luz-verde) / 0.2) 48%,
-    rgb(var(--luz-verde) / 0.2) 52%,
-    transparent 70%
-  );
-  --barrido-luz-blanco: linear-gradient(
-    var(--eje),
-    transparent 30%,
-    rgb(255 255 255 / 0.45) 48%,
-    rgb(255 255 255 / 0.45) 52%,
-    transparent 70%
-  );
+  --barrido-luz: none;
+  --barrido-luz-blanco: none;
 
   /* -------------------------------------------------------------- blobs */
   /**
@@ -2269,8 +1895,8 @@ dd {
    * Sobre papel pelado los dos numeros son deliberadamente casi nada: al 6% de
    * verde-400 el tenue ya cae a 4.47 ❌. La luz que se VE va en `.escena-luz`.
    */
-  --blob-alfa-cancha: 0.04;
-  --blob-alfa-cambio: 0.2;
+  --blob-alfa-cancha: 0;
+  --blob-alfa-cambio: 0;
   --blob-tamanio: clamp(280px, 48vw, 720px);
 
   /* -------------------------------------------------------------- enlace */
@@ -2288,25 +1914,6 @@ dd {
  *                  y el amarillo se reserva para el foco y el titular.
  *   cancha         luz Cambio: sobre Verde Cancha un halo verde es invisible.
  */
-.sup-noche,
-.sup-fosa {
-  --luz-marca: var(--luz-verde-clara);
-  --luz-foco: var(--luz-cambio);
-  --luz-blob: var(--luz-verde);
-  --titular-luz: var(--color-cambio);
-  --barrido-luz: var(--barrido-luz-blanco);
-  --enlace-activo: var(--color-cambio);
-}
-
-.sup-fosa {
-  --blob-alfa-cancha: 0.14;
-  --blob-alfa-cambio: 0.08;
-}
-
-.sup-noche {
-  --blob-alfa-cancha: 0.04;
-  --blob-alfa-cambio: 0.02;
-}
 
 .sup-cancha {
   --luz-marca: var(--luz-cambio);
@@ -2314,7 +1921,7 @@ dd {
   --luz-blob: var(--luz-verde-clara);
   --titular-luz: var(--color-cambio);
   --barrido-luz: var(--barrido-luz-blanco);
-  --enlace-activo: var(--color-papel);
+  --enlace-activo: var(--color-blanco);
   /** Sin velo no hay luz que sumar: el texto apoyado directo tiene 0.10 de aire. */
   --blob-alfa-cancha: 0;
   --blob-alfa-cambio: 0;
@@ -2334,11 +1941,6 @@ dd {
  * apoyan texto directo sobre `.sup-cancha` con contrastes medidos contra el
  * verde plano. La viva es opt-in por eso.
  */
-.sup-cancha.sup-cancha-viva {
-  background-image: var(--malla-viva);
-  --blob-alfa-cancha: 0.55;
-  --blob-alfa-cambio: 0.45;
-}
 
 /**
  * ESCENA DE LUZ sobre papel: una seccion clara con blobs que se VEN. Remapea
@@ -2354,36 +1956,6 @@ dd {
  * 0.14 / 0.08 ya es el techo por el enlace verde-400 (5.01) y el borde de
  * control (3.37); al 0.20 / 0.10 caen a 4.30 y 2.89.
  */
-.escena-luz {
-  position: relative;
-  isolation: isolate;
-  --blob-alfa-cancha: 0.16;
-  --blob-alfa-cambio: 0.55;
-  --color-neutro-tenue: var(--color-neutro-texto);
-  --color-alerta: var(--color-alerta-hondo);
-  --linea-control: var(--linea-control-honda);
-  --enlace: var(--verde-750);
-}
-
-.sup-noche.escena-luz,
-.sup-fosa.escena-luz {
-  --color-neutro-tenue: var(--color-sobre-oscuro-2);
-  --color-alerta: var(--color-naranja);
-  /* Sobre un fondo oscuro el lavado claro seria un parche blanco: se apaga. */
-  --alerta-lavado: rgb(255 144 45 / 0.16);
-  --linea-control: var(--linea-control-oscura);
-  --enlace: var(--verde-400);
-}
-
-.sup-noche.escena-luz {
-  --blob-alfa-cancha: 0.1;
-  --blob-alfa-cambio: 0.06;
-}
-
-.sup-fosa.escena-luz {
-  --blob-alfa-cancha: 0.14;
-  --blob-alfa-cambio: 0.08;
-}
 
 /* -------------------------------------------------------------- vidrios */
 
@@ -2401,59 +1973,6 @@ dd {
  * obliga a recomponer lo que tiene detras en cada cuadro de scroll. Una grilla
  * de 24 fichas NO es de vidrio: es `.sup-ficha` con `.eleva`.
  */
-.sup-vidrio-claro {
-  position: relative;
-  isolation: isolate;
-  background-color: var(--vidrio-claro-solido);
-  border: 1px solid var(--vidrio-claro-borde);
-  border-radius: var(--radio-grande);
-  box-shadow: var(--luz-superior), var(--sombra-2), var(--glow-suave);
-  color: var(--texto);
-
-  /**
-   * ⚠️ MAS HONDOS QUE LOS DE PAPEL, Y ES UN NUMERO: el vidrio puede vivir
-   * sobre fosa, y ahi blanco al 82% compone #d2d6d4. Con los tokens de papel
-   * el texto secundario queda en 4.19, el alerta en 3.85 y el borde de control
-   * en 2.62: los tres ❌. Estos pasan sobre fosa (5.27 / 4.62 / 3.19) y sobran
-   * sobre blanco. Numeros completos en `--vidrio-claro-fondo`.
-   */
-  --color-neutro-texto: #4d554b;
-  --color-neutro-tenue: var(--color-neutro-texto);
-  --color-neutro-apagado: #9aa396;
-  --color-neutro-borde: #e4e6de;
-  --color-neutro-suave: #f2f3ea;
-  --linea-tenue: var(--color-neutro-borde);
-  --linea-control: #6f766c;
-  --linea-control-honda: #6f766c;
-  --superficie-1: var(--color-blanco);
-  --superficie-2: var(--color-neutro-suave);
-  --patron-color: var(--color-neutro-borde);
-  --destello: var(--destello-claro);
-  --color-foco: var(--color-cancha);
-  --color-alerta: #964300;
-  --color-alerta-hondo: #964300;
-  --enlace: var(--verde-750);
-  --enlace-activo: var(--color-tiempo-extra);
-  --luz-marca: var(--luz-verde);
-  --luz-foco: var(--luz-verde);
-  --luz-blob: var(--luz-verde-clara);
-  --titular-luz: var(--verde-500);
-  --barrido-luz: linear-gradient(
-    var(--eje),
-    transparent 30%,
-    rgb(var(--luz-verde) / 0.2) 48%,
-    rgb(var(--luz-verde) / 0.2) 52%,
-    transparent 70%
-  );
-  --boton-primario-fondo: var(--color-cancha);
-  --boton-primario-texto: var(--color-papel);
-  --boton-primario-fondo-activo: var(--color-tiempo-extra);
-  --boton-secundario-fondo: var(--superficie-marca);
-  --boton-secundario-borde: var(--color-cancha);
-  --boton-secundario-texto: var(--color-tiempo-extra);
-  --boton-secundario-fondo-activo: var(--superficie-1);
-  --boton-secundario-texto-activo: var(--color-tiempo-extra);
-}
 
 /**
  * VIDRIO OSCURO: el panel de lectura sobre una foto, sobre una malla viva o
@@ -2509,20 +2028,6 @@ dd {
   --boton-secundario-texto-activo: var(--color-cambio);
 }
 
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .sup-vidrio-claro {
-    background-color: var(--vidrio-claro-fondo);
-    -webkit-backdrop-filter: var(--vidrio-desenfoque);
-    backdrop-filter: var(--vidrio-desenfoque);
-  }
-
-  .sup-vidrio-oscuro {
-    background-color: var(--vidrio-oscuro-fondo);
-    -webkit-backdrop-filter: var(--vidrio-desenfoque);
-    backdrop-filter: var(--vidrio-desenfoque);
-  }
-}
-
 /**
  * VELO DE TEXTO. Va en el contenedor de la columna de texto de una escena viva
  * y pinta la capa oscura DEBAJO del texto (z -1 con `isolation`), redondeada con
@@ -2534,20 +2039,6 @@ dd {
  * ⚠️ PINTA EN `::before`: no va en el mismo elemento que `.sup-*`, `.patron-vivo`
  * ni `.borde-brilla`. Va en un hijo propio.
  */
-.velo-texto {
-  position: relative;
-  isolation: isolate;
-}
-
-.velo-texto::before {
-  content: '';
-  position: absolute;
-  inset: calc(var(--espacio-5) * -1);
-  z-index: var(--z-fondo);
-  pointer-events: none;
-  border-radius: var(--radio-panel);
-  background: var(--velo-texto);
-}
 
 /* ------------------------------------------------- primitivas de luz */
 
@@ -2559,33 +2050,8 @@ dd {
  * papel → Cambio. Mismo `@supports` que `.titular-degradado` y por la misma
  * razon: un texto transparente sin fondo es invisible.
  */
-@supports ((background-clip: text) or (-webkit-background-clip: text)) {
-  .titular-vivo {
-    background-image: var(--degradado-titular-vivo);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .sup-noche .titular-vivo,
-  .sup-fosa .titular-vivo,
-  .sup-vidrio-oscuro .titular-vivo {
-    background-image: var(--degradado-titular-claro-vivo);
-  }
-
-  .sup-cancha .titular-vivo,
-  .sup-noche .titular-degradado,
-  .sup-fosa .titular-degradado,
-  .sup-cancha .titular-degradado,
-  .sup-vidrio-oscuro .titular-degradado {
-    background-image: var(--degradado-titular-claro);
-  }
-}
 
 /** Cifra destacada con glow de texto. Estatico: un importe no late. */
-.cifra-brilla {
-  text-shadow: var(--glow-texto);
-}
 
 /**
  * GLOW ESTATICO: una superficie que brilla en reposo. Uno o dos por pantalla
@@ -2593,23 +2059,10 @@ dd {
  * borde de 1px con alfa viene adentro del glow. `.brilla` (movimiento.css) es
  * la version que se enciende en hover.
  */
-.glow {
-  box-shadow: var(--sombra-2), var(--glow-marca);
-}
-
-.glow-fuerte {
-  box-shadow: var(--sombra-2), var(--glow-marca-fuerte);
-}
 
 /** Amarillo pase lo que pase: la chispa, para un sello o una etiqueta destacada. */
-.glow-cambio {
-  box-shadow: var(--glow-cambio);
-}
 
 /** Solo el borde de luz, sin halo: para un chip o una fila seleccionada. */
-.borde-luz {
-  box-shadow: 0 0 0 1px var(--borde-luz);
-}
 
 /* ============================================================= modo oscuro */
 
@@ -2794,4 +2247,24 @@ dd {
   --peligro-texto-relleno: var(--color-tinta);
   --nav-hover: var(--verde-400);
   --globo-borde: var(--verde-400);
+}
+
+/*
+ * Superficies de tarjeta. Una sola elevacion: blanco sobre el fondo de pagina.
+ * Sistema de 2026-11-06 (ver docs-implementation/frontend-sobrio-2026-11-06.md).
+ */
+
+.sup-ficha,
+.sup-flotante,
+.sup-vidrio,
+.sup-vidrio-claro {
+  background-color: var(--color-blanco);
+  box-shadow: var(--sombra-1);
+}
+
+@media (max-width: 760px) {
+  :root {
+    --canal: 16px;
+    --espacio-seccion: 24px;
+  }
 }

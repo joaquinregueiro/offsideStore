@@ -172,7 +172,7 @@ export default async function MisMetricas() {
             </EstadoVacio>
           ) : (
             <>
-              <div className={`${estilos.tablero} sup-noche con-grano`}>
+              <div className={estilos.tablero}>
                 <Cifras
                   cifras={[
                     {
@@ -273,7 +273,7 @@ export default async function MisMetricas() {
             </>
           )}
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Sólo se cuentan las órdenes completadas, que son las mismas que miran tu nivel y tu
               reputación. Las que están en curso no aparecen acá porque todavía pueden cancelarse.

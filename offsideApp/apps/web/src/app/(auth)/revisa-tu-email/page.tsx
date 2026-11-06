@@ -41,12 +41,12 @@ export default async function RevisaTuEmail({
 
   return (
     <Pantalla>
-      <div className={`${propios.tarjeta} entra-acerca`}>
-        <div className={`${propios.tarjetaCabecera} sup-cancha con-grano`}>
+      <div className={propios.tarjeta}>
+        <div className={propios.tarjetaCabecera}>
           <span className={`${propios.sello} ${propios.selloClaro}`} aria-hidden="true">
             <IconoSobre tamanio={34} />
           </span>
-          <h1 className={`${propios.tarjetaTitulo} display display-3`}>Revisá tu email</h1>
+          <h1 className={propios.tarjetaTitulo}>Revisá tu email</h1>
         </div>
 
         <div className={propios.tarjetaCuerpo}>
@@ -78,7 +78,7 @@ export default async function RevisaTuEmail({
               exactamente como abría antes. Reemplaza al `aparecerPanel` local,
               que movía 4px de opacidad mientras la altura saltaba de golpe.
             */
-            <details className={`${propios.desplegable} desplegable`}>
+            <details className={propios.desplegable}>
               <summary className={propios.desplegableTitulo}>No me llegó</summary>
               <div className={propios.desplegablePanel}>
                 <p className={propios.desplegableTexto}>

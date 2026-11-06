@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { Footer } from '@/components/footer';
 import { Header } from '@/components/header';
@@ -65,7 +65,7 @@ function Secuencia({ pasos }: { pasos: PasoDeFlujo[] }) {
       sale de la GEOMETRIA, no de un delay por item. En una animacion dirigida
       por scroll `animation-delay` no hace absolutamente nada.
     */
-    <ol className={`${estilos.pasos} revela-grilla`}>
+    <ol className={estilos.pasos}>
       {pasos.map((paso) => (
         <li key={paso.titulo} className={estilos.paso}>
           <div className={estilos.pasoMarca} aria-hidden="true">
@@ -316,13 +316,13 @@ export default async function ComoFunciona() {
       <Pantalla>
         <main id="contenido">
           {/* ------------------------------------------------------ portada */}
-          <section className={`${estilos.portada} sup-cancha`}>
+          <section className={estilos.portada}>
             <div className={estilos.portadaTrama} aria-hidden="true">
-              <div className={`${estilos.portadaTramaCapa} patron-vivo`} />
+              <div className={estilos.portadaTramaCapa} />
             </div>
 
             <div className={estilos.portadaInterior}>
-              <p className={`${estilos.antetitulo} entra`}>Cómo funciona</p>
+              <p className={estilos.antetitulo}>Cómo funciona</p>
 
               {/*
                 ⚠️ EL CORTE DE LINEA ESTA ESCRITO A MANO Y ES COMPOSICION, no un
@@ -331,19 +331,16 @@ export default async function ComoFunciona() {
                 subir desde atras. Es texto fijo y corto: decidir donde corta es
                 exactamente lo que se hace en una revista.
               */}
-              <h1 className="display entra-lineas">
+              <h1 className=" ">
                 <span>
                   <span>Sin</span>
-                </span>
+                </span>{' '}
                 <span>
                   <span className="oblicuo">vueltas</span>
                 </span>
               </h1>
 
-              <p
-                className={`${estilos.bajada} entra`}
-                style={{ '--retraso': '320ms' } as CSSProperties}
-              >
+              <p className={estilos.bajada}>
                 Offside conecta a quien vende una camiseta con quien la está buscando. El dinero
                 pasa por Mercado Pago y el vendedor cobra en su propia cuenta. Acá está todo lo que
                 pasa, y también lo que todavía no.
@@ -380,33 +377,32 @@ export default async function ComoFunciona() {
             <div className={estilos.tramoInterior}>
               <header className={estilos.tramoEncabezado}>
                 <p className={estilos.tramoRotulo}>01 · Para comprar</p>
-                <h2 className={`${estilos.tramoTitulo} display-3`}>Elegís, pagás, te llega</h2>
-                <span className={`${estilos.tramoFilete} revela-linea`} aria-hidden="true" />
+                <h2 className={estilos.tramoTitulo}>Elegís, pagás, te llega</h2>
+                <span className={estilos.tramoFilete} aria-hidden="true" />
               </header>
               <Secuencia pasos={COMPRAR} />
             </div>
           </section>
 
           {/* ------------------------------------------------------- vender */}
-          <section id="vender" className={`${estilos.tramoTenido} sup-2 con-grano`}>
+          <section id="vender" className={estilos.tramoTenido}>
             <div className={estilos.tramoInterior}>
               <header className={estilos.tramoEncabezado}>
                 <p className={estilos.tramoRotulo}>02 · Para vender</p>
-                <h2 className={`${estilos.tramoTitulo} display-3`}>Tres requisitos y publicás</h2>
-                <span className={`${estilos.tramoFilete} revela-linea`} aria-hidden="true" />
+                <h2 className={estilos.tramoTitulo}>Tres requisitos y publicás</h2>
+                <span className={estilos.tramoFilete} aria-hidden="true" />
               </header>
               <Secuencia pasos={VENDER} />
             </div>
           </section>
 
           {/* ----------------------------------------------------- la plata */}
-          <section id="la-plata" className={`${estilos.plata} sup-noche con-grano`}>
+          <section id="la-plata" className={estilos.plata}>
             {/* Cinta de seccion (identidad §05), en su escala real y en deriva. */}
-            <div className={`${estilos.cinta} patron-vivo patron-vivo-cinta`} aria-hidden="true" />
 
             <div className={estilos.plataInterior}>
               <p className={estilos.plataRotulo}>03 · La plata</p>
-              <h2 className={`${estilos.plataTitulo} display-3`}>Quién cobra qué</h2>
+              <h2 className={estilos.plataTitulo}>Quién cobra qué</h2>
 
               {/*
                 ⚠️ EL PORCENTAJE SALE DEL CONFIG STORE, NO DEL CODIGO. Y entra
@@ -414,7 +410,7 @@ export default async function ComoFunciona() {
                 mostrando el valor FINAL desde el primer cuadro. Nada de contar
                 hacia arriba — es plata que se le descuenta a alguien.
               */}
-              <span className={`${estilos.cifra} cifra-entra`}>
+              <span className={estilos.cifra}>
                 <span>{basisPointsToPercent(basisPoints)}</span>
               </span>
               <p className={estilos.cifraPie}>Es lo que retiene Offside de cada venta</p>
@@ -509,8 +505,8 @@ export default async function ComoFunciona() {
             <div className={estilos.tramoInterior}>
               <header className={estilos.tramoEncabezado}>
                 <p className={estilos.tramoRotulo}>04 · Confianza</p>
-                <h2 className={`${estilos.tramoTitulo} display-3`}>Números, no adjetivos</h2>
-                <span className={`${estilos.tramoFilete} revela-linea`} aria-hidden="true" />
+                <h2 className={estilos.tramoTitulo}>Números, no adjetivos</h2>
+                <span className={estilos.tramoFilete} aria-hidden="true" />
               </header>
 
               {/*
@@ -569,12 +565,12 @@ export default async function ComoFunciona() {
           </section>
 
           {/* ------------------------------------------------------ el envío */}
-          <section id="el-envio" className={`${estilos.tramoTenido} sup-2 con-grano`}>
+          <section id="el-envio" className={estilos.tramoTenido}>
             <div className={estilos.tramoInterior}>
               <header className={estilos.tramoEncabezado}>
                 <p className={estilos.tramoRotulo}>05 · El envío</p>
-                <h2 className={`${estilos.tramoTitulo} display-3`}>Lo declara el vendedor</h2>
-                <span className={`${estilos.tramoFilete} revela-linea`} aria-hidden="true" />
+                <h2 className={estilos.tramoTitulo}>Lo declara el vendedor</h2>
+                <span className={estilos.tramoFilete} aria-hidden="true" />
               </header>
 
               {/*
@@ -620,7 +616,7 @@ export default async function ComoFunciona() {
               <header className={estilos.tramoEncabezado}>
                 <hr className={estilos.faltaRegla} />
                 <p className={estilos.tramoRotulo}>06 · Sin maquillaje</p>
-                <h2 className={`${estilos.tramoTitulo} display-3`}>Lo que todavía no hacemos</h2>
+                <h2 className={estilos.tramoTitulo}>Lo que todavía no hacemos</h2>
               </header>
 
               <p className={estilos.faltaLead}>
@@ -632,7 +628,7 @@ export default async function ComoFunciona() {
                 primitiva `Pasos`: lleno = hecho, hueco = pendiente. Quien no
                 distingue colores lee igual la diferencia.
               */}
-              <ul className={`${estilos.faltantes} revela-grilla`}>
+              <ul className={estilos.faltantes}>
                 {FALTANTES.map((item) => (
                   <li key={item.titulo} className={estilos.faltante}>
                     <span className={estilos.faltanteMarca} aria-hidden="true" />
@@ -647,12 +643,10 @@ export default async function ComoFunciona() {
           </section>
 
           {/* ------------------------------------------------------- cierre */}
-          <section className={`${estilos.cierre} sup-cancha`}>
+          <section className={estilos.cierre}>
             <div className={estilos.cierreInterior}>
               <p className={estilos.cierreRotulo}>Ya está</p>
-              <p className={`${estilos.cierreTitulo} display display-3 oblicuo revela-suave`}>
-                Empezá por acá
-              </p>
+              <p className={`${estilos.cierreTitulo}   oblicuo`}>Empezá por acá</p>
               <p className={estilos.cierreBajada}>
                 Mirar el catálogo no pide cuenta. Publicar pide tres cosas y se aprueba solo.
               </p>

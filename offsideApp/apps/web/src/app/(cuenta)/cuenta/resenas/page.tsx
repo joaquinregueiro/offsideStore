@@ -69,9 +69,9 @@ export default async function MisResenas() {
             </EstadoVacio>
           ) : (
             <Seccion titulo="Lo que escribiste" dato={cantidad(resenas.length, 'reseña')}>
-              <ul className={`${estilos.lista} ${estilos.revela}`}>
+              <ul className={estilos.lista}>
                 {resenas.map((resena) => (
-                  <li key={resena.id} className={`${estilos.tarjetaTexto} sup-ficha eleva`}>
+                  <li key={resena.id} className={`${estilos.tarjetaTexto} sup-ficha`}>
                     <div className={estilos.tarjetaCabecera}>
                       <span className={estilos.tarjetaEnlace}>{resena.sellerDisplayName}</span>
                       <span className={estilos.tarjetaFecha}>

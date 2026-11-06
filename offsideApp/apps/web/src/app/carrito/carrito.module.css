@@ -1,25 +1,3 @@
-/**
- * EL CARRITO — lo que se guardo, agrupado por vendedor, y su checkout.
- *
- * ⚠️ ES LA ANTESALA DE UNA COMPRA Y SE MIDE CON LA MISMA VARA QUE `(compra)`:
- * profundidad y direccion, pero el movimiento termina quieto y nunca ocurre
- * encima de un importe que alguien esta leyendo. Un subtotal que late se lee
- * como un subtotal que todavia no esta decidido.
- *
- * ⚠️ LAS SUPERFICIES NO SE ESCRIBEN A MANO. Elevacion, vidrio, grano y remapeo
- * de tokens salen de `.sup-ficha`, `.sup-2` y `.sup-cancha` (tokens.css). Este
- * archivo aporta unicamente lo que es propio del carrito.
- *
- * ⚠️ EL SELECTOR DE DIRECCION NO ESTA ACA. Lo pinta `(compra)/resumen.module.css`
- * a traves de `<SelectorDeDireccion>`: es EL MISMO control en las dos pantallas,
- * y duplicar su hoja es la forma de que dentro de seis meses la direccion se vea
- * distinta segun por donde se entre.
- *
- * ⚠️ EL UNICO `@keyframes` LLEVA NOMBRE PROPIO. En un CSS Module los nombres son
- * locales, asi que declarar aca uno que TAMBIEN exista en `movimiento.css`
- * dejaria el global muerto sin que falle nada.
- */
-
 /* ------------------------------------------------------------- la pagina */
 
 .pagina {
@@ -44,8 +22,7 @@
 }
 
 .titulo {
-  font-size: var(--texto-3xl);
-  text-transform: uppercase;
+  font-size: var(--texto-2xl);
   /* Garantia de 320px: una palabra mas larga que la columna empujaria la pagina. */
   overflow-wrap: anywhere;
 }
@@ -60,16 +37,6 @@
   background-image: var(--degradado-acento);
 }
 
-/**
- * ⚠️ LA ANIMACION ES UNA CLASE APARTE Y NO VA PEGADA AL FILETE, igual que en
- * `(compra)`: la pantalla decide si anima, el filete no.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .reglaTituloAnimada {
-    animation: trazarRielCarrito var(--dur-escena) var(--curva-corte) both;
-  }
-}
-
 .resumenCabecera {
   margin: var(--espacio-3) 0 0;
   font-size: var(--texto-sm);
@@ -78,8 +45,6 @@
 
 .subtitulo {
   font-size: var(--texto-xl);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   margin: var(--espacio-8) 0 var(--espacio-5);
 }
 
@@ -111,8 +76,6 @@
   gap: var(--espacio-2);
   margin: 0;
   font-size: var(--texto-lg);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -175,27 +138,12 @@
   object-fit: cover;
   display: block;
 }
-
-/** Hueco sin foto: el rombo de la identidad, no un cuadrado gris. */
 .lineaPatron {
   display: block;
   width: 100%;
   height: 100%;
   background-color: var(--superficie-marca);
-  background-size: var(--patron-tamanio-fino);
-  background-position: var(--patron-posicion-fino);
-  /*
-    ⚠️ LA RECETA SE ESCRIBE ACA Y NO SE USA `var(--patron-rombos)`: esa custom
-    property esta declarada en `:root` CONTENIENDO `var(--patron-color)`, y el
-    valor computado ya lleva sus `var()` sustituidos, asi que redefinir el color
-    en este elemento no cambiaria una sola pieza.
-  */
   --patron-color: color-mix(in oklab, var(--color-cancha) 22%, transparent);
-  background-image:
-    linear-gradient(45deg, var(--patron-color) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--patron-color) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--patron-color) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--patron-color) 75%);
 }
 
 .lineaCuerpo {
@@ -221,22 +169,14 @@
   margin: 0;
   font-family: var(--fuente-titulo);
   font-size: var(--texto-xl);
-  letter-spacing: var(--tracking-titulo);
   font-variant-numeric: tabular-nums;
 }
 
 .lineaPorUnidad {
   font-family: var(--fuente-texto);
   font-size: var(--texto-sm);
-  letter-spacing: normal;
   color: var(--color-neutro-tenue);
 }
-
-/**
- * ⚠️ EL CAMBIO DE PRECIO ES UN DATO, NO UNA ALARMA: va en el naranja de texto
- * (`--color-alerta`, 4.88:1 sobre blanco) y NO se anima. El precio del carrito
- * no esta congelado —BR-023— y enterarse tarde es el peor momento.
- */
 .lineaCambio {
   margin: 0;
   font-size: var(--texto-sm);
@@ -292,15 +232,12 @@
 
 .lineaSubtotalRotulo {
   font-size: var(--texto-xs);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-tenue);
 }
 
 .lineaSubtotalValor {
   font-family: var(--fuente-titulo);
   font-size: var(--texto-xl);
-  letter-spacing: var(--tracking-titulo);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -348,15 +285,12 @@
   align-items: baseline;
   gap: var(--espacio-3);
   font-size: var(--texto-sm);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-tenue);
 }
 
 .grupoSubtotal strong {
   font-family: var(--fuente-titulo);
   font-size: var(--texto-xl);
-  letter-spacing: var(--tracking-titulo);
   font-variant-numeric: tabular-nums;
   color: var(--texto);
 }
@@ -379,21 +313,12 @@
 
 .totalRotulo {
   font-size: var(--texto-sm);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--color-neutro-texto);
 }
-
-/**
- * ⚠️ EL TOTAL PUEDE ENTRAR, NUNCA PUEDE ESTAR EN MOVIMIENTO. `cifra-entra` lo
- * levanta UNA VEZ detras de su mascara mostrando el valor FINAL desde el primer
- * cuadro: es la plata que la persona esta por transferirle a un desconocido.
- */
 .totalValor {
   display: inline-block;
   font-family: var(--fuente-titulo);
   font-size: var(--display-3);
-  letter-spacing: var(--tracking-display);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -428,18 +353,15 @@
 
 .barraRotulo {
   font-size: var(--texto-sm);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
-  color: var(--color-sobre-cancha);
+  color: var(--color-neutro-texto);
 }
 
 .barraTotal {
   font-family: var(--fuente-titulo);
   font-size: var(--texto-2xl);
-  letter-spacing: var(--tracking-titulo);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: var(--color-papel);
+  color: var(--color-tinta);
 }
 
 .nota {
@@ -505,8 +427,7 @@
 .ordenTotal {
   margin: 0;
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
-  letter-spacing: var(--tracking-titulo);
+  font-size: var(--texto-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -540,11 +461,4 @@
   gap: var(--espacio-3);
 }
 
-/* ======================================================= keyframes locales */
-
 /** Sin `to`: el valor final es la escala 1 del elemento. */
-@keyframes trazarRielCarrito {
-  from {
-    transform: scaleX(0);
-  }
-}

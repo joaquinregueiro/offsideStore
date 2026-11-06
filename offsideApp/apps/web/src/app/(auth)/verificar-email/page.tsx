@@ -30,12 +30,12 @@ export default async function VerificarEmail({
   if (token === undefined || token === '') {
     return (
       <Pantalla>
-        <div className={`${propios.tarjeta} entra-acerca`}>
-          <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta} sup-calida`}>
+        <div className={propios.tarjeta}>
+          <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta}`}>
             <span className={`${propios.sello} ${propios.selloAlerta}`} aria-hidden="true">
               <IconoSobre tamanio={34} />
             </span>
-            <h1 className={`${propios.tarjetaTitulo} display display-3`}>Revisá tu email</h1>
+            <h1 className={propios.tarjetaTitulo}>Revisá tu email</h1>
           </div>
 
           <div className={propios.tarjetaCuerpo}>
@@ -57,12 +57,12 @@ export default async function VerificarEmail({
     // crudo: sería información sobre tokens ajenos.
     return (
       <Pantalla>
-        <div className={`${propios.tarjeta} entra-acerca`}>
-          <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta} sup-calida`}>
+        <div className={propios.tarjeta}>
+          <div className={`${propios.tarjetaCabecera} ${propios.tarjetaCabeceraAlerta}`}>
             <span className={`${propios.sello} ${propios.selloAlerta}`} aria-hidden="true">
               <IconoSobre tamanio={34} />
             </span>
-            <h1 className={`${propios.tarjetaTitulo} display display-3`}>Ese enlace ya no sirve</h1>
+            <h1 className={propios.tarjetaTitulo}>Ese enlace ya no sirve</h1>
           </div>
 
           <div className={propios.tarjetaCuerpo}>
@@ -88,8 +88,8 @@ export default async function VerificarEmail({
         de marca con malla y grano, con el tilde como objeto y no como un glifo
         suelto.
       */}
-      <div className={`${propios.tarjeta} entra-acerca`}>
-        <div className={`${propios.tarjetaCabecera} sup-cancha con-grano`}>
+      <div className={propios.tarjeta}>
+        <div className={propios.tarjetaCabecera}>
           {/*
             ⚠️ DOS VUELTAS Y PARA (3.9s). No es `infinite` y no puede serlo: WCAG
             2.2.2 exige poder detener cualquier movimiento de más de cinco
@@ -97,15 +97,10 @@ export default async function VerificarEmail({
             —compositor puro—, no un `box-shadow`, que es pintura. Y no toca el
             texto: el contraste no cambia en ningún cuadro.
           */}
-          <span
-            className={`${propios.sello} ${propios.selloClaro} ${propios.selloPulsa}`}
-            aria-hidden="true"
-          >
+          <span className={`${propios.sello} ${propios.selloClaro}`} aria-hidden="true">
             <IconoTilde tamanio={40} />
           </span>
-          <h1 className={`${propios.tarjetaTitulo} display display-3`}>
-            Listo, tu email está verificado
-          </h1>
+          <h1 className={propios.tarjetaTitulo}>Listo, tu email está verificado</h1>
         </div>
 
         <div className={propios.tarjetaCuerpo}>

@@ -34,13 +34,13 @@ export default function CargandoVitrina() {
     <main id="contenido">
       <BarraFantasma />
 
-      <div className={`${estilos.portadaFantasma} sup-cancha con-grano`} aria-hidden="true">
+      <div className={estilos.portadaFantasma} aria-hidden="true">
         <div className={estilos.portadaFantasmaInterior}>
-          <Esqueleto alto={12} ancho="180px" className={`${estilos.lineaClara}`} />
-          <Esqueleto alto={64} ancho="min(9ch, 60%)" className={`${estilos.lineaClara}`} />
-          <Esqueleto alto={64} ancho="min(12ch, 74%)" className={`${estilos.lineaClara}`} />
-          <Esqueleto alto={16} ancho="min(46ch, 100%)" className={`${estilos.lineaClara}`} />
-          <Esqueleto alto={44} ancho="min(260px, 100%)" className={`${estilos.lineaClara}`} />
+          <Esqueleto alto={12} ancho="180px" className={estilos.lineaClara} />
+          <Esqueleto alto={64} ancho="min(9ch, 60%)" className={estilos.lineaClara} />
+          <Esqueleto alto={64} ancho="min(12ch, 74%)" className={estilos.lineaClara} />
+          <Esqueleto alto={16} ancho="min(46ch, 100%)" className={estilos.lineaClara} />
+          <Esqueleto alto={44} ancho="min(260px, 100%)" className={estilos.lineaClara} />
         </div>
       </div>
 

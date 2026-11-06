@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { Isotipo, LogoLockup } from './marca';
-import { Blobs } from './movimiento';
 import { Contenedor } from './ui';
 
 import estilos from './pantalla-de-servicio.module.css';
@@ -32,7 +31,7 @@ export function BanderaIzada() {
  * del offside en algo que no es un offside.
  */
 export function HojaDiagonal() {
-  return <span className={`${estilos.hoja} entra-telon-diagonal`} />;
+  return <span className={estilos.hoja} />;
 }
 
 /**
@@ -97,7 +96,7 @@ export function PantallaDeServicio({
         escrito que aca la luz se VE. Las dos clases traen `position: relative;
         isolation: isolate`, que es lo que mantiene las capas de z -1 adentro.
       */}
-      <section className={`${estilos.escena} sup-fosa escena-luz`}>
+      <section className={estilos.escena}>
         {/*
           ⚠️ CAPAS DE FONDO ANIDADAS Y NINGUNA COMPARTE ELEMENTO CON `.sup-fosa`:
           `.sup-fosa::before` es el filo de luz y `.patron-vivo::before` es el
@@ -105,9 +104,9 @@ export function PantallaDeServicio({
           importacion, asi que compartir elemento apaga el filo sin avisar. Los
           blobs van primero: la trama de rombos se pinta encima de la luz.
         */}
-        <Blobs />
-        <div className={`${estilos.trama} flota flota-lento`} aria-hidden="true">
-          <div className={`${estilos.tramaCapa} patron-vivo`} />
+
+        <div className={estilos.trama} aria-hidden="true">
+          <div className={estilos.tramaCapa} />
         </div>
 
         {/*
@@ -121,13 +120,9 @@ export function PantallaDeServicio({
           `className?: string` sin `| undefined`, y `estilos.contenido` es
           `string | undefined` por `noUncheckedIndexedAccess`.
         */}
-        <Contenedor ancho="medio" className={`${estilos.contenido}`}>
+        <Contenedor ancho="medio" className={estilos.contenido}>
           {marca && (
-            <Link
-              href="/"
-              className={`${estilos.marcaEnlace} marca-brilla entra-veloz`}
-              aria-label="Offside Store — inicio"
-            >
+            <Link href="/" className={estilos.marcaEnlace} aria-label="Offside Store — inicio">
               <LogoLockup alto={26} />
             </Link>
           )}
@@ -137,11 +132,7 @@ export function PantallaDeServicio({
             mientras adentro la bandera se iza o la hoja se descorre. Son dos
             elementos distintos, asi que las dos animaciones conviven.
           */}
-          <div
-            className={`${estilos.ornamento} enciende`}
-            style={{ '--retraso': '80ms' } as CSSProperties}
-            aria-hidden="true"
-          >
+          <div className={estilos.ornamento} aria-hidden="true">
             {ornamento}
           </div>
 
@@ -153,21 +144,11 @@ export function PantallaDeServicio({
             filtra el resultado —gradiente recortado al texto incluido— y no se
             anima nunca.
           */}
-          <div className={estilos.codigoHalo} aria-hidden="true">
-            <p
-              className={`${estilos.codigo} shimmer-titulo`}
-              style={{ '--retraso': '140ms' } as CSSProperties}
-            >
-              {codigo}
-            </p>
+          <div aria-hidden="true">
+            <p className={estilos.codigo}>{codigo}</p>
           </div>
 
-          <h1
-            className={`${estilos.titulo} entra-luz`}
-            style={{ '--retraso': '280ms' } as CSSProperties}
-          >
-            {titulo}
-          </h1>
+          <h1 className={estilos.titulo}>{titulo}</h1>
 
           {/*
             ⚠️ VIDRIO OSCURO PARA EL TEXTO Y LAS ACCIONES. Fosa al 86% con
@@ -177,12 +158,7 @@ export function PantallaDeServicio({
             sin una variante escrita a mano. Medido en tokens.css: hasta con
             blanco puro detras todos los tokens de noche pasan AA.
           */}
-          <div
-            className={`${estilos.cuerpo} sup-vidrio-oscuro entra`}
-            style={{ '--retraso': '400ms' } as CSSProperties}
-          >
-            {children}
-          </div>
+          <div className={estilos.cuerpo}>{children}</div>
         </Contenedor>
       </section>
 
@@ -214,14 +190,13 @@ export function PantallaDeServicio({
  */
 export function TiraDeRecuperacion({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
-    <section className={`${estilos.recuperacion} escena-luz`}>
+    <section className={estilos.recuperacion}>
       {/* Dos luces alcanzan: la principal arriba a la derecha y la calida abajo a la izquierda. */}
-      <Blobs luces={[{ tono: 'cancha' }, { tono: 'cambio', x: '10%', y: '92%' }]} />
 
       <div className={estilos.recuperacionContenido}>
-        <h2 className={`${estilos.recuperacionTitulo} revela`}>{titulo}</h2>
+        <h2 className={estilos.recuperacionTitulo}>{titulo}</h2>
         {/* El escalonado sale de la geometria: cada ficha se revela al entrar, con la curva viva. */}
-        <ul className={`${estilos.recuperacionGrilla} revela-grilla-luz`}>{children}</ul>
+        <ul className={estilos.recuperacionGrilla}>{children}</ul>
       </div>
     </section>
   );

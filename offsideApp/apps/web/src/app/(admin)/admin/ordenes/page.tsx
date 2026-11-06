@@ -169,9 +169,7 @@ export default async function Ordenes({
         />
       </div>
 
-      <Boton type="submit" className="presiona">
-        Buscar
-      </Boton>
+      <Boton type="submit">Buscar</Boton>
 
       {hallada === null && (
         <p className={estilos.ayudaBuscador}>
