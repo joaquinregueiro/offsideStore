@@ -137,9 +137,9 @@
 .precio {
   margin: var(--espacio-4) 0 0;
   font-family: var(--fuente-titulo);
-  font-size: 48px;
-  font-weight: var(--peso-normal);
-  line-height: 1;
+  font-size: 37px;
+  font-weight: 700;
+  line-height: 1.15;
 }
 
 .resumen {
@@ -374,7 +374,7 @@
   }
 
   .precio {
-    font-size: 40px;
+    font-size: 30px;
   }
 }
 

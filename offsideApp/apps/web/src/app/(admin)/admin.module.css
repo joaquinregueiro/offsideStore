@@ -240,8 +240,9 @@
  */
 .numeroDeOrden {
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--texto-sm);
-  line-height: 1;
+  line-height: 1.15;
   user-select: all;
   overflow-wrap: anywhere;
 }
@@ -666,7 +667,8 @@ p.marcadorCifra {
 .marcadorCifra {
   margin: var(--espacio-2) 0 var(--espacio-5);
   font-family: var(--fuente-titulo);
-  font-size: var(--display-2);
+  font-weight: 700;
+  font-size: var(--texto-2xl);
   line-height: var(--interlineado-display);
   color: var(--color-tinta);
 }
@@ -909,8 +911,9 @@ p.marcadorCifra {
 .pendienteNumero {
   display: block;
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-4xl);
-  line-height: 1;
+  font-weight: 700;
+  font-size: var(--texto-2xl);
+  line-height: 1.15;
   color: var(--color-alerta);
   font-variant-numeric: tabular-nums;
 }

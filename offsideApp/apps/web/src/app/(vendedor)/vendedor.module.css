@@ -644,8 +644,9 @@
 .filaPrecio {
   margin: var(--espacio-2) 0 0;
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
-  line-height: 1;
+  font-weight: 700;
+  font-size: var(--texto-xl);
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 

@@ -389,8 +389,9 @@
 .ticketNumero {
   margin: 0;
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--texto-xl);
-  line-height: 1;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -512,8 +513,9 @@
 }
 .totalValor {
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--display-3);
-  line-height: 0.9;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: right;
@@ -744,8 +746,9 @@
 }
 .barraTotal {
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
-  line-height: 1;
+  font-weight: 700;
+  font-size: var(--texto-xl);
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--color-tinta);
@@ -974,8 +977,9 @@
 }
 .compraTotal {
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
-  line-height: 1;
+  font-weight: 700;
+  font-size: var(--texto-xl);
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

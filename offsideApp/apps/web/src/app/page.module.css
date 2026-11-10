@@ -48,7 +48,7 @@
   color: var(--color-blanco);
   margin: 0;
   font-size: var(--display-1);
-  line-height: 0.95;
+  line-height: 1.1;
 }
 
 .tituloLinea {

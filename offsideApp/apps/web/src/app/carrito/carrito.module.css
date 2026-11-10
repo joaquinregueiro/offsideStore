@@ -168,6 +168,7 @@
 .lineaPrecio {
   margin: 0;
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--texto-xl);
   font-variant-numeric: tabular-nums;
 }
@@ -237,6 +238,7 @@
 
 .lineaSubtotalValor {
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--texto-xl);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -290,6 +292,7 @@
 
 .grupoSubtotal strong {
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--texto-xl);
   font-variant-numeric: tabular-nums;
   color: var(--texto);
@@ -318,6 +321,7 @@
 .totalValor {
   display: inline-block;
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--display-3);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -358,7 +362,8 @@
 
 .barraTotal {
   font-family: var(--fuente-titulo);
-  font-size: var(--texto-2xl);
+  font-weight: 700;
+  font-size: var(--texto-xl);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--color-tinta);
@@ -427,6 +432,7 @@
 .ordenTotal {
   margin: 0;
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--texto-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

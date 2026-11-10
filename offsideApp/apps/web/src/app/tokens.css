@@ -116,7 +116,7 @@
    * Es muy CONDENSADA: los titulares ocupan mucho menos ancho que con una
    * sans normal, y el sistema cuenta con eso.
    */
-  --fuente-titulo: var(--font-titulo), 'Arial Narrow', sans-serif;
+  --fuente-titulo: var(--font-titulo), var(--font-texto), system-ui, sans-serif;
   --fuente-texto: var(--font-texto), system-ui, sans-serif;
 
   /**
@@ -151,7 +151,7 @@
    * Interlineado APRETADO en titulares (0.9-0.95). Es lo que le da el
    * caracter de camiseta; con 1.2 el sistema se vuelve genérico.
    */
-  --interlineado-titulo: 0.95;
+  --interlineado-titulo: 1.15;
   --interlineado-texto: 1.5;
 
   /** Mayusculas con tracking, para etiquetas y categorias. */
@@ -1145,10 +1145,10 @@ a:hover {
    */
   --display-3: 22px;
   --display-2: 28px;
-  --display-1: clamp(44px, 6vw, 64px);
+  --display-1: clamp(30px, 4.2vw, 46px);
 
   /** A 84px+ un interlineado de 0.95 abre un canal blanco que parte el titular. */
-  --interlineado-display: 0.95;
+  --interlineado-display: 1.1;
   /** El tracking se CIERRA al crecer: es optica, no gusto. */
   --tracking-display: normal;
   /** Para parrafos largos de lectura editorial. */
@@ -1601,9 +1601,9 @@ dd {
 /** Titular de tapa. */
 .display {
   font-family: var(--fuente-titulo);
-  font-weight: var(--peso-normal);
+  font-weight: 700;
   font-size: var(--display-1);
-  line-height: var(--interlineado-display);
+  line-height: 1.1;
   text-wrap: balance;
   /**
    * ⚠️ ESTO ES LO QUE GARANTIZA LA REGLA DE 320px. A ~56px, una PALABRA sola de

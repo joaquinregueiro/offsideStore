@@ -138,6 +138,7 @@
 
 .indiceNumero {
   font-family: var(--fuente-titulo);
+  font-weight: 700;
   font-size: var(--texto-md);
   font-variant-numeric: tabular-nums;
   /* Verde Cancha sobre papel: 5.16:1. */
@@ -357,8 +358,8 @@ span.cifra {
   margin-block: calc(var(--espacio-7) - 0.14em) calc(var(--espacio-3) - 0.14em);
   margin-inline: 0;
   font-family: var(--fuente-titulo);
-  font-weight: var(--peso-normal);
-  font-size: var(--display-2);
+  font-weight: 700;
+  font-size: var(--texto-2xl);
   line-height: var(--interlineado-display);
   font-variant-numeric: tabular-nums;
   /* Fuera del @supports: si el fondo no llega, el numero sigue existiendo. */
