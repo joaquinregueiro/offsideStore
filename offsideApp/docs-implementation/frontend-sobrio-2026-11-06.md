@@ -82,3 +82,9 @@ detalle de ventas y reclamos; el worker de BullMQ; **los tests de integración n
 corrieron**.
 
 ⚠️ **Revisar antes de desplegar:** en `next dev --webpack` la pantalla 404 mostró la barra superior sin sus estilos, y no se pudo comprobar en un build de producción porque el servidor no arranca sin Redis. Mirar `/no-existe` con la app corriendo normalmente.
+
+## Banner de portada (2026-11-10)
+
+Las dos fotos del dueño son el fondo del banner: `public/portada/portada-escritorio.webp` (2000x500) y `portada-telefono.webp` (900x601), elegidas con `<picture>` a 760 px. Encima va un velo plano de Tinta al 45%: con menos, el texto de 16 px no llega a 4.5:1 sobre las zonas claras de la foto.
+
+El titular pasó de "Camisetas con historia" a "Vendé la que no usás. Comprá la que soñás.", a pedido del dueño.

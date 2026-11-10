@@ -3,10 +3,34 @@
 }
 
 .banner {
-  height: 300px;
+  position: relative;
+  min-height: 360px;
+  overflow: hidden;
+  background-color: var(--color-tinta);
+}
+
+.bannerFondo,
+.bannerImagen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.bannerImagen {
+  object-fit: cover;
+}
+
+/* Velo plano: el texto blanco se mide contra la zona mas clara de la foto. */
+.bannerFondo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgb(16 35 26 / 0.45);
 }
 
 .bannerInterior {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -17,37 +41,29 @@
 }
 
 .bannerTexto {
-  max-width: 500px;
+  max-width: 620px;
 }
 
 .titulo {
+  color: var(--color-blanco);
   margin: 0;
   font-size: var(--display-1);
   line-height: 0.95;
 }
 
+.tituloLinea {
+  display: block;
+}
+
 .bajada {
+  max-width: 500px;
   margin: var(--espacio-3) 0 var(--espacio-5);
-  color: var(--color-neutro-texto);
+  color: var(--color-blanco);
   font-size: var(--texto-md);
 }
 
-.bannerFotos {
-  display: flex;
-  flex: none;
-  gap: var(--espacio-3);
-}
-
-.bannerFoto {
-  display: block;
-  width: 148px;
-  height: 180px;
-  border-radius: var(--radio-ficha);
-  background: var(--color-blanco);
-  object-fit: cover;
-}
-
 .contenido {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--espacio-seccion);
@@ -243,10 +259,6 @@
 }
 
 @media (max-width: 980px) {
-  .bannerFotos {
-    display: none;
-  }
-
   .grilla {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -254,7 +266,7 @@
 
 @media (max-width: 760px) {
   .banner {
-    height: auto;
+    min-height: 0;
     padding-bottom: 72px;
   }
 

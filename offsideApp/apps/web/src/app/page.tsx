@@ -55,8 +55,6 @@ const TOPE_DE_PROMOCIONADAS = 4;
 const TOPE_DE_ATAJOS = 8;
 const MINIMO_DE_FACETAS = 4;
 
-const FOTOS_DEL_BANNER = 3;
-
 /**
  * El icono de cada categoria del enum `garment_category` (ERD §5). Se indexa por
  * `code`, que es fijo (migracion 0004, DEC-041).
@@ -227,8 +225,6 @@ export default async function Home({
   const favoritoDe = (id: string): EstadoDeFavorito | undefined =>
     user === null ? undefined : { activo: favoritos.has(id), volverA: '/#en-venta' };
 
-  const fotos = listings.filter((listing) => listing.coverUrl !== null).slice(0, FOTOS_DEL_BANNER);
-
   const clubes = atajosDe(facetas.club, catalogo.clubes);
   const marcas = atajosDe(facetas.marca, catalogo.marcas);
 
@@ -237,31 +233,36 @@ export default async function Home({
       <Header />
 
       <main id="contenido" className={estilos.pagina}>
+        {/*
+          ⚠️ LA FOTO ES FONDO, NO CONTENIDO: va con alt vacio y un velo plano
+          encima para que el titular blanco se lea sobre cualquier zona de la
+          foto. Dos encuadres porque la de escritorio es 4:1 y en un telefono
+          quedaria una franja ilegible. `fetchPriority="high"`: es lo primero
+          que se ve.
+        */}
         <section className={`${estilos.banner} sup-cancha`}>
+          <picture className={estilos.bannerFondo}>
+            <source media="(max-width: 760px)" srcSet="/portada/portada-telefono.webp" />
+            <img
+              src="/portada/portada-escritorio.webp"
+              alt=""
+              className={estilos.bannerImagen}
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
           <div className={estilos.bannerInterior}>
             <div className={estilos.bannerTexto}>
-              <h1 className={`${estilos.titulo} display`}>Camisetas con historia</h1>
+              <h1 className={`${estilos.titulo} display`}>
+                <span className={estilos.tituloLinea}>Vendé la que no usás.</span>{' '}
+                <span className={estilos.tituloLinea}>Comprá la que soñás.</span>
+              </h1>
               <p className={estilos.bajada}>
-                Comprá y vendé camisetas de fútbol retro, de época y de temporada. Cada una con sus
-                propias fotos.
+                El marketplace de camisetas de fútbol: retro, de época y de temporada, cada una con
+                sus propias fotos.
               </p>
               <BotonEnlace href="/buscar">Ver camisetas</BotonEnlace>
             </div>
-
-            {fotos.length === FOTOS_DEL_BANNER && (
-              <div className={estilos.bannerFotos} aria-hidden="true">
-                {fotos.map((foto) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={foto.id}
-                    className={estilos.bannerFoto}
-                    src={foto.coverUrl ?? ''}
-                    alt=""
-                    decoding="async"
-                  />
-                ))}
-              </div>
-            )}
           </div>
         </section>
 
