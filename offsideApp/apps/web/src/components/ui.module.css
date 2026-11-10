@@ -628,7 +628,7 @@ span.mascaraCifra {
 }
 .filaTotal .filaValor {
   font-family: var(--fuente-titulo);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--texto-xl);
   line-height: 1.15;
 }
@@ -1021,7 +1021,7 @@ span.mascaraCifra {
  */
 .tabla td.numero {
   font-family: var(--fuente-titulo);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--texto-lg);
   line-height: 1.15;
   color: var(--texto-fuerte, var(--color-tinta));
@@ -1359,7 +1359,7 @@ span.mascaraCifra {
 .precio {
   margin: 0;
   font-family: var(--fuente-titulo);
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.15;
   color: var(--texto-fuerte, var(--color-tinta));
   font-variant-numeric: tabular-nums;
@@ -1438,7 +1438,7 @@ span.mascaraCifra {
   flex-direction: column;
   gap: var(--espacio-1);
   font-family: var(--fuente-titulo);
-  font-weight: 700;
+  font-weight: 800;
   font-size: max(var(--texto-xl), var(--display-3));
   line-height: 1.15;
   color: var(--texto-fuerte, var(--color-tinta));
@@ -1641,7 +1641,7 @@ span.mascaraCifra {
 
 .estrellasNumero {
   font-family: var(--fuente-titulo);
-  font-weight: 700;
+  font-weight: 800;
   font-size: calc(var(--estrella) * 1.15);
   line-height: 1.15;
   font-variant-numeric: tabular-nums;

@@ -38,13 +38,13 @@ import './movimiento.css';
  * Las dos familias del sistema visual, con los roles que la identidad les
  * asigna (`design/Offside Identidad.dc.html` §03).
  *
- * Poppins para el titular de portada y los precios, pesos 600 y 700. Reemplaza a
+ * Poppins para el titular de portada y los precios, peso 800 (extra negrita). Reemplaza a
  * Big Noodle Titling por decision del dueño (2026-11-10). Es mucho mas ancha que
  * Big Noodle, asi que los tamaños de esos textos se achicaron en la misma pasada.
  */
 const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['600', '700'],
+  weight: ['800'],
   variable: '--font-titulo',
   display: 'swap',
 });

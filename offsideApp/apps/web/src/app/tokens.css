@@ -1601,7 +1601,7 @@ dd {
 /** Titular de tapa. */
 .display {
   font-family: var(--fuente-titulo);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--display-1);
   line-height: 1.1;
   text-wrap: balance;

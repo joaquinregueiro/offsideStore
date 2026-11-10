@@ -393,7 +393,7 @@
 
 .compraTotal {
   font-family: var(--fuente-titulo);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--texto-xl);
   font-variant-numeric: tabular-nums;
 }

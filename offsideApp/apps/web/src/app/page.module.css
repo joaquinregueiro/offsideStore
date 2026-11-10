@@ -21,12 +21,17 @@
   object-fit: cover;
 }
 
-/* Velo plano: el texto blanco se mide contra la zona mas clara de la foto. */
+/*
+ * Velo plano. Las fotos ya vienen oscurecidas: en escritorio el texto da 6.9:1
+ * sin velo en la zona mas clara (percentil 99), asi que alcanza con un 10%.
+ * En telefono el texto cubre toda la foto y sin velo da 3.8:1: el 25% lo lleva
+ * a 4.7:1. Si se cambian las fotos, hay que volver a medir.
+ */
 .bannerFondo::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-color: rgb(16 35 26 / 0.45);
+  background-color: rgb(16 35 26 / 0.1);
 }
 
 .bannerInterior {
@@ -265,6 +270,10 @@
 }
 
 @media (max-width: 760px) {
+  .bannerFondo::after {
+    background-color: rgb(16 35 26 / 0.25);
+  }
+
   .banner {
     min-height: 0;
     padding-bottom: 72px;
