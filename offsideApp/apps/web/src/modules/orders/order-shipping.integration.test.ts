@@ -185,7 +185,12 @@ async function ventaEnPreparacion(
     .where(eq(schema.sellerProfiles.id, perfil.id));
   await db.insert(schema.mercadopagoAccounts).values({
     sellerId: perfil.id,
-    mpUserId: `3000000${secuencia}`,
+    /*
+     * ⚠️ PREFIJO UNICO POR ARCHIVO: `mp_user_id` es UNIQUE. Este compartia el
+     * `3` con `listings.integration.test` —una colision latente que solo
+     * aparecia cuando los dos llegaban al mismo numero—.
+     */
+    mpUserId: `8000000${secuencia}`,
     accessTokenEncrypted: encryptToken('valor-que-simula-un-access-token'),
     status: 'connected',
     connectedAt: new Date(),
