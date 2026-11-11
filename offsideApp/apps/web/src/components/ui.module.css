@@ -94,6 +94,7 @@
 .botonPrimario {
   --boton-barrido: var(--boton-primario-fondo-activo, var(--color-tiempo-extra));
   background-color: var(--boton-primario-fondo, var(--color-cancha));
+  background-image: var(--boton-primario-imagen, var(--degradado-boton));
   color: var(--boton-primario-texto, var(--color-papel));
   box-shadow: none;
 }
@@ -108,6 +109,7 @@
   color: var(--boton-primario-texto, var(--color-papel));
   box-shadow: none;
   background-color: var(--boton-barrido);
+  background-image: var(--boton-primario-imagen, var(--degradado-boton-activo));
 }
 .botonPrimario:focus-visible:not(:disabled) {
   box-shadow: none;

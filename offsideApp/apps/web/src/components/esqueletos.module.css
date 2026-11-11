@@ -330,6 +330,7 @@
 .barraFantasma {
   min-height: 108px;
   background: var(--color-cancha);
+  background-image: var(--degradado-cancha);
 }
 .barraFantasmaContenido {
   display: flex;

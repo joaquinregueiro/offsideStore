@@ -797,8 +797,18 @@ a:hover {
   --eje: 112deg;
 
   /** Superficies de marca: barra, botones, cintas. Peor punto = cancha, 5.16:1. */
-  --degradado-cancha: linear-gradient(var(--color-cancha), var(--color-cancha));
-  --degradado-cancha-activo: linear-gradient(var(--color-tiempo-extra), var(--color-tiempo-extra));
+  /*
+   * Degradado de las zonas de verde de marca (2026-11-11, pedido del dueño).
+   * Va de Verde Cancha hacia un verde MAS OSCURO, nunca mas claro: el texto
+   * blanco arranca en 5.4:1 y solo gana contraste a lo largo del degradado.
+   */
+  --degradado-cancha: linear-gradient(
+    112deg,
+    var(--color-cancha) 0%,
+    #0d6d3e 55%,
+    var(--color-tiempo-extra) 100%
+  );
+  --degradado-cancha-activo: linear-gradient(112deg, var(--color-tiempo-extra) 0%, #084a2b 100%);
 
   /** Superficies oscuras. Papel encima: minimo 12.59:1. */
   --degradado-noche: linear-gradient(var(--color-blanco), var(--color-blanco));
@@ -1466,6 +1476,9 @@ dd {
 /** Bloque verde de marca: la portada y sus parientes. */
 .sup-cancha {
   background-color: var(--color-cancha);
+  background-image: var(--degradado-cancha);
+  /* Sobre verde el boton primario es blanco: sin degradado. */
+  --boton-primario-imagen: none;
   color: var(--color-papel);
 
   --color-neutro-texto: var(--color-sobre-cancha);
@@ -1830,8 +1843,8 @@ dd {
    * barra ni para ningun bloque con `--color-sobre-cancha` o Cambio encima
    * (4.15 / 4.14 ❌): esos siguen con `--degradado-cancha`.
    */
-  --degradado-boton: linear-gradient(var(--color-cancha), var(--color-cancha));
-  --degradado-boton-activo: linear-gradient(var(--color-tiempo-extra), var(--color-tiempo-extra));
+  --degradado-boton: var(--degradado-cancha);
+  --degradado-boton-activo: var(--degradado-cancha-activo);
 
   /**
    * MALLA VIVA — la portada que SI aclara y satura: cancha → verde-600 →
