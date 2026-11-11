@@ -5,6 +5,7 @@ import {
   AreaDeTexto,
   Campo,
   CampoArchivos,
+  CampoConSugerencias,
   CampoImporte,
   Formulario,
   GrupoDeCampos,
@@ -214,44 +215,52 @@ export default async function NuevaPublicacion() {
                 <SubtituloDeGrupo>Para que te encuentren</SubtituloDeGrupo>
 
                 <div className={estilos.par}>
-                  <Seleccion
-                    nombre="clubId"
+                  <CampoConSugerencias
+                    nombre="club"
                     etiqueta="Club"
-                    vacio="No corresponde"
-                    ayuda="Si es de un club, elegílo: es el filtro que más se usa."
-                    opciones={catalogos.clubes.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                    ayuda="Escribí y elegí de la lista. Si no está, lo proponemos al catálogo."
+                    sugerencias={catalogos.clubes.map((c) => c.name)}
                   />
-                  <Seleccion
-                    nombre="nationalTeamId"
+                  <CampoConSugerencias
+                    nombre="nationalTeam"
                     etiqueta="Selección"
-                    vacio="No corresponde"
-                    opciones={catalogos.selecciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                    ayuda="Sólo si es de una selección nacional."
+                    sugerencias={catalogos.selecciones.map((c) => c.name)}
                   />
                 </div>
 
-                <div className={estilos.par}>
-                  <Seleccion
-                    nombre="brandId"
-                    etiqueta="Marca"
-                    vacio="No la sé"
-                    opciones={catalogos.marcas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-                  />
-                  <Seleccion
-                    nombre="seasonId"
-                    etiqueta="Temporada"
-                    vacio="No la sé"
-                    ayuda="El año o la temporada de la camiseta."
-                    opciones={catalogos.temporadas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-                  />
-                </div>
-
-                <Seleccion
-                  nombre="competitionId"
-                  etiqueta="Competencia"
-                  vacio="No corresponde"
-                  ayuda="Si es una camiseta de una copa o torneo puntual."
-                  opciones={catalogos.competiciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                <CampoConSugerencias
+                  nombre="brand"
+                  etiqueta="Marca"
+                  ayuda="Adidas, Nike, Puma… Si no la sabés, dejalo vacío."
+                  sugerencias={catalogos.marcas.map((c) => c.name)}
                 />
+
+                {/*
+                  ⚠️ TRES CAMPOS CON EL MISMO `name`, y es a proposito: asi el
+                  navegador manda `seasonIds` tres veces y la accion los lee con
+                  `getAll`. Un solo campo multiple (`<select multiple>`) exige
+                  saber hacer ctrl+click y en el telefono es una lista rara.
+
+                  ⚠️ SON AÑOS ENTEROS Y NO "2015/16" (owner, 2026-11-10). La
+                  migracion `0007` sembro las dos formas; aca se ofrecen solo las
+                  primeras y por eso se filtra por `esAnioEntero`.
+                */}
+                <div className={estilos.par}>
+                  {[0, 1, 2].map((indice) => (
+                    <Seleccion
+                      key={indice}
+                      nombre="seasonIds"
+                      identificador={`seasonIds-${indice}`}
+                      etiqueta={indice === 0 ? 'Temporada' : `Temporada ${indice + 1}`}
+                      vacio={indice === 0 ? 'No la sé' : 'Ninguna'}
+                      {...(indice === 0
+                        ? { ayuda: 'El año de la camiseta. Podés elegir hasta tres.' }
+                        : {})}
+                      opciones={catalogos.anios.map((a) => ({ valor: a.id, etiqueta: a.name }))}
+                    />
+                  ))}
+                </div>
               </GrupoDeCampos>
 
               <GrupoDeCampos
@@ -283,6 +292,28 @@ export default async function NuevaPublicacion() {
                     ]}
                   />
                 </div>
+
+                {/*
+                  ⚠️ LA AUTENTICIDAD LA DECLARA QUIEN VENDE Y OFFSIDE NO LA
+                  VERIFICA (TS-032). Por eso las dos opciones dicen "declarada"
+                  en la ayuda y por eso el formulario NO ofrece "verificada":
+                  ese valor existe en el enum pero es un juicio de Offside, y
+                  dejarlo elegir seria regalar una insignia de confianza.
+
+                  ⚠️ SIN ELEGIR QUEDA `NO_ESPECIFICADA`, que es honesto: obligar
+                  empujaria a marcar "original" por descarte, que es justo el
+                  dato que no queremos inventar.
+                */}
+                <Seleccion
+                  nombre="authenticity"
+                  etiqueta="Original o réplica"
+                  vacio="Prefiero no decirlo"
+                  ayuda="Lo declarás vos. Offside no lo verifica."
+                  opciones={[
+                    { valor: 'ORIGINAL_DECLARADA', etiqueta: 'Original' },
+                    { valor: 'REPLICA_OFICIAL', etiqueta: 'Réplica' },
+                  ]}
+                />
               </GrupoDeCampos>
 
               {/*

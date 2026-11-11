@@ -279,14 +279,27 @@ const publicarSchema = z.object({
   // categoria (ERD §9.1).
   kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
   sleeve: z.enum(['short', 'long']).optional(),
-  // Referencias de catalogo. OPCIONALES: exigirlas dejaria afuera cualquier
-  // camiseta cuyo club o marca no este sembrado, y el flujo de propuestas de
-  // catalogo (DEC-041) todavia no existe.
-  clubId: z.string().uuid().optional(),
-  nationalTeamId: z.string().uuid().optional(),
-  brandId: z.string().uuid().optional(),
-  competitionId: z.string().uuid().optional(),
-  seasonId: z.string().uuid().optional(),
+  /*
+   * Catalogos ESCRIBIBLES (delta 2026-11-10): llega el NOMBRE, no un uuid.
+   *
+   * ⚠️ ACA SOLO SE VALIDA LA FORMA —que sea texto y no una novela—. Que el
+   * nombre exista, a cual se parece y que hacer si no esta en el catalogo lo
+   * decide el Service: repetirlo aca seria tener la regla en dos lados.
+   *
+   * ⚠️ `competitionId` SE FUE del formulario (owner, 2026-11-10). La columna
+   * sigue en la base con lo que ya tenia cargado.
+   */
+  club: z.string().trim().max(80).optional(),
+  nationalTeam: z.string().trim().max(80).optional(),
+  brand: z.string().trim().max(80).optional(),
+  /** Hasta tres; el tope real lo aplica el Service. */
+  seasonIds: z.array(z.string().uuid()).max(10).optional(),
+  /**
+   * ⚠️ SOLO LOS DOS VALORES QUE PUEDE DECLARAR QUIEN VENDE. `VERIFICADA`,
+   * `SOSPECHOSA` y `FALSIFICACION` son juicios de Offside: aceptarlos desde un
+   * formulario dejaria que cualquiera se marque la camiseta como verificada.
+   */
+  authenticity: z.enum(['ORIGINAL_DECLARADA', 'REPLICA_OFICIAL']).optional(),
   /**
    * Envio DECLARADO por el vendedor (delta al ERD §11).
    *
@@ -334,18 +347,22 @@ export async function publicar(
       condition: texto(formData, 'condition'),
       kitType: texto(formData, 'kitType'),
       sleeve: texto(formData, 'sleeve'),
-      clubId: texto(formData, 'clubId'),
-      nationalTeamId: texto(formData, 'nationalTeamId'),
-      brandId: texto(formData, 'brandId'),
-      competitionId: texto(formData, 'competitionId'),
-      seasonId: texto(formData, 'seasonId'),
+      club: texto(formData, 'club'),
+      nationalTeam: texto(formData, 'nationalTeam'),
+      brand: texto(formData, 'brand'),
+      /*
+       * ⚠️ `getAll`, NO `get`: son tres campos con el MISMO nombre. Con `get`
+       * se leeria solo el primero y las otras dos temporadas se perderian en
+       * silencio, que es la peor forma de perder un dato.
+       */
+      seasonIds: formData.getAll('seasonIds').filter((v) => typeof v === 'string' && v !== ''),
+      authenticity: texto(formData, 'authenticity'),
       shippingMode: texto(formData, 'shippingMode'),
       shippingCostPesos: texto(formData, 'shippingCostPesos'),
     });
 
-    // Al publicar los cinco selectores de catalogo SI estan en el formulario,
-    // asi que se mandan derecho: aca `null` significa "el vendedor no eligio
-    // ninguno", que es un valor legitimo y no una perdida de dato.
+    // Al publicar, los campos de catalogo SI estan en el formulario, asi que
+    // se mandan derecho: vacio significa "no elegi ninguno", que es legitimo.
     const listing = await publishListing(user, {
       categoryId: input.categoryId,
       title: input.title,
@@ -356,11 +373,11 @@ export async function publicar(
       condition: input.condition,
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
-      clubId: input.clubId ?? null,
-      nationalTeamId: input.nationalTeamId ?? null,
-      brandId: input.brandId ?? null,
-      competitionId: input.competitionId ?? null,
-      seasonId: input.seasonId ?? null,
+      club: input.club ?? null,
+      nationalTeam: input.nationalTeam ?? null,
+      brand: input.brand ?? null,
+      seasonIds: input.seasonIds ?? [],
+      ...(input.authenticity === undefined ? {} : { authenticity: input.authenticity }),
       /*
        * ⚠️ `undefined` Y `null` SIGNIFICAN COSAS DISTINTAS ACA. Ausente = "el
        * vendedor no eligio", y el Service cae al `shipping_default_mode` del
@@ -590,38 +607,46 @@ const editarSchema = z.object({
   condition: z.enum(['NUEVO', 'COMO_NUEVO', 'EXCELENTE', 'MUY_BUENO', 'BUENO', 'ACEPTABLE']),
   kitType: z.enum(['home', 'away', 'third', 'goalkeeper', 'special']).optional(),
   sleeve: z.enum(['short', 'long']).optional(),
-  // Referencias de catalogo. OPCIONALES: exigirlas dejaria afuera cualquier
-  // camiseta cuyo club o marca no este sembrado, y el flujo de propuestas de
-  // catalogo (DEC-041) todavia no existe.
-  clubId: z.string().uuid().optional(),
-  nationalTeamId: z.string().uuid().optional(),
-  brandId: z.string().uuid().optional(),
-  competitionId: z.string().uuid().optional(),
-  seasonId: z.string().uuid().optional(),
+  /*
+   * Catalogos ESCRIBIBLES (delta 2026-11-10): llega el NOMBRE, no un uuid.
+   *
+   * ⚠️ ACA SOLO SE VALIDA LA FORMA —que sea texto y no una novela—. Que el
+   * nombre exista, a cual se parece y que hacer si no esta en el catalogo lo
+   * decide el Service: repetirlo aca seria tener la regla en dos lados.
+   *
+   * ⚠️ `competitionId` SE FUE del formulario (owner, 2026-11-10). La columna
+   * sigue en la base con lo que ya tenia cargado.
+   */
+  club: z.string().trim().max(80).optional(),
+  nationalTeam: z.string().trim().max(80).optional(),
+  brand: z.string().trim().max(80).optional(),
+  /** Hasta tres; el tope real lo aplica el Service. */
+  seasonIds: z.array(z.string().uuid()).max(10).optional(),
+  /**
+   * ⚠️ SOLO LOS DOS VALORES QUE PUEDE DECLARAR QUIEN VENDE. `VERIFICADA`,
+   * `SOSPECHOSA` y `FALSIFICACION` son juicios de Offside: aceptarlos desde un
+   * formulario dejaria que cualquiera se marque la camiseta como verificada.
+   */
+  authenticity: z.enum(['ORIGINAL_DECLARADA', 'REPLICA_OFICIAL']).optional(),
 });
 
-/** Las cinco referencias de catalogo que puede llevar una publicacion. */
-const CLAVES_DE_CATALOGO = [
-  'clubId',
-  'nationalTeamId',
-  'brandId',
-  'competitionId',
-  'seasonId',
-] as const;
+/**
+ * Los campos de catalogo que el formulario de editar puede traer.
+ *
+ * ⚠️ SON NOMBRES, NO IDS (delta 2026-11-10). `competitionId` ya no esta: el
+ * owner saco el campo del formulario y la columna conserva lo que tenia.
+ */
+const CLAVES_DE_CATALOGO = ['club', 'nationalTeam', 'brand'] as const;
 
 type ClaveDeCatalogo = (typeof CLAVES_DE_CATALOGO)[number];
 
 /**
- * Referencias de catalogo que hay que ESCRIBIR, distinguiendo "el formulario no
- * traia el campo" de "el campo vino vacio".
+ * Que campos de catalogo se escriben y cuales se dejan como estaban.
  *
- * ⚠️ ESTO ARREGLA UNA PERDIDA DE DATOS SILENCIOSA. El formulario de editar no
- * tiene los selectores de club, seleccion, marca, temporada ni competencia
- * —sólo los tiene el de publicar—, asi que esas cinco claves llegaban SIEMPRE
- * como `undefined`. La accion mandaba `clubId: input.clubId ?? null` y el
+ * ⚠️ EXISTE POR UN BUG REAL (2026-09-09). El formulario de editar no tenia los
+ * selectores, la accion los leia como `undefined` y mandaba `?? null`, y el
  * repositorio hace `.set({ ...values })`, que escribe el `null`: **corregir un
- * typo en el titulo borraba el club, la marca y la temporada de la
- * publicacion**.
+ * typo en el titulo borraba el club, la marca y la temporada**.
  *
  * El efecto no se veia en ningun lado. La camiseta desaparecia de las facetas
  * de `/buscar`, perdia el peso `A` de los alias —o sea que "CARP" o
@@ -630,9 +655,8 @@ type ClaveDeCatalogo = (typeof CLAVES_DE_CATALOGO)[number];
  *
  * ⚠️ SE PREGUNTA POR `formData.has()` Y NO POR EL VALOR. `texto()` colapsa la
  * cadena vacia a `undefined`, asi que con el valor solo es imposible saber si
- * el vendedor VACIO el campo o si el campo no existia. Con `has()`, el dia que
- * el formulario incorpore los selectores, vaciar uno va a limpiarlo de verdad
- * sin tocar esta funcion.
+ * el vendedor VACIO el campo o si el campo no existia. Con `has()`, vaciar uno
+ * lo limpia de verdad y un campo ausente no se toca.
  */
 function catalogoAEscribir(
   formData: FormData,
@@ -665,11 +689,11 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       condition: texto(formData, 'condition'),
       kitType: texto(formData, 'kitType'),
       sleeve: texto(formData, 'sleeve'),
-      clubId: texto(formData, 'clubId'),
-      nationalTeamId: texto(formData, 'nationalTeamId'),
-      brandId: texto(formData, 'brandId'),
-      competitionId: texto(formData, 'competitionId'),
-      seasonId: texto(formData, 'seasonId'),
+      club: texto(formData, 'club'),
+      nationalTeam: texto(formData, 'nationalTeam'),
+      brand: texto(formData, 'brand'),
+      seasonIds: formData.getAll('seasonIds').filter((v) => typeof v === 'string' && v !== ''),
+      authenticity: texto(formData, 'authenticity'),
     });
 
     await editListing(user, input.listingId, {
@@ -682,6 +706,13 @@ export async function editar(_estado: EstadoVendedor, formData: FormData): Promi
       kitType: input.kitType ?? null,
       sleeve: input.sleeve ?? null,
       ...catalogoAEscribir(formData, input),
+      /*
+       * ⚠️ MISMO CRITERIO QUE LOS CATALOGOS: si el formulario no trae el campo,
+       * las temporadas que ya tenia la publicacion no se tocan. Si lo trae
+       * vacio, se borran — que es lo que la persona pidio.
+       */
+      ...(formData.has('seasonIds') ? { seasonIds: input.seasonIds ?? [] } : {}),
+      ...(input.authenticity === undefined ? {} : { authenticity: input.authenticity }),
     });
   } catch (error) {
     return respuestaDeError(error, {

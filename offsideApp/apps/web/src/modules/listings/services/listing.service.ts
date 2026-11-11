@@ -1,9 +1,10 @@
-import type { Database } from '@offside/database';
+import { getDatabase, type Database } from '@offside/database';
 
 import type { PublicUser } from '../../auth/services/auth.service';
 import { canSellerOperate } from '../../sellers/services/mercadopago-connection.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../listings.errors';
+import { registrarPropuestas, resolverCatalogos } from './catalogo-de-publicacion.service';
 import { createStorage } from '../infrastructure/storage/index';
 import * as catalogRepo from '../repositories/catalog.repository';
 import * as imageRepo from '../repositories/listing-image.repository';
@@ -85,15 +86,24 @@ export interface PublishListingInput {
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
   /**
-   * Referencias de catalogo. Todas OPCIONALES: son las que alimentan las
-   * facetas, pero exigirlas dejaria afuera cualquier camiseta cuyo club o marca
-   * no este sembrado, y el flujo de propuestas (DEC-041) todavia no existe.
+   * Catalogos ESCRIBIBLES: llega el NOMBRE, no el id (delta 2026-11-10).
+   *
+   * ⚠️ CAMBIO DE FORMA, NO SOLO DE TIPO. Antes el formulario ofrecia una lista
+   * cerrada y mandaba uuids; ahora se escribe, porque "no estan ni todos los
+   * clubes ni marcas del mundo". El Service resuelve el texto contra el
+   * catalogo —nombre, alias, sin tildes ni espacios y tolerando un typo— y lo
+   * que no existe entra como solicitud de alta (DEC-041), no como texto libre.
    */
-  clubId?: string | null;
-  nationalTeamId?: string | null;
-  brandId?: string | null;
-  competitionId?: string | null;
-  seasonId?: string | null;
+  club?: string | null;
+  nationalTeam?: string | null;
+  brand?: string | null;
+  /**
+   * Temporadas elegidas, hasta `MAXIMO_DE_TEMPORADAS` (delta 2026-11-10,
+   * autorizado por el owner). Antes era UNA sola FK.
+   */
+  seasonIds?: string[];
+  /** Original o replica, DECLARADA por quien vende (TS-032). */
+  authenticity?: listingRepo.ListingRow['authenticity'];
   /**
    * Envio DECLARADO por el vendedor (delta §11). Opcional: sin Correo
    * Argentino no hay cotizacion, asi que quien no elige cae en
@@ -118,6 +128,8 @@ export interface PublicListing {
   kitType: listingRepo.ListingRow['kitType'];
   sleeve: listingRepo.ListingRow['sleeve'];
   categoryId: string;
+  /** Declarada por quien vende (TS-032). El formulario de editar la necesita. */
+  authenticity: listingRepo.ListingRow['authenticity'];
   /**
    * Referencias de catalogo (ERD §8).
    *
@@ -154,6 +166,7 @@ export function toPublicListing(row: listingRepo.ListingRow): PublicListing {
     moderationStatus: row.moderationStatus,
     priceAmount: row.priceAmount.toString(),
     currency: row.currency,
+    authenticity: row.authenticity,
     clubId: row.clubId,
     nationalTeamId: row.nationalTeamId,
     brandId: row.brandId,
@@ -222,52 +235,114 @@ export async function publishListing(
     await getShippingSettings(),
   );
 
-  const creada = await listingRepo.insertListing({
-    sellerId: seller.id,
-    shippingMode: envio.shippingMode,
-    shippingCostAmount: envio.shippingCostAmount,
-    categoryId: input.categoryId,
-    title: input.title,
-    description: input.description,
-    priceAmount: input.priceAmount,
-    // Una sola moneda en el MVP; el ERD ya exige `currency` en toda tabla con
-    // importes y la orden copia la del listing.
-    currency: 'ARS',
-    stock: input.stock,
-    sizeValue: input.sizeValue,
-    condition: input.condition,
-    kitType: input.kitType,
-    sleeve: input.sleeve,
-    clubId: input.clubId ?? null,
-    nationalTeamId: input.nationalTeamId ?? null,
-    brandId: input.brandId ?? null,
-    competitionId: input.competitionId ?? null,
-    seasonId: input.seasonId ?? null,
-    /**
-     * ⚠️ APROBACION AUTOMATICA — DECISION TRANSITORIA del owner (2026-09-01).
-     *
-     * `configuration-registry.md` §8 lista las "reglas de moderacion
-     * (pre/post publicacion)" como configuracion administrativa SIN valor
-     * definido. Mientras eso siga abierto, las publicaciones nacen
-     * `APPROVED`.
-     *
-     * POR QUE, y no es comodidad: el ERD §9.1 exige `APPROVED` para que algo
-     * sea comprable, y nada asignaba ese estado. Nacer `PENDING` volvia la
-     * regla del ERD imposible de cumplir, y el codigo la ignoraba para
-     * compensar. Naciendo `APPROVED`, el codigo hace lo que el ERD dice.
-     *
-     * ⚠️ ESTO NO ESCALA. Es viable mientras el volumen sea bajo y el owner
-     * conozca a los vendedores. RISK-FR1 (falsificaciones) es Critico/Alta:
-     * cuando haya vendedores desconocidos hay que decidir la politica de
-     * moderacion de verdad y cambiar esta linea.
+  /*
+   * ⚠️ RESUELVE ANTES DE ESCRIBIR NADA. Si lo escrito es ambiguo —"manchester"
+   * son dos— esto lanza, y entonces no queda una publicacion a medias con el
+   * club vacio que nadie vuelve a completar.
+   */
+  const catalogos = await resolverCatalogos({
+    club: input.club,
+    nationalTeam: input.nationalTeam,
+    brand: input.brand,
+  });
+
+  const temporadas = validarTemporadas(input.seasonIds ?? []);
+
+  const creada = await getDatabase().transaction(async (tx) => {
+    const fila = await listingRepo.insertListing(
+      {
+        sellerId: seller.id,
+        shippingMode: envio.shippingMode,
+        shippingCostAmount: envio.shippingCostAmount,
+        categoryId: input.categoryId,
+        title: input.title,
+        description: input.description,
+        priceAmount: input.priceAmount,
+        // Una sola moneda en el MVP; el ERD ya exige `currency` en toda tabla
+        // con importes y la orden copia la del listing.
+        currency: 'ARS',
+        stock: input.stock,
+        sizeValue: input.sizeValue,
+        condition: input.condition,
+        kitType: input.kitType,
+        sleeve: input.sleeve,
+        clubId: catalogos.clubId,
+        nationalTeamId: catalogos.nationalTeamId,
+        brandId: catalogos.brandId,
+        /*
+         * ⚠️ `competitionId` NO SE ESCRIBE MAS: el owner saco el campo del
+         * formulario el 2026-11-10. La COLUMNA queda —borrarla es irreversible
+         * y las publicaciones viejas la tienen cargada—, simplemente nadie la
+         * completa en las nuevas.
+         *
+         * ⚠️ `seasonId` TAMPOCO: la temporada paso a `listing_seasons`, que se
+         * escribe mas abajo dentro de esta misma transaccion.
+         */
+        ...(input.authenticity === undefined ? {} : { authenticity: input.authenticity }),
+        /**
+         * ⚠️ APROBACION AUTOMATICA — DECISION TRANSITORIA del owner (2026-09-01).
+         *
+         * `configuration-registry.md` §8 lista las "reglas de moderacion
+         * (pre/post publicacion)" como configuracion administrativa SIN valor
+         * definido. Mientras eso siga abierto, las publicaciones nacen
+         * `APPROVED`.
+         *
+         * POR QUE, y no es comodidad: el ERD §9.1 exige `APPROVED` para que algo
+         * sea comprable, y nada asignaba ese estado. Nacer `PENDING` volvia la
+         * regla del ERD imposible de cumplir, y el codigo la ignoraba para
+         * compensar. Naciendo `APPROVED`, el codigo hace lo que el ERD dice.
+         *
+         * ⚠️ ESTO NO ESCALA. Es viable mientras el volumen sea bajo y el owner
+         * conozca a los vendedores. RISK-FR1 (falsificaciones) es Critico/Alta:
+         * cuando haya vendedores desconocidos hay que decidir la politica de
+         * moderacion de verdad y cambiar esta linea.
+         */
+        moderationStatus: 'APPROVED',
+      },
+      tx,
+    );
+
+    await listingRepo.replaceSeasons(fila.id, temporadas, tx);
+
+    /*
+     * ⚠️ LAS PROPUESTAS VAN DESPUES DE LA FILA Y DENTRO DE LA MISMA
+     * TRANSACCION: cada una guarda el id de la publicacion para poder
+     * engancharla al aprobarse, asi que antes no existe, y si la publicacion se
+     * revierte no puede quedar una solicitud apuntando a la nada.
      */
-    moderationStatus: 'APPROVED',
+    await registrarPropuestas(catalogos.propuestas, fila.id, user.id, tx);
+
+    return fila;
   });
 
   // El indice de busqueda lo mantiene el Service, no un trigger (DEC-042).
   await reindex(creada.id);
 
   return toPublicListing(creada);
+}
+
+/**
+ * Cuantas temporadas se pueden elegir.
+ *
+ * ⚠️ TRES, Y EL NUMERO VIENE DEL OWNER (2026-11-10: "te debe dejar elegir al
+ * menos 3"). No es ⚙️: subirlo convierte el filtro en ruido —una camiseta "de
+ * 2015 a 2022" no ayuda a nadie a buscar— y bajarlo rompe publicaciones que ya
+ * existen.
+ */
+export const MAXIMO_DE_TEMPORADAS = 3;
+
+/**
+ * ⚠️ SE VALIDA EN EL SERVICE Y NO SOLO EN LA PANTALLA. El formulario manda tres
+ * campos, pero un POST directo manda los que quiera: el tope es una regla, no
+ * una propiedad del HTML.
+ */
+function validarTemporadas(ids: string[]): string[] {
+  const unicas = [...new Set(ids.filter((id) => id.trim() !== ''))];
+  if (unicas.length > MAXIMO_DE_TEMPORADAS) {
+    throw errors.demasiadasTemporadas(MAXIMO_DE_TEMPORADAS);
+  }
+
+  return unicas;
 }
 
 /** Categoria tal como la elige el vendedor al publicar. */
@@ -307,7 +382,26 @@ export interface CatalogosDePublicacion {
   selecciones: catalogRepo.CatalogRow[];
   marcas: catalogRepo.CatalogRow[];
   competiciones: catalogRepo.CatalogRow[];
+  /** Todas, como estan sembradas: años sueltos y temporadas partidas. */
   temporadas: catalogRepo.CatalogRow[];
+  /**
+   * Solo los años enteros, de mas nuevo a mas viejo.
+   *
+   * ⚠️ ES LO UNICO QUE OFRECE EL FORMULARIO (owner, 2026-11-10: "años enteros
+   * 2015 o 2016, no 2015/16"). La migracion `0007` sembro LAS DOS FORMAS —68
+   * años sueltos y 67 temporadas partidas—, asi que esto filtra en vez de
+   * borrar: las publicaciones que ya eligieron "2015-16" la conservan, y la
+   * forma partida sigue existiendo para buscar.
+   */
+  anios: catalogRepo.CatalogRow[];
+}
+
+/**
+ * ⚠️ UN AÑO ENTERO SON CUATRO DIGITOS Y NADA MAS. "2015-16" y "2015/16" no
+ * pasan. Se mira el `name`, que es lo que ve quien publica.
+ */
+export function esAnioEntero(fila: catalogRepo.CatalogRow): boolean {
+  return /^\d{4}$/.test(fila.name.trim());
 }
 
 /**
@@ -324,7 +418,9 @@ export async function listCatalogs(): Promise<CatalogosDePublicacion> {
     catalogRepo.findActive('season'),
   ]);
 
-  return { clubes, selecciones, marcas, competiciones, temporadas };
+  const anios = temporadas.filter(esAnioEntero).sort((a, b) => b.name.localeCompare(a.name));
+
+  return { clubes, selecciones, marcas, competiciones, temporadas, anios };
 }
 
 /** Publicaciones propias del vendedor autenticado. */
@@ -654,4 +750,17 @@ export async function catalogoDeLaVitrina(): Promise<CatalogoDeLaVitrina> {
     temporadas: temporadas.map(publica),
     categorias,
   };
+}
+
+/**
+ * Las temporadas elegidas de una publicacion, para el formulario de editar.
+ *
+ * ⚠️ NO EXIGE SESION, y por eso NO se expone en ninguna ruta: la llama la
+ * pantalla de editar DESPUES de encontrar la publicacion entre las propias
+ * (`listMyListings`), que es donde vive la autorizacion. Exponerla sola seria
+ * dejar leer las temporadas de cualquier publicacion por id — un dato publico,
+ * pero la regla del proyecto es que la pertenencia la decide un solo lugar.
+ */
+export async function listSeasonIdsOf(listingId: string): Promise<string[]> {
+  return listingRepo.findSeasonIds(listingId);
 }

@@ -176,7 +176,18 @@ function condiciones(filtros: SearchFilters) {
   if (filtros.competitionId !== undefined) {
     partes.push(sql`l.competition_id = ${filtros.competitionId}`);
   }
-  if (filtros.seasonId !== undefined) partes.push(sql`l.season_id = ${filtros.seasonId}`);
+  /*
+   * ⚠️ LA TEMPORADA SE FILTRA POR `listing_seasons`, NO POR `l.season_id`
+   * (delta 2026-11-10). Una publicacion puede tener hasta tres, asi que la
+   * columna dejo de ser la verdad. Es un `EXISTS` y no un JOIN a proposito: un
+   * JOIN multiplicaria la fila por cada temporada y el conteo total —que esta
+   * consulta tambien alimenta— saldria inflado.
+   */
+  if (filtros.seasonId !== undefined) {
+    partes.push(
+      sql`EXISTS (SELECT 1 FROM listing_seasons ls WHERE ls.listing_id = l.id AND ls.season_id = ${filtros.seasonId})`,
+    );
+  }
   if (filtros.precioMin !== undefined) partes.push(sql`l.price_amount >= ${filtros.precioMin}`);
   if (filtros.precioMax !== undefined) partes.push(sql`l.price_amount <= ${filtros.precioMax}`);
 
@@ -416,15 +427,34 @@ export async function facetCounts(
     filtros: resto,
   });
 
-  const columna = sql.raw(`l.${COLUMNA_DE_FACETA[faceta]}`);
+  /*
+   * ⚠️ LA TEMPORADA SE CUENTA APARTE, desde `listing_seasons`. Las demas
+   * facetas son una columna de `listings` y agrupan directo; esta es una
+   * relacion N:N, asi que una publicacion con tres temporadas tiene que sumar
+   * UNO en cada una de las tres. Con la columna vieja sumaria en una sola —y
+   * desde el delta del 2026-11-10 ni siquiera se escribe—.
+   */
+  const filas =
+    faceta === 'seasonId'
+      ? await conn(db).execute(sql`
+          SELECT ls.season_id::text AS valor, count(*)::int AS cantidad
+            FROM listings l
+            JOIN listing_seasons ls ON ls.listing_id = l.id
+           WHERE ${base}
+           GROUP BY ls.season_id
+           ORDER BY cantidad DESC, valor ASC
+        `)
+      : await (async () => {
+          const columna = sql.raw(`l.${COLUMNA_DE_FACETA[faceta]}`);
 
-  const filas = await conn(db).execute(sql`
-    SELECT ${columna}::text AS valor, count(*)::int AS cantidad
-      FROM listings l
-     WHERE ${base} AND ${columna} IS NOT NULL
-     GROUP BY ${columna}
-     ORDER BY cantidad DESC, valor ASC
-  `);
+          return conn(db).execute(sql`
+            SELECT ${columna}::text AS valor, count(*)::int AS cantidad
+              FROM listings l
+             WHERE ${base} AND ${columna} IS NOT NULL
+             GROUP BY ${columna}
+             ORDER BY cantidad DESC, valor ASC
+          `);
+        })();
 
   return (filas as unknown as { valor: string; cantidad: number }[]).map((row) => ({
     valor: String(row.valor),

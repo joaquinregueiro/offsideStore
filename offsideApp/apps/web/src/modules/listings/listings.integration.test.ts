@@ -1418,7 +1418,8 @@ describe('catalogos y alias (PS-023 / PS-024, DEC-041)', () => {
     const listing = await listingService.publishListing(seller, {
       ...(await camiseta()),
       title: 'Camiseta retro 1996',
-      clubId: await idDe('clubs', 'river-plate'),
+      // Delta 2026-11-10: el Service recibe el NOMBRE y lo resuelve.
+      club: 'River Plate',
     });
 
     await getDatabase()
@@ -1448,18 +1449,15 @@ describe('catalogos y alias (PS-023 / PS-024, DEC-041)', () => {
 
   it('las facetas de catalogo cuentan y filtran (PS-023)', async () => {
     const seller = await vendedor('facetas-catalogo');
+    // El id sigue haciendo falta para verificar la faceta; el alta ya va por nombre.
     const boca = await idDe('clubs', 'boca-juniors');
-    const adidas = await idDe('brands', 'adidas');
 
-    for (const [titulo, clubId] of [
-      ['Faceta catalogo A', boca],
-      ['Faceta catalogo B', boca],
-    ] as const) {
+    for (const titulo of ['Faceta catalogo A', 'Faceta catalogo B'] as const) {
       const l = await listingService.publishListing(seller, {
         ...(await camiseta()),
         title: titulo,
-        clubId,
-        brandId: adidas,
+        club: 'Boca Juniors',
+        brand: 'Adidas',
       });
 
       await getDatabase()

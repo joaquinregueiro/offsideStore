@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import {
   AreaDeTexto,
   Campo,
+  CampoConSugerencias,
   CampoImporte,
   CampoOculto,
   Formulario,
@@ -16,7 +17,11 @@ import { Aviso, BotonEnlace, Seccion } from '@/components/ui';
 import { estadoDePublicacion, precio, tonoDePublicacion } from '@/lib/formato';
 import { requireSellerSessionUser } from '@/lib/session';
 import { PanelDeCuenta } from '../../../../../(cuenta)/panel';
-import { listCatalogs, listMyListings } from '@/modules/listings/services/listing.service';
+import {
+  listCatalogs,
+  listMyListings,
+  listSeasonIdsOf,
+} from '@/modules/listings/services/listing.service';
 
 import { editar } from '../../../../acciones';
 import { Chapa } from '../../../../chapa';
@@ -46,6 +51,25 @@ export const dynamic = 'force-dynamic';
  * `counter()` de `.formPublicar` los numera solo, así que la diferencia no
  * miente en ninguna de las dos pantallas.
  */
+/**
+ * El nombre de un item de catalogo a partir de su id.
+ *
+ * ⚠️ EL FORMULARIO AHORA MANDA NOMBRES, no ids (delta 2026-11-10), asi que lo
+ * que hay guardado hay que traducirlo para mostrarlo. Se resuelve con los
+ * catalogos que la pantalla YA cargo para las sugerencias: una segunda consulta
+ * para tres nombres seria trabajo de mas.
+ *
+ * ⚠️ SI EL ITEM YA NO ESTA ACTIVO devuelve vacio, y es lo correcto: el campo
+ * aparece en blanco y guardar sin tocarlo lo limpia. Mostrar el nombre de algo
+ * que el catalogo dio de baja invitaria a reenviarlo y el resolvedor lo
+ * rechazaria sin que se entienda por que.
+ */
+function nombreDe(catalogo: { id: string; name: string }[], id: string | null): string {
+  if (id === null) return '';
+
+  return catalogo.find((item) => item.id === id)?.name ?? '';
+}
+
 export default async function EditarPublicacion({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireSellerSessionUser(`/vendedor/publicaciones/${id}/editar`);
@@ -54,6 +78,12 @@ export default async function EditarPublicacion({ params }: { params: Promise<{ 
   const [propias, catalogos] = await Promise.all([listMyListings(user), listCatalogs()]);
   const publicacion = propias.find((item) => item.id === id);
   if (publicacion === undefined) notFound();
+
+  /*
+   * Se pide DESPUES de confirmar que la publicacion es suya: la autorizacion
+   * vive en `listMyListings`, no en esta consulta.
+   */
+  const temporadas = await listSeasonIdsOf(publicacion.id);
 
   if (publicacion.status === 'deleted') {
     return (
@@ -212,46 +242,50 @@ export default async function EditarPublicacion({ params }: { params: Promise<{ 
                 </p>
 
                 <div className={estilos.par}>
-                  <Seleccion
-                    nombre="clubId"
+                  <CampoConSugerencias
+                    nombre="club"
                     etiqueta="Club"
-                    vacio="Sin especificar"
-                    defaultValue={publicacion.clubId ?? ''}
-                    opciones={catalogos.clubes.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                    ayuda="Escribí y elegí de la lista. Si no está, lo proponemos al catálogo."
+                    defaultValue={nombreDe(catalogos.clubes, publicacion.clubId)}
+                    sugerencias={catalogos.clubes.map((c) => c.name)}
                   />
-                  <Seleccion
-                    nombre="nationalTeamId"
+                  <CampoConSugerencias
+                    nombre="nationalTeam"
                     etiqueta="Selección"
-                    vacio="Sin especificar"
-                    defaultValue={publicacion.nationalTeamId ?? ''}
-                    opciones={catalogos.selecciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                    ayuda="Sólo si es de una selección nacional."
+                    defaultValue={nombreDe(catalogos.selecciones, publicacion.nationalTeamId)}
+                    sugerencias={catalogos.selecciones.map((c) => c.name)}
                   />
                 </div>
 
-                <div className={estilos.par}>
-                  <Seleccion
-                    nombre="brandId"
-                    etiqueta="Marca"
-                    vacio="Sin especificar"
-                    defaultValue={publicacion.brandId ?? ''}
-                    opciones={catalogos.marcas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-                  />
-                  <Seleccion
-                    nombre="seasonId"
-                    etiqueta="Temporada"
-                    vacio="Sin especificar"
-                    defaultValue={publicacion.seasonId ?? ''}
-                    opciones={catalogos.temporadas.map((c) => ({ valor: c.id, etiqueta: c.name }))}
-                  />
-                </div>
-
-                <Seleccion
-                  nombre="competitionId"
-                  etiqueta="Competencia"
-                  vacio="Sin especificar"
-                  defaultValue={publicacion.competitionId ?? ''}
-                  opciones={catalogos.competiciones.map((c) => ({ valor: c.id, etiqueta: c.name }))}
+                <CampoConSugerencias
+                  nombre="brand"
+                  etiqueta="Marca"
+                  ayuda="Adidas, Nike, Puma… Si no la sabés, dejalo vacío."
+                  defaultValue={nombreDe(catalogos.marcas, publicacion.brandId)}
+                  sugerencias={catalogos.marcas.map((c) => c.name)}
                 />
+
+                {/*
+                  ⚠️ LOS TRES CAMPOS SE DIBUJAN SIEMPRE, tengan valor o no, y
+                  comparten `name`. Es lo que permite BORRAR temporadas: la
+                  accion mira `formData.has('seasonIds')` y, si el formulario las
+                  trajo, reemplaza la lista entera. Si alguno se omitiera cuando
+                  esta vacio, vaciar la ultima seria imposible.
+                */}
+                <div className={estilos.par}>
+                  {[0, 1, 2].map((indice) => (
+                    <Seleccion
+                      key={indice}
+                      nombre="seasonIds"
+                      identificador={`seasonIds-${indice}`}
+                      etiqueta={indice === 0 ? 'Temporada' : `Temporada ${indice + 1}`}
+                      vacio={indice === 0 ? 'Sin especificar' : 'Ninguna'}
+                      defaultValue={temporadas[indice] ?? ''}
+                      opciones={catalogos.anios.map((a) => ({ valor: a.id, etiqueta: a.name }))}
+                    />
+                  ))}
+                </div>
               </GrupoDeCampos>
 
               <GrupoDeCampos
@@ -285,6 +319,24 @@ export default async function EditarPublicacion({ params }: { params: Promise<{ 
                     ]}
                   />
                 </div>
+
+                {/* La declara quien vende; Offside no la verifica (TS-032). */}
+                <Seleccion
+                  nombre="authenticity"
+                  etiqueta="Original o réplica"
+                  vacio="Prefiero no decirlo"
+                  ayuda="Lo declarás vos. Offside no lo verifica."
+                  defaultValue={
+                    publicacion.authenticity === 'ORIGINAL_DECLARADA' ||
+                    publicacion.authenticity === 'REPLICA_OFICIAL'
+                      ? publicacion.authenticity
+                      : ''
+                  }
+                  opciones={[
+                    { valor: 'ORIGINAL_DECLARADA', etiqueta: 'Original' },
+                    { valor: 'REPLICA_OFICIAL', etiqueta: 'Réplica' },
+                  ]}
+                />
               </GrupoDeCampos>
             </Formulario>
           </div>

@@ -1310,19 +1310,26 @@ const PUBLICACIONES_EXPIRADO: DefinicionDePublicacion[] = [
   },
 ];
 
-/** Ids de catalogo indexados por slug, para resolver las definiciones. */
+/** Catalogo indexado por slug: id para escribir directo, nombre para los Services. */
+type EntradaDeCatalogo = Map<string, { id: string; name: string }>;
+
 interface Catalogos {
   categorias: Map<Categoria, string>;
-  clubes: Map<string, string>;
-  selecciones: Map<string, string>;
-  marcas: Map<string, string>;
-  competiciones: Map<string, string>;
-  temporadas: Map<string, string>;
+  clubes: EntradaDeCatalogo;
+  selecciones: EntradaDeCatalogo;
+  marcas: EntradaDeCatalogo;
+  competiciones: EntradaDeCatalogo;
+  temporadas: EntradaDeCatalogo;
 }
 
 async function cargarCatalogos(): Promise<Catalogos> {
-  const porSlug = (filas: { id: string; slug: string }[]) =>
-    new Map(filas.map((fila) => [fila.slug, fila.id]));
+  /*
+   * ⚠️ SE GUARDA EL NOMBRE ADEMAS DEL ID (delta 2026-11-10). El formulario
+   * —y con el `publishListing`— pasaron a recibir NOMBRES: el seed siembra por
+   * los mismos Services que usa la app, asi que necesita las dos cosas.
+   */
+  const porSlug = (filas: { id: string; slug: string; name: string }[]) =>
+    new Map(filas.map((fila) => [fila.slug, { id: fila.id, name: fila.name }]));
 
   const categorias = await listingService.listActiveCategories();
   const catalogos = await listingService.listCatalogs();
@@ -1342,17 +1349,33 @@ async function cargarCatalogos(): Promise<Catalogos> {
  * seed, no un dato opcional: se corta para no sembrar una publicacion sin el
  * club que el titulo promete.
  */
+function entradaDeCatalogo(
+  mapa: Map<string, { id: string; name: string }>,
+  slug: string | undefined,
+  nombre: string,
+): { id: string; name: string } | null {
+  if (slug === undefined) return null;
+
+  const fila = mapa.get(slug);
+  if (fila === undefined) throw new Error(`No existe ${nombre} '${slug}' en el catalogo sembrado`);
+
+  return fila;
+}
+
 function idDeCatalogo(
-  mapa: Map<string, string>,
+  mapa: Map<string, { id: string; name: string }>,
   slug: string | undefined,
   nombre: string,
 ): string | null {
-  if (slug === undefined) return null;
+  return entradaDeCatalogo(mapa, slug, nombre)?.id ?? null;
+}
 
-  const id = mapa.get(slug);
-  if (id === undefined) throw new Error(`No existe ${nombre} '${slug}' en el catalogo sembrado`);
-
-  return id;
+function nombreDeCatalogo(
+  mapa: Map<string, { id: string; name: string }>,
+  slug: string | undefined,
+  nombre: string,
+): string | null {
+  return entradaDeCatalogo(mapa, slug, nombre)?.name ?? null;
 }
 
 function inputDePublicacion(
@@ -1373,12 +1396,30 @@ function inputDePublicacion(
     condition: def.condicion,
     kitType: def.kitType,
     sleeve: def.manga,
-    clubId: idDeCatalogo(catalogos.clubes, def.club, 'el club'),
-    nationalTeamId: idDeCatalogo(catalogos.selecciones, def.seleccion, 'la seleccion'),
-    brandId: idDeCatalogo(catalogos.marcas, def.marca, 'la marca'),
-    competitionId: idDeCatalogo(catalogos.competiciones, def.competicion, 'la competicion'),
-    seasonId: idDeCatalogo(catalogos.temporadas, def.temporada, 'la temporada'),
+    /*
+     * ⚠️ NOMBRES, NO IDS (delta 2026-11-10): es lo que manda el formulario y lo
+     * que `publishListing` resuelve. Sembrar por otro camino dejaria el seed
+     * ejercitando un contrato que la app ya no usa.
+     */
+    club: nombreDeCatalogo(catalogos.clubes, def.club, 'el club'),
+    nationalTeam: nombreDeCatalogo(catalogos.selecciones, def.seleccion, 'la seleccion'),
+    brand: nombreDeCatalogo(catalogos.marcas, def.marca, 'la marca'),
+    seasonIds: temporadaDe(catalogos, def.temporada),
   };
+}
+
+/**
+ * La temporada del seed, como lista.
+ *
+ * ⚠️ LAS DEFINICIONES USAN SLUGS COMO "2001" Y TAMBIEN "1996-97". El formulario
+ * solo ofrece años enteros, pero el catalogo conserva las dos formas y el seed
+ * siembra lo que su definicion diga: filtrar aca escondería publicaciones
+ * historicas que existen de verdad.
+ */
+function temporadaDe(catalogos: Catalogos, slug: string | undefined): string[] {
+  const id = idDeCatalogo(catalogos.temporadas, slug, 'la temporada');
+
+  return id === null ? [] : [id];
 }
 
 /**
@@ -1461,14 +1502,24 @@ async function publicarSinOperar(
       condition: input.condition,
       kitType: input.kitType,
       sleeve: input.sleeve,
-      clubId: input.clubId ?? null,
-      nationalTeamId: input.nationalTeamId ?? null,
-      brandId: input.brandId ?? null,
-      competitionId: input.competitionId ?? null,
-      seasonId: input.seasonId ?? null,
+      /*
+       * ⚠️ ESTE CAMINO ESCRIBE IDS porque no pasa por el Service: resuelve los
+       * slugs de la definicion contra el catalogo, que es lo que el Service
+       * haria con los nombres.
+       */
+      clubId: idDeCatalogo(catalogos.clubes, def.club, 'el club'),
+      nationalTeamId: idDeCatalogo(catalogos.selecciones, def.seleccion, 'la seleccion'),
+      brandId: idDeCatalogo(catalogos.marcas, def.marca, 'la marca'),
+      competitionId: idDeCatalogo(catalogos.competiciones, def.competicion, 'la competicion'),
       // Mismo valor que escribe `publishListing`: decision transitoria del owner.
       moderationStatus: 'APPROVED',
     });
+
+    /*
+     * ⚠️ LA TEMPORADA VA A `listing_seasons` (delta 2026-11-10), no a la
+     * columna: es donde la app la lee desde ahora.
+     */
+    await listingRepo.replaceSeasons(creada.id, temporadaDe(catalogos, def.temporada));
 
     await searchService.reindex(creada.id);
     await completarPublicacion(vendedor.user, creada.id, def);

@@ -815,11 +815,12 @@ export interface Opcion {
  * `appearance: none`, no el comportamiento: en el telefono se abre el selector
  * del sistema operativo y anda sin una linea de JavaScript.
  *
- * ⚠️ NO SE REEMPLAZA POR `<input list>` + `<datalist>`, aunque una lista de 135
- * temporadas pida busqueda a gritos: un datalist manda al servidor el TEXTO
- * visible y el schema de publicar exige un uuid. La unica forma de que mande el
- * uuid es ponerlo en `value`, y entonces la persona ve el uuid escrito en el
- * campo. No hay mapeo etiqueta a valor en HTML sin JavaScript.
+ * ⚠️ SIGUE SIENDO UN `<select>` DONDE EL VALOR ES UN ID. Para los catalogos
+ * escribibles —club, seleccion, marca— esta primitiva ya no se usa: ver
+ * `CampoConSugerencias`, que manda el NOMBRE y lo resuelve el servidor. El
+ * obstaculo que este comentario describia —"un datalist manda el texto visible
+ * y el schema exige un uuid"— se resolvio cambiando lo que el schema espera, no
+ * poniendo el uuid a la vista.
  */
 export function Seleccion({
   nombre,
@@ -1279,4 +1280,78 @@ export function GrupoDeCampos({
 /** Subtitulo interno de un grupo. Ver la nota de `.grupoSubtitulo`. */
 export function SubtituloDeGrupo({ children }: { children: ReactNode }) {
   return <p className={estilos.grupoSubtitulo}>{children}</p>;
+}
+
+/**
+ * Campo escribible con sugerencias: `<input list>` + `<datalist>`.
+ *
+ * ⚠️ MANDA EL TEXTO, NO UN ID, y eso es el diseño entero. El servidor resuelve
+ * el nombre contra el catalogo —exacto, alias, sin tildes ni espacios y
+ * tolerando un typo— y lo que no existe entra como solicitud de alta (DEC-041).
+ * Fue la unica forma de cumplir el pedido del owner: "no estan ni todos los
+ * clubes ni marcas del mundo".
+ *
+ * ⚠️ FUNCIONA SIN UNA LINEA DE JAVASCRIPT, como el resto del sitio. El
+ * `<datalist>` es nativo: el navegador filtra mientras se escribe y en el
+ * telefono lo muestra como lista. Con JS apagado sigue siendo un campo de texto
+ * y el servidor resuelve igual.
+ *
+ * ⚠️ LO QUE EL DATALIST NO PUEDE HACER lo hace el servidor: el navegador
+ * compara contra el texto visible tal cual, asi que "Newbalance" NO destaca "New
+ * Balance" en la lista. Al enviar, el resolvedor normaliza y lo encuentra. Por
+ * eso el campo acepta lo escrito aunque no haya coincidencia visible.
+ *
+ * ⚠️ `autoComplete="off"` NO ES COSMETICO: sin el, el navegador superpone su
+ * propio historial al `<datalist>` y la persona ve dos listas peleando por el
+ * mismo espacio.
+ */
+export function CampoConSugerencias({
+  nombre,
+  etiqueta,
+  sugerencias,
+  ayuda,
+  defaultValue,
+  identificador,
+  maxLength = 80,
+}: {
+  nombre: string;
+  etiqueta: string;
+  /** Lo que se ofrece al escribir. El valor que viaja es el texto. */
+  sugerencias: string[];
+  ayuda?: string;
+  defaultValue?: string | undefined;
+  identificador?: string;
+  maxLength?: number;
+}) {
+  const id = identificador ?? nombre;
+  const idLista = `${id}-opciones`;
+  const idAyuda = ayuda === undefined ? undefined : `${id}-ayuda`;
+  const idError = `${id}-error`;
+  const { error, valor } = useCampo(nombre);
+
+  return (
+    <div className={estilos.campo}>
+      <label htmlFor={id} className={estilos.etiqueta}>
+        {etiqueta}
+      </label>
+      <input
+        id={id}
+        name={nombre}
+        type="text"
+        list={idLista}
+        autoComplete="off"
+        maxLength={maxLength}
+        className={clases(estilos.control, error !== undefined && estilos.controlError)}
+        defaultValue={valor ?? defaultValue}
+        aria-invalid={error === undefined ? undefined : true}
+        aria-describedby={describe(idAyuda, idError, error)}
+      />
+      <datalist id={idLista}>
+        {sugerencias.map((sugerencia) => (
+          <option key={sugerencia} value={sugerencia} />
+        ))}
+      </datalist>
+      <PieDeCampo idError={idError} idAyuda={idAyuda} error={error} ayuda={ayuda} />
+    </div>
+  );
 }
