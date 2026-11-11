@@ -99,6 +99,13 @@ const ACCESOS: {
     icono: 'bandera',
   },
   {
+    nombre: 'Catálogo',
+    href: '/admin/catalogo',
+    detalle: 'Altas de club, selección y marca que alguien propuso al publicar.',
+    capacidad: CAPABILITIES.CATALOG_MODERATE,
+    icono: 'etiqueta',
+  },
+  {
     nombre: 'Ingresos',
     href: '/admin/ingresos',
     detalle: 'Comisión cobrada por mes y por origen, leída de los snapshots.',

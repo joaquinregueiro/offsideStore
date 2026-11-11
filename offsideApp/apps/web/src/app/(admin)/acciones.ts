@@ -15,6 +15,10 @@ import { resolve as resolverDisputaService } from '@/modules/disputes/services/d
 import { endPromotionByAdmin } from '@/modules/listings/services/promotion.service';
 import { refundPayment } from '@/modules/payments/services/refund.service';
 import { reviewReport } from '@/modules/reports/services/report.service';
+import {
+  approveCatalogRequest,
+  rejectCatalogRequest,
+} from '@/modules/listings/services/catalog-moderation.service';
 import { grantTiendaLevel } from '@/modules/reputation/services/reputation.service';
 import { assignTierManually } from '@/modules/sellers/services/seller-tier.service';
 import { applySanction, liftSanction } from '@/modules/trust/services/sanction.service';
@@ -630,4 +634,71 @@ export async function revisarReporte(
   revalidatePath('/admin/reportes');
 
   return { ok: resultado };
+}
+
+/* ------------------------------ catalogo controlado (DEC-041) ------------ */
+
+const solicitudSchema = z.object({
+  solicitudId: z.string().uuid(),
+  /** Al aprobar se puede corregir el nombre: "deportivo moron" → "Deportivo Morón". */
+  nombre: z.string().trim().min(2, 'El nombre es muy corto').max(80).optional(),
+});
+
+/**
+ * Aprueba un alta al catalogo propuesta desde el formulario de publicar.
+ *
+ * ⚠️ CREA UNA ENTIDAD QUE DESPUES FILTRA A TODO EL SITIO, asi que consume su
+ * limite y se audita en el Service. Y el nombre que entra es el que escribe
+ * quien modera, no el texto crudo de la propuesta.
+ */
+export async function aprobarSolicitudDeCatalogo(
+  _estado: EstadoAdmin,
+  formData: FormData,
+): Promise<EstadoAdmin> {
+  try {
+    const admin = await requireCapabilitySessionUser(CAPABILITIES.CATALOG_MODERATE);
+    await exigirLimitePorUsuario('admin-moderate', admin.id);
+
+    const input = solicitudSchema.parse({
+      solicitudId: texto(formData, 'solicitudId'),
+      nombre: texto(formData, 'nombre'),
+    });
+
+    await approveCatalogRequest(admin, input.solicitudId, input.nombre);
+  } catch (error) {
+    return errorDeAdmin(error, formData);
+  }
+
+  revalidatePath('/admin/catalogo');
+
+  return { ok: 'Alta aprobada. La publicación que la pidió ya quedó enganchada.' };
+}
+
+const rechazoSchema = z.object({
+  solicitudId: z.string().uuid(),
+  motivo: z.string().trim().min(3, 'Escribí el motivo del rechazo').max(500),
+});
+
+/** Rechaza una propuesta. El motivo es obligatorio: lo exige la tabla. */
+export async function rechazarSolicitudDeCatalogo(
+  _estado: EstadoAdmin,
+  formData: FormData,
+): Promise<EstadoAdmin> {
+  try {
+    const admin = await requireCapabilitySessionUser(CAPABILITIES.CATALOG_MODERATE);
+    await exigirLimitePorUsuario('admin-moderate', admin.id);
+
+    const input = rechazoSchema.parse({
+      solicitudId: texto(formData, 'solicitudId'),
+      motivo: texto(formData, 'motivo'),
+    });
+
+    await rejectCatalogRequest(admin, input.solicitudId, input.motivo);
+  } catch (error) {
+    return errorDeAdmin(error, formData);
+  }
+
+  revalidatePath('/admin/catalogo');
+
+  return { ok: 'Propuesta rechazada.' };
 }

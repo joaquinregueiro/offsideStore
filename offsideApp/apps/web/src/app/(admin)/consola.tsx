@@ -17,6 +17,7 @@ export type SeccionDeAdmin =
   | 'vendedores'
   | 'ordenes'
   | 'reportes'
+  | 'catalogo'
   | 'ingresos';
 
 /**
@@ -78,7 +79,7 @@ export function Consola({
    * ⚠️ SON OPCIONALES A PROPOSITO: solo el indice los tiene a mano. Ninguna
    * pantalla va a pedir tres `COUNT` de mas para pintar un numerito.
    */
-  pendientes?: { disputas?: number; reportes?: number } | undefined;
+  pendientes?: { disputas?: number; reportes?: number; catalogo?: number } | undefined;
   /** El buscador de la consola de pagos y el de ordenes. */
   children?: ReactNode;
 }) {
@@ -86,6 +87,7 @@ export function Consola({
   const puedeReembolsar = hasCapability(rol, CAPABILITIES.PAYMENTS_REFUND);
   const puedeResolver = hasCapability(rol, CAPABILITIES.DISPUTES_RESOLVE);
   const puedeModerar = hasCapability(rol, CAPABILITIES.TRUST_MODERATE);
+  const puedeModerarCatalogo = hasCapability(rol, CAPABILITIES.CATALOG_MODERATE);
 
   const items: ItemDeSeccion[] = [{ clave: 'inicio', texto: 'Inicio', href: '/admin' }];
 
@@ -122,6 +124,20 @@ export function Consola({
       texto: 'Reportes',
       href: '/admin/reportes',
       ...(pendientes?.reportes === undefined ? {} : { dato: pendientes.reportes }),
+    });
+  }
+
+  /*
+   * ⚠️ VA CON SU PROPIA CAPACIDAD (`catalog:moderate`, DEC-041) y no con la de
+   * moderar: aprobar un alta decide que entidades EXISTEN en el sitio, que es
+   * otra cosa que atender una denuncia.
+   */
+  if (puedeModerarCatalogo) {
+    items.push({
+      clave: 'catalogo',
+      texto: 'Catálogo',
+      href: '/admin/catalogo',
+      ...(pendientes?.catalogo === undefined ? {} : { dato: pendientes.catalogo }),
     });
   }
 
