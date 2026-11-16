@@ -33,7 +33,13 @@ RUN npm ci
 FROM node:24-alpine AS build
 WORKDIR /app
 
-COPY --from=deps /app/node_modules ./node_modules
+# ⚠️ SE COPIA TODO `/app`, NO SOLO `/app/node_modules`. npm puede instalar una
+# dependencia adentro del workspace (`apps/web/node_modules/next`) en vez de
+# subirla a la raiz, segun como quede el lockfile. Copiando solo la raiz, esa
+# dependencia desaparecia y el build fallaba con `next: not found` (deploy del
+# 2026-11-16). `.dockerignore` excluye `**/node_modules`, asi que el `COPY . .`
+# de abajo trae el codigo sin pisar lo instalado.
+COPY --from=deps /app ./
 COPY . .
 
 # ⚠️ VALORES FICTICIOS, SOLO PARA CONSTRUIR. `next build` evalua los modulos de

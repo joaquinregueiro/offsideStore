@@ -173,6 +173,23 @@ cambian.
   `--cap-add SYS_ADMIN` y comandos de Laravel— que si quedan guardados rompen el
   deploy o abren un riesgo serio.
 
+## `next: not found` en el build (2026-11-16)
+
+El deploy de `aa6bb65` falló en `RUN npm run build` con `sh: next: not found`.
+Al subir `next` a 16.4.3 con `npm install -w @offside/web`, npm lo dejó en
+`apps/web/node_modules/next` en vez de la raíz, y la etapa `build` copiaba
+**sólo** `/app/node_modules` desde `deps`. El CI no lo vio porque no construye
+la imagen.
+
+Dos arreglos, y cada uno alcanza solo (se reprodujeron las etapas a mano):
+
+- el lockfile volvió a tener `next` en la raíz, como antes de la subida;
+- la etapa `build` copia `/app` completo desde `deps`, así que una dependencia
+  instalada dentro de un workspace ya no se pierde.
+
+⚠️ Al actualizar una dependencia de un workspace, revisar en el lockfile que no
+haya quedado bajo `apps/*/node_modules/`.
+
 ## Verificado
 
 La imagen se construyó y se corrió contra el PostgreSQL y el Redis locales:
