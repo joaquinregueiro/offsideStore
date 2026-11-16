@@ -169,7 +169,7 @@ export default async function MisCompras({
                   : `${cantidad(ordenes.length, 'orden', 'órdenes')} · ${estadoDeOrden(estado)}`
               }
             >
-              <ul className={`${estilos.lista} ${estilos.revela}`}>
+              <ul className={estilos.lista}>
                 {ordenes.map((orden) => {
                   /*
                   ⚠️ EL TÍTULO SALE DEL SNAPSHOT CONGELADO EN LA ORDEN (DEC-030),
@@ -186,11 +186,10 @@ export default async function MisCompras({
                     <li key={orden.id}>
                       <Link
                         href={`/cuenta/compras/${orden.id}`}
-                        className={`${estilos.compra} sup-ficha eleva destello presiona`}
+                        className={`${estilos.compra} sup-ficha`}
                         data-tono={tonoDeOrden(orden.status)}
-                        transitionTypes={['avanza']}
                       >
-                        <span className={`${estilos.compraMarco} zoom-marco`}>
+                        <span className={estilos.compraMarco}>
                           {portada === undefined ? (
                             <span
                               className={`${estilos.compraPatron} ${estilos.rombos}`}
@@ -199,7 +198,7 @@ export default async function MisCompras({
                           ) : (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              className={`${estilos.compraFoto} zoom-foto`}
+                              className={estilos.compraFoto}
                               src={portada}
                               alt=""
                               width={96}

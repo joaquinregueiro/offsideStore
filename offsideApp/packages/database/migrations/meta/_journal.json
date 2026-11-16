@@ -92,6 +92,13 @@
       "when": 1789350553605,
       "tag": "0012_seed_claves_faltantes",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794350668635,
+      "tag": "0013_listing_seasons",
+      "breakpoints": true
     }
   ]
 }

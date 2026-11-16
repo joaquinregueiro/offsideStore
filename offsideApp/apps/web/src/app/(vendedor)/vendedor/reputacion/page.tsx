@@ -108,7 +108,7 @@ export default async function MiReputacion({
             contra las órdenes: por eso son seis números crudos y no una barra de
             "85% de satisfacción", que no significaría nada concreto.
           */}
-            <div className={`${estilos.tablero} sup-noche con-grano`}>
+            <div className={estilos.tablero}>
               <Cifras
                 cifras={[
                   {
@@ -278,7 +278,7 @@ export default async function MiReputacion({
             />
           </Seccion>
 
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               La calificación la deja quien te compró y no se puede borrar ni editar desde acá. Si
               una reseña rompe las reglas, Offside la revisa: responderla es tu herramienta, no la

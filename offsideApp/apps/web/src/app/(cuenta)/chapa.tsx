@@ -46,9 +46,7 @@ export function ChapaDeCuenta({
   lateral?: ReactNode;
 }) {
   return (
-    <header className={`${estilos.chapa} sup-cancha con-grano entra-acerca`}>
-      <span className={`${estilos.chapaPatron} patron-vivo`} aria-hidden="true" />
-
+    <header className={estilos.chapa}>
       <div>
         <p className={estilos.chapaRotulo}>{rotulo}</p>
         {/*

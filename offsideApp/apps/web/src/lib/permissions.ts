@@ -62,6 +62,16 @@ export const CAPABILITIES = {
   DISPUTES_RESOLVE: 'disputes:resolve',
   /** Aplicar y levantar sanciones a vendedores (ERD §16.2). */
   TRUST_MODERATE: 'trust:moderate',
+  /**
+   * Aprobar o rechazar altas al catalogo controlado (DEC-041).
+   *
+   * ⚠️ ES LA CAPACIDAD QUE DEC-041 DEJABA PENDIENTE. La decision estaba cerrada
+   * y la tabla modelada desde el ERD v1.1; lo unico que faltaba era quien
+   * aprueba, y por eso el flujo entero estaba sin construir. Desde el
+   * 2026-11-10 quien publica puede PROPONER un club o una marca que no esta, y
+   * algo tiene que poder convertir esa propuesta en catalogo.
+   */
+  CATALOG_MODERATE: 'catalog:moderate',
 } as const;
 
 export type Capability = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];
@@ -92,6 +102,15 @@ const MAPA: Readonly<Record<Capability, readonly AdminRole[]>> = {
   // generales. Una sancion que nace de una disputa la aplica el flujo de
   // resolucion con `disputes:resolve`, sin necesitar esta capacidad.
   'trust:moderate': ['SUPER_ADMIN', 'ADMIN'],
+  /*
+   * ⚠️ MODERATOR SIGUE AFUERA, igual que en las dos de arriba y por la misma
+   * razon: aprobar un alta de catalogo decide que entidades existen en el
+   * sitio, y `product-specification.md` §11 identifica los datos sucios como el
+   * riesgo que mata la busqueda facetada. Quien modera el catalogo no esta
+   * escrito en ningun lado (sigue 🟡 en DEC-023/OQ-F2): darselo a MODERATOR
+   * porque el nombre pega seria decidirlo desde el codigo.
+   */
+  'catalog:moderate': ['SUPER_ADMIN', 'ADMIN'],
 };
 
 /** Roles que tienen una capacidad. */

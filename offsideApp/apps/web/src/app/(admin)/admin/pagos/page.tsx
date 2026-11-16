@@ -145,9 +145,7 @@ export default async function Pagos({
         (Amarillo Cambio sobre tinta, 13.97:1). Los demás escriben
         `--color-tinta` o `--color-tiempo-extra` literales.
       */}
-      <Boton type="submit" className="presiona">
-        Buscar
-      </Boton>
+      <Boton type="submit">Buscar</Boton>
 
       {!hayResultado && (
         <p className={estilos.ayudaBuscador}>
@@ -444,7 +442,7 @@ export default async function Pagos({
                       dos DEBAJO de AA; la clase los cablea a `--color-neutro-texto`
                       (5.51) y `--color-alerta-hondo` (5.05).
                     */}
-                    <div className={`${estilos.zonaPeligro} sup-calida`}>
+                    <div className={estilos.zonaPeligro}>
                       {pago.refundableAmount === '0' ? (
                         <p className={estilos.nota}>
                           <span>Este pago no admite más reembolsos.</span>

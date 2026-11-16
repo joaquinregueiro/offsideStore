@@ -1,5 +1,5 @@
 import { getDatabase, schema, type Database } from '@offside/database';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 /**
  * Acceso a los catalogos controlados (ERD §8, `product-specification.md` §4.3).
@@ -123,4 +123,189 @@ export async function nombresPorId(
     .where(inArray(tabla.id, ids));
 
   return new Map(filas.map((fila) => [fila.id, fila.name]));
+}
+
+/** `catalog_target_type` del ERD §8.1 (DEC-041). */
+export type CatalogTargetType = typeof schema.catalogChangeRequests.$inferSelect.targetType;
+
+export interface NuevaSolicitudDeCatalogo {
+  targetType: CatalogTargetType;
+  /** Snapshot inmutable de la propuesta: `{ name, listingId, campo }`. */
+  payload: Record<string, unknown>;
+  requestedBy: string;
+}
+
+/**
+ * Deja una solicitud de alta al catalogo (DEC-041).
+ *
+ * ⚠️ LA SOLICITUD NO TOCA EL CATALOGO. Es la regla dura de la tabla: solo la
+ * APROBACION crea la entidad. Esto nada mas deja asentado el pedido.
+ */
+export async function insertChangeRequest(
+  valores: NuevaSolicitudDeCatalogo,
+  db?: Database,
+): Promise<string> {
+  const [fila] = await conn(db)
+    .insert(schema.catalogChangeRequests)
+    .values({
+      targetType: valores.targetType,
+      payload: valores.payload,
+      requestedBy: valores.requestedBy,
+    })
+    .returning({ id: schema.catalogChangeRequests.id });
+
+  return fila!.id;
+}
+
+/* ------------------------------- moderacion del catalogo (DEC-041) ------- */
+
+/** Una solicitud pendiente, con quien la pidio. */
+export interface SolicitudDeCatalogoRow {
+  id: string;
+  targetType: CatalogTargetType;
+  payload: unknown;
+  requestedBy: string;
+  requesterEmail: string;
+  status: string;
+  createdAt: Date;
+}
+
+/**
+ * Solicitudes pendientes, la mas vieja primero.
+ *
+ * ⚠️ ES UNA COLA DE TRABAJO, igual que las preguntas sin responder: se atiende
+ * por orden de llegada, porque cada una tiene una publicacion esperando del
+ * otro lado.
+ */
+export async function findPendingRequests(db?: Database): Promise<SolicitudDeCatalogoRow[]> {
+  return conn(db)
+    .select({
+      id: schema.catalogChangeRequests.id,
+      targetType: schema.catalogChangeRequests.targetType,
+      payload: schema.catalogChangeRequests.payload,
+      requestedBy: schema.catalogChangeRequests.requestedBy,
+      requesterEmail: schema.users.email,
+      status: schema.catalogChangeRequests.status,
+      createdAt: schema.catalogChangeRequests.createdAt,
+    })
+    .from(schema.catalogChangeRequests)
+    .innerJoin(schema.users, eq(schema.users.id, schema.catalogChangeRequests.requestedBy))
+    .where(eq(schema.catalogChangeRequests.status, 'PENDING'))
+    .orderBy(asc(schema.catalogChangeRequests.createdAt));
+}
+
+export async function findRequestById(
+  id: string,
+  db?: Database,
+): Promise<SolicitudDeCatalogoRow | undefined> {
+  const [fila] = await conn(db)
+    .select({
+      id: schema.catalogChangeRequests.id,
+      targetType: schema.catalogChangeRequests.targetType,
+      payload: schema.catalogChangeRequests.payload,
+      requestedBy: schema.catalogChangeRequests.requestedBy,
+      requesterEmail: schema.users.email,
+      status: schema.catalogChangeRequests.status,
+      createdAt: schema.catalogChangeRequests.createdAt,
+    })
+    .from(schema.catalogChangeRequests)
+    .innerJoin(schema.users, eq(schema.users.id, schema.catalogChangeRequests.requestedBy))
+    .where(eq(schema.catalogChangeRequests.id, id))
+    .limit(1);
+
+  return fila;
+}
+
+/**
+ * Cierra una solicitud.
+ *
+ * ⚠️ CONDICIONADO A `PENDING`: dos moderadores mirando la misma cola no pueden
+ * aprobar dos veces la misma propuesta y crear el club por duplicado. La
+ * segunda ve `undefined`, igual que la segunda respuesta a una pregunta.
+ */
+export async function resolveRequest(
+  id: string,
+  valores: {
+    status: 'APPROVED' | 'REJECTED';
+    reviewedBy: string;
+    reviewNote: string | null;
+    createdEntityId: string | null;
+  },
+  db?: Database,
+): Promise<{ id: string } | undefined> {
+  const [fila] = await conn(db)
+    .update(schema.catalogChangeRequests)
+    .set({
+      status: valores.status,
+      reviewedBy: valores.reviewedBy,
+      reviewedAt: new Date(),
+      reviewNote: valores.reviewNote,
+      createdEntityId: valores.createdEntityId,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.catalogChangeRequests.id, id),
+        eq(schema.catalogChangeRequests.status, 'PENDING'),
+      ),
+    )
+    .returning({ id: schema.catalogChangeRequests.id });
+
+  return fila;
+}
+
+/** De `catalog_target_type` al catalogo que este modulo sabe escribir. */
+const CATALOGO_DE: Partial<Record<CatalogTargetType, NombreDeCatalogo>> = {
+  club: 'club',
+  national_team: 'nationalTeam',
+  brand: 'brand',
+};
+
+export function catalogoDeTarget(target: CatalogTargetType): NombreDeCatalogo | undefined {
+  return CATALOGO_DE[target];
+}
+
+/**
+ * Crea la entidad de catalogo al aprobar.
+ *
+ * ⚠️ EL `slug` SE DERIVA DEL NOMBRE y es UNIQUE en las seis tablas: si ya
+ * existe, la base rechaza. Es lo que se quiere —aprobar dos veces "River Plate"
+ * no puede dejar dos clubes— y por eso el Service traduce ese choque a un error
+ * con nombre en vez de dejar salir el de PostgreSQL.
+ */
+export async function insertCatalogEntity(
+  catalogo: NombreDeCatalogo,
+  valores: { name: string; slug: string },
+  db?: Database,
+): Promise<string> {
+  const tabla = TABLAS[catalogo];
+
+  const [fila] = await conn(db)
+    .insert(tabla)
+    .values({ name: valores.name, slug: valores.slug })
+    .returning({ id: tabla.id });
+
+  return fila!.id;
+}
+
+/**
+ * Engancha la publicacion que origino la propuesta.
+ *
+ * ⚠️ ES LA MITAD QUE HACE UTIL LA APROBACION. Sin esto, aprobar crearia el club
+ * y la publicacion seguiria sin el: quien publico tendria que volver a editarla
+ * sin que nadie le avise. El campo viene en el `payload` de la solicitud.
+ */
+export async function attachCatalogToListing(
+  listingId: string,
+  campo: 'club' | 'nationalTeam' | 'brand',
+  entityId: string,
+  db?: Database,
+): Promise<void> {
+  const columna = {
+    club: { clubId: entityId },
+    nationalTeam: { nationalTeamId: entityId },
+    brand: { brandId: entityId },
+  }[campo];
+
+  await conn(db).update(schema.listings).set(columna).where(eq(schema.listings.id, listingId));
 }

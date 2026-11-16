@@ -193,7 +193,17 @@ async function vendedor(
   if (opciones.conectado !== false) {
     await db.insert(schema.mercadopagoAccounts).values({
       sellerId: perfil.id,
-      mpUserId: `4000000${secuencia}`,
+      /*
+       * ⚠️ EL PREFIJO ES UNICO POR ARCHIVO, y no es cosmetico: `mp_user_id` es
+       * UNIQUE en `mercadopago_accounts`. Dos archivos de test que compartan
+       * prefijo chocan apenas los dos lleguen al mismo numero de secuencia
+       * —o apenas una corrida interrumpida deje una fila viva—, y el fallo
+       * aparece en el archivo equivocado.
+       *
+       * Tomados: 2=orders, 3=listings, 4=config, 5=seller-approval,
+       * 6=mp-refresh, 7=questions, 8=order-shipping.
+       */
+      mpUserId: `7000000${secuencia}`,
       accessTokenEncrypted: encryptToken('valor-que-simula-un-access-token'),
       status: 'connected',
       connectedAt: new Date(),

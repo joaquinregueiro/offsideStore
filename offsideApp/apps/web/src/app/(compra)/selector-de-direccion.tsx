@@ -168,7 +168,7 @@ export function SelectorDeDireccion({
         `<Confirmar>`. Sin soporte del navegador abre de golpe, que es lo que un
         `<details>` hace por defecto: nada queda inalcanzable.
       */}
-      <details className={`${estilos.otraDireccion} desplegable`}>
+      <details className={estilos.otraDireccion}>
         <summary className={estilos.otraDireccionDisparador}>Enviar a otra dirección</summary>
         <div className={estilos.otraDireccionPanel}>
           <p className={estilos.otraDireccionNota}>

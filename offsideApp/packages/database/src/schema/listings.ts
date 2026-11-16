@@ -8,6 +8,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -260,4 +261,52 @@ export const listingPriceHistory = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('listing_price_history_listing_id_idx').on(t.listingId)],
+);
+
+/**
+ * TEMPORADAS DE UNA PUBLICACION (delta al ERD, 2026-11-10).
+ *
+ * =============================================================================
+ * ⚠️ ESTA TABLA NO ESTA EN EL ERD v1.3
+ * =============================================================================
+ *
+ * El ERD modela la temporada como UNA FK en `listings.season_id`, y esa forma no
+ * alcanza: una camiseta puede haberse usado en mas de una —el kit de un club se
+ * repite dos o tres temporadas seguidas— y quien publica necesita decir cuales
+ * sin tener que elegir una y mentir en las otras.
+ *
+ * El cambio lo AUTORIZO EL OWNER el 2026-11-10 (CLAUDE.md §5). Falta reflejarlo
+ * en `docs/04-technical/database-design.md`, que es solo lectura (§3).
+ *
+ * ⚠️ `listings.season_id` NO SE BORRA, y no es por cobardia. Borrar una columna
+ * es irreversible y la escriben/leen la busqueda, las facetas y los filtros; la
+ * migracion COPIA lo que haya ahi a esta tabla y, a partir de ahora, la verdad
+ * vive aca. La columna queda como estaba —ni se escribe ni se lee desde el
+ * codigo nuevo— hasta que el owner decida darla de baja en el ERD.
+ *
+ * ⚠️ `listing_id` CASCADE, `season_id` RESTRICT, y la diferencia es la regla del
+ * ERD §20.10: esta fila es un HIJO DEPENDIENTE de la publicacion —sin ella no
+ * significa nada—, pero la temporada es un CATALOGO COMPARTIDO: borrar "2015"
+ * porque alguien lo uso mal no puede arrastrar publicaciones ajenas.
+ *
+ * ⚠️ LA PK ES COMPUESTA, no un uuid propio: lo unico que esta fila dice es que
+ * este par existe, y la PK compuesta hace imposible repetirlo. Un id sintetico
+ * habilitaria dos filas identicas con ids distintos.
+ */
+export const listingSeasons = pgTable(
+  'listing_seasons',
+  {
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id, { onDelete: 'cascade' }),
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.listingId, t.seasonId] }),
+    /** Las facetas y los filtros van al reves: "que publicaciones son de 2015". */
+    index('listing_seasons_season_id_idx').on(t.seasonId),
+  ],
 );

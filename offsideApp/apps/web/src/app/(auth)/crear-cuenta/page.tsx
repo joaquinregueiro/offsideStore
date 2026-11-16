@@ -49,15 +49,15 @@ export default async function CrearCuenta({
         */}
         <PasosBreves pasos={['Crear cuenta', 'Verificar el email', 'Listo']} actual={1} />
 
-        <div className={`${propios.encabezado} escalona`}>
+        <div className={propios.encabezado}>
           <p className={propios.antetitulo}>Tu cuenta</p>
-          <h1 className={`${estilos.titulo} ${propios.titulo} display`}>Crear cuenta</h1>
+          <h1 className={`${estilos.titulo} ${propios.titulo}`}>Crear cuenta</h1>
           <p className={`${estilos.bajada} ${propios.bajada}`}>
             Con una sola cuenta comprás y vendés. Verificar el email es el único paso obligatorio.
           </p>
         </div>
 
-        <div className={`${propios.cuerpo} entra-suave`}>
+        <div className={propios.cuerpo}>
           <Formulario accion={crearCuenta} enviar="Crear cuenta">
             <CampoOculto nombre="next" valor={destino} />
             <Campo nombre="email" etiqueta="Email" tipo="email" autoComplete="email" />
@@ -79,13 +79,12 @@ export default async function CrearCuenta({
           </Formulario>
         </div>
 
-        <div className={`${propios.pieEnlaces} entra-suave`}>
+        <div className={propios.pieEnlaces}>
           <p className={estilos.pie}>
             ¿Ya tenés cuenta?{' '}
             <Link
               href={destino === '/' ? '/ingresar' : `/ingresar?next=${encodeURIComponent(destino)}`}
               className="subraya"
-              transitionTypes={['retrocede']}
             >
               Ingresá
             </Link>

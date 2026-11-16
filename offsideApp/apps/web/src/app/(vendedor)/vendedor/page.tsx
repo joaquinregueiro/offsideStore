@@ -15,7 +15,7 @@ import {
   IconoRayo,
   IconoTienda,
 } from '@/components/iconos';
-import { FotoCompartida, Pantalla } from '@/components/movimiento';
+import { Pantalla } from '@/components/movimiento';
 import {
   Aviso,
   BotonEnlace,
@@ -243,7 +243,7 @@ export default async function PanelDeVendedor() {
               arriba: es plata real, y un número que sube mientras alguien lo lee
               se interpreta como un número que todavía se está calculando.
             */}
-              <div className={`${estilos.tablero} sup-noche con-grano`}>
+              <div className={estilos.tablero}>
                 <Cifras
                   cifras={[
                     {
@@ -314,7 +314,7 @@ export default async function PanelDeVendedor() {
               `::details-content` + `interpolate-size`). Sin soporte del navegador
               abre de golpe: exactamente lo que hace hoy.
             */}
-              <details className={`${estilos.habilitacion} desplegable`}>
+              <details className={estilos.habilitacion}>
                 <summary className={estilos.habilitacionTitulo}>
                   Tu cuenta está habilitada
                   {estado.approvedAt !== null && ` desde el ${fecha(estado.approvedAt)}`}
@@ -414,7 +414,7 @@ export default async function PanelDeVendedor() {
               (pointer: fine)`: en un teléfono el `:hover` queda pegado después de
               un toque y la tira se quedaría con cinco fotos apagadas.
             */}
-              <ul className={`${estilos.tira} revela-grilla enfoca-hermanos`}>
+              <ul className={estilos.tira}>
                 {vitrina.map((item) => {
                   const portada = portadas.get(item.id);
 
@@ -425,7 +425,7 @@ export default async function PanelDeVendedor() {
                       morph, una foto desaparece y otra aparece, y nada dice que
                       son la misma.
                     */}
-                      <FotoCompartida id={item.id}>
+                      <>
                         <Link href={`/p/${item.id}`} className={estilos.tiraItem}>
                           {portada === undefined ? (
                             <span className={estilos.tiraPatron} data-foto />
@@ -445,7 +445,7 @@ export default async function PanelDeVendedor() {
                             {estadoDePublicacion(item.status)}
                           </span>
                         </Link>
-                      </FotoCompartida>
+                      </>
                     </li>
                   );
                 })}
@@ -558,7 +558,7 @@ export default async function PanelDeVendedor() {
           SS-012). Es un requisito para poder cobrar, y decirlo evita que el
           vendedor lo lea como un sello de calidad.
         */}
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Estar habilitado significa que podés operar. No es un distintivo de confianza: la
               reputación se construye vendiendo.
@@ -598,7 +598,7 @@ function Acceso({
   detalle: string;
 }) {
   return (
-    <Link href={href} className={`${estilos.acceso} destello`} transitionTypes={['avanza']}>
+    <Link href={href} className={estilos.acceso}>
       <span className={estilos.accesoIcono} aria-hidden="true">
         {icono}
       </span>

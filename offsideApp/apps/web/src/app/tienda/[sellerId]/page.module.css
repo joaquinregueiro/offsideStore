@@ -1,17 +1,3 @@
-/**
- * TIENDA PUBLICA DE UN VENDEDOR (SS-020).
- *
- * ⚠️ ES UNA PANTALLA DE LECTURA, NO UNA PORTADA. No lleva superficie oscura a
- * sangre ni titular de 132px: lo que la persona vino a hacer acá es LEER
- * numeros —cuantas ventas, cuantos reclamos, que dicen las reseñas— antes de
- * decidir si le compra a un desconocido. La jerarquia la da el espacio y la
- * regla, no el color.
- *
- * ⚠️ NINGUNA CIFRA DE ESTA PANTALLA SE ANIMA. Es la regla del sistema y acá
- * pesa el doble: un "3 reclamos" que entra creciendo se lee como un aviso de
- * Offside sobre esa persona, y no lo es — es un dato.
- */
-
 .pagina {
   padding-block: var(--espacio-6) var(--espacio-seccion);
 }
@@ -61,7 +47,6 @@
 
 .titulo {
   margin: 0;
-  text-transform: uppercase;
   /* Un nombre de tienda largo y sin espacios no puede desbordar a 320px. */
   overflow-wrap: anywhere;
 }
@@ -102,8 +87,6 @@
   margin: 0 0 var(--espacio-5);
   font-size: var(--texto-lg);
   font-weight: var(--peso-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   color: var(--texto);
 }
 
@@ -132,8 +115,6 @@
   margin: 0 0 var(--espacio-2);
   font-size: var(--texto-xs);
   font-weight: var(--peso-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-etiqueta);
   /* #5b6459 sobre blanco: 6.15:1 ✅ */
   color: var(--color-neutro-texto);
 }

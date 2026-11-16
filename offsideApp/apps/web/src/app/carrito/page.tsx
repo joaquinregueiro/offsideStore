@@ -71,12 +71,9 @@ export default async function Carrito() {
       <main id="contenido" className={estilos.pagina}>
         <Migas items={[{ texto: 'Catálogo', href: '/' }, { texto: 'Tu carrito' }]} />
 
-        <div className={`${estilos.cabecera} entra`}>
+        <div className={estilos.cabecera}>
           <h1 className={estilos.titulo}>Tu carrito</h1>
-          <span
-            className={`${estilos.reglaTitulo} ${estilos.reglaTituloAnimada}`}
-            aria-hidden="true"
-          />
+          <span className={estilos.reglaTitulo} aria-hidden="true" />
           {!vacio && (
             <p className={estilos.resumenCabecera}>
               {cantidadLegible(carrito.cantidadUnidades, 'unidad', 'unidades')} ·{' '}
@@ -111,7 +108,7 @@ export default async function Carrito() {
             )}
 
             {carrito.vendedores.map((grupo) => (
-              <section key={grupo.sellerId} className={`${estilos.grupo} sup-ficha con-grano`}>
+              <section key={grupo.sellerId} className={`${estilos.grupo} sup-ficha`}>
                 <header className={estilos.grupoCabecera}>
                   <h2 className={estilos.grupoTitulo}>
                     <IconoTienda tamanio={18} />
@@ -135,17 +132,13 @@ export default async function Carrito() {
                         className={estilos.linea}
                         data-problema={item.comprable && alcanza ? undefined : 'si'}
                       >
-                        <Link
-                          href={`/p/${item.listingId}`}
-                          className={`${estilos.lineaMarco} zoom-marco`}
-                          transitionTypes={['avanza']}
-                        >
+                        <Link href={`/p/${item.listingId}`} className={estilos.lineaMarco}>
                           {item.coverUrl === null ? (
                             <span className={estilos.lineaPatron} aria-hidden="true" />
                           ) : (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              className={`${estilos.lineaFoto} zoom-foto`}
+                              className={estilos.lineaFoto}
                               src={item.coverUrl}
                               alt=""
                               width={84}
@@ -158,11 +151,7 @@ export default async function Carrito() {
 
                         <div className={estilos.lineaCuerpo}>
                           <p className={estilos.lineaTitulo}>
-                            <Link
-                              href={`/p/${item.listingId}`}
-                              className="subraya"
-                              transitionTypes={['avanza']}
-                            >
+                            <Link href={`/p/${item.listingId}`} className="subraya">
                               {item.title}
                             </Link>
                           </p>
@@ -285,14 +274,14 @@ export default async function Carrito() {
               </section>
             ))}
 
-            <section className={`${estilos.cierre} sup-2`}>
+            <section className={estilos.cierre}>
               <div className={estilos.totalFila}>
                 <span className={estilos.totalRotulo}>Total del carrito</span>
                 {/*
                   ⚠️ `.cifra-entra` ENTRA UNA VEZ Y TERMINA QUIETA. Es la unica
                   animacion permitida sobre plata.
                 */}
-                <span className={`${estilos.totalValor} cifra-entra`}>
+                <span className={estilos.totalValor}>
                   <span>{precio(carrito.total, moneda)}</span>
                 </span>
               </div>
@@ -317,7 +306,7 @@ export default async function Carrito() {
               accion={comprarCarrito}
               enviar="Comprar"
               pie={
-                <div className={`${estilos.barraCompra} sup-cancha`}>
+                <div className={estilos.barraCompra}>
                   <span className={estilos.barraRotulo}>Total del carrito</span>
                   <span className={estilos.barraTotal}>{precio(carrito.total, moneda)}</span>
                 </div>

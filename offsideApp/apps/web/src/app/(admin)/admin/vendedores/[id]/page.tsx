@@ -326,7 +326,7 @@ export default async function Vendedor({ params }: { params: Promise<{ id: strin
               <h2 className={estilos.tituloDeFicha}>Aplicar una sanción</h2>
             </div>
 
-            <div className={`${estilos.zonaPeligro} sup-calida`}>
+            <div className={estilos.zonaPeligro}>
               <Confirmar
                 etiqueta="Sancionar a este vendedor"
                 pregunta="Una suspensión le impide vender desde el momento en que se guarda. Una expulsión es DEFINITIVA y no se puede deshacer desde la aplicación."

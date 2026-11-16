@@ -50,9 +50,9 @@ export default async function Ingresar({
           desplazamiento) y `.escalona > *` tiene la misma especificidad, asi que
           adentro perderia su entrada seca y un error se leeria como una alarma.
         */}
-        <div className={`${propios.encabezado} escalona`}>
+        <div className={propios.encabezado}>
           <p className={propios.antetitulo}>Tu cuenta</p>
-          <h1 className={`${estilos.titulo} ${propios.titulo} display`}>Ingresar</h1>
+          <h1 className={`${estilos.titulo} ${propios.titulo}`}>Ingresar</h1>
           <p className={`${estilos.bajada} ${propios.bajada}`}>
             Entrá para comprar, publicar y seguir tus operaciones.
           </p>
@@ -64,7 +64,7 @@ export default async function Ingresar({
           </div>
         )}
 
-        <div className={`${propios.cuerpo} entra-suave`}>
+        <div className={propios.cuerpo}>
           <Formulario accion={ingresar} enviar="Ingresar">
             <CampoOculto nombre="next" valor={destino} />
             <Campo nombre="email" etiqueta="Email" tipo="email" autoComplete="email" />
@@ -87,9 +87,9 @@ export default async function Ingresar({
           avanzar; volver a ingresar, retroceder. Sin esto la transicion existe
           pero no significa nada.
         */}
-        <div className={`${propios.pieEnlaces} entra-suave`}>
+        <div className={propios.pieEnlaces}>
           <p className={estilos.pie}>
-            <Link href="/olvide-password" className="subraya" transitionTypes={['avanza']}>
+            <Link href="/olvide-password" className="subraya">
               Olvidé mi contraseña
             </Link>
           </p>
@@ -102,7 +102,6 @@ export default async function Ingresar({
                   : `/crear-cuenta?next=${encodeURIComponent(destino)}`
               }
               className="subraya"
-              transitionTypes={['avanza']}
             >
               Creá una
             </Link>

@@ -168,7 +168,7 @@ export default async function MisVentas({
               calculando—. El pliego oscuro es lo que corta el scroll y le da al
               número el peso que tenía el borde de la caja blanca.
             */}
-              <div className={`${estilos.tablero} sup-noche con-grano`}>
+              <div className={estilos.tablero}>
                 <Cifras
                   cifras={[
                     {
@@ -307,7 +307,6 @@ export default async function MisVentas({
                                       <Link
                                         href={`/vendedor/ventas/${venta.id}`}
                                         className="subraya"
-                                        transitionTypes={['avanza']}
                                       >
                                         {principal?.title ?? `Orden ${venta.orderNumber}`}
                                       </Link>
@@ -377,7 +376,7 @@ export default async function MisVentas({
           la orden. Prometer un neto exacto sería mentir — y eso no puede estar en
           gris de 13px al pie.
         */}
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Mercado Pago cobra además su propio costo de procesamiento, que se descuenta de tu
               parte al acreditarse el pago. Por eso lo de arriba dice «te quedó» y no «cobraste».

@@ -17,6 +17,7 @@ export type SeccionDeAdmin =
   | 'vendedores'
   | 'ordenes'
   | 'reportes'
+  | 'catalogo'
   | 'ingresos';
 
 /**
@@ -78,7 +79,7 @@ export function Consola({
    * ⚠️ SON OPCIONALES A PROPOSITO: solo el indice los tiene a mano. Ninguna
    * pantalla va a pedir tres `COUNT` de mas para pintar un numerito.
    */
-  pendientes?: { disputas?: number; reportes?: number } | undefined;
+  pendientes?: { disputas?: number; reportes?: number; catalogo?: number } | undefined;
   /** El buscador de la consola de pagos y el de ordenes. */
   children?: ReactNode;
 }) {
@@ -86,6 +87,7 @@ export function Consola({
   const puedeReembolsar = hasCapability(rol, CAPABILITIES.PAYMENTS_REFUND);
   const puedeResolver = hasCapability(rol, CAPABILITIES.DISPUTES_RESOLVE);
   const puedeModerar = hasCapability(rol, CAPABILITIES.TRUST_MODERATE);
+  const puedeModerarCatalogo = hasCapability(rol, CAPABILITIES.CATALOG_MODERATE);
 
   const items: ItemDeSeccion[] = [{ clave: 'inicio', texto: 'Inicio', href: '/admin' }];
 
@@ -125,12 +127,26 @@ export function Consola({
     });
   }
 
+  /*
+   * ⚠️ VA CON SU PROPIA CAPACIDAD (`catalog:moderate`, DEC-041) y no con la de
+   * moderar: aprobar un alta decide que entidades EXISTEN en el sitio, que es
+   * otra cosa que atender una denuncia.
+   */
+  if (puedeModerarCatalogo) {
+    items.push({
+      clave: 'catalogo',
+      texto: 'Catálogo',
+      href: '/admin/catalogo',
+      ...(pendientes?.catalogo === undefined ? {} : { dato: pendientes.catalogo }),
+    });
+  }
+
   if (puedeConfigurar) {
     items.push({ clave: 'ingresos', texto: 'Ingresos', href: '/admin/ingresos' });
   }
 
   return (
-    <div className={`${estilos.consola} sup-noche con-grano`}>
+    <div className={estilos.consola}>
       {/*
         Rombos de la bandera, estaticos y en la mitad derecha. Van en un span
         propio porque `sup-noche` ya usa `::before` (el filo de luz) y
@@ -157,7 +173,7 @@ export function Consola({
           <NavDeSeccion items={items} activo={activo} etiqueta="Back-office" />
         </div>
 
-        <h1 className={`display display-3 ${estilos.titulo}`}>{titulo}</h1>
+        <h1 className={estilos.titulo}>{titulo}</h1>
         <hr className={estilos.filete} aria-hidden="true" />
 
         {children}

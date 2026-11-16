@@ -169,3 +169,45 @@ export const invalidPriceRange = (motivo: string): AuthError =>
 
 export const invalidSearchOrder = (): AuthError =>
   new AuthError('VALIDATION_FAILED', 'Ese orden de resultados no existe');
+
+/**
+ * Lo escrito se parece a algo del catalogo, pero no lo identifica.
+ *
+ * ⚠️ EL MENSAJE TRAE LAS OPCIONES, y por eso no es un "dato invalido" generico:
+ * quien escribio "manchester" no cometio un error, le falto precision. Sin los
+ * nombres a la vista tendria que adivinar cual de los dos queriamos.
+ */
+export const catalogAmbiguo = (campo: string, opciones: string[]): AuthError =>
+  new AuthError(
+    'VALIDATION_FAILED',
+    opciones.length === 1
+      ? `No encontramos ese ${campo}. ¿Quisiste decir "${opciones[0]}"? Escribilo igual o dejá el campo vacío.`
+      : `Ese ${campo} coincide con varios: ${opciones.map((o) => `"${o}"`).join(', ')}. Escribí el que corresponda.`,
+  );
+
+/** Tope de temporadas por publicacion (delta 2026-11-10). */
+export const demasiadasTemporadas = (maximo: number): AuthError =>
+  new AuthError('VALIDATION_FAILED', `Podés elegir hasta ${maximo} temporadas.`);
+
+/* ------------------------------ moderacion del catalogo (DEC-041) -------- */
+
+export const solicitudNoEncontrada = (): AuthError =>
+  new AuthError('VALIDATION_FAILED', 'Esa solicitud no existe');
+
+/** Ya la resolvio alguien: el UPDATE condicionado a `PENDING` no encontro fila. */
+export const solicitudYaResuelta = (): AuthError =>
+  new AuthError('VALIDATION_FAILED', 'Esa solicitud ya fue resuelta');
+
+/**
+ * El destino de la solicitud no es uno de los catalogos que el formulario
+ * propone. El enum tiene siete y solo tres se proponen desde publicar.
+ */
+export const catalogoNoModerable = (target: string): AuthError =>
+  new AuthError('VALIDATION_FAILED', `Todavía no se pueden aprobar altas de "${target}" desde acá`);
+
+export const motivoRequerido = (): AuthError =>
+  new AuthError('VALIDATION_FAILED', 'Escribí el motivo del rechazo');
+
+/** Sin `catalog:moderate` (DEC-023). Mismo criterio que el resto del back-office. */
+export const sinCapacidadDeCatalogo = (): AuthError =>
+  new AuthError('FORBIDDEN', 'No tenés permiso para moderar el catálogo');

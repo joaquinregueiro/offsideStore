@@ -20,7 +20,7 @@ import {
 } from './catalog';
 import { appSettings } from './config';
 import { disputeActions, disputeEvidences, disputes } from './disputes';
-import { listingImages, listingPriceHistory, listings } from './listings';
+import { listingImages, listingPriceHistory, listings, listingSeasons } from './listings';
 import { notifications } from './notifications';
 import { orderItems, orderStatusHistory, orders } from './orders';
 import { chargebacks, paymentSplits, payments, refunds, sellerLiabilities } from './payments';
@@ -233,6 +233,8 @@ export const listingsRelations = relations(listings, ({ one, many }) => ({
   }),
   country: one(countries, { fields: [listings.countryId], references: [countries.id] }),
   season: one(seasons, { fields: [listings.seasonId], references: [seasons.id] }),
+  /** Delta 2026-11-10: la temporada paso de UNA a VARIAS (hasta 3). */
+  seasons: many(listingSeasons),
   images: many(listingImages),
   priceHistory: many(listingPriceHistory),
   orderItems: many(orderItems),
@@ -463,4 +465,10 @@ export const catalogChangeRequestsRelations = relations(catalogChangeRequests, (
     references: [users.id],
     relationName: 'catalog_request_reviewer',
   }),
+}));
+
+/** Delta 2026-11-10 — temporadas de una publicacion (hasta 3). */
+export const listingSeasonsRelations = relations(listingSeasons, ({ one }) => ({
+  listing: one(listings, { fields: [listingSeasons.listingId], references: [listings.id] }),
+  season: one(seasons, { fields: [listingSeasons.seasonId], references: [seasons.id] }),
 }));

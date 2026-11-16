@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 
 import { CampoOculto, Formulario } from '@/components/form';
 import { IconoAutenticado, IconoCarrito, IconoIntercambio } from '@/components/iconos';
-import { FotoCompartida, Pantalla } from '@/components/movimiento';
+import { Pantalla } from '@/components/movimiento';
 import { Etiqueta, Migas } from '@/components/ui';
 import { cantidad as cantidadLegible, condicion, precio } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
@@ -109,12 +109,9 @@ export default async function Comprar({
           ]}
         />
 
-        <div className={`${estilos.cabecera} entra`}>
+        <div className={estilos.cabecera}>
           <h1 className={estilos.titulo}>Confirmar compra</h1>
-          <span
-            className={`${estilos.reglaTitulo} ${estilos.reglaTituloAnimada}`}
-            aria-hidden="true"
-          />
+          <span className={estilos.reglaTitulo} aria-hidden="true" />
         </div>
 
         {/*
@@ -137,29 +134,18 @@ export default async function Comprar({
           una ficha que se levanta y se pone verde al pasar el mouse promete un
           clic que no existe.
         */}
-        <article className={`${estilos.producto} sup-ficha con-grano entra`}>
-          <Link
-            href={`/p/${listing.id}`}
-            className={`${estilos.productoFoto} zoom-marco`}
-            transitionTypes={['retrocede']}
-          >
+        <article className={`${estilos.producto} sup-ficha`}>
+          <Link href={`/p/${listing.id}`} className={estilos.productoFoto}>
             {portada === undefined ? (
               <span
-                className={`${estilos.productoPatron} ${estilos.rombos} ${estilos.rombosFinos}`}
+                className={`${estilos.productoPatron} ${estilos.rombosFinos}`}
                 aria-hidden="true"
               />
             ) : (
-              <FotoCompartida id={listing.id}>
+              <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="zoom-foto"
-                  src={portada.url}
-                  alt=""
-                  width={176}
-                  height={220}
-                  decoding="async"
-                />
-              </FotoCompartida>
+                <img src={portada.url} alt="" width={176} height={220} decoding="async" />
+              </>
             )}
           </Link>
 
@@ -176,11 +162,7 @@ export default async function Comprar({
                 Vendida por <strong>{listing.sellerDisplayName}</strong>
               </span>
             </p>
-            <Link
-              href={`/p/${listing.id}`}
-              className={`${estilos.productoEnlace} subraya`}
-              transitionTypes={['retrocede']}
-            >
+            <Link href={`/p/${listing.id}`} className={`${estilos.productoEnlace} subraya`}>
               Ver la publicación
             </Link>
           </div>
@@ -194,7 +176,7 @@ export default async function Comprar({
           pantalla con el total correcto, sin una linea de JavaScript.
         */}
         {listing.stock > 1 && (
-          <form method="get" className={`${estilos.cantidad} sup-2`}>
+          <form method="get" className={estilos.cantidad}>
             <label className={estilos.cantidadEtiqueta} htmlFor="cantidad-compra">
               ¿Cuántas unidades?
             </label>
@@ -210,7 +192,7 @@ export default async function Comprar({
                 </option>
               ))}
             </select>
-            <button type="submit" className={`${estilos.cantidadBoton} presiona`}>
+            <button type="submit" className={estilos.cantidadBoton}>
               Actualizar
             </button>
             <span className={estilos.cantidadNota}>
@@ -224,8 +206,8 @@ export default async function Comprar({
           plano (`.sup-2`) despues del troquel: es la unica jerarquia que no
           depende de que alguien lea.
         */}
-        <section className={`${estilos.ticket} sup-ficha con-grano entra`} data-tono="marca">
-          <div className={`${estilos.ticketBanda} ${estilos.rombos}`} aria-hidden="true" />
+        <section className={`${estilos.ticket} sup-ficha`} data-tono="marca">
+          <div className={estilos.ticketBanda} aria-hidden="true" />
 
           <header className={estilos.ticketCabecera}>
             <p className={estilos.ticketRotulo}>Resumen de la compra</p>
@@ -261,7 +243,7 @@ export default async function Comprar({
 
           <div className={estilos.perforacion} aria-hidden="true" />
 
-          <div className={`${estilos.total} sup-2`}>
+          <div className={estilos.total}>
             <span className={estilos.totalConcepto}>
               {cantidad === 1 ? 'Total a pagar ahora' : `Total por ${cantidad} unidades`}
             </span>
@@ -270,7 +252,7 @@ export default async function Comprar({
               sube una vez detras de una mascara, muestra el valor FINAL desde el
               primer cuadro y termina quieta. Nada de contar hacia arriba.
             */}
-            <span className={`${estilos.totalValor} cifra-entra`}>
+            <span className={estilos.totalValor}>
               <span>{importeTotal}</span>
             </span>
             <p className={estilos.totalNota}>
@@ -297,7 +279,7 @@ export default async function Comprar({
               telefono se completaba la direccion entera sin volver a ver ni una
               vez cuanto se iba a pagar.
             */
-            <div className={`${estilos.barraCompra} sup-cancha`}>
+            <div className={estilos.barraCompra}>
               <span className={estilos.barraRotulo}>Total a pagar ahora</span>
               <span className={estilos.barraTotal}>{importeTotal}</span>
             </div>
@@ -315,7 +297,7 @@ export default async function Comprar({
             conectar Mercado Pago NO otorga confianza, asi que no se lo presenta
             como un sello.
           */}
-          <ul className={`${estilos.garantias} sup-noche con-grano`}>
+          <ul className={estilos.garantias}>
             <li>
               <IconoIntercambio tamanio={18} />
               <span>

@@ -29,7 +29,7 @@ import estilos from './admin.module.css';
 export default function CargandoPantalla() {
   return (
     <main id="contenido" className={estilos.pagina}>
-      <div className={`${estilos.consola} sup-noche con-grano`} aria-hidden="true">
+      <div className={estilos.consola} aria-hidden="true">
         <span className={estilos.rombos} />
         <div className={estilos.consolaCentro}>
           <div className={estilos.consolaEncabezado}>

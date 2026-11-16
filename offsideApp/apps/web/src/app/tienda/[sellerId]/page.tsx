@@ -261,15 +261,13 @@ export default async function TiendaPublica({
             />
 
             {/* ------------------------------------------------ encabezado */}
-            <header className={`${estilos.encabezado} entra-largo`}>
+            <header className={estilos.encabezado}>
               <span className={estilos.marca} aria-hidden="true">
                 <IconoTienda tamanio={30} />
               </span>
 
               <div className={estilos.identidad}>
-                <h1 className={`display display-3 titular-degradado ${estilos.titulo}`}>
-                  {reputacion.sellerDisplayName}
-                </h1>
+                <h1 className={estilos.titulo}>{reputacion.sellerDisplayName}</h1>
 
                 {/*
                   ⚠️ LAS TRES INSIGNIAS DICEN COSAS DISTINTAS Y NO SE MEZCLAN
@@ -436,7 +434,7 @@ export default async function TiendaPublica({
                     para explicar por qué algo aparece antes que lo de OTRO
                     vendedor. Queda anotado.
                   */}
-                  <ul className={`${estilos.grilla} enfoca-hermanos revela-grilla-materia`}>
+                  <ul className={estilos.grilla}>
                     {catalogo.listings.map((item) => (
                       <li key={item.id}>
                         <ListingCard listing={item} favorito={favoritoDe(item.id)} />

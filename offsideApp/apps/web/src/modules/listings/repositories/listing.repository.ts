@@ -255,6 +255,8 @@ export interface InsertListingValues {
   kitType: ListingRow['kitType'];
   sleeve: ListingRow['sleeve'];
   moderationStatus: ListingRow['moderationStatus'];
+  /** Declarada por quien vende (TS-032). Sin elegir queda `NO_ESPECIFICADA`. */
+  authenticity?: ListingRow['authenticity'];
   /** Envio declarado (delta §11), ya validado por el Service. */
   shippingMode: string;
   shippingCostAmount: bigint | null;
@@ -267,8 +269,11 @@ export interface InsertListingValues {
  * `status` (ERD §9.1). Quien modera y si un `PENDING` debe frenar la venta
  * siguen 🟡 sin decidir: no se toca desde aca.
  *
- * ⚠️ `authenticity` queda en su default `NO_ESPECIFICADA`: la evidencia exigida
- * por categoria sigue 🟦 (DEC-025).
+ * ⚠️ `authenticity` ES DECLARADA, NO VERIFICADA (TS-032). Quien publica elige
+ * entre original y replica; sin elegir queda `NO_ESPECIFICADA`. Los otros tres
+ * valores del enum —`VERIFICADA`, `SOSPECHOSA`, `FALSIFICACION`— son juicios de
+ * Offside y NO salen del formulario: la evidencia exigida por categoria sigue
+ * 🟦 (DEC-025).
  */
 export async function insertListing(
   values: InsertListingValues,
@@ -295,6 +300,7 @@ export async function insertListing(
       seasonId: values.seasonId ?? null,
       shippingMode: values.shippingMode,
       shippingCostAmount: values.shippingCostAmount,
+      ...(values.authenticity === undefined ? {} : { authenticity: values.authenticity }),
       /**
        * ⚠️ NACE EN BORRADOR (SS-032, y es el default del ERD §9.1).
        *
@@ -664,4 +670,49 @@ export async function claimPromotion(
     .returning({ id: schema.listings.id });
 
   return filas.length === 1;
+}
+
+/* ------------------------------------------------- temporadas (delta 2026-11-10) */
+
+/**
+ * Reemplaza las temporadas de una publicacion.
+ *
+ * ⚠️ BORRA Y VUELVE A INSERTAR, no hace diferencias. Son tres filas como mucho
+ * y la tabla no tiene nada propio que preservar —su PK ES el par—: calcular el
+ * delta seria mas codigo para el mismo resultado.
+ *
+ * ⚠️ SE LLAMA SIEMPRE, incluso con la lista vacia: es lo que permite BORRAR
+ * todas las temporadas al editar. Un "si viene vacio no toco nada" repetiria el
+ * bug del 2026-09-09, donde no distinguir "no vino" de "lo vaciaron" borraba
+ * los catalogos al corregir un typo —solo que al reves—.
+ */
+export async function replaceSeasons(
+  listingId: string,
+  seasonIds: string[],
+  db?: Database,
+): Promise<void> {
+  const cx = conn(db);
+
+  await cx.delete(schema.listingSeasons).where(eq(schema.listingSeasons.listingId, listingId));
+
+  // `Set` por si el formulario manda la misma dos veces: la PK compuesta lo
+  // rechazaria con un error de base en vez de con uno util.
+  const unicas = [...new Set(seasonIds)];
+  if (unicas.length === 0) return;
+
+  await cx
+    .insert(schema.listingSeasons)
+    .values(unicas.map((seasonId) => ({ listingId, seasonId })));
+}
+
+/** Las temporadas de una publicacion, de la mas nueva a la mas vieja. */
+export async function findSeasonIds(listingId: string, db?: Database): Promise<string[]> {
+  const filas = await conn(db)
+    .select({ seasonId: schema.listingSeasons.seasonId, label: schema.seasons.label })
+    .from(schema.listingSeasons)
+    .innerJoin(schema.seasons, eq(schema.seasons.id, schema.listingSeasons.seasonId))
+    .where(eq(schema.listingSeasons.listingId, listingId))
+    .orderBy(desc(schema.seasons.label));
+
+  return filas.map((fila) => fila.seasonId);
 }

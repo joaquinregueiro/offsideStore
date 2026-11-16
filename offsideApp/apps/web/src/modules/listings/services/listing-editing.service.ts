@@ -4,6 +4,8 @@ import * as audit from '../../audit/services/audit.service';
 import type { PublicUser } from '../../auth/services/auth.service';
 import { requireOwnSellerProfile } from '../../sellers/services/seller.service';
 import * as errors from '../listings.errors';
+import { registrarPropuestas, resolverCatalogos } from './catalogo-de-publicacion.service';
+import { MAXIMO_DE_TEMPORADAS } from './listing.service';
 import * as imageRepo from '../repositories/listing-image.repository';
 import * as listingRepo from '../repositories/listing.repository';
 import { getShippingSettings } from './listing-settings.service';
@@ -55,12 +57,21 @@ export interface EditListingInput {
   condition?: listingRepo.ListingRow['condition'];
   kitType?: listingRepo.ListingRow['kitType'];
   sleeve?: listingRepo.ListingRow['sleeve'];
-  /** Referencias de catalogo. Cambiarlas obliga a reindexar: llevan alias. */
-  clubId?: string | null;
-  nationalTeamId?: string | null;
-  brandId?: string | null;
-  competitionId?: string | null;
-  seasonId?: string | null;
+  /**
+   * Catalogos ESCRIBIBLES: llega el NOMBRE (delta 2026-11-10). Cambiarlos
+   * obliga a reindexar, porque sus alias entran al vector con peso `A`.
+   *
+   * ⚠️ `undefined` ES "NO VINO EN EL FORMULARIO" Y CONSERVA LO QUE HABIA;
+   * cadena vacia es "lo vacie". Es la trampa del 2026-09-09 y por eso la accion
+   * decide con `formData.has()`, no con el valor.
+   */
+  club?: string | null;
+  nationalTeam?: string | null;
+  brand?: string | null;
+  /** Reemplaza TODAS las temporadas. `undefined` las deja como estaban. */
+  seasonIds?: string[];
+  /** Original o replica, declarada (TS-032). */
+  authenticity?: listingRepo.ListingRow['authenticity'];
   /**
    * Envio declarado (delta §11).
    *
@@ -140,12 +151,52 @@ export async function editListing(
    * repositorio exige el modo ya estrechado. Pasarle el crudo escribiria en la
    * columna lo que alguien haya mandado por POST.
    */
-  const { shippingMode: _modoCrudo, shippingCostAmount: _costoCrudo, ...resto } = input;
-  const cambios = envio === undefined ? resto : { ...resto, ...envio };
+  /*
+   * ⚠️ LOS NOMBRES SE RESUELVEN ANTES DE ABRIR LA TRANSACCION, igual que al
+   * publicar: si lo escrito es ambiguo esto lanza, y editar el titulo no puede
+   * dejar la publicacion sin club de paso.
+   *
+   * ⚠️ SOLO SE RESUELVE LO QUE VINO. Un campo ausente no se toca; uno vacio se
+   * limpia. La diferencia la trae la accion con `formData.has()`.
+   */
+  const catalogos = await resolverCatalogos({
+    ...(input.club === undefined ? {} : { club: input.club }),
+    ...(input.nationalTeam === undefined ? {} : { nationalTeam: input.nationalTeam }),
+    ...(input.brand === undefined ? {} : { brand: input.brand }),
+  });
+
+  const {
+    shippingMode: _modoCrudo,
+    shippingCostAmount: _costoCrudo,
+    club: _club,
+    nationalTeam: _seleccion,
+    brand: _marca,
+    seasonIds,
+    ...resto
+  } = input;
+
+  const idsDeCatalogo = {
+    ...(input.club === undefined ? {} : { clubId: catalogos.clubId }),
+    ...(input.nationalTeam === undefined ? {} : { nationalTeamId: catalogos.nationalTeamId }),
+    ...(input.brand === undefined ? {} : { brandId: catalogos.brandId }),
+  };
+
+  const cambios = {
+    ...resto,
+    ...idsDeCatalogo,
+    ...(envio ?? {}),
+  };
 
   const actualizada = await getDatabase().transaction(async (tx) => {
     const fila = await listingRepo.updateListing(listing.id, cambios, tx);
     if (fila === undefined) throw errors.listingNotFound();
+
+    // `undefined` conserva; una lista (aunque este vacia) reemplaza.
+    if (seasonIds !== undefined) {
+      await listingRepo.replaceSeasons(listing.id, validarTemporadasEditadas(seasonIds), tx);
+    }
+
+    await registrarPropuestas(catalogos.propuestas, listing.id, user.id, tx);
 
     if (precioCambio) {
       await listingRepo.insertPriceChange(
@@ -267,4 +318,17 @@ export async function deleteListing(user: PublicUser, listingId: string): Promis
     before: { status: listing.status },
     after: { status: 'deleted' },
   });
+}
+
+/**
+ * ⚠️ EL TOPE SE VUELVE A APLICAR AL EDITAR. Validarlo solo al publicar dejaria
+ * la puerta de atras obvia: publicar con una y despues agregar diez.
+ */
+function validarTemporadasEditadas(ids: string[]): string[] {
+  const unicas = [...new Set(ids.filter((id) => id.trim() !== ''))];
+  if (unicas.length > MAXIMO_DE_TEMPORADAS) {
+    throw errors.demasiadasTemporadas(MAXIMO_DE_TEMPORADAS);
+  }
+
+  return unicas;
 }

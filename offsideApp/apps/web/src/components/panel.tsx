@@ -254,7 +254,6 @@ export function Solapas({
                 href={solapa.href}
                 className={esActiva ? estilos.solapaActiva : estilos.solapa}
                 aria-current={esActiva ? 'page' : undefined}
-                transitionTypes={['barrido']}
               >
                 {solapa.texto}
                 {solapa.dato !== undefined && solapa.dato > 0 && (

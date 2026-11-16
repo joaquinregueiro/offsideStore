@@ -72,11 +72,7 @@ export function RutaDeCompra({
         necesitar un z-index mas alto que el resto de la pantalla.
       */}
       <div className={estilos.rutaRiel} aria-hidden="true">
-        <span
-          className={[estilos.rutaAvance, animar ? estilos.rutaAvanceAnimada : '']
-            .filter(Boolean)
-            .join(' ')}
-        />
+        <span className={[estilos.rutaAvance, animar ? '' : ''].filter(Boolean).join(' ')} />
       </div>
 
       <ol className={estilos.rutaLista}>

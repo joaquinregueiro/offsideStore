@@ -73,16 +73,9 @@ export function Isotipo({ alto = 26 }: { alto?: number }) {
  * el panel de auth— el nombre de la marca ya está escrito en el texto que lo
  * rodea, y la barra fantasma entera es `aria-hidden`.
  *
- * ⚠️ ES SOLO LA PALABRA: ESTE LOCKUP NO TRAE LA BANDERA. Con el retiro de
- * `Logo`, el isotipo deja de aparecer en la barra, el pie, el panel de auth y
- * los esqueletos. La bandera queda SOLO en el 404, izada. Es consecuencia de
- * usar este archivo en todos lados, y lo decidió el dueño.
- *
- * ⚠️ LA RELACION ES 2.826 Y POR ESO ENTRA SIN TOCAR LA BARRA: a 36px de alto
- * mide 102px de ancho, y `.marca` sigue midiendo `--alto-control` (44) porque
- * lo declara como `min-height`. `--alto-barra` sigue siendo 84px = 16 + 44 +
- * 16 + 6. Con el lockup a 44 tambien entraba (124px); 36 es el "achicalo un
- * poco" que pidio el dueño el 2026-09-15.
+ * ⚠️ LOCKUP NUEVO DEL 2026-11-10: palabra + bandera de juez de linea, en blanco
+ * para fondos oscuros. Relacion 4.78: a 30 px de alto mide 143 px de ancho.
+ * Si se cambia el archivo, hay que actualizar `LOCKUP_RELACION` con su ancho/alto.
  *
  * ⚠️ EL PNG NO ES EL ARCHIVO CRUDO, y el recorte no es una optimización
  * opcional: el original es un lienzo de 2600x2600 con la palabra en una banda
@@ -92,7 +85,7 @@ export function Isotipo({ alto = 26 }: { alto?: number }) {
  * 17 KB, sin diferencia visible a los tamaños a los que se usa.
  */
 
-const LOCKUP_RELACION = 746 / 264;
+const LOCKUP_RELACION = 1263 / 264;
 
 export function LogoLockup({ alto = 36 }: { alto?: number }) {
   return (

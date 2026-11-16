@@ -27,7 +27,7 @@ import estilos from './admin.module.css';
 export default function ErrorDelGrupo({ reset }: { error: Error; reset: () => void }) {
   return (
     <main id="contenido" className={estilos.pagina}>
-      <div className={`${estilos.consola} sup-noche con-grano`}>
+      <div className={estilos.consola}>
         <span className={estilos.rombos} aria-hidden="true" />
         <div className={estilos.consolaCentro}>
           <p className={estilos.marcaConsola}>Back-office</p>

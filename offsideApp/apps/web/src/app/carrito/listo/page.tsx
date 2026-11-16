@@ -59,14 +59,11 @@ export default async function OrdenesCreadas({
       <main id="contenido" className={estilos.pagina}>
         <Migas items={[{ texto: 'Tu carrito', href: '/carrito' }, { texto: 'Órdenes creadas' }]} />
 
-        <div className={`${estilos.cabecera} entra`}>
+        <div className={estilos.cabecera}>
           <h1 className={estilos.titulo}>
             {ordenes.length === 1 ? 'Creamos tu orden' : 'Creamos tus órdenes'}
           </h1>
-          <span
-            className={`${estilos.reglaTitulo} ${estilos.reglaTituloAnimada}`}
-            aria-hidden="true"
-          />
+          <span className={estilos.reglaTitulo} aria-hidden="true" />
           {/*
             ⚠️ SE DICE QUE TODAVIA NO SE PAGO NADA, Y ES LO MAS IMPORTANTE DE LA
             PANTALLA. "Creamos tu orden" con un tilde verde se lee como "listo,
@@ -101,7 +98,7 @@ export default async function OrdenesCreadas({
 
             <ul className={estilos.ordenes}>
               {ordenes.map((orden) => (
-                <li key={orden.id} className={`${estilos.orden} sup-ficha con-grano`}>
+                <li key={orden.id} className={`${estilos.orden} sup-ficha`}>
                   <div className={estilos.ordenDatos}>
                     <p className={estilos.ordenNumero}>
                       <IconoTilde tamanio={16} />

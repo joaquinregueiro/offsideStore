@@ -69,9 +69,7 @@ export default async function Vendedores({
         LA BANDA OSCURA: lee los ocho tokens `--boton-*` que `.sup-noche`
         cablea. Los demás escriben `--color-tinta` literal.
       */}
-      <Boton type="submit" className="presiona">
-        Buscar
-      </Boton>
+      <Boton type="submit">Buscar</Boton>
 
       {buscado === '' && (
         <p className={estilos.ayudaBuscador}>

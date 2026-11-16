@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { Footer } from '@/components/footer';
 import { Header } from '@/components/header';
-import { IconoBuscar, IconoCerrar, IconoFiltro } from '@/components/iconos';
+import { IconoCerrar, IconoFiltro } from '@/components/iconos';
 import { ListingCard, type EstadoDeFavorito } from '@/components/listing-card';
 import { Pantalla } from '@/components/movimiento';
-import { Aviso, BotonEnlace } from '@/components/ui';
+import { Aviso, BotonEnlace, Migas } from '@/components/ui';
 import { condicion, manga, precio, tipoDeCamiseta } from '@/lib/formato';
 import { getSessionUser } from '@/lib/session';
 import { favoriteIdsOf } from '@/modules/favorites/services/favorite.service';
@@ -397,7 +397,6 @@ export default async function Buscar({
     titular en lineas con CSS sin JavaScript, y decidir donde corta un titulo es
     composicion, igual que en una revista.
   */
-  const lineasTitulo = q === undefined ? ['Todas las', 'camisetas'] : ['Resultados para', `“${q}”`];
 
   const pastilla = (clave: string, texto: string, etiquetaLectores: string) => (
     <Link key={clave} href={conFiltro(clave, undefined)} className={estilos.pastilla}>
@@ -421,7 +420,6 @@ export default async function Buscar({
       ⚠️ EL TECHO ES DEL GRUPO, NO DEL TOTAL. Contra el total, "Talle M (40)"
       aplastaria a los 38 clubes y todas las barras darian el piso.
     */
-    const techo = Math.max(1, ...facetas.map((f) => f.cantidad));
 
     /*
       ⚠️ RAIZ CUADRADA CON PISO DEL 8%, NO PROPORCION LINEAL, Y NO ES UN
@@ -431,10 +429,9 @@ export default async function Buscar({
       artefacto de render pegado al borde izquierdo. La raiz es lo estandar para
       esta distribucion; el piso garantiza que toda barra existente se vea.
     */
-    const escala = (cantidad: number) => Math.max(0.08, Math.sqrt(cantidad / techo)).toFixed(3);
 
     return (
-      <section key={clave} className={estilos.grupo}>
+      <section key={clave} id={`filtro-${clave}`} className={estilos.grupo}>
         <h2 className={estilos.grupoTitulo}>{titulo}</h2>
         <ul className={estilos.opciones}>
           {facetas.map((faceta) => (
@@ -443,7 +440,6 @@ export default async function Buscar({
                 href={conFiltro(clave, faceta.valor === activo ? undefined : faceta.valor)}
                 className={faceta.valor === activo ? estilos.opcionActiva : estilos.opcion}
                 aria-current={faceta.valor === activo ? 'true' : undefined}
-                style={{ '--proporcion': escala(faceta.cantidad) } as CSSProperties}
               >
                 <span className={estilos.opcionTexto}>
                   {etiquetar?.(faceta.valor) ?? faceta.etiqueta}
@@ -494,152 +490,39 @@ export default async function Buscar({
             las dos el `::before` del elemento y se lo pelean. `con-grano` usa
             `::after`, así que ese sí puede ir en la banda.
           */}
-          <div className={`${estilos.franja} sup-noche con-grano`}>
-            <div className={`${estilos.rombos} patron-vivo`} aria-hidden="true" />
-
-            <div className={estilos.franjaCuerpo}>
-              <p className={`${estilos.kicker} entra-suave`}>Catálogo</p>
-
-              <div className={estilos.encabezado}>
-                <h1 className={`${estilos.titulo} display display-3 entra-lineas`}>
-                  {lineasTitulo.map((linea) => (
-                    <span key={linea}>
-                      <span>{linea}</span>
-                    </span>
-                  ))}
-                </h1>
-
-                {/*
-                  ⚠️ NO ES UN CONTADOR QUE GIRA. Cada faceta es una navegación
-                  completa, así que un `counter()` animado subiría de 0 a N en
-                  CADA click sobre el único número que la persona está mirando
-                  para decidir si sigue filtrando. `cifra-entra` muestra el
-                  valor final desde el primer cuadro, se desplaza una vez y
-                  termina quieto — y es texto real, así que se copia y se lee.
-                */}
-                <p
-                  className={`${estilos.marcador} entra`}
-                  style={{ '--retraso': '180ms' } as CSSProperties}
-                >
-                  <span className={`${estilos.marcadorCifra} display display-2 cifra-entra`}>
-                    <span>{resultado.total}</span>
-                  </span>
-                  <span className={estilos.marcadorPalabra}>
-                    {resultado.total === 1 ? 'publicación' : 'publicaciones'}
-                  </span>
-                </p>
-              </div>
-
-              {/*
-                ⚠️ EL BUSCADOR VIVE ACÁ, EN LA PANTALLA DE BUSCAR. Antes, para
-                corregir la consulta había que subir a la barra verde: en
-                teléfono, a la segunda fila del header. Es el control más usado
-                del sitio y estaba fuera de la pantalla que existe para él.
-
-                Los filtros activos viajan como ocultos: buscar otra cosa no
-                tiene por qué tirar abajo el talle que ya se eligió. `pagina` no
-                viaja, por el mismo motivo que en `conFiltro`.
-              */}
-              <form
-                action="/buscar"
-                method="get"
-                className={estilos.buscadorBanda}
-                role="search"
-                /*
-                  ⚠️ SON DOS LANDMARKS `search` EN LA MISMA PANTALLA: este y el de
-                  la barra verde, que `Header` ya declara con `role="search"`. Dos
-                  regiones del mismo rol y sin nombre se anuncian identicas
-                  ("busqueda", "busqueda") y quien navega por landmarks no puede
-                  elegir. El nombre va aca porque `header.tsx` no es de esta ola.
-                */
-                aria-label="Buscar en el catálogo"
-              >
-                {ocultos(['q', 'pagina'])}
-                <label htmlFor="busqueda-pantalla" className="solo-lectores">
-                  Buscar publicaciones
-                </label>
-                <input
-                  id="busqueda-pantalla"
-                  className={estilos.buscadorCampo}
-                  type="search"
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Camiseta, club, temporada…"
-                />
-                <button type="submit" className={`${estilos.buscadorEnviar} destello presiona`}>
-                  Buscar
-                </button>
-              </form>
-
-              {/*
-                ⚠️ CINTA DE CLUBES, SOLO CUANDO LA BÚSQUEDA ESTÁ EN BLANCO.
-                `/buscar` sin texto ni filtros era una grilla muda, y la
-                migración 0007 sembró 38 clubes que nadie ve hasta abrir el
-                panel. Cada nombre es un enlace a `?club=<id>`.
-
-                ⚠️ LA SEGUNDA COPIA LLEVA `aria-hidden`: sin eso un lector de
-                pantalla lee la lista dos veces. La pausa con `:hover` y con
-                `:focus-within` la trae la clase global, y hace falta la de foco
-                porque acá el contenido es interactivo (WCAG 2.2.2).
-              */}
-              {!hayFiltros && resultado.facetas.club.length >= 6 && (
-                <div className={`${estilos.cinta} marquesina`}>
-                  <div className="marquesina-pista">
-                    <ul className="marquesina-grupo">
-                      {resultado.facetas.club.map((club) => (
-                        <li key={club.valor}>
-                          <Link
-                            href={conFiltro('club', club.valor)}
-                            className={estilos.cintaEnlace}
-                          >
-                            {club.etiqueta}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                    <ul className="marquesina-grupo" aria-hidden="true">
-                      {resultado.facetas.club.map((club) => (
-                        <li key={club.valor}>
-                          <span className={estilos.cintaEnlace}>{club.etiqueta}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/*
-                ⚠️ PASTILLAS DE FILTRO ACTIVO. Cada una se saca tocándola y
-                "Limpiar todo" vuelve a cero. Sin esto, la única forma de sacar
-                un filtro era encontrarlo de nuevo en la lista.
-
-                `escalona` es el ÚNICO escalonado de la pantalla y está acá a
-                propósito: esta fila es lo que efectivamente cambia al tocar un
-                filtro. El panel de filtros NO lo lleva —ver el CSS—.
-              */}
-              {hayFiltros && (
-                <div className={`${estilos.activos} escalona`}>
-                  <span className={estilos.activosTitulo}>Filtros</span>
-
-                  {q !== undefined && pastilla('q', `Texto: ${q}`, 'Quitar el filtro de texto')}
-
-                  {activos.map((filtro) =>
-                    pastilla(
-                      filtro.clave,
-                      `${filtro.titulo}: ${filtro.etiqueta}`,
-                      `Quitar el filtro ${filtro.titulo} ${filtro.etiqueta}`,
-                    ),
-                  )}
-
-                  <Link href="/buscar" className={estilos.limpiar}>
-                    Limpiar todo
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-
           <div className={estilos.cuerpo}>
+            <Migas
+              items={[
+                { texto: 'Inicio', href: '/' },
+                { texto: q === undefined ? 'Camisetas' : 'Búsqueda' },
+              ]}
+            />
+
+            <div className={estilos.encabezado}>
+              <h1 className={estilos.titulo}>
+                {q === undefined ? 'Todas las camisetas' : `Resultados para “${q}”`}
+              </h1>
+              <p className={estilos.total}>
+                {resultado.total === 1 ? '1 resultado' : `${resultado.total} resultados`}
+              </p>
+            </div>
+
+            {hayFiltros && (
+              <div className={estilos.activos}>
+                {q !== undefined && pastilla('q', `Texto: ${q}`, 'Quitar el filtro de texto')}
+                {activos.map((filtro) =>
+                  pastilla(
+                    filtro.clave,
+                    `${filtro.titulo}: ${filtro.etiqueta}`,
+                    `Quitar el filtro ${filtro.titulo} ${filtro.etiqueta}`,
+                  ),
+                )}
+                <Link href="/buscar" className={estilos.limpiar}>
+                  Limpiar todo
+                </Link>
+              </div>
+            )}
+
             <div className={estilos.columnas}>
               {/*
                 ⚠️ EN TELÉFONO LOS FILTROS SE PLIEGAN, Y NO ES UN LUJO. A 900px
@@ -650,7 +533,7 @@ export default async function Buscar({
                 CSS, y en escritorio además pegado al scroll con scroll propio.
                 En teléfono NO se pega: la barra superior ya ocupa dos filas.
               */}
-              <details className={`${estilos.filtros} sup-ficha`}>
+              <details className={estilos.filtros}>
                 <summary className={estilos.filtrosBoton}>
                   <IconoFiltro tamanio={18} />
                   Filtrar
@@ -827,11 +710,7 @@ export default async function Buscar({
                     Antes ofrecía limpiar TODO: quien había puesto cuatro
                     filtros perdía los cuatro para sacar el que sobraba.
                   */
-                  <div className={`${estilos.vacio} sup-2 patron-vivo con-grano`}>
-                    <span className={estilos.vacioMarca} aria-hidden="true">
-                      <IconoBuscar tamanio={40} />
-                    </span>
-
+                  <div className={estilos.vacio}>
                     {/*
                       ⚠️ ES UN `<h2>` Y NO UN `<p>`. La columna de resultados se
                       quedaba sin ningún encabezado en el árbol de
@@ -839,7 +718,7 @@ export default async function Buscar({
                       de filtros—, así que quien navega por encabezados no
                       encontraba el resultado de su propia búsqueda.
                     */}
-                    <h2 className={`${estilos.vacioTitulo} display display-3 titular-degradado`}>
+                    <h2 className={estilos.vacioTitulo}>
                       {fueraDeRango ? 'Esa página no existe' : 'No encontramos nada'}
                     </h2>
 
@@ -900,7 +779,7 @@ export default async function Buscar({
                       las demás al apuntar una —nunca el texto: el precio y el
                       título no pueden perder contraste ni por un instante—.
                     */}
-                    <ul className={`${estilos.grilla} revela-grilla-materia enfoca-hermanos`}>
+                    <ul className={estilos.grilla}>
                       {resultado.resultados.map((item) => (
                         <li key={item.id}>
                           {/*
@@ -959,16 +838,6 @@ export default async function Buscar({
                             <p className={estilos.paginacionCuenta}>
                               Página {paginaSegura} de {paginas}
                             </p>
-                            <span className={estilos.riel} aria-hidden="true">
-                              <span
-                                className={estilos.rielRelleno}
-                                style={
-                                  {
-                                    '--progreso': (paginaSegura / paginas).toFixed(3),
-                                  } as CSSProperties
-                                }
-                              />
-                            </span>
                           </div>
 
                           {paginaSegura < paginas ? (

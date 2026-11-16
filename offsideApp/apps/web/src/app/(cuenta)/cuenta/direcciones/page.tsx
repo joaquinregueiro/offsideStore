@@ -68,9 +68,9 @@ export default async function MisDirecciones() {
             </EstadoVacio>
           ) : (
             <Seccion titulo="Guardadas" dato={`${direcciones.length} de ${MAX_ADDRESSES_PER_USER}`}>
-              <ul className={`${estilos.direcciones} ${estilos.revela}`}>
+              <ul className={estilos.direcciones}>
                 {direcciones.map((direccion) => (
-                  <li key={direccion.id} className={`${estilos.direccion} sup-ficha eleva`}>
+                  <li key={direccion.id} className={`${estilos.direccion} sup-ficha`}>
                     <div className={estilos.direccionCabecera}>
                       <p className={estilos.direccionEtiqueta}>
                         {direccion.etiqueta ?? direccion.nombre}
@@ -140,10 +140,7 @@ export default async function MisDirecciones() {
               poder agregar otra.
             </Aviso>
           ) : (
-            <details
-              className={`${estilos.bloque} sup-ficha desplegable`}
-              open={direcciones.length === 0}
-            >
+            <details className={`${estilos.bloque} sup-ficha`} open={direcciones.length === 0}>
               <summary className={estilos.direccionEtiqueta}>Agregar una dirección</summary>
               <div className={estilos.separador}>
                 <FormularioDeDireccion accion={guardarDireccion} enviar="Guardar la dirección" />

@@ -10,7 +10,7 @@ import {
   IconoPregunta,
   IconoUbicacion,
 } from '@/components/iconos';
-import { Blobs, Pantalla } from '@/components/movimiento';
+import { Pantalla } from '@/components/movimiento';
 import { Cifras, InsigniaDeNivel, Seccion } from '@/components/ui';
 import { cantidad, nivelDeUsuario } from '@/lib/formato';
 import { requireVerifiedSessionUser } from '@/lib/session';
@@ -87,8 +87,7 @@ export default async function ResumenDeCuenta() {
           ⚠️ LOS NÚMEROS SOBRE UN PLANO OSCURO Y NO EN CUATRO CAJAS BLANCAS: el
           número es el contenido, y sobre papel pesa lo mismo que su borde.
         */}
-          <div className={`${estilos.tablero} sup-noche con-grano escena-luz`}>
-            <Blobs />
+          <div className={estilos.tablero}>
             <Cifras
               cifras={[
                 {
@@ -133,7 +132,7 @@ export default async function ResumenDeCuenta() {
             entra con reloj, que es lo correcto para algo que ya está a la vista
             cuando la página pinta.
           */}
-            <ul className={`${estilos.atajos} ${estilos.revela}`}>
+            <ul className={estilos.atajos}>
               <Atajo
                 href="/cuenta/compras"
                 icono={<IconoCamiseta tamanio={22} />}
@@ -211,12 +210,8 @@ function Atajo({
 }) {
   return (
     <li>
-      <Link
-        href={href}
-        className={`${estilos.atajo} sup-ficha eleva destello presiona`}
-        transitionTypes={['avanza']}
-      >
-        <span className={`${estilos.atajoIcono} icono-vivo`} aria-hidden="true">
+      <Link href={href} className={`${estilos.atajo} sup-ficha`}>
+        <span className={estilos.atajoIcono} aria-hidden="true">
           {icono}
         </span>
         <span className={estilos.atajoCuerpo}>

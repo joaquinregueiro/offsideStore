@@ -7,6 +7,7 @@ import { getMySellerProfile } from '@/modules/sellers/services/seller.service';
 
 import { IconoBuscar, IconoCampana, IconoCarrito, IconoLlave, IconoMenu } from './iconos';
 import { conteosDelPanel, itemsDelPanel } from './panel';
+import { SECCIONES_DEL_CATALOGO } from './secciones-del-catalogo';
 import estilos from './cajon.module.css';
 
 /**
@@ -48,7 +49,7 @@ export async function CajonDeCuenta() {
         <span className="solo-lectores">Menú y tu cuenta</span>
       </summary>
 
-      <nav className={`${estilos.panel} sup-noche`} aria-label="Menú">
+      <nav className={estilos.panel} aria-label="Menú">
         {user === null ? <Invitado /> : <Sesion user={user} />}
       </nav>
     </details>
@@ -89,11 +90,13 @@ function Invitado() {
             <span className={estilos.texto}>Crear cuenta</span>
           </Link>
         </li>
-        <li>
-          <Link href="/como-funciona" className={estilos.item}>
-            <span className={estilos.texto}>Cómo funciona</span>
-          </Link>
-        </li>
+        {SECCIONES_DEL_CATALOGO.map((seccion) => (
+          <li key={seccion.href}>
+            <Link href={seccion.href} className={estilos.item}>
+              <span className={estilos.texto}>{seccion.texto}</span>
+            </Link>
+          </li>
+        ))}
       </ul>
     </>
   );
@@ -160,6 +163,13 @@ async function Sesion({ user }: { user: NonNullable<Awaited<ReturnType<typeof ge
             <span className={estilos.texto}>Explorar</span>
           </Link>
         </li>
+        {SECCIONES_DEL_CATALOGO.map((seccion) => (
+          <li key={seccion.href}>
+            <Link href={seccion.href} className={estilos.item}>
+              <span className={estilos.texto}>{seccion.texto}</span>
+            </Link>
+          </li>
+        ))}
         <li>
           <Link href="/carrito" className={estilos.item}>
             <span className={estilos.icono} aria-hidden="true">

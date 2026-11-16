@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { ArmazonPrivado } from '@/components/barra-lateral';
 import { Footer } from '@/components/footer';
 import { Header } from '@/components/header';
 
@@ -13,7 +14,7 @@ export default function LayoutDeVendedor({ children }: { children: ReactNode }) 
   return (
     <>
       <Header />
-      {children}
+      <ArmazonPrivado>{children}</ArmazonPrivado>
       <Footer />
     </>
   );

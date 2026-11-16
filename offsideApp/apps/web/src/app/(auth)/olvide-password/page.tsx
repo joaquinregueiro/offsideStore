@@ -21,9 +21,9 @@ export default function OlvidePassword() {
   return (
     <Pantalla>
       <div className={propios.hoja}>
-        <div className={`${propios.encabezado} escalona`}>
+        <div className={propios.encabezado}>
           <p className={propios.antetitulo}>Recuperar acceso</p>
-          <h1 className={`${estilos.titulo} ${propios.titulo} display`}>Recuperar contraseña</h1>
+          <h1 className={`${estilos.titulo} ${propios.titulo}`}>Recuperar contraseña</h1>
           {/*
             ⚠️ EL FRASEO NO CONFIRMA NI DESMIENTE QUE EL EMAIL EXISTA. "Si el
             email está registrado" es deliberado: decir "no encontramos esa
@@ -36,20 +36,20 @@ export default function OlvidePassword() {
           </p>
         </div>
 
-        <div className={`${propios.cuerpo} entra-suave`}>
+        <div className={propios.cuerpo}>
           <Formulario accion={pedirResetDePassword} enviar="Enviar enlace">
             <Campo nombre="email" etiqueta="Email" tipo="email" autoComplete="email" />
           </Formulario>
         </div>
 
-        <div className={`${propios.pieEnlaces} entra-suave`}>
+        <div className={propios.pieEnlaces}>
           <p className={estilos.pie}>
             {/*
               ⚠️ `retrocede` PORQUE ESTA PANTALLA ES UN DESVIO: sale por donde
               entro. La convencion de la pagina de un libro esta tan asentada que
               romperla marea.
             */}
-            <Link href="/ingresar" className="subraya" transitionTypes={['retrocede']}>
+            <Link href="/ingresar" className="subraya">
               Volver a ingresar
             </Link>
           </p>

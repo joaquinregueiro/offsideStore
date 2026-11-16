@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 import { CampoOculto, Formulario } from '@/components/form';
 import { IconoBuscar, IconoCamiseta } from '@/components/iconos';
-import { FotoCompartida, Pantalla } from '@/components/movimiento';
+import { Pantalla } from '@/components/movimiento';
 import {
   Aviso,
   BotonEnlace,
@@ -271,7 +271,7 @@ export default async function MisPublicaciones({
                     visibles.length === 1 ? '1 publicación' : `${visibles.length} publicaciones`
                   }
                 >
-                  <ul className={`${estilos.inventario} revela-grilla`}>
+                  <ul className={estilos.inventario}>
                     {visibles.map((publicacion) => {
                       const portada = portadas.get(publicacion.id);
                       const promocion = promocionadas.get(publicacion.id);
@@ -287,7 +287,7 @@ export default async function MisPublicaciones({
                         */
                           data-estado={publicacion.status}
                         >
-                          <FotoCompartida id={publicacion.id}>
+                          <>
                             <span className={estilos.filaMarco}>
                               {portada === undefined ? (
                                 <span className={estilos.filaPatron} aria-hidden="true" />
@@ -304,15 +304,11 @@ export default async function MisPublicaciones({
                                 />
                               )}
                             </span>
-                          </FotoCompartida>
+                          </>
 
                           <div className={estilos.filaCuerpo}>
                             <div className={estilos.filaTitulo}>
-                              <Link
-                                href={`/p/${publicacion.id}`}
-                                className="subraya"
-                                transitionTypes={['avanza']}
-                              >
+                              <Link href={`/p/${publicacion.id}`} className="subraya">
                                 {publicacion.title}
                               </Link>
                               <Etiqueta tono={tonoDePublicacion(publicacion.status)}>
@@ -338,7 +334,7 @@ export default async function MisPublicaciones({
                                 <span
                                   className={[
                                     estilos.chipUltima,
-                                    publicacion.status === 'active' ? 'pulso-atencion' : '',
+                                    publicacion.status === 'active' ? '' : '',
                                   ]
                                     .filter(Boolean)
                                     .join(' ')}
@@ -471,7 +467,7 @@ export default async function MisPublicaciones({
           toque las órdenes ya hechas (BR-023 / SS-041) son cosas que hay que
           leer, no que hay que encontrar.
         */}
-          <div className={`${estilos.cierre} sup-2 patron-vivo diagonales-vivas`}>
+          <div className={estilos.cierre}>
             <p className={estilos.nota}>
               Pausar la saca de la vitrina y podés volver a activarla cuando quieras. Eliminar es
               definitivo. Cambiar el precio no afecta a las órdenes ya hechas.

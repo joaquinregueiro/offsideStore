@@ -180,7 +180,7 @@ export default async function MisAvisos({
                 ) : undefined
               }
             >
-              <ul className={`${estilos.lista} ${estilos.revela}`}>
+              <ul className={estilos.lista}>
                 {pagina.notificaciones.map((aviso) => {
                   const destino = destinoDe(aviso.payload);
 
@@ -216,11 +216,7 @@ export default async function MisAvisos({
                             {fechaRelativa(aviso.createdAt, ahora)}
                           </span>
 
-                          {destino !== null && destino !== '' && (
-                            <Link href={destino} transitionTypes={['avanza']}>
-                              Ver
-                            </Link>
-                          )}
+                          {destino !== null && destino !== '' && <Link href={destino}>Ver</Link>}
 
                           {!aviso.leida && (
                             <Formulario

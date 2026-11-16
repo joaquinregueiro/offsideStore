@@ -14,21 +14,8 @@ import estilos from './ui.module.css';
  * boton dentro de un `<form>` que apunta a una Server Action funciona sin
  * JavaScript en el cliente, y por eso no necesita `'use client'`.
  *
- * ⚠️ EL MOVIMIENTO Y LA LUZ SE COMPONEN CON LAS CLASES GLOBALES DE
- * `movimiento.css` Y `tokens.css`, no se reimplementan aca. `entra-seco`,
- * `entra-acerca`, `entra-acerca-corto`, `cifra-entra`, `estado-entra`,
- * `pulso-atencion`, `eleva`, `tilt`, `destello`, `luz-filo`, `blobs`,
- * `escena-luz`, `aparece-escala`, `escalona`, `shimmer-titulo`,
- * `titular-degradado`, `subraya`, `esqueleto` y `desplegable` son parte de la
- * fundacion: una copia local queda fuera de la red de seguridad de
- * `prefers-reduced-motion` —que las lista por nombre— y diverge el dia que
- * alguien toque una de las dos.
- *
- * ⚠️ VERSION LUMINOSA (2026-09-10). El dueño rechazo la version angulosa
- * —"anticuada, sin animaciones, glow, dinamismo, muy cuadrado todo"— y esta
- * ronda la reemplaza: radios generosos, glow, vidrio, blobs que flotan detras
- * del estado vacio y del pliego, y hover rico. Las PROPS PUBLICAS no cambian;
- * `Pliego` suma dos opcionales (`luz`, `flotante`).
+ * Sistema sobrio desde el 2026-11-06: sin animaciones, vidrio ni luz. Algunas props
+ * (`animado`, `pulso`, `luz`, `patron`) quedan sin efecto para no tocar cada llamador.
  */
 
 /**
@@ -39,13 +26,6 @@ import estilos from './ui.module.css';
  * que no puedan romper AA por accidente. Son `<i>` vacios porque `.blob` es
  * `position: absolute` y un `<span>` en flujo no aporta nada.
  */
-const BLOBS = (
-  <span className="blobs" aria-hidden="true">
-    <i className="blob blob-cancha" />
-    <i className="blob blob-cambio blob-chico" />
-    <i className="blob blob-cancha blob-chico" />
-  </span>
-);
 
 /* ------------------------------------------------------------------ boton */
 
@@ -119,7 +99,7 @@ function clasesDeBoton(
     estilos.boton,
     claseDeVariante(variante),
     claseDeTamanio(tamanio),
-    variante === 'primario' ? 'luz-filo' : '',
+    variante === 'primario' ? '' : '',
     bloque ? estilos.botonBloque : '',
     extra ?? '',
   ]
@@ -212,7 +192,7 @@ export function BotonEnlace({
   children,
 }: BaseBoton & {
   href: string;
-  className?: string;
+  className?: string | undefined;
   /**
    * Texto para lectores de pantalla cuando el contenido visible no alcanza.
    *
@@ -311,12 +291,7 @@ export function Etiqueta({
 
   return (
     <span
-      className={[
-        estilos.etiqueta,
-        clase,
-        pulso ? 'pulso-atencion' : '',
-        animada ? 'estado-entra' : '',
-      ]
+      className={[estilos.etiqueta, clase, pulso ? '' : '', animada ? '' : '']
         .filter(Boolean)
         .join(' ')}
     >
@@ -353,7 +328,7 @@ export function Aviso({ tono = 'neutro', children }: { tono?: TonoAviso; childre
    * 140ms de pura opacidad. Un aviso de error que se desliza durante medio
    * segundo se lee como un susto, y este ya interrumpe con `role="alert"`.
    */
-  const entrada = tono === 'error' ? 'entra-seco' : 'entra-acerca-corto';
+  const entrada = tono === 'error' ? '' : '';
 
   return (
     <p
@@ -387,7 +362,7 @@ export function Contenedor({
   ancho?: AnchoContenedor;
   /** Agrega el aire vertical de una pantalla suelta: errores, 404, avisos. */
   vertical?: boolean;
-  className?: string;
+  className?: string | undefined;
   children: ReactNode;
 }) {
   const clase =
@@ -455,7 +430,7 @@ export function Tarjeta({
    * no existe el hover.
    */
   interactiva?: boolean;
-  className?: string;
+  className?: string | undefined;
   children: ReactNode;
 }) {
   return (
@@ -522,14 +497,13 @@ export function EstadoVacio({
    * lleva el gradiente de titular, que aguanta cualquier tamaño (5.16:1).
    */
   return (
-    <div className={`${estilos.vacio} escena-luz`}>
-      {BLOBS}
+    <div className={estilos.vacio}>
       {icono !== undefined && (
-        <span className={`${estilos.vacioIcono} aparece-escala`} aria-hidden="true">
+        <span className={estilos.vacioIcono} aria-hidden="true">
           {icono}
         </span>
       )}
-      <Titulo className={`${estilos.vacioTitulo} titular-degradado`}>{titulo}</Titulo>
+      <Titulo className={estilos.vacioTitulo}>{titulo}</Titulo>
       {children !== undefined && <div className={estilos.vacioCuerpo}>{children}</div>}
     </div>
   );
@@ -562,7 +536,7 @@ export function Esqueleto({
 }: {
   alto?: number | string;
   ancho?: number | string;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <span
@@ -608,7 +582,7 @@ export function Migas({ items }: { items: Miga[] }) {
             </li>
           ) : (
             <li key={item.texto}>
-              <Link href={item.href} className="subraya" transitionTypes={['retrocede']}>
+              <Link href={item.href} className="subraya">
                 {item.texto}
               </Link>
             </li>
@@ -650,7 +624,7 @@ export function Seccion({
          * cancha sobre claro (peor stop 5.16:1, vale a cualquier tamaño) y
          * papel → Cambio adentro de un pliego oscuro o de marca.
          */}
-        <h2 className={`${estilos.seccionTitulo} titular-degradado`}>{titulo}</h2>
+        <h2 className={estilos.seccionTitulo}>{titulo}</h2>
         {dato !== undefined && <p className={estilos.seccionDato}>{dato}</p>}
         {accion !== undefined && <div className={estilos.seccionAccion}>{accion}</div>}
       </div>
@@ -695,7 +669,7 @@ export function FilaDeDatos({
          * lineas de un resumen, el total dejaria de destacarse.
          */}
         {destacada ? (
-          <span className={`cifra-entra ${estilos.mascaraCifra}`}>
+          <span className={estilos.mascaraCifra}>
             <span>{children}</span>
           </span>
         ) : (
@@ -759,7 +733,7 @@ export function Pasos({ pasos, etiqueta }: { pasos: Paso[]; etiqueta?: string })
        * que su `<li>` llego. Los `nth-child` de `.escalona` asignan `--i` con
        * los mismos valores que usa el riel, asi que no se pelean.
        */}
-      <ol className={`${estilos.pasosLista} escalona escalona-lado`}>
+      <ol className={estilos.pasosLista}>
         {pasos.map((paso) => (
           <li
             key={paso.titulo}
@@ -818,7 +792,7 @@ export function Confirmar({
   children: ReactNode;
 }) {
   return (
-    <details className={`${estilos.confirmar} desplegable`}>
+    <details className={estilos.confirmar}>
       <summary className={estilos.confirmarDisparador}>{etiqueta}</summary>
       <div className={estilos.confirmarPanel}>
         <p className={estilos.confirmarPregunta}>{pregunta}</p>
@@ -997,13 +971,13 @@ export function Panel({
    * `--display-3` (≥30px) habilita. `titular-vivo` elige solo por superficie.
    */
   return (
-    <div className={[estilos.panel, clase, 'entra-acerca'].filter(Boolean).join(' ')}>
+    <div className={[estilos.panel, clase, ''].filter(Boolean).join(' ')}>
       {icono !== undefined && (
-        <span className={`${estilos.panelIcono} aparece-escala`} aria-hidden="true">
+        <span className={estilos.panelIcono} aria-hidden="true">
           {icono}
         </span>
       )}
-      <h1 className={`${estilos.panelTitulo} shimmer-titulo titular-vivo`}>{titulo}</h1>
+      <h1 className={estilos.panelTitulo}>{titulo}</h1>
       {children !== undefined && <div className={estilos.panelCuerpo}>{children}</div>}
     </div>
   );
@@ -1153,7 +1127,7 @@ export function Cifras({
             {quietas ? (
               cifra.valor
             ) : (
-              <span className={`cifra-entra ${estilos.mascaraCifra}`}>
+              <span className={estilos.mascaraCifra}>
                 <span>{cifra.valor}</span>
               </span>
             )}
@@ -1195,7 +1169,7 @@ export function Precio({
   valor: string;
   tamanio?: TamanioPrecio;
   animado?: boolean;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <p
@@ -1208,7 +1182,7 @@ export function Precio({
         .join(' ')}
     >
       {animado ? (
-        <span className={`cifra-entra ${estilos.mascaraCifra}`}>
+        <span className={estilos.mascaraCifra}>
           <span>{valor}</span>
         </span>
       ) : (
@@ -1260,9 +1234,9 @@ export type SuperficiePliego = 'noche' | 'fosa' | 'cancha';
  */
 export function Pliego({
   superficie = 'noche',
-  patron = false,
+
   corte = false,
-  luz = true,
+
   flotante = false,
   className,
   children,
@@ -1295,11 +1269,10 @@ export function Pliego({
    * bloque se pisan y el resultado es un corte con esquinas raras.
    */
   flotante?: boolean;
-  className?: string;
+  className?: string | undefined;
   children: ReactNode;
 }) {
-  const claseSuperficie =
-    superficie === 'cancha' ? 'sup-cancha' : superficie === 'fosa' ? 'sup-fosa' : 'sup-noche';
+  const claseSuperficie = superficie === 'cancha' ? '' : superficie === 'fosa' ? '' : '';
 
   /*
    * ⚠️ ORDEN DE LAS CAPAS: blobs, patron, contenido. Las dos capas vacias van
@@ -1314,14 +1287,12 @@ export function Pliego({
         flotante ? estilos.pliegoFlotante : '',
         corte ? estilos.pliegoCorte : '',
         claseSuperficie,
-        'con-grano',
+        '',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
     >
-      {luz && superficie !== 'cancha' && BLOBS}
-      {patron && <span className={`${estilos.pliegoPatron} patron-vivo`} aria-hidden="true" />}
       <div className={estilos.pliegoInterior}>{children}</div>
     </section>
   );
