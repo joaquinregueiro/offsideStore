@@ -120,7 +120,14 @@
   }
 }
 
-/* Area privada: barra lateral de 216px + contenido. La barra solo existe en escritorio. */
+/*
+ * Area privada: barra lateral + contenido.
+ *
+ * ⚠️ LA BARRA SE OCULTA EN 760 PX, EL MISMO CORTE QUE ABRE EL MENU DE TELEFONO
+ * (header.module.css). Antes se ocultaba en 900 y entre 761 y 900 no habia
+ * ninguna de las dos: con el navegador agrandado al 125-150% en una notebook,
+ * las secciones de la cuenta no tenian por donde llegarse.
+ */
 .privado {
   display: flex;
   flex: 1 0 auto;
@@ -138,6 +145,8 @@
 }
 
 .lateral {
+  position: sticky;
+  top: var(--espacio-4);
   flex: 0 0 216px;
   padding: var(--espacio-2);
   border-radius: var(--radio-ficha);
@@ -191,7 +200,17 @@
   text-align: center;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
+  .privado {
+    gap: var(--espacio-4);
+  }
+
+  .lateral {
+    flex-basis: 184px;
+  }
+}
+
+@media (max-width: 760px) {
   .privado {
     padding-top: var(--espacio-4);
   }
