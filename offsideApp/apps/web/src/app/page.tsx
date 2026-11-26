@@ -236,7 +236,7 @@ export default async function Home({
         {/*
           ⚠️ LA FOTO ES FONDO, NO CONTENIDO: va con alt vacio y un velo plano
           encima para que el titular blanco se lea sobre cualquier zona de la
-          foto. Dos encuadres porque la de escritorio es 4:1 y en un telefono
+          foto. Dos encuadres porque la de escritorio es 2.5:1 y en un telefono
           quedaria una franja ilegible. `fetchPriority="high"`: es lo primero
           que se ve.
         */}
